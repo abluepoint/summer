@@ -1,0 +1,154 @@
+<!--
+  ~ Copyright (c) 2020 abluepoint All Rights Reserved.
+  ~ File:pom.xml
+  ~ Date:2020-12-31 17:49:31
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.abluepoint.summer</groupId>
+    <artifactId>summer-parent</artifactId>
+    <version>3.0.21-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <parent>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-parent</artifactId>
+        <version>2020.0.0</version>
+    </parent>
+
+    <modules>
+        <module>../summer-common</module>
+        <module>../summer-data-jpa</module>
+        <module>../summer-mvc</module>
+        <module>../summer-security</module>
+    </modules>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <summer.version>3.0.21-SNAPSHOT</summer.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.abluepoint.summer</groupId>
+                <artifactId>summer-common</artifactId>
+                <version>${summer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.abluepoint.summer</groupId>
+                <artifactId>summer-data-jpa</artifactId>
+                <version>${summer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.abluepoint.summer</groupId>
+                <artifactId>summer-security</artifactId>
+                <version>${summer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.abluepoint.summer</groupId>
+                <artifactId>summer-mvc</artifactId>
+                <version>${summer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>1.2.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.auth0</groupId>
+                <artifactId>java-jwt</artifactId>
+                <version>3.4.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.9</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>json-schema-validator</artifactId>
+                <version>1.0.35</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.6</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.12</version>
+                <scope>provided</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <configuration>
+                    <attach>true</attach>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <distributionManagement>
+        <!--		<repository>-->
+        <!--			<id>releases</id>-->
+        <!--			<name>maven-releases</name>-->
+        <!--			<url>http://nexus.teleinfo.cn/repository/maven-releases/</url>-->
+        <!--		</repository>-->
+
+        <!--		<snapshotRepository>-->
+        <!--			<id>snapshots</id>-->
+        <!--			<name>maven-snapshots</name>-->
+        <!--			<url>http://nexus.teleinfo.cn/repository/maven-snapshots/</url>-->
+        <!--		</snapshotRepository>-->
+
+        <repository>
+            <id>teleinfo-releases</id>
+            <name>teleinfo-releases</name>
+            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-releases/</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>teleinfo-snapshots</id>
+            <name>teleinfo-snapshots</name>
+            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>

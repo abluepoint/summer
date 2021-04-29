@@ -1,0 +1,20 @@
+{
+  "title": "user",
+  "description": "user.",
+  "type": "object",
+  "required": [
+    "username",
+    "password"
+  ],
+  "properties": {
+    "username": {
+      "type": "string",
+      "title": "Bio"
+    },
+    "password": {
+      "type": "string",
+      "title": "Password",
+      "minLength": 3
+    }
+  }
+}

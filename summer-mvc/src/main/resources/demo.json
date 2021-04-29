@@ -1,0 +1,7 @@
+{
+    "timestamp": "2019-08-09T05:07:30.197+0000",
+    "status": 403,
+    "error": "Forbidden",
+    "message": "Access Denied",
+    "path": "/identityv2/data/detail"
+}
