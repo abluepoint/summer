@@ -39,6 +39,8 @@ public abstract class JpaFtlAbstractTemplateSource implements JpaTemplateSource 
      */
     public String getTemplateSql(String templateName, Object param) throws Exception {
 
+        templateName = templateName.replace(".","/");
+
         Assert.that(templateName.indexOf("/") > 0, "illegal template name");
 
         if (forceReload || stringTemplateLoader.findTemplateSource(templateName) == null) {

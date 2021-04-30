@@ -10,6 +10,8 @@ import com.abluepoint.summer.data.jpa.JpaDefaultTemplate;
 import com.abluepoint.summer.data.jpa.template.JpaTemplateSource;
 import com.abluepoint.summer.data.jpa.transform.SummerTupleConverter;
 import com.abluepoint.summer.data.jpa.util.JpaNameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
@@ -24,9 +26,10 @@ import javax.persistence.Query;
 import java.util.*;
 
 public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
-//    private final DeclaredQuery query;
-//    private final DeclaredQuery countQuery;
 
+    private final static Logger logger = LoggerFactory.getLogger(SummerAbstractStringBasedJpaQuery.class);
+
+    private final SummerJpaQueryMethod method;
     private final String queryString;
     private final String countQueryString;
 
@@ -56,6 +59,8 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
         Assert.hasText(queryString, "Query string must not be null or empty!");
         Assert.notNull(evaluationContextProvider, "ExpressionEvaluationContextProvider must not be null!");
         Assert.notNull(parser, "Parser must not be null!");
+
+        this.method = (SummerJpaQueryMethod) method;
         this.queryString = queryString;
         this.countQueryString = method.getCountQuery();
         this.evaluationContextProvider = evaluationContextProvider;
@@ -212,22 +217,34 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
      */
     protected String getQuerySql(String queryString, Map<String, Object> parameterMap) {
         String querySql = null;
-        if (queryString.equals("")) {
 
-        } else if (queryString.startsWith("${")) {
-            ApplicationContext context = JpaDefaultTemplate.getApplicationContext();
-            if (context == null) {
-                throw new RuntimeException("It is not run in spring or not config AppContextUtil!");
-            }
-            JpaTemplateSource jpaTemplateSource = context.getBean("jpaTemplateSource", JpaTemplateSource.class);
+        ApplicationContext context = JpaDefaultTemplate.getApplicationContext();
+        if (context == null) {
+            throw new RuntimeException("It is not run in spring or not config AppContextUtil!");
+        }
+        JpaTemplateSource jpaTemplateSource = context.getBean("jpaTemplateSource", JpaTemplateSource.class);
 
-            String templateName = JpaNameUtils.getTemplateName(queryString);
+        if (queryString.equals("#")) {
 
+            queryString = new StringBuilder(method.getJavaClassName()).append(".").append(method.getJavaMethodName()).toString();
+            logger.debug("query string is: {}",queryString);
+
+            String templateName = queryString;
             try {
                 querySql = jpaTemplateSource.getTemplateSql(templateName, parameterMap);
             } catch (Exception e) {
                 throw new RuntimeException(new StringBuilder("Find template error,template name is \"").append(templateName).append("\"").toString(), e);
             }
+
+        } else if (queryString.startsWith("##")&&queryString.endsWith("##")) {
+
+            String templateName = JpaNameUtils.getTemplateName(queryString);
+            try {
+                querySql = jpaTemplateSource.getTemplateSql(templateName, parameterMap);
+            } catch (Exception e) {
+                throw new RuntimeException(new StringBuilder("Find template error,template name is \"").append(templateName).append("\"").toString(), e);
+            }
+
         } else {
             querySql = queryString;
         }

@@ -19,11 +19,10 @@ public class SummerJpaQueryMethodFactory extends DefaultJpaQueryMethodFactory {
     public SummerJpaQueryMethodFactory(QueryExtractor extractor) {
         super(extractor);
         this.extractor = extractor;
-
     }
 
     @Override
     public JpaQueryMethod build(Method method, RepositoryMetadata metadata, ProjectionFactory factory) {
-        return new JpaQueryMethod(method, metadata, factory, extractor);
+        return new SummerJpaQueryMethod(method, metadata, factory, extractor);
     }
 }

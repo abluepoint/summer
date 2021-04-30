@@ -33,9 +33,9 @@ public abstract class JpaNameUtils {
 
     public static String getTemplateName(String express) {
         if (StringUtils.hasText(express)) {
-            int begin = express.indexOf("${");
+            int begin = express.indexOf("##");
             if (begin != -1) {
-                int end = express.lastIndexOf("}");
+                int end = express.lastIndexOf("##");
                 if (end != -1) {
                     return express.substring(begin+2,end).trim();
                 }
