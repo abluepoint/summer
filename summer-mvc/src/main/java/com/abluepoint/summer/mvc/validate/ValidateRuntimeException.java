@@ -28,8 +28,8 @@ public class ValidateRuntimeException extends SummerRuntimeException {
 		super(message, cause);
 	}
 
-	public ValidateRuntimeException(Throwable cause,String message, Object... args) {
-		super(cause,message,args);
+	public ValidateRuntimeException(String message, Throwable cause, Object... args) {
+		super(message,cause,args);
 	}
 	
 	public ValidateRuntimeException(Throwable cause) {

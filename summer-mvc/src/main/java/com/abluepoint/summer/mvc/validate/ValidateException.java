@@ -32,8 +32,8 @@ public class ValidateException extends SummerException {
         super(message, cause);
     }
 
-    public ValidateException(Throwable cause, String message, Object... args) {
-        super(cause, message, args);
+    public ValidateException(String message, Throwable cause, Object... args) {
+        super(message, cause, args);
         initName(args);
     }
 

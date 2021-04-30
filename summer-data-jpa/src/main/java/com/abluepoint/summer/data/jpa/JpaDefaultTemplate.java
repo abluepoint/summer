@@ -35,7 +35,7 @@ public class JpaDefaultTemplate implements JpaTemplate {
 
     @Override
     public <T> T selectOne(String templateName, Map<String, Object> parameter, Class<T> resultType) throws Exception {
-        String sql = jpaTemplateSource.getTemplate(templateName, parameter);
+        String sql = jpaTemplateSource.getTemplateSql(templateName, parameter);
         return jpaSqlTemplate.selectOne(sql, parameter, resultType);
     }
 
@@ -46,7 +46,7 @@ public class JpaDefaultTemplate implements JpaTemplate {
 
     @Override
     public <E> List<E> selectList(String templateName, Map<String, Object> parameter, Class<E> resultType) throws Exception {
-        String sql = jpaTemplateSource.getTemplate(templateName, parameter);
+        String sql = jpaTemplateSource.getTemplateSql(templateName, parameter);
         return jpaSqlTemplate.selectList(sql, parameter, resultType);
     }
 
@@ -69,8 +69,8 @@ public class JpaDefaultTemplate implements JpaTemplate {
 
     @Override
     public <E> Page<E> selectPage(String templateName, String countTemplateName, Map<String, Object> parameter, Pageable pageable, Class<E> resultType) throws Exception {
-        String sql = jpaTemplateSource.getTemplate(templateName, parameter);
-        String countSql = jpaTemplateSource.getTemplate(templateName, parameter);
+        String sql = jpaTemplateSource.getTemplateSql(templateName, parameter);
+        String countSql = jpaTemplateSource.getTemplateSql(templateName, parameter);
 
         //	    boolean isNative = isNative(templateName, countTemplateName);
 

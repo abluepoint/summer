@@ -12,7 +12,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Map;
 
-public class FtlWhereDirective implements TemplateDirectiveModel {
+public class FreemarkerWhereDirective implements TemplateDirectiveModel {
 
     private static final String SPACE = " ";
 

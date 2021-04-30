@@ -33,7 +33,7 @@ public class SummerException extends Exception implements Messageable {
         messageSupport.setMessageKey(message);
     }
 
-    public SummerException(Throwable cause,String message, Object... args) {
+    public SummerException(String message, Throwable cause, Object... args) {
         super(message, cause);
         messageSupport.setMessageKey(message);
         messageSupport.setArgs(args);

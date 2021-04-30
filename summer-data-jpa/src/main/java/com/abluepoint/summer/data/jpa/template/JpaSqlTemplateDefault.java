@@ -25,11 +25,11 @@ import java.util.Map;
 /**
  * @author bluepoint
  */
-public class DefaultJpaSqlTemplate extends AbstractJpaSqlTemplate {
+public class JpaSqlTemplateDefault extends AbstractJpaSqlTemplate {
 
     private EntityManager entityManager;
 
-    public DefaultJpaSqlTemplate(EntityManager entityManager) {
+    public JpaSqlTemplateDefault(EntityManager entityManager) {
         this.entityManager = entityManager;
     }
 

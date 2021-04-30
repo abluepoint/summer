@@ -11,22 +11,17 @@ import com.abluepoint.summer.data.jpa.template.JpaTemplateSource;
 import com.abluepoint.summer.data.jpa.transform.SummerTupleConverter;
 import com.abluepoint.summer.data.jpa.util.JpaNameUtils;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.data.repository.query.ReturnedType;
-import org.springframework.data.repository.util.ClassUtils;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
 //    private final DeclaredQuery query;
@@ -229,7 +224,7 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
             String templateName = JpaNameUtils.getTemplateName(queryString);
 
             try {
-                querySql = jpaTemplateSource.getTemplate(templateName, parameterMap);
+                querySql = jpaTemplateSource.getTemplateSql(templateName, parameterMap);
             } catch (Exception e) {
                 throw new RuntimeException(new StringBuilder("Find template error,template name is \"").append(templateName).append("\"").toString(), e);
             }
