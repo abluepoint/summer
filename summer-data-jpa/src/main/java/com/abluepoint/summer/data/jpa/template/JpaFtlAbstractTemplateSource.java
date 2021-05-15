@@ -7,7 +7,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateExceptionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.jvm.hotspot.utilities.Assert;
+import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -41,7 +41,7 @@ public abstract class JpaFtlAbstractTemplateSource implements JpaTemplateSource 
 
         templateName = templateName.replace(".","/");
 
-        Assert.that(templateName.indexOf("/") > 0, "illegal template name");
+        Assert.isTrue(templateName.indexOf("/") > 0, "illegal template name");
 
         if (forceReload || stringTemplateLoader.findTemplateSource(templateName) == null) {
             loadTemplate(templateName, param);
