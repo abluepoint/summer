@@ -6,15 +6,17 @@
 
 package com.abluepoint.summer.common.exception;
 
+
 public class SummerException extends Exception implements Messageable {
 
     private static final long serialVersionUID = 5586244298123416199L;
+    private static final String EMPTY_STRING = "";
 
     private MessageSupport messageSupport = new MessageSupport();
 
     public SummerException() {
         super();
-        messageSupport.setMessageKey("");
+        messageSupport.setMessageKey(EMPTY_STRING);
     }
 
     public SummerException(String message) {
@@ -22,6 +24,11 @@ public class SummerException extends Exception implements Messageable {
         messageSupport.setMessageKey(message);
     }
 
+    /**
+     * Throwable类型的参数放在最后,不作为组装message的参数
+     * @param message
+     * @param args
+     */
     public SummerException(String message, Object... args) {
         super(message);
         messageSupport.setMessageKey(message);
@@ -31,12 +38,6 @@ public class SummerException extends Exception implements Messageable {
     public SummerException(String message, Throwable cause) {
         super(message, cause);
         messageSupport.setMessageKey(message);
-    }
-
-    public SummerException(String message, Throwable cause, Object... args) {
-        super(message, cause);
-        messageSupport.setMessageKey(message);
-        messageSupport.setArgs(args);
     }
 
     @Override

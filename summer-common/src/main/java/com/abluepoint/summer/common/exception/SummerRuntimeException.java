@@ -32,17 +32,10 @@ public class SummerRuntimeException extends RuntimeException implements Messagea
         messageSupport.setMessageKey(message);
     }
 
-    public SummerRuntimeException(String message, Throwable cause, Object... args) {
-        super(message, cause);
-        messageSupport.setMessageKey(message);
-        messageSupport.setArgs(args);
-    }
-
     public SummerRuntimeException(SummerException e) {
         super(e.getMessageKey(), e);
         messageSupport.setMessageKey(e.getMessageKey());
         messageSupport.setArgs(e.getArgs());
-
     }
 
     public SummerRuntimeException(Throwable cause) {
