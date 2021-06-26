@@ -87,7 +87,7 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
                     String countStr = request.getParameter(fieldList.getCountParam());
                     Matcher matcher = countPattern.matcher(countStr);
                     if (!matcher.matches()) {
-                        exceptions.add(new ValidateException("validate.field.list.illegal.count", new Object[] { fieldList.getName(), countStr }));
+                        exceptions.add(new ValidateException("validate.field.list.illegal.count", fieldList.getName(), countStr));
                     } else {
                         int count = Integer.parseInt(countStr);
                         FieldMeta[] items = fieldList.getFields();
@@ -120,7 +120,7 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
             if (wrapper == null) {
                 throw new SummerException("system.request.not_cached");
             }
-            if(!wrapper.isCached()){
+            if (!wrapper.isCached()) {
                 wrapper.cacheRequest();
             }
             String schemaId = fieldJsonSchema.value();
@@ -158,18 +158,18 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
 
         if (field.isRequired()) {
             if (StringUtils.isEmpty(value)) {
-                exceptions.add(new ValidateException("validate.field.required", new Object[] { paramName, value, field.getStyle().getDesc() }));
+                exceptions.add(new ValidateException("validate.field.required", new Object[]{paramName, value, field.getStyle().getDesc()}));
             }
         }
 
         if (value != null) {
             if (style.validate(value)) {
                 String name = field.getName();
-                if(StringUtils.hasText(name)){
+                if (StringUtils.hasText(name)) {
                     data.put(name, style.getTypedObject(value));
                 }
             } else {
-                exceptions.add(new ValidateException("validate.field.error", new Object[] { paramName, value, field.getStyle().getDesc() }));
+                exceptions.add(new ValidateException("validate.field.error", new Object[]{paramName, value, field.getStyle().getDesc()}));
             }
         }
     }

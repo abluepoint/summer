@@ -23,18 +23,14 @@ public class ValidateException extends SummerException {
         super(message);
     }
 
-    public ValidateException(String message, Object[] args) {
+
+    public ValidateException(String message, Object... args) {
         super(message, args);
         initName(args);
     }
 
     public ValidateException(String message, Throwable cause) {
         super(message, cause);
-    }
-
-    public ValidateException(String message, Throwable cause, Object... args) {
-        super(message, cause, args);
-        initName(args);
     }
 
     private void initName(Object[] args) {

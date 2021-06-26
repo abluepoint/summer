@@ -26,8 +26,4 @@ public class RequestLoggingException extends SummerException {
         super(message, cause);
     }
 
-    public RequestLoggingException(String message, Object[] args, Throwable cause) {
-        super(message, args, cause);
-    }
-
 }

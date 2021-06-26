@@ -18,7 +18,4 @@ public class JpaSummerException extends SummerException {
         super(message, cause);
     }
 
-    public JpaSummerException(String message, Throwable cause, Object... args) {
-        super(message, cause, args);
-    }
 }
