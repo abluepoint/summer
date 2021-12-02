@@ -83,7 +83,7 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
     @Override
     public Query doCreateQuery(JpaParametersParameterAccessor accessor) {
         SummerJpaParametersParameterAccessor parameterAccessor = (SummerJpaParametersParameterAccessor) accessor;
-        String querySql = getQuerySql(queryString, parameterAccessor.getNamedParameterMap());
+        String querySql = getQuerySql(queryString, parameterAccessor.getNamedParameterMap(),false);
 
         // sql to hash
         DeclaredQuery declaredQuery = queryMap.get(querySql);
@@ -143,7 +143,7 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
     @Override
     protected Query doCreateCountQuery(JpaParametersParameterAccessor accessor) {
         SummerJpaParametersParameterAccessor parameterAccessor = (SummerJpaParametersParameterAccessor) accessor;
-        String countQuerySql = getQuerySql(countQueryString, parameterAccessor.getNamedParameterMap());
+        String countQuerySql = getQuerySql(countQueryString, parameterAccessor.getNamedParameterMap(),true);
 
         DeclaredQuery declaredCountQuery = countQueryMap.get(countQuerySql);
         if (declaredCountQuery == null) {
@@ -215,7 +215,7 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
      * @param parameterMap
      * @return
      */
-    protected String getQuerySql(String queryString, Map<String, Object> parameterMap) {
+    protected String getQuerySql(String queryString, Map<String, Object> parameterMap,boolean isCountQuery) {
         String querySql = null;
 
         ApplicationContext context = JpaDefaultTemplate.getApplicationContext();
@@ -226,7 +226,13 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
 
         if (queryString.equals("#")) {
 
-            queryString = new StringBuilder(method.getJavaClassName()).append(".").append(method.getJavaMethodName()).toString();
+            StringBuilder queryStringBuilder = new StringBuilder(method.getJavaClassName()).append(".").append(method.getJavaMethodName());
+
+            if(isCountQuery){
+                queryStringBuilder.append(".count");
+            }
+
+            queryString = queryStringBuilder.toString();
             logger.debug("query string is: {}",queryString);
 
             String templateName = queryString;
