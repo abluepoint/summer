@@ -19,7 +19,7 @@ public class GlobalHandlerExceptionResolver extends SummerHandlerExceptionResolv
     private RequestLoggingSupport requestLoggingSupport;
     private static final Logger logger = LoggerFactory.getLogger(GlobalHandlerExceptionResolver.class);
 
-    public GlobalHandlerExceptionResolver(CodeMapping codeMapping, RequestLoggingSupport requestLoggingSupport) {
+    public GlobalHandlerExceptionResolver(ExceptionCodeMapping codeMapping, RequestLoggingSupport requestLoggingSupport) {
         super(codeMapping);
         this.requestLoggingSupport = requestLoggingSupport;
     }

@@ -18,11 +18,11 @@ import java.util.Map;
 /**
  *
  */
-public class NamedCodeMapping implements CodeMapping {
+public class ExceptionCodeMapping  {
 
     private Map<String, Integer> mapping;
 
-    public NamedCodeMapping() {
+    public ExceptionCodeMapping() {
         this.mapping = new HashMap<>();
         register(SummerException.class,1001);
         register(SummerRuntimeException.class,1001);
@@ -32,7 +32,6 @@ public class NamedCodeMapping implements CodeMapping {
 
     }
 
-    @Override
     public Integer getCode(Exception ex) {
         Integer code = mapping.get(ex.getClass().getName());
         if (code != null) {
@@ -42,7 +41,6 @@ public class NamedCodeMapping implements CodeMapping {
         }
     }
 
-    @Override
     public Integer register(Class exceptionClass, Integer code) {
         return mapping.put(exceptionClass.getName(), code);
     }

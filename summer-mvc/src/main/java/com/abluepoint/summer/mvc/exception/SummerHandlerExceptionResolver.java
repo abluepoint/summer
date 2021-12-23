@@ -11,10 +11,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /*
  * Copyright (c) 2020 abluepoint All Rights Reserved.
@@ -26,10 +23,10 @@ public class SummerHandlerExceptionResolver implements HandlerExceptionResolver,
 
     private MessageSource messageSource;
 
-    private CodeMapping codeMapping;
+    private ExceptionCodeMapping exceptionCodeMapping;
 
-    public SummerHandlerExceptionResolver(CodeMapping codeMapping) {
-        this.codeMapping = codeMapping;
+    public SummerHandlerExceptionResolver(ExceptionCodeMapping codeMapping) {
+        this.exceptionCodeMapping = codeMapping;
     }
 
     @Override
@@ -50,20 +47,20 @@ public class SummerHandlerExceptionResolver implements HandlerExceptionResolver,
             }
             Map<String, Object> data = new HashMap<>(1);
             data.put("errors", errorList);
-            return Results.failView(codeMapping.getCode(exs), getMessage(request,exs), data);
+            return Results.failView(exceptionCodeMapping.getCode(exs), getMessage(request,exs), data);
 
         } else if (ex instanceof Messageable) {
             Messageable message = (Messageable) ex;
-            return Results.failView(codeMapping.getCode(ex), getMessage(request,message));
+            return Results.failView(exceptionCodeMapping.getCode(ex), getMessage(request,message));
         } else {
-            return Results.failView(codeMapping.getCode(ex), messageSource.getMessage("system.exception.undefined",null, null));
+            return Results.failView(exceptionCodeMapping.getCode(ex), messageSource.getMessage("system.exception.undefined",null, Locale.SIMPLIFIED_CHINESE));
         }
 
 
     }
 
-    protected String getMessage(HttpServletRequest request,Messageable validateEx) {
-        return messageSource.getMessage(validateEx.getMessageKey(),validateEx.getArgs(), null);
+    protected String getMessage(HttpServletRequest request,Messageable messageable) {
+        return messageSource.getMessage(messageable.getMessageKey(),messageable.getArgs(), Locale.SIMPLIFIED_CHINESE);
     }
 
     @Override
