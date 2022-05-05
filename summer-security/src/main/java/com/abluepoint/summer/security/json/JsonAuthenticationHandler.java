@@ -41,7 +41,7 @@ public class JsonAuthenticationHandler implements AuthenticationHandler {
 
 	@Override
 	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
-		HttpResult httpResponseEntity = new HttpResult(LocalDateTime.now(), HttpStatus.UNAUTHORIZED, exception.getMessage());
+		HttpResult httpResponseEntity = new HttpResult(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(), exception.getMessage(),request.getContextPath());
 		response.setStatus(HttpStatus.UNAUTHORIZED.value());
 		response.setCharacterEncoding("utf-8");
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);

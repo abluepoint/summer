@@ -37,13 +37,13 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
 
     private ObjectMapper objectMapper;
 
-    public JsonUsernamePasswordAuthenticationFilter() {
-        super(new AntPathRequestMatcher("/login"));
+    public JsonUsernamePasswordAuthenticationFilter(String pattern) {
+        super(new AntPathRequestMatcher(pattern));
         objectMapper = new ObjectMapper();
     }
 
-    public JsonUsernamePasswordAuthenticationFilter(ObjectMapper objectMapper) {
-        super(new AntPathRequestMatcher("/login"));
+    public JsonUsernamePasswordAuthenticationFilter(ObjectMapper objectMapper,String pattern) {
+        super(new AntPathRequestMatcher(pattern));
         this.objectMapper = objectMapper;
     }
 
@@ -57,7 +57,7 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
 
-        if(!HttpMethod.POST.matches(request.getMethod())){
+        if (!HttpMethod.POST.matches(request.getMethod())) {
             throw new BadCredentialsException("only post method allowed");
         }
 

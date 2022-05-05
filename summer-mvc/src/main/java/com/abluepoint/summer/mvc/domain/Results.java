@@ -10,7 +10,6 @@ public class Results {
     public static final String SUCCESS_MESSAGE = "OK";
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Results.class);
 
-
     public static Result<?> success() {
         return success(null);
     }

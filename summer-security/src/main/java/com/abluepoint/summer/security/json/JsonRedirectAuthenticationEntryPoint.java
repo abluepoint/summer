@@ -27,7 +27,7 @@ import java.time.LocalDateTime;
  */
 
 public class JsonRedirectAuthenticationEntryPoint extends JsonAuthenticationEntryPoint {
-	private static final Logger log = LoggerFactory.getLogger(JsonRedirectAuthenticationEntryPoint.class);
+    private static final Logger log = LoggerFactory.getLogger(JsonRedirectAuthenticationEntryPoint.class);
 
     private ObjectMapper objectMapper;
     private String authenticationEntryUrl;
@@ -42,12 +42,12 @@ public class JsonRedirectAuthenticationEntryPoint extends JsonAuthenticationEntr
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-		if(authException instanceof InsufficientAuthenticationException){
-			String redirectUri = URLEncoder.encode(oauthAuthenticationUrl+"?"+request.getQueryString(),"UTF-8");
-			response.sendRedirect(authenticationEntryUrl +"?redirect_uri="+redirectUri);
-		}else {
-			super.commence(request,response,authException);
-		}
+        if (authException instanceof InsufficientAuthenticationException) {
+            String redirectUri = URLEncoder.encode(oauthAuthenticationUrl + "?" + request.getQueryString(), "UTF-8");
+            response.sendRedirect(authenticationEntryUrl + "?redirect_uri=" + redirectUri);
+        } else {
+            super.commence(request, response, authException);
+        }
 
     }
 }

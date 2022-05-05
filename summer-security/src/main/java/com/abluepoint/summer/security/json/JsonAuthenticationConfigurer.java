@@ -20,7 +20,7 @@ public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer
     private JsonUsernamePasswordAuthenticationFilter authenticationFilter;
 
     public JsonAuthenticationConfigurer() {
-        this.authenticationFilter = new JsonUsernamePasswordAuthenticationFilter();
+        this.authenticationFilter = new JsonUsernamePasswordAuthenticationFilter("/api/login");
     }
 
     @Override
