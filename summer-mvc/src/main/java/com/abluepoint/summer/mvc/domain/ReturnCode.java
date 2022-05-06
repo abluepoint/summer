@@ -4,13 +4,14 @@ import org.springframework.lang.Nullable;
 
 public enum ReturnCode {
     OK(0, "ok"),
+    PENDING(1, "pending"),
     FORBIDDEN(403, "ok"),
     UNAUTHORIZED(401,"unauthorized"),
     LOGIN_FAILED(1001,"login failed"),
     ;
 
-    private int value;
-    private String message;
+    private final int value;
+    private final String message;
 
     private static final ReturnCode[] VALUES;
 

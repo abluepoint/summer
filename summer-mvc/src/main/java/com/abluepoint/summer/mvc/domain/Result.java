@@ -8,6 +8,7 @@ import java.io.Serializable;
 public class Result<T> implements Serializable {
     private int code;
     private String msg;
+    private Integer messageCount;
     private T data;
 
     public Result(int status, String message, T data) {
@@ -32,4 +33,11 @@ public class Result<T> implements Serializable {
         return data;
     }
 
+    public Integer getMessageCount() {
+        return messageCount;
+    }
+
+    public void setMessageCount(Integer messageCount) {
+        this.messageCount = messageCount;
+    }
 }

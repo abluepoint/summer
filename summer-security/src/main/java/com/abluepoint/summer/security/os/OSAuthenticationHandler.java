@@ -35,9 +35,9 @@ import java.util.Map;
  */
 public class OSAuthenticationHandler implements AuthenticationHandler {
 
-    private JwtManager jwtManager;
+    private final JwtManager jwtManager;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     public OSAuthenticationHandler(JwtManager jwtManager, ObjectMapper objectMapper) {
         this.jwtManager = jwtManager;
@@ -55,17 +55,17 @@ public class OSAuthenticationHandler implements AuthenticationHandler {
     }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         UserDetails user = (UserDetails) authentication.getPrincipal();
 
-//        String token = jwtManager.createJwtToken(user.getUsername(), request.getRequestedSessionId());
+        String token = jwtManager.createJwtToken(user.getUsername(), request.getRequestedSessionId());
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-//        Map<String, String> data = new HashMap(1);
-//        data.put("token", token);
+        Map<String, String> data = new HashMap<>(1);
+        data.put("token", token);
 
-        Result<Map<String, String>> result = Results.success();
+        Result<Map<String, String>> result = Results.success(data);
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 

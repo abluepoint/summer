@@ -9,7 +9,7 @@ public class Results {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Results.class);
 
     public static <T> Result<T> success() {
-        return success(null);
+        return success(ReturnCode.OK.message());
     }
 
     public static <T> Result<T> success(T data) {
@@ -21,12 +21,12 @@ public class Results {
     }
 
     private static <T> Result<T> success(String msg, T data) {
-        return new Result<T>(ReturnCode.OK.value(), msg, data);
+        return new Result<>(ReturnCode.OK.value(), msg, data);
     }
 
     public static <T> Result<T> fail(int code, String msg, T data) {
         log.debug("build fail result,code: {}, msg: {}", code, msg);
-        return new Result<T>(code, msg, data);
+        return new Result<>(code, msg, data);
     }
 
     public static <T> Result<T> fail(int code, String msg) {
