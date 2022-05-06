@@ -28,7 +28,7 @@ import java.io.IOException;
 public class OSAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private static final Logger log = LoggerFactory.getLogger(OSAuthenticationEntryPoint.class);
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     public OSAuthenticationEntryPoint(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -40,7 +40,7 @@ public class OSAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result<Object> result = Results.fail(ReturnCode.UNAUTHORIZED);
+        Result<Object> result = Results.fail(ReturnCode.UNAUTHORIZED.value(),ReturnCode.UNAUTHORIZED.message());
         objectMapper.writeValue(response.getOutputStream(), result);
 
     }

@@ -33,13 +33,13 @@ public class Results {
         return fail(code, msg, null);
     }
 
-    public static <T> Result<T> fail(ReturnCode rc) {
-        return fail(rc.value(), rc.message());
-    }
-
-    public static <T> Result<T> fail(ReturnCode rc, T data) {
-        return fail(rc.value(), rc.message(), data);
-    }
+//    public static <T> Result<T> fail(ReturnCode rc) {
+//        return fail(rc.value(), rc.message());
+//    }
+//
+//    public static <T> Result<T> fail(ReturnCode rc, T data) {
+//        return fail(rc.value(), rc.message(), data);
+//    }
 
     public static ModelAndView failView(int code, String msg, Object data) {
         ModelAndView mav = new ModelAndView(new MappingJackson2JsonView());

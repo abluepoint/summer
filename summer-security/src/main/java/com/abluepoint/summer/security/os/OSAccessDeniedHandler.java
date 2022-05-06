@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 
 public class OSAccessDeniedHandler implements AccessDeniedHandler {
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     public OSAccessDeniedHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -36,7 +36,7 @@ public class OSAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         HttpResult httpResult = new HttpResult(LocalDateTime.now(), HttpStatus.FORBIDDEN.value(), accessDeniedException.getMessage(),request.getContextPath());
 
-        Result<HttpResult> result = Results.fail(ReturnCode.FORBIDDEN,httpResult);
+        Result<HttpResult> result = Results.fail(ReturnCode.FORBIDDEN.value(),ReturnCode.FORBIDDEN.message(),httpResult);
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 

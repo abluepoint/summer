@@ -50,7 +50,7 @@ public class OSAuthenticationHandler implements AuthenticationHandler {
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result<Object> result = Results.fail(ReturnCode.LOGIN_FAILED);
+        Result<Object> result = Results.fail(ReturnCode.LOGIN_FAILED.value(),ReturnCode.LOGIN_FAILED.message());
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 
