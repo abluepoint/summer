@@ -4,6 +4,7 @@ import com.abluepoint.summer.common.exception.Messageable;
 import com.abluepoint.summer.mvc.domain.Results;
 import com.abluepoint.summer.mvc.validate.ValidateException;
 import com.abluepoint.summer.mvc.validate.ValidateExceptions;
+import org.slf4j.Logger;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceAware;
 import org.springframework.web.servlet.HandlerExceptionResolver;
@@ -21,6 +22,7 @@ import java.util.*;
 
 public class SummerHandlerExceptionResolver implements HandlerExceptionResolver, MessageSourceAware {
 
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(SummerHandlerExceptionResolver.class);
     private MessageSource messageSource;
 
     private ExceptionCodeMapping exceptionCodeMapping;
@@ -33,6 +35,7 @@ public class SummerHandlerExceptionResolver implements HandlerExceptionResolver,
     public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
 
         if (ex instanceof ValidateExceptions) {
+
             ValidateExceptions exs = ((ValidateExceptions) ex);
             List<ValidateException> list = exs.getErrors();
             ValidateException validateEx = null;
@@ -42,25 +45,52 @@ public class SummerHandlerExceptionResolver implements HandlerExceptionResolver,
                 validateEx = list.get(i);
                 temp = new HashMap<>(2);
                 temp.put("name", validateEx.getName());
-                temp.put("errorMsg", getMessage(request,validateEx));
+                temp.put("errorMsg", getMessage(validateEx.getMessageKey(), validateEx.getArgs()));
                 errorList.add(temp);
             }
             Map<String, Object> data = new HashMap<>(1);
             data.put("errors", errorList);
-            return Results.failView(exceptionCodeMapping.getCode(exs), getMessage(request,exs), data);
+
+            String messageKey = ex.getMessage();
+            int dotIndex = messageKey.indexOf(".");
+            if (dotIndex != -1) {
+                String rcCodeStr = messageKey.substring(0, dotIndex);
+                try {
+                    Integer rcCode = Integer.valueOf(rcCodeStr);
+                    return Results.failView(rcCode, getMessage(messageKey, null), data);
+                } catch (Exception e) {
+                    log.error("messageKey must start with code", e);
+                }
+            }
+
+            return Results.failView(exceptionCodeMapping.getCode(exs), getMessage(exs.getMessageKey(), exs.getArgs()), data);
 
         } else if (ex instanceof Messageable) {
+
             Messageable message = (Messageable) ex;
-            return Results.failView(exceptionCodeMapping.getCode(ex), getMessage(request,message));
+            String messageKey = message.getMessageKey();
+            int dotIndex = messageKey.indexOf(".");
+            if (dotIndex != -1) {
+                String rcCodeStr = messageKey.substring(0, dotIndex);
+                try {
+                    Integer rcCode = Integer.valueOf(rcCodeStr);
+                    return Results.failView(rcCode, getMessage(messageKey, message.getArgs()));
+                } catch (Exception e) {
+                    log.error("messageKey must start with code", e);
+                }
+            }
+            return Results.failView(exceptionCodeMapping.getCode(ex), getMessage(messageKey, message.getArgs()));
+
         } else {
-            return Results.failView(exceptionCodeMapping.getCode(ex), messageSource.getMessage("system.exception.undefined",null, Locale.SIMPLIFIED_CHINESE));
+            return Results.failView(exceptionCodeMapping.getCode(ex), getMessage("-1.system.exception.undefined", null));
         }
 
 
     }
 
-    protected String getMessage(HttpServletRequest request,Messageable messageable) {
-        return messageSource.getMessage(messageable.getMessageKey(),messageable.getArgs(), Locale.SIMPLIFIED_CHINESE);
+
+    protected String getMessage(String messageKey, Object[] args) {
+        return messageSource.getMessage(messageKey, args, Locale.SIMPLIFIED_CHINESE);
     }
 
     @Override

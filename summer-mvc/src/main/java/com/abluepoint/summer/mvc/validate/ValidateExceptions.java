@@ -17,7 +17,12 @@ public class ValidateExceptions extends SummerException {
     private List<ValidateException> errors;
 
     public ValidateExceptions() {
-        super("validate.errors");
+        super("400.validate.errors");
+        this.errors = new ArrayList<>();
+    }
+
+    public ValidateExceptions(String messageKey) {
+        super(messageKey);
         this.errors = new ArrayList<>();
     }
 

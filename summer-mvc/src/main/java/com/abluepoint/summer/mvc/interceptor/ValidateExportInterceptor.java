@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.ValidationMessage;
 import org.springframework.http.HttpMethod;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -27,11 +28,12 @@ import org.springframework.web.util.WebUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ValidateExportInterceptor implements HandlerInterceptor {
+public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
 
     private static final AnnotationMetadataManager metadataManager = AnnotationMetadataManager.INSTANCE;
     /**
@@ -53,14 +55,12 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
         HandlerMethod hm = (HandlerMethod) handler;
 
         FieldsMeta fieldsMeta = metadataManager.getFieldsMeta(hm);
+
         FieldJsonSchema fieldJsonSchema = metadataManager.getFieldJsonSchemaMeta(hm);
 
         boolean isJsonSchema = fieldJsonSchema != null;
-        if (isJsonSchema && fieldsMeta.hasFields()) {
-            throw new ValidateException("validate.field.illegal_config_both");
-        }
 
-        ValidateExceptions exceptions = new ValidateExceptions();
+        ValidateExceptions exceptions = new ValidateExceptions("400.validate.errors");
 
         Map<String, Object> data = initDataContainer(fieldsMeta.count());
 
@@ -87,7 +87,7 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
                     String countStr = request.getParameter(fieldList.getCountParam());
                     Matcher matcher = countPattern.matcher(countStr);
                     if (!matcher.matches()) {
-                        exceptions.add(new ValidateException("validate.field.list.illegal.count", fieldList.getName(), countStr));
+                        exceptions.add(new ValidateException("400.field.list.illegal_count", fieldList.getName(), countStr));
                     } else {
                         int count = Integer.parseInt(countStr);
                         FieldMeta[] items = fieldList.getFields();
@@ -112,33 +112,16 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
             }
         }
 
-        if (isJsonSchema) {
-            if (!HttpMethod.POST.matches(request.getMethod())) {
-                throw new ValidateException("field.config.json_schema.http_method_must_be_post");
-            }
-            CachingSupportServletRequestWrap wrapper = WebUtils.getNativeRequest(request, CachingSupportServletRequestWrap.class);
-            if (wrapper == null) {
-                throw new SummerException("system.request.not_cached");
-            }
-            if (!wrapper.isCached()) {
-                wrapper.cacheRequest();
-            }
-            String schemaId = fieldJsonSchema.value();
-            JsonSchema schema = jsonSchemaManager.getJsonSchema(schemaId);
-            JsonNode node = objectMapper.readTree(wrapper.getByteArray());
-            Set<ValidationMessage> errors = schema.validate(node);
-            for (ValidationMessage error : errors) {
-                exceptions.add(new ValidateException("validate.json." + error.getType(), error.getArguments()));
-            }
-            if (!exceptions.isEmpty()) {
-                throw exceptions;
-            }
+        if(isJsonSchema){
+            validateJsonSchema(request, fieldJsonSchema, exceptions, jsonSchemaManager, objectMapper);
         }
 
         request.setAttribute(Context.DATA_ATTR, data);
 
         return true;
     }
+
+
 
     protected HashMap<String, Object> initDataContainer(int oriSize) {
         return new HashMap<>(oriSize + 10);
@@ -157,8 +140,8 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
         }
 
         if (field.isRequired()) {
-            if (StringUtils.isEmpty(value)) {
-                exceptions.add(new ValidateException("validate.field.required", new Object[]{paramName, value, field.getStyle().getDesc()}));
+            if (ObjectUtils.isEmpty(value)) {
+                exceptions.add(new ValidateException("400.field.required", new Object[]{paramName, value, field.getStyle().getDesc()}));
             }
         }
 
@@ -169,7 +152,7 @@ public class ValidateExportInterceptor implements HandlerInterceptor {
                     data.put(name, style.getTypedObject(value));
                 }
             } else {
-                exceptions.add(new ValidateException("validate.field.error", new Object[]{paramName, value, field.getStyle().getDesc()}));
+                exceptions.add(new ValidateException("400.field.error", new Object[]{paramName, value, field.getStyle().getDesc()}));
             }
         }
     }

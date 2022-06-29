@@ -30,7 +30,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ValidateOnlyInterceptor implements HandlerInterceptor {
+public class ValidateOnlyInterceptor extends ValidateAbstractInterceptor {
 
     private static final AnnotationMetadataManager metadataManager = AnnotationMetadataManager.INSTANCE;
     /**
@@ -55,9 +55,6 @@ public class ValidateOnlyInterceptor implements HandlerInterceptor {
         FieldsMeta fieldsMeta = metadataManager.getFieldsMeta(hm);
 
         boolean isJsonSchema = fieldJsonSchema != null;
-        if (isJsonSchema && fieldsMeta.hasFields()) {
-            throw new ValidateException("field.config.both.illegal");
-        }
 
         ValidateExceptions exceptions = new ValidateExceptions();
 
@@ -84,7 +81,7 @@ public class ValidateOnlyInterceptor implements HandlerInterceptor {
                     String countStr = request.getParameter(fieldList.getCountParam());
                     Matcher matcher = countPattern.matcher(countStr);
                     if (!matcher.matches()) {
-                        exceptions.add(new ValidateException("validate.field.list.illegal.count", new Object[] { fieldList.getName(), countStr }));
+                        exceptions.add(new ValidateException("400.field.list.illegal_count", new Object[] { fieldList.getName(), countStr }));
                     } else {
                         int count = Integer.parseInt(countStr);
                         FieldMeta[] items = fieldList.getFields();
@@ -106,31 +103,9 @@ public class ValidateOnlyInterceptor implements HandlerInterceptor {
             }
         }
 
-        if (isJsonSchema) {
-            if (!HttpMethod.POST.matches(request.getMethod())) {
-                throw new ValidateException("field.config.json_schema.http_method_must_be_post");
-            }
-
-            CachingSupportServletRequestWrap wrapper = WebUtils.getNativeRequest(request, CachingSupportServletRequestWrap.class);
-            if (wrapper == null) {
-                throw new SummerException("system.request.not_cached");
-            }
-            if(!wrapper.isCached()){
-                wrapper.cacheRequest();
-            }
-            String schemaId = fieldJsonSchema.value();
-            JsonSchema schema = jsonSchemaManager.getJsonSchema(schemaId);
-            JsonNode node = objectMapper.readTree(wrapper.getByteArray());
-
-            Set<ValidationMessage> errors = schema.validate(node);
-            for(ValidationMessage error:errors){
-                exceptions.add(new ValidateException("validate.json."+error.getType(), error.getArguments()));
-            }
-            if (!exceptions.isEmpty()) {
-                throw exceptions;
-            }
+        if(isJsonSchema){
+            validateJsonSchema(request, fieldJsonSchema, exceptions, jsonSchemaManager, objectMapper);
         }
-
         return true;
     }
 
@@ -146,13 +121,13 @@ public class ValidateOnlyInterceptor implements HandlerInterceptor {
 
         if (field.isRequired()) {
             if (StringUtils.isEmpty(value)) {
-                exceptions.add(new ValidateException("validate.field.required", new Object[] { paramName, value, field.getStyle().getDesc() }));
+                exceptions.add(new ValidateException("400.field.required", new Object[] { paramName, value, field.getStyle().getDesc() }));
             }
         }
 
         if (value != null) {
             if (!style.validate(value)) {
-                exceptions.add(new ValidateException("validate.field.error", new Object[] { paramName, value, field.getStyle().getDesc() }));
+                exceptions.add(new ValidateException("400.field.error", new Object[] { paramName, value, field.getStyle().getDesc() }));
             }
         }
     }

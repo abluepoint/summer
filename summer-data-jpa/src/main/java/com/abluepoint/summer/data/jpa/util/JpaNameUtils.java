@@ -38,29 +38,31 @@ public abstract class JpaNameUtils {
             if (begin != -1) {
                 int end = express.lastIndexOf("##");
                 if (end != -1) {
-                    return express.substring(begin+2,end).trim();
+                    return express.substring(begin + 2, end).trim();
                 }
             }
         }
         return null;
     }
 
-    public static String likeWrap(String property){
-        Assert.hasLength(property,"property not null");
-
+    public static String likeWrap(String property) {
+        if (property == null) {
+            return null;
+        }
         StringBuilder stringBuilder = new StringBuilder("%");
         stringBuilder.append(property).append("%");
         return stringBuilder.toString();
     }
 
-    public static String rightLikeWrap(String property){
-        Assert.hasLength(property,"property not null");
+    public static String rightLikeWrap(String property) {
+        if (property == null) {
+            return null;
+        }
 
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(property).append("%");
         return stringBuilder.toString();
     }
-
 
 
 }
