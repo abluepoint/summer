@@ -1,5 +1,6 @@
 package com.abluepoint.summer.data.jpa.util;
 
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 public abstract class JpaNameUtils {
@@ -43,4 +44,23 @@ public abstract class JpaNameUtils {
         }
         return null;
     }
+
+    public static String likeWrap(String property){
+        Assert.hasLength(property,"property not null");
+
+        StringBuilder stringBuilder = new StringBuilder("%");
+        stringBuilder.append(property).append("%");
+        return stringBuilder.toString();
+    }
+
+    public static String rightLikeWrap(String property){
+        Assert.hasLength(property,"property not null");
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(property).append("%");
+        return stringBuilder.toString();
+    }
+
+
+
 }

@@ -34,9 +34,9 @@ public class OSAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.OK.value());
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        HttpResult httpResult = new HttpResult(LocalDateTime.now(), HttpStatus.FORBIDDEN.value(), accessDeniedException.getMessage(),request.getContextPath());
+        HttpResult httpResult = new HttpResult(LocalDateTime.now(), HttpStatus.FORBIDDEN.value(), accessDeniedException.getMessage(), request.getContextPath());
 
-        Result<HttpResult> result = Results.fail(ReturnCode.FORBIDDEN.value(),ReturnCode.FORBIDDEN.message(),httpResult);
+        Result<HttpResult> result = Results.fail(ReturnCode.FORBIDDEN.value(), ReturnCode.FORBIDDEN.message(), httpResult);
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 

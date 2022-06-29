@@ -9,19 +9,19 @@ public class Results {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Results.class);
 
     public static <T> Result<T> success() {
-        return success(ReturnCode.OK.message());
+        return success(ReturnCode.OK.message(),null);
     }
 
     public static <T> Result<T> success(T data) {
         return success(ReturnCode.OK.message(), data);
     }
 
-    private static <T> Result<T> success(String msg) {
-        return success(msg, null);
+    public static <T> Result<T> success(String msg, T data) {
+        return success(ReturnCode.OK.value(),msg,data);
     }
 
-    private static <T> Result<T> success(String msg, T data) {
-        return new Result<>(ReturnCode.OK.value(), msg, data);
+    public static <T> Result<T> success(int code ,String msg, T data) {
+        return new Result<>(code, msg, data);
     }
 
     public static <T> Result<T> fail(int code, String msg, T data) {
@@ -32,14 +32,6 @@ public class Results {
     public static <T> Result<T> fail(int code, String msg) {
         return fail(code, msg, null);
     }
-
-//    public static <T> Result<T> fail(ReturnCode rc) {
-//        return fail(rc.value(), rc.message());
-//    }
-//
-//    public static <T> Result<T> fail(ReturnCode rc, T data) {
-//        return fail(rc.value(), rc.message(), data);
-//    }
 
     public static ModelAndView failView(int code, String msg, Object data) {
         ModelAndView mav = new ModelAndView(new MappingJackson2JsonView());

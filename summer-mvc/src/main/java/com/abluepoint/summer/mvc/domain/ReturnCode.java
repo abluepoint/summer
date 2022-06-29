@@ -3,11 +3,11 @@ package com.abluepoint.summer.mvc.domain;
 import org.springframework.lang.Nullable;
 
 public enum ReturnCode {
-    OK(0, "ok"),
-    PENDING(1, "pending"),
-    FORBIDDEN(403, "ok"),
-    UNAUTHORIZED(401,"unauthorized"),
-    LOGIN_FAILED(1001,"login failed"),
+    OK(0, "system.message.ok"),
+    PENDING(1, "system.message.pending"),
+    FORBIDDEN(403, "system.message.forbidden"),
+    UNAUTHORIZED(401,"system.message.unauthorized"),
+    LOGIN_FAILED(1001,"system.message.login_failed"),
     ;
 
     private final int value;

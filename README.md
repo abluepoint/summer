@@ -1,5 +1,5 @@
 # summer & blue
 
 ```bash
-mvn versions:set -DgenerateBackupPoms=false -DnewVersion=3.1.2-SNAPSHOT && mvn -N versions:update-child-modules
+mvn versions:set -DgenerateBackupPoms=false -DnewVersion=3.1.6 && mvn -N versions:update-child-modules
 ```
