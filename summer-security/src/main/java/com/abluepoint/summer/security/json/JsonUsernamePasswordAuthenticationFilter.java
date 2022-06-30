@@ -82,16 +82,23 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
 //			}
         }
 
-        if (username == null)
+        if (username == null) {
             throw new BadCredentialsException("username is null");
-        if (password == null)
+        }
+        if (password == null) {
             throw new BadCredentialsException("password is null");
+        }
 
         username = username.trim();
+        password = decrypt(password);
 
         UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
 
         return getAuthenticationManager().authenticate(authRequest);
+    }
+
+    protected String decrypt(String password) {
+        return password;
     }
 
 }

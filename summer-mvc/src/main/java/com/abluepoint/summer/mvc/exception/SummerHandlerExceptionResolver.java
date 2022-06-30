@@ -1,6 +1,7 @@
 package com.abluepoint.summer.mvc.exception;
 
 import com.abluepoint.summer.common.exception.Messageable;
+import com.abluepoint.summer.mvc.domain.R;
 import com.abluepoint.summer.mvc.domain.Results;
 import com.abluepoint.summer.mvc.validate.ValidateException;
 import com.abluepoint.summer.mvc.validate.ValidateExceptions;
@@ -52,15 +53,9 @@ public class SummerHandlerExceptionResolver implements HandlerExceptionResolver,
             data.put("errors", errorList);
 
             String messageKey = ex.getMessage();
-            int dotIndex = messageKey.indexOf(".");
-            if (dotIndex != -1) {
-                String rcCodeStr = messageKey.substring(0, dotIndex);
-                try {
-                    Integer rcCode = Integer.valueOf(rcCodeStr);
-                    return Results.failView(rcCode, getMessage(messageKey, null), data);
-                } catch (Exception e) {
-                    log.error("messageKey must start with code", e);
-                }
+            Integer rcCode = R.getRcCode(messageKey);
+            if (rcCode != null) {
+                return Results.failView(rcCode, getMessage(messageKey, null));
             }
 
             return Results.failView(exceptionCodeMapping.getCode(exs), getMessage(exs.getMessageKey(), exs.getArgs()), data);
@@ -69,16 +64,12 @@ public class SummerHandlerExceptionResolver implements HandlerExceptionResolver,
 
             Messageable message = (Messageable) ex;
             String messageKey = message.getMessageKey();
-            int dotIndex = messageKey.indexOf(".");
-            if (dotIndex != -1) {
-                String rcCodeStr = messageKey.substring(0, dotIndex);
-                try {
-                    Integer rcCode = Integer.valueOf(rcCodeStr);
-                    return Results.failView(rcCode, getMessage(messageKey, message.getArgs()));
-                } catch (Exception e) {
-                    log.error("messageKey must start with code", e);
-                }
+
+            Integer rcCode = R.getRcCode(messageKey);
+            if (rcCode != null) {
+                return Results.failView(rcCode, getMessage(messageKey, message.getArgs()));
             }
+
             return Results.failView(exceptionCodeMapping.getCode(ex), getMessage(messageKey, message.getArgs()));
 
         } else {

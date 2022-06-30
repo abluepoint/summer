@@ -17,11 +17,11 @@ public class PageResult<T> {
     private long totalCount;
     private Integer totalPage;
 
-    private List<T> data;
+    private List<T> list;
 
     public static <T> PageResult<T> of(Page<T> page) {
         PageResult<T> pageResult = new PageResult(page.getSize(),page.getNumber()+1,page.getTotalElements(),page.getTotalPages());
-        pageResult.setData(page.getContent());
+        pageResult.setList(page.getContent());
         return pageResult;
     }
 
@@ -68,11 +68,11 @@ public class PageResult<T> {
         this.totalPage = totalPage;
     }
 
-    public List<T> getData() {
-        return data;
+    public List<T> getList() {
+        return list;
     }
 
-    public void setData(List<T> data) {
-        this.data = data;
+    public void setList(List<T> list) {
+        this.list = list;
     }
 }
