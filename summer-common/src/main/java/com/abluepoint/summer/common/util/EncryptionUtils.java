@@ -26,7 +26,7 @@ import javax.crypto.Cipher;
 public abstract class EncryptionUtils {
 
 	public static final String KEY_ALGORITHM = "RSA";
-	public static final String SIGNATURE_ALGORITHM = "SHA1withRSA";
+	public static final String SIGNATURE_ALGORITHM = "SHA256withRSA";
 
 	public static KeyPair generateKeyPair() throws NoSuchAlgorithmException {
 		KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
@@ -102,4 +102,32 @@ public abstract class EncryptionUtils {
 		return cipher.doFinal(data);
 	}
 
+	/**
+	 * @param data
+	 * @param key
+	 * @return
+	 * @throws Exception
+	 */
+	public static byte[] decryptByKey(byte[] data, Key key, String algorithm) throws Exception {
+
+		// 对数据解密
+		Cipher cipher = Cipher.getInstance(algorithm);
+		cipher.init(Cipher.DECRYPT_MODE, key);
+
+		return cipher.doFinal(data);
+	}
+
+	/**
+	 * @param data
+	 * @param key
+	 * @return
+	 * @throws Exception
+	 */
+	public static byte[] encryptByKey(byte[] data, Key key, String algorithm) throws Exception {
+
+		Cipher cipher = Cipher.getInstance(algorithm);
+		cipher.init(Cipher.ENCRYPT_MODE, key);
+
+		return cipher.doFinal(data);
+	}
 }
