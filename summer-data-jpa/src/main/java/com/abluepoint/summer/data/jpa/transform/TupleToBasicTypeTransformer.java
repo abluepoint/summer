@@ -6,6 +6,7 @@
 
 package com.abluepoint.summer.data.jpa.transform;
 
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.data.jpa.JpaSummerException;
 import com.abluepoint.summer.data.jpa.JpaSummerRuntimeException;
 import org.springframework.core.convert.ConversionService;
@@ -28,7 +29,7 @@ public class TupleToBasicTypeTransformer implements TupleTransformer {
     @Override
     public Object transformTuple(Tuple tuple, List<TupleElement<?>> elements) {
         if (elements.size() != 1) {
-            throw new JpaSummerRuntimeException("Can not cast multi column to basic type!");
+            throw new JpaSummerRuntimeException(CodeMessageEnum.SYSTEM_DATA_MULTI_COLUMN);
         }
         TupleElement te = elements.get(0);
 

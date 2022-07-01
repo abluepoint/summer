@@ -7,6 +7,7 @@
 package com.abluepoint.summer.mvc.validate;
 
 
+import com.abluepoint.summer.common.exception.CodeMessage;
 import com.abluepoint.summer.common.exception.SummerException;
 
 public class ValidateException extends SummerException {
@@ -19,18 +20,18 @@ public class ValidateException extends SummerException {
         super();
     }
 
-    public ValidateException(String message) {
-        super(message);
+    public ValidateException(CodeMessage codeMessage) {
+        super(codeMessage);
     }
 
 
-    public ValidateException(String message, Object... args) {
-        super(message, args);
+    public ValidateException(CodeMessage codeMessage, Object... args) {
+        super(codeMessage, args);
         initName(args);
     }
 
-    public ValidateException(String message, Throwable cause) {
-        super(message, cause);
+    public ValidateException(CodeMessage codeMessage, Throwable cause) {
+        super(codeMessage, cause);
     }
 
     private void initName(Object[] args) {

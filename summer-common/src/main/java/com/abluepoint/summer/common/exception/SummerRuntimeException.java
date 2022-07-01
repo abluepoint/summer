@@ -13,39 +13,49 @@ public class SummerRuntimeException extends RuntimeException implements Messagea
 
     public SummerRuntimeException() {
         super();
-        messageSupport.setMessageKey("");
+        messageSupport.setFromCodeMessage(CodeMessageEnum.SYSTEM_UNDEFINED_ERROR);
     }
 
-    public SummerRuntimeException(String message) {
-        super(message);
-        messageSupport.setMessageKey(message);
+    public SummerRuntimeException(CodeMessage codeMessage) {
+        super(codeMessage.getMessageKey());
+        messageSupport.setFromCodeMessage(codeMessage);
     }
 
-    public SummerRuntimeException(String message, Object... args) {
-        super(message);
-        messageSupport.setMessageKey(message);
+    public SummerRuntimeException(CodeMessage codeMessage, Object... args) {
+        super(codeMessage.getMessageKey());
+        messageSupport.setFromCodeMessage(codeMessage);
         messageSupport.setArgs(args);
     }
 
-    public SummerRuntimeException(String message, Throwable cause) {
-        super(message, cause);
-        messageSupport.setMessageKey(message);
+    public SummerRuntimeException(CodeMessage codeMessage, Throwable cause) {
+        super(codeMessage.getMessageKey(), cause);
+        messageSupport.setFromCodeMessage(codeMessage);
     }
 
     public SummerRuntimeException(SummerException e) {
         super(e.getMessageKey(), e);
+        messageSupport.setCode(e.getCode());
         messageSupport.setMessageKey(e.getMessageKey());
         messageSupport.setArgs(e.getArgs());
     }
 
+
     public SummerRuntimeException(Throwable cause) {
         super(cause.getMessage(), cause);
         if (cause instanceof Messageable) {
-            messageSupport.setMessageKey(((Messageable) cause).getMessageKey());
+            messageSupport.setFromCodeMessage((Messageable) cause);
             messageSupport.setArgs(((Messageable) cause).getArgs());
         } else {
+            messageSupport.setFromCodeMessage(CodeMessageEnum.SYSTEM_UNDEFINED_ERROR);
             messageSupport.setMessageKey(cause.getMessage());
         }
+    }
+
+
+
+    @Override
+    public Integer getCode() {
+        return messageSupport.getCode();
     }
 
     @Override

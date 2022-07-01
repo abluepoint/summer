@@ -7,35 +7,53 @@ package com.abluepoint.summer.common.exception;
  */
 
 public class MessageSupport implements Messageable {
-	private static final long serialVersionUID = -979815032339047301L;
-	private String messageKey = null;
-	private Object[] args;
+    private static final long serialVersionUID = -979815032339047301L;
 
-	public static void exportMessage(Messageable messageable, StringBuilder sb) {
-		sb.append(messageable.getMessageKey());
-		if (messageable.getArgs() != null) {
-			sb.append(" Args:");
-			Object[] arrayOfObject = messageable.getArgs();
-			int length = arrayOfObject.length;
-			for (int i = 0; i < length; i++) {
-				sb.append(arrayOfObject[i]).append(" ");
-			}
-		}
-	}
+    private Integer code = null;
+    private String messageKey = null;
+    private Object[] args;
 
-	public void setMessageKey(String messageKey) {
-		this.messageKey = messageKey;
-	}
+    public static void exportMessage(Messageable messageable, StringBuilder sb) {
+        sb.append(messageable.getMessageKey());
+        if (messageable.getArgs() != null) {
+            sb.append(" Args:");
+            Object[] arrayOfObject = messageable.getArgs();
+            int length = arrayOfObject.length;
+            for (int i = 0; i < length; i++) {
+                sb.append(arrayOfObject[i]).append(" ");
+            }
+        }
+    }
 
-	public String getMessageKey() {
-		return this.messageKey;
-	}
+    public void setMessageKey(String messageKey) {
+        this.messageKey = messageKey;
+    }
 
-	public void setArgs(Object[] args) {
-		this.args = args;
-	}
+    public void setCode(Integer code) {
+        this.code = code;
+    }
 
-	public Object[] getArgs() {
-		return this.args;
-	}
+    @Override
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getMessageKey() {
+        return this.messageKey;
+    }
+
+    public void setArgs(Object[] args) {
+        this.args = args;
+    }
+
+    public Object[] getArgs() {
+        return this.args;
+    }
+
+    public void setFromCodeMessage(CodeMessage codeMessage) {
+        this.code = codeMessage.getCode();
+        this.messageKey = codeMessage.getMessageKey();
+    }
+
+
 }

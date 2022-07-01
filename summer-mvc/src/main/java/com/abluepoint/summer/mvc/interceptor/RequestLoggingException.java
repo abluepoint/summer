@@ -6,6 +6,7 @@ package com.abluepoint.summer.mvc.interceptor;
  * Date:2020-03-10 17:45:10
  */
 
+import com.abluepoint.summer.common.exception.CodeMessage;
 import com.abluepoint.summer.common.exception.SummerException;
 
 public class RequestLoggingException extends SummerException {
@@ -14,16 +15,16 @@ public class RequestLoggingException extends SummerException {
         super();
     }
 
-    public RequestLoggingException(String message) {
-        super(message);
+    public RequestLoggingException(CodeMessage codeMessage) {
+        super(codeMessage);
     }
 
-    public RequestLoggingException(String message, Object[] args) {
-        super(message, args);
+    public RequestLoggingException(CodeMessage codeMessage, Object[] args) {
+        super(codeMessage, args);
     }
 
-    public RequestLoggingException(String message, Throwable cause) {
-        super(message, cause);
+    public RequestLoggingException(CodeMessage codeMessage, Throwable cause) {
+        super(codeMessage, cause);
     }
 
 }

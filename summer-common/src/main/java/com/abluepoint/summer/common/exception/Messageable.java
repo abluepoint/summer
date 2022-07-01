@@ -8,7 +8,6 @@ package com.abluepoint.summer.common.exception;
 
 import java.io.Serializable;
 
-public interface Messageable extends Serializable {
-	public String getMessageKey();
-	public Object[] getArgs();
+public interface Messageable extends CodeMessage, Serializable {
+    public Object[] getArgs();
 }

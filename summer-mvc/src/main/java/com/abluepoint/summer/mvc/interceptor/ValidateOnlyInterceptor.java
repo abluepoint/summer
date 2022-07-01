@@ -6,6 +6,7 @@
 
 package com.abluepoint.summer.mvc.interceptor;
 
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.common.exception.SummerException;
 import com.abluepoint.summer.common.util.AppContextUtil;
 import com.abluepoint.summer.mvc.annotation.*;
@@ -81,7 +82,7 @@ public class ValidateOnlyInterceptor extends ValidateAbstractInterceptor {
                     String countStr = request.getParameter(fieldList.getCountParam());
                     Matcher matcher = countPattern.matcher(countStr);
                     if (!matcher.matches()) {
-                        exceptions.add(new ValidateException("400.field.list.illegal_count", new Object[] { fieldList.getName(), countStr }));
+                        exceptions.add(new ValidateException(CodeMessageEnum.VALIDATE_FIELD_LIST_ILLEGAL_COUNT, new Object[] { fieldList.getName(), countStr }));
                     } else {
                         int count = Integer.parseInt(countStr);
                         FieldMeta[] items = fieldList.getFields();
@@ -121,13 +122,13 @@ public class ValidateOnlyInterceptor extends ValidateAbstractInterceptor {
 
         if (field.isRequired()) {
             if (StringUtils.isEmpty(value)) {
-                exceptions.add(new ValidateException("400.field.required", new Object[] { paramName, value, field.getStyle().getDesc() }));
+                exceptions.add(new ValidateException(CodeMessageEnum.VALIDATE_FIELD_REQUIRED, new Object[] { paramName, value, field.getStyle().getDesc() }));
             }
         }
 
         if (value != null) {
             if (!style.validate(value)) {
-                exceptions.add(new ValidateException("400.field.error", new Object[] { paramName, value, field.getStyle().getDesc() }));
+                exceptions.add(new ValidateException(CodeMessageEnum.VALIDATE_FIELD_ERROR, new Object[] { paramName, value, field.getStyle().getDesc() }));
             }
         }
     }

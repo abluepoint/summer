@@ -19,25 +19,29 @@ public class SummerException extends Exception implements Messageable {
         messageSupport.setMessageKey(EMPTY_STRING);
     }
 
-    public SummerException(String message) {
-        super(message);
-        messageSupport.setMessageKey(message);
+    public SummerException(CodeMessage codeMessage) {
+        super(codeMessage.getMessageKey());
+        messageSupport.setFromCodeMessage(codeMessage);
     }
 
     /**
      * Throwable类型的参数放在最后,不作为组装message的参数
-     * @param message
      * @param args
      */
-    public SummerException(String message, Object... args) {
-        super(message);
-        messageSupport.setMessageKey(message);
+    public SummerException(CodeMessage codeMessage, Object... args) {
+        super(codeMessage.getMessageKey());
+        messageSupport.setFromCodeMessage(codeMessage);
         messageSupport.setArgs(args);
     }
 
-    public SummerException(String message, Throwable cause) {
-        super(message, cause);
-        messageSupport.setMessageKey(message);
+    public SummerException(CodeMessage codeMessage, Throwable cause) {
+        super(codeMessage.getMessageKey(), cause);
+        messageSupport.setFromCodeMessage(codeMessage);
+    }
+
+    @Override
+    public Integer getCode() {
+        return messageSupport.getCode();
     }
 
     @Override

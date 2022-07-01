@@ -6,6 +6,8 @@ package com.abluepoint.summer.mvc.validate;
  * Date:2020-03-13 16:25:13
  */
 
+import com.abluepoint.summer.common.exception.CodeMessage;
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.common.exception.MessageSupport;
 import com.abluepoint.summer.common.exception.SummerException;
 
@@ -17,12 +19,12 @@ public class ValidateExceptions extends SummerException {
     private List<ValidateException> errors;
 
     public ValidateExceptions() {
-        super("400.validate.errors");
+        super(CodeMessageEnum.VALIDATE_ERRORS);
         this.errors = new ArrayList<>();
     }
 
-    public ValidateExceptions(String messageKey) {
-        super(messageKey);
+    public ValidateExceptions(CodeMessage codeMessage) {
+        super(codeMessage);
         this.errors = new ArrayList<>();
     }
 
@@ -38,7 +40,7 @@ public class ValidateExceptions extends SummerException {
     public String getMessage() {
         StringBuilder sb = new StringBuilder(super.getMessage());
         sb.append("\r\n");
-        for (ValidateException ve:errors){
+        for (ValidateException ve : errors) {
             MessageSupport.exportMessage(ve, sb);
             sb.append("\r\n");
         }

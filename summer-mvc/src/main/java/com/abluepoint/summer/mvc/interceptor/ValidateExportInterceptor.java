@@ -6,6 +6,7 @@
 
 package com.abluepoint.summer.mvc.interceptor;
 
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.common.exception.SummerException;
 import com.abluepoint.summer.common.util.AppContextUtil;
 import com.abluepoint.summer.mvc.annotation.*;
@@ -60,7 +61,7 @@ public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
 
         boolean isJsonSchema = fieldJsonSchema != null;
 
-        ValidateExceptions exceptions = new ValidateExceptions("400.validate.errors");
+        ValidateExceptions exceptions = new ValidateExceptions();
 
         Map<String, Object> data = initDataContainer(fieldsMeta.count());
 
@@ -87,7 +88,7 @@ public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
                     String countStr = request.getParameter(fieldList.getCountParam());
                     Matcher matcher = countPattern.matcher(countStr);
                     if (!matcher.matches()) {
-                        exceptions.add(new ValidateException("400.field.list.illegal_count", fieldList.getName(), countStr));
+                        exceptions.add(new ValidateException(CodeMessageEnum.VALIDATE_FIELD_LIST_ILLEGAL_COUNT, fieldList.getName(), countStr));
                     } else {
                         int count = Integer.parseInt(countStr);
                         FieldMeta[] items = fieldList.getFields();
@@ -112,7 +113,7 @@ public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
             }
         }
 
-        if(isJsonSchema){
+        if (isJsonSchema) {
             validateJsonSchema(request, fieldJsonSchema, exceptions, jsonSchemaManager, objectMapper);
         }
 
@@ -120,7 +121,6 @@ public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
 
         return true;
     }
-
 
 
     protected HashMap<String, Object> initDataContainer(int oriSize) {
@@ -141,7 +141,7 @@ public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
 
         if (field.isRequired()) {
             if (ObjectUtils.isEmpty(value)) {
-                exceptions.add(new ValidateException("400.field.required", new Object[]{paramName, value, field.getStyle().getDesc()}));
+                exceptions.add(new ValidateException(CodeMessageEnum.VALIDATE_FIELD_REQUIRED, new Object[]{paramName, value, field.getStyle().getDesc()}));
             }
         }
 
@@ -152,7 +152,7 @@ public class ValidateExportInterceptor extends ValidateAbstractInterceptor {
                     data.put(name, style.getTypedObject(value));
                 }
             } else {
-                exceptions.add(new ValidateException("400.field.error", new Object[]{paramName, value, field.getStyle().getDesc()}));
+                exceptions.add(new ValidateException(CodeMessageEnum.VALIDATE_FIELD_ERROR, new Object[]{paramName, value, field.getStyle().getDesc()}));
             }
         }
     }

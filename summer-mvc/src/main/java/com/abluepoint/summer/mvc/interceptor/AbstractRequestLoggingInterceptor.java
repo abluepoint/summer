@@ -6,6 +6,7 @@
 
 package com.abluepoint.summer.mvc.interceptor;
 
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.mvc.filter.CachingSupportServletRequestWrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ public abstract class AbstractRequestLoggingInterceptor implements HandlerInterc
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         CachingSupportServletRequestWrap wrapper = WebUtils.getNativeRequest(request, CachingSupportServletRequestWrap.class);
         if (wrapper == null) {
-            throw new RequestLoggingException("system.error.request_not_support");
+            throw new RequestLoggingException(CodeMessageEnum.SYSTEM_REQUEST_NOT_CACHED);
         }
         wrapper.cacheRequest();
         beforeRequest(request, requestLoggingSupport.getBeforeMessage(request));

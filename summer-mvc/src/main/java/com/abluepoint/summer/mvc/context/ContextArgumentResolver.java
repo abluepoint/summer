@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.context;
 
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.common.exception.SummerRuntimeException;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -28,7 +29,7 @@ public class ContextArgumentResolver implements HandlerMethodArgumentResolver {
         if (data != null) {
             context.setData(data);
         } else {
-            throw new SummerRuntimeException("system.config.error", new Object[] { webRequest.getContextPath() });
+            throw new SummerRuntimeException(CodeMessageEnum.SYSTEM_CONFIG_ERROR, new Object[]{webRequest.getContextPath()});
         }
         return context;
     }

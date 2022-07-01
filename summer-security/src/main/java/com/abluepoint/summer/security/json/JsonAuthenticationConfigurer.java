@@ -9,6 +9,7 @@ package com.abluepoint.summer.security.json;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.HttpSecurityBuilder;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
@@ -17,7 +18,11 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 
 public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer<T, B>, B extends HttpSecurityBuilder<B>> extends AbstractHttpConfigurer<T, B> {
 
-    private JsonUsernamePasswordAuthenticationFilter authenticationFilter;
+    private AbstractAuthenticationProcessingFilter authenticationFilter;
+
+    public JsonAuthenticationConfigurer(AbstractAuthenticationProcessingFilter authenticationFilter) {
+        this.authenticationFilter = authenticationFilter;
+    }
 
     public JsonAuthenticationConfigurer() {
         this.authenticationFilter = new JsonUsernamePasswordAuthenticationFilter("/api/login");
@@ -27,7 +32,7 @@ public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer
     public void configure(B http) throws Exception {
         authenticationFilter.setAuthenticationManager(http.getSharedObject(AuthenticationManager.class));
         authenticationFilter.setSessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy());
-        JsonUsernamePasswordAuthenticationFilter filter = postProcess(authenticationFilter);
+        AbstractAuthenticationProcessingFilter filter = postProcess(authenticationFilter);
         http.addFilterAfter(filter, LogoutFilter.class);
     }
 
@@ -46,7 +51,7 @@ public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer
         return this;
     }
 
-    public JsonUsernamePasswordAuthenticationFilter getAuthenticationFilter() {
+    public AbstractAuthenticationProcessingFilter getAuthenticationFilter() {
         return authenticationFilter;
     }
 

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.mvc.interceptor;
 
+import com.abluepoint.summer.common.exception.CodeMessageDefault;
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.common.exception.SummerException;
 import com.abluepoint.summer.mvc.annotation.FieldJsonSchema;
 import com.abluepoint.summer.mvc.filter.CachingSupportServletRequestWrap;
@@ -22,11 +24,11 @@ public abstract class ValidateAbstractInterceptor implements HandlerInterceptor 
 
     protected void validateJsonSchema(HttpServletRequest request, FieldJsonSchema fieldJsonSchema, ValidateExceptions exceptions, JsonSchemaManager jsonSchemaManager, ObjectMapper objectMapper) throws SummerException, IOException {
         if (!HttpMethod.POST.matches(request.getMethod())) {
-            throw new ValidateException("-1.system.json_schema.http_method_must_be_post");
+            throw new ValidateException(CodeMessageEnum.VALIDATE_ILLEGAL_JSON_HTTP_METHOD);
         }
         CachingSupportServletRequestWrap wrapper = WebUtils.getNativeRequest(request, CachingSupportServletRequestWrap.class);
         if (wrapper == null) {
-            throw new SummerException("-1.system.request.not_cached");
+            throw new SummerException(CodeMessageEnum.SYSTEM_REQUEST_NOT_CACHED);
         }
         if (!wrapper.isCached()) {
             wrapper.cacheRequest();
@@ -36,7 +38,8 @@ public abstract class ValidateAbstractInterceptor implements HandlerInterceptor 
         JsonNode node = objectMapper.readTree(wrapper.getByteArray());
         Set<ValidationMessage> errors = schema.validate(node);
         for (ValidationMessage error : errors) {
-            exceptions.add(new ValidateException("400.json_schema." + error.getType(), error.getArguments()));
+            CodeMessageDefault codeMessageDefault = new CodeMessageDefault(CodeMessageEnum.VALIDATE_ERROR.getCode(),"validate.json_schema."+error.getType());
+            exceptions.add(new ValidateException(codeMessageDefault, error.getArguments()));
         }
         if (!exceptions.isEmpty()) {
             throw exceptions;

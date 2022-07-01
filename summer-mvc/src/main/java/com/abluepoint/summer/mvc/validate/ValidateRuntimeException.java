@@ -6,34 +6,32 @@
 
 package com.abluepoint.summer.mvc.validate;
 
+import com.abluepoint.summer.common.exception.CodeMessage;
 import com.abluepoint.summer.common.exception.SummerRuntimeException;
 
 public class ValidateRuntimeException extends SummerRuntimeException {
 
-	private static final long serialVersionUID = 2285211535401698199L;
+    private static final long serialVersionUID = 2285211535401698199L;
 
-	public ValidateRuntimeException() {
-		super();
-	}
+    public ValidateRuntimeException() {
+        super();
+    }
 
-	public ValidateRuntimeException(String message) {
-		super(message);
-	}
+    public ValidateRuntimeException(CodeMessage codeMessage) {
+        super(codeMessage);
+    }
 
-	public ValidateRuntimeException(String message, Object... args) {
-		super(message,args);
-	}
+    public ValidateRuntimeException(CodeMessage codeMessage, Object... args) {
+        super(codeMessage, args);
+    }
 
-	public ValidateRuntimeException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    public ValidateRuntimeException(CodeMessage codeMessage, Throwable cause) {
+        super(codeMessage, cause);
+    }
 
-	public ValidateRuntimeException(String message, Throwable cause, Object... args) {
-		super(message,cause,args);
-	}
-	
-	public ValidateRuntimeException(Throwable cause) {
-		super(cause);
-	}
-	
+    public ValidateRuntimeException(CodeMessage codeMessage, Throwable cause, Object... args) {
+        super(codeMessage, cause, args);
+    }
+
+
 }

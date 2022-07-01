@@ -1,5 +1,6 @@
 package com.abluepoint.summer.data.jpa;
 
+import com.abluepoint.summer.common.exception.CodeMessage;
 import com.abluepoint.summer.common.exception.SummerException;
 import com.abluepoint.summer.common.exception.SummerRuntimeException;
 
@@ -8,16 +9,16 @@ public class JpaSummerRuntimeException extends SummerRuntimeException {
     public JpaSummerRuntimeException() {
     }
 
-    public JpaSummerRuntimeException(String message) {
-        super(message);
+    public JpaSummerRuntimeException(CodeMessage codeMessage) {
+        super(codeMessage);
     }
 
-    public JpaSummerRuntimeException(String message, Object... args) {
-        super(message, args);
+    public JpaSummerRuntimeException(CodeMessage codeMessage, Object... args) {
+        super(codeMessage, args);
     }
 
-    public JpaSummerRuntimeException(String message, Throwable cause) {
-        super(message, cause);
+    public JpaSummerRuntimeException(CodeMessage codeMessage, Throwable cause) {
+        super(codeMessage, cause);
     }
 
     public JpaSummerRuntimeException(SummerException e) {
