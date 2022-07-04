@@ -4,25 +4,27 @@
  * Date:2020-12-29 18:31:29
  */
 
-package com.abluepoint.summer.security.os;
+package com.abluepoint.summer.security.app;
 
-import com.abluepoint.summer.mvc.domain.HttpResult;
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
+import com.abluepoint.summer.mvc.domain.R;
 import com.abluepoint.summer.mvc.domain.Result;
-import com.abluepoint.summer.mvc.domain.Results;
-import com.abluepoint.summer.mvc.domain.ReturnCode;
 import com.abluepoint.summer.security.AuthenticationHandler;
-import com.abluepoint.summer.security.json.JsonAuthenticateSuccessResult;
 import com.abluepoint.summer.security.jwt.JwtManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.session.web.http.CookieHttpSessionIdResolver;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -33,15 +35,23 @@ import java.util.Map;
  *
  * @author bluepoint
  */
-public class OSAuthenticationHandler implements AuthenticationHandler {
 
+public class AppAuthenticationHandler implements AuthenticationHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(AppAuthenticationHandler.class);
     private final JwtManager jwtManager;
-
     private final ObjectMapper objectMapper;
+    private final MessageSource messageSource;
 
-    public OSAuthenticationHandler(JwtManager jwtManager, ObjectMapper objectMapper) {
+    //	private static final String CURRENT_SESSION_ATTR = SESSION_REPOSITORY_ATTR + ".CURRENT_SESSION";
+
+    private static final String WRITTEN_SESSION_ID_ATTR = CookieHttpSessionIdResolver.class.getName()
+            .concat(".WRITTEN_SESSION_ID_ATTR");
+
+    public AppAuthenticationHandler(JwtManager jwtManager, ObjectMapper objectMapper, MessageSource messageSource) {
         this.jwtManager = jwtManager;
         this.objectMapper = objectMapper;
+        this.messageSource = messageSource;
     }
 
     @Override
@@ -50,7 +60,12 @@ public class OSAuthenticationHandler implements AuthenticationHandler {
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result<Object> result = Results.fail(ReturnCode.LOGIN_FAILED.value(),ReturnCode.LOGIN_FAILED.message());
+        log.info("authentication failure",exception);
+
+        Result result = R.failByMessage(messageSource, null, CodeMessageEnum.LOGIN_FAILED);
+        result.setTimestamp(LocalDateTime.now());
+        result.setPath(request.getContextPath());
+
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 
@@ -58,14 +73,15 @@ public class OSAuthenticationHandler implements AuthenticationHandler {
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         UserDetails user = (UserDetails) authentication.getPrincipal();
 
-        String token = jwtManager.createJwtToken(user.getUsername(), request.getRequestedSessionId());
+        String sessionId = (String) request.getAttribute(WRITTEN_SESSION_ID_ATTR);
+        String token = jwtManager.createJwtToken(user.getUsername(), sessionId);
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         Map<String, String> data = new HashMap<>(1);
         data.put("token", token);
 
-        Result<Map<String, String>> result = Results.success(data);
+        Result<Map<String, String>> result = R.okByMessage(messageSource, data,CodeMessageEnum.OK);
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 

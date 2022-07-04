@@ -4,13 +4,13 @@
  * Date:2020-12-29 18:32:29
  */
 
-package com.abluepoint.summer.security.os;
+package com.abluepoint.summer.security.app;
 
-import com.abluepoint.summer.mvc.domain.HttpResult;
-import com.abluepoint.summer.mvc.domain.ReturnCode;
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
+import com.abluepoint.summer.mvc.domain.R;
 import com.abluepoint.summer.mvc.domain.Result;
-import com.abluepoint.summer.mvc.domain.Results;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,12 +21,14 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
-public class OSAccessDeniedHandler implements AccessDeniedHandler {
+public class AppAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
+    private final MessageSource messageSource;
 
-    public OSAccessDeniedHandler(ObjectMapper objectMapper) {
+    public AppAccessDeniedHandler(ObjectMapper objectMapper, MessageSource messageSource) {
         this.objectMapper = objectMapper;
+        this.messageSource = messageSource;
     }
 
     @Override
@@ -34,9 +36,10 @@ public class OSAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.OK.value());
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        HttpResult httpResult = new HttpResult(LocalDateTime.now(), HttpStatus.FORBIDDEN.value(), accessDeniedException.getMessage(), request.getContextPath());
 
-        Result<HttpResult> result = Results.fail(ReturnCode.FORBIDDEN.value(), ReturnCode.FORBIDDEN.message(), httpResult);
+        Result result = R.failByMessage(messageSource,null, CodeMessageEnum.FORBIDDEN);
+        result.setTimestamp(LocalDateTime.now());
+        result.setPath(request.getContextPath());
         objectMapper.writeValue(response.getOutputStream(), result);
     }
 

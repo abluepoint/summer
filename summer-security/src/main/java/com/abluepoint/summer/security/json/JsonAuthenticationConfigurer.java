@@ -13,7 +13,9 @@ import org.springframework.security.web.authentication.AbstractAuthenticationPro
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
+import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 
 public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer<T, B>, B extends HttpSecurityBuilder<B>> extends AbstractHttpConfigurer<T, B> {
@@ -31,7 +33,7 @@ public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer
     @Override
     public void configure(B http) throws Exception {
         authenticationFilter.setAuthenticationManager(http.getSharedObject(AuthenticationManager.class));
-        authenticationFilter.setSessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy());
+        authenticationFilter.setSessionAuthenticationStrategy(http.getSharedObject(SessionAuthenticationStrategy.class));
         AbstractAuthenticationProcessingFilter filter = postProcess(authenticationFilter);
         http.addFilterAfter(filter, LogoutFilter.class);
     }

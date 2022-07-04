@@ -3,12 +3,14 @@ package com.abluepoint.summer.mvc.domain;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY )
 public class Result<T> implements Serializable {
     private int code;
     private String msg;
-    private Integer messageCount;
+    private String path;
+    private LocalDateTime timestamp;
     private T data;
 
     public Result(int status, String message, T data) {
@@ -33,11 +35,19 @@ public class Result<T> implements Serializable {
         return data;
     }
 
-    public Integer getMessageCount() {
-        return messageCount;
+    public String getPath() {
+        return path;
     }
 
-    public void setMessageCount(Integer messageCount) {
-        this.messageCount = messageCount;
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
     }
 }

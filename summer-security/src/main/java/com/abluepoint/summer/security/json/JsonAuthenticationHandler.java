@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.session.web.http.CookieHttpSessionIdResolver;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -22,6 +23,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDateTime;
+
+import static org.springframework.session.web.http.SessionRepositoryFilter.SESSION_REPOSITORY_ATTR;
 
 /**
  * <h2>JsonLoginHandler<h2>
@@ -33,6 +36,12 @@ public class JsonAuthenticationHandler implements AuthenticationHandler {
 	private JwtManager jwtManager;
 
 	private ObjectMapper objectMapper;
+
+//	private static final String CURRENT_SESSION_ATTR = SESSION_REPOSITORY_ATTR + ".CURRENT_SESSION";
+
+	private static final String WRITTEN_SESSION_ID_ATTR = CookieHttpSessionIdResolver.class.getName()
+			.concat(".WRITTEN_SESSION_ID_ATTR");
+
 
 	public JsonAuthenticationHandler(JwtManager jwtManager, ObjectMapper objectMapper) {
 		this.jwtManager = jwtManager;
@@ -48,10 +57,13 @@ public class JsonAuthenticationHandler implements AuthenticationHandler {
 		objectMapper.writeValue(response.getOutputStream(), httpResponseEntity);
 	}
 
+
+
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
 		UserDetails user = (UserDetails) authentication.getPrincipal();
-		String token = jwtManager.createJwtToken(user.getUsername());
+		String sessionId = (String) request.getAttribute(WRITTEN_SESSION_ID_ATTR);
+		String token = jwtManager.createJwtToken(user.getUsername(),sessionId);
 		HttpResult httpResult = new JsonAuthenticateSuccessResult(LocalDateTime.now(), "success", token);
 		response.setCharacterEncoding("utf-8");
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);

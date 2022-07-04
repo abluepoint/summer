@@ -7,6 +7,7 @@
 package com.abluepoint.summer.mvc.filter;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpMethod;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.util.WebUtils;
 
@@ -53,6 +54,9 @@ public class CachingSupportServletRequestWrap extends HttpServletRequestWrapper 
 
     @Override
     public synchronized ServletInputStream getInputStream() throws IOException {
+        if(this.getMethod().equals("GET")||this.getMethod().equals("DELETE")){
+            return null;
+        }
         if (this.inputStream == null) {
             if (cached) {
                 byteArray = StreamUtils.copyToByteArray(super.getInputStream());

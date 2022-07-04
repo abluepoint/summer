@@ -13,6 +13,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "summer.security")
 public class SecurityProperties {
 
+    private boolean debug = false;
     private boolean ignoreAll = false;
     private String[] ignored;
 
@@ -30,5 +31,13 @@ public class SecurityProperties {
 
     public void setIgnoreAll(boolean ignoreAll) {
         this.ignoreAll = ignoreAll;
+    }
+
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
     }
 }

@@ -56,7 +56,6 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
 		}
 
 		JwtAuthenticationToken token = new JwtAuthenticationToken(user, jwtToken, user.getAuthorities());
-		token.setDetails(user);
 		return token;
 	}
 

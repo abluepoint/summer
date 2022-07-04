@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.domain;
 
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import org.slf4j.Logger;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
@@ -9,15 +10,15 @@ public class Results {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Results.class);
 
     public static <T> Result<T> success() {
-        return success(ReturnCode.OK.message(),null);
+        return success(CodeMessageEnum.OK.getMessageKey(),null);
     }
 
     public static <T> Result<T> success(T data) {
-        return success(ReturnCode.OK.message(), data);
+        return success(CodeMessageEnum.OK.getMessageKey(), data);
     }
 
     public static <T> Result<T> success(String msg, T data) {
-        return success(ReturnCode.OK.value(),msg,data);
+        return success(CodeMessageEnum.OK.getCode(),msg,data);
     }
 
     public static <T> Result<T> success(int code ,String msg, T data) {

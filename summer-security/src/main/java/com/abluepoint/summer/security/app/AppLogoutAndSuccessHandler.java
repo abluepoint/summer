@@ -4,14 +4,14 @@
  * Date:2020-12-29 18:33:29
  */
 
-package com.abluepoint.summer.security.os;
+package com.abluepoint.summer.security.app;
 
-import com.abluepoint.summer.mvc.domain.HttpResult;
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
+import com.abluepoint.summer.mvc.domain.R;
 import com.abluepoint.summer.mvc.domain.Result;
-import com.abluepoint.summer.mvc.domain.Results;
 import com.abluepoint.summer.security.LogoutAndSuccessHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpStatus;
+import org.springframework.context.MessageSource;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 
@@ -19,13 +19,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Map;
 
-public class OSLogoutAndSuccessHandler implements LogoutAndSuccessHandler {
+public class AppLogoutAndSuccessHandler implements LogoutAndSuccessHandler {
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
+    private final MessageSource messageSource;
 
-    public OSLogoutAndSuccessHandler(ObjectMapper objectMapper) {
+    public AppLogoutAndSuccessHandler(ObjectMapper objectMapper, MessageSource messageSource) {
         this.objectMapper = objectMapper;
+        this.messageSource = messageSource;
     }
 
     /**
@@ -45,7 +48,10 @@ public class OSLogoutAndSuccessHandler implements LogoutAndSuccessHandler {
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result<String> result = Results.success("logout success");
+        Result<Map<String, String>> result = R.okByMessage(messageSource,null, CodeMessageEnum.OK);
+        result.setTimestamp(LocalDateTime.now());
+        result.setPath(request.getContextPath());
+
         objectMapper.writeValue(response.getOutputStream(), result);
 
     }

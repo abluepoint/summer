@@ -6,6 +6,7 @@
 
 package com.abluepoint.summer.security.jwt;
 
+import com.abluepoint.summer.security.util.JwtTokenUtil;
 import com.auth0.jwt.exceptions.JWTDecodeException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
@@ -32,7 +33,7 @@ import java.util.List;
 
 
 /**
- * todo: need impl jti bassed filter
+ * todo: need impl jti based filter
  */
 public class JwtAuthenticationJtiFilter extends OncePerRequestFilter {
 
@@ -55,11 +56,7 @@ public class JwtAuthenticationJtiFilter extends OncePerRequestFilter {
 	}
 
 	protected String getJwtToken(HttpServletRequest request) {
-		String authInfo = request.getHeader("Authorization");
-		if (authInfo != null) {
-			authInfo = authInfo.replace("Bearer ", "");
-		}
-		return authInfo;
+		return JwtTokenUtil.getJwtToken(request);
 	}
 
 	@Override

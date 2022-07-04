@@ -1,7 +1,11 @@
 package com.abluepoint.summer.mvc.domain;
 
+import com.abluepoint.summer.common.exception.CodeMessage;
+import com.abluepoint.summer.common.exception.CodeMessageDefault;
+import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.common.util.AppContextUtil;
 import org.slf4j.Logger;
+import org.springframework.context.MessageSource;
 
 import java.util.Locale;
 
@@ -14,47 +18,32 @@ public class R {
     }
 
     public static <T> Result<T> ok() {
-        return ok(null, ReturnCode.OK.message(), null);
+        return ok(null);
     }
 
     public static <T> Result<T> ok(T data) {
-        return ok(data, ReturnCode.OK.message());
+        return ok(data, CodeMessageEnum.OK, null);
     }
 
-
-    public static <T> Result<T> ok(T data, String messageKey, Object... args) {
-        String message = AppContextUtil.getAppContext().getMessage(messageKey, args, getDefaultLocale());
-        Integer rcCode = getRcCode(messageKey);
-        if(rcCode==null){
-            rcCode = -1;
-        }
-        return Results.success(rcCode, message, data);
+    public static <T> Result<T> ok(T data, CodeMessage codeMessage, Object... args) {
+        return okByMessage(AppContextUtil.getAppContext(), data, codeMessage, args);
     }
 
-    public static <T> Result<T> fail(T data, String messageKey, Object... args) {
-        String message = AppContextUtil.getAppContext().getMessage(messageKey, args, getDefaultLocale());
-        Integer rcCode = getRcCode(messageKey);
-        if(rcCode==null){
-            rcCode = -1;
-        }
-        return Results.fail(rcCode, message, data);
+    public static <T> Result<T> okByMessage(MessageSource messageSource, T data, CodeMessage codeMessage, Object... args) {
+        String message = messageSource.getMessage(codeMessage.getMessageKey(), args, getDefaultLocale());
+        return Results.success(codeMessage.getCode(), message, data);
     }
 
-    public static Integer getRcCode(String messageKey){
-        int dotIndex = messageKey.indexOf(".");
-        if (dotIndex != -1) {
-            String rcCodeStr = messageKey.substring(0, dotIndex);
-            try {
-                Integer rcCode = Integer.valueOf(rcCodeStr);
-                return rcCode;
-            } catch (Exception e) {
-                log.error("messageKey must start with code", e);
-            }
-        }
-        return null;
+    public static <T> Result<T> fail(T data, CodeMessage codeMessage, Object... args) {
+        return failByMessage(AppContextUtil.getAppContext(),data,codeMessage,args);
     }
 
-    public static <T> Result<T> fail(String messageKey, Object... args) {
-        return fail(null, messageKey, args);
+    public static <T> Result<T> failByMessage(MessageSource messageSource, T data, CodeMessage codeMessage, Object... args) {
+        String message = messageSource.getMessage(codeMessage.getMessageKey(), args, getDefaultLocale());
+        return Results.fail(codeMessage.getCode(), message, data);
+    }
+
+    public static <T> Result<T> fail(CodeMessage codeMessage, Object... args) {
+        return fail(null, codeMessage, args);
     }
 }
