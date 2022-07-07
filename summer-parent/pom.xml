@@ -38,6 +38,11 @@
         <dependencies>
             <dependency>
                 <groupId>com.abluepoint.summer</groupId>
+                <artifactId>summer-automator</artifactId>
+                <version>${summer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.abluepoint.summer</groupId>
                 <artifactId>summer-common</artifactId>
                 <version>${summer.version}</version>
             </dependency>
