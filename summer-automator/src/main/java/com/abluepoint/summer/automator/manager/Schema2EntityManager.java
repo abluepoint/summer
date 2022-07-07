@@ -58,11 +58,11 @@ public class Schema2EntityManager {
         ignoredColumn.add("updated_on");
         ignoredColumn.add("updated_by");
         tables.forEach(tableName -> {
-            List<Column> list = schemaRepository.findColumnByDbNameAndTableName(dbName,tableName);
+            List<Column> list = schemaRepository.findColumnByDbNameAndTableName(dbName, tableName);
             generateTable(tableName, list, basePackage, basePackageFile, ignoredColumn, templateBasePath);
-//            if (tableName.startsWith("sys_")) {
-//                generateTable(tableName, list, basePackage, basePackageFile, ignoredColumn, templateBasePath);
-//            }
+            //            if (tableName.startsWith("sys_")) {
+            //                generateTable(tableName, list, basePackage, basePackageFile, ignoredColumn, templateBasePath);
+            //            }
         });
 
     }
@@ -73,10 +73,10 @@ public class Schema2EntityManager {
         File projectFile = new File(root, targetProjectName);
 
         String basePackagePath = basePackage.replaceAll("\\.", "/");
-        File baseSrcMainJavaFile = new File(projectFile, "src/main/java/" + basePackagePath);
+        File baseDataPackageFile = new File(projectFile, "src/main/java/" + basePackagePath);
 
-        if (!baseSrcMainJavaFile.exists()) {
-            baseSrcMainJavaFile.mkdirs();
+        if (!baseDataPackageFile.exists()) {
+            baseDataPackageFile.mkdirs();
         }
 
         Set<String> ignoredColumn = new HashSet<>();
@@ -85,12 +85,12 @@ public class Schema2EntityManager {
         ignoredColumn.add("updated_on");
         ignoredColumn.add("updated_by");
 
-        List<Column> list = schemaRepository.findColumnByDbNameAndTableName(dbName,tableName);
-        generateTable(tableName, list, basePackage, baseSrcMainJavaFile, ignoredColumn, templateBasePath);
+        List<Column> list = schemaRepository.findColumnByDbNameAndTableName(dbName, tableName);
+        generateTable(tableName, list, basePackage, baseDataPackageFile, ignoredColumn, templateBasePath);
 
     }
 
-    public void generateTable(String tableName, List<Column> list, String basePackage, File baseSrcMainJavaFile, Set<String> ignoredColumn, String templateBasePath) {
+    public void generateTable(String tableName, List<Column> list, String basePackage, File baseDataPackageFile, Set<String> ignoredColumn, String templateBasePath) {
 
         Map<String, Object> context = new HashMap<>();
         context.put("tableName", tableName);
@@ -121,7 +121,7 @@ public class Schema2EntityManager {
         context.put("fields", fields);
         context.put("fieldsImportType", fieldsImportType);
 
-        File entityFile = new File(baseSrcMainJavaFile, NameUtils.package2Path(entityPackage));
+        File entityFile = new File(baseDataPackageFile, "entity");
         if (!entityFile.exists()) {
             entityFile.mkdirs();
         }
@@ -130,7 +130,7 @@ public class Schema2EntityManager {
         logger.info("build file : {},in path : {}", entityClassFileName, entityFile.getAbsoluteFile());
         FreemarkerUtils.createFile(templateBasePath + "/entity/entity.ftl", context, entityFile, entityClassFileName);
 
-        File repoFile = new File(baseSrcMainJavaFile, NameUtils.package2Path(repoPackage));
+        File repoFile = new File(baseDataPackageFile, "repository");
         if (!repoFile.exists()) {
             repoFile.mkdirs();
         }
@@ -138,9 +138,7 @@ public class Schema2EntityManager {
         logger.info("build file : {},in path : {}", repoClassFileName, repoFile.getAbsoluteFile());
 
         File repoClassFile = new File(repoFile, repoClassFileName);
-        if (!repoClassFile.exists()) {
-            FreemarkerUtils.createFile(templateBasePath + "/repo/repo.ftl", context, repoFile, repoClassFileName);
-        }
+        FreemarkerUtils.createFile(templateBasePath + "/repo/repo.ftl", context, repoFile, repoClassFileName);
 
     }
 }
