@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_EMPTY )
 public class Result<T> implements Serializable {
     private int code;
-    private String msg;
+    private String message;
     private String path;
     private LocalDateTime timestamp;
     private T data;
@@ -20,15 +20,15 @@ public class Result<T> implements Serializable {
     protected void init(int status, String message, T data){
         this.code = status;
         this.data = data;
-        this.msg = message;
+        this.message = message;
     }
 
     public int getCode() {
         return code;
     }
 
-    public String getMsg() {
-        return msg;
+    public String getMessage() {
+        return message;
     }
 
     public T getData() {
