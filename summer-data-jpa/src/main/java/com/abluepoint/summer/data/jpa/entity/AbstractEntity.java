@@ -6,47 +6,49 @@
 
 package com.abluepoint.summer.data.jpa.entity;
 
+
 import javax.persistence.MappedSuperclass;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @MappedSuperclass
 public abstract class AbstractEntity {
 
-    private LocalDateTime createdOn;
+    private LocalDateTime createTime;
     private Long createdBy;
-    private LocalDateTime updatedOn;
+    private LocalDateTime updateTime;
     private Long updatedBy;
 
-    public LocalDateTime getCreatedOn() {
-        return createdOn;
-    }
 
-    public void setCreatedOn(LocalDateTime createdOn) {
-        this.createdOn = createdOn;
+    public LocalDateTime getCreateTime() {
+        return this.createTime;
     }
 
     public Long getCreatedBy() {
-        return createdBy;
+        return this.createdBy;
+    }
+
+    public LocalDateTime getUpdateTime() {
+        return this.updateTime;
+    }
+
+    public Long getUpdatedBy() {
+        return this.updatedBy;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
     }
 
     public void setCreatedBy(Long createdBy) {
         this.createdBy = createdBy;
     }
 
-    public LocalDateTime getUpdatedOn() {
-        return updatedOn;
-    }
-
-    public void setUpdatedOn(LocalDateTime updatedOn) {
-        this.updatedOn = updatedOn;
-    }
-
-    public Long getUpdatedBy() {
-        return updatedBy;
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
     }
 
     public void setUpdatedBy(Long updatedBy) {
         this.updatedBy = updatedBy;
     }
-
 }

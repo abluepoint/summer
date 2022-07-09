@@ -9,8 +9,6 @@ import java.util.Map;
 
 public interface JpaSqlTemplate {
 
-//	public <E> List<E> findListBySql(String sql, boolean isNative, Map<String, Object> paramMap, Class<E> resultType);
-//	public <E> Page<E> findPageBySql(String sql, String countSql, boolean isNative, Pageable pageable, Map<String, Object> paramMap, Class<E> resultType);
 	/**
 	 * Retrieve a single row mapped from the statement key.
 	 *

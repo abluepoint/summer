@@ -20,7 +20,7 @@ public enum CodeMessageEnum implements CodeMessage {
 
     SYSTEM_REQUEST_NOT_CACHED(30002,"system.request_not_cached"),
     SYSTEM_DATA_MULTI_COLUMN(31000,"system.data.multi_column"),
-
+    SYSTEM_DATA_LOGIC_DELETE_NOT_SUPPORT(31003,"system.data.logic_delete_not_support"),
 
     ;
 

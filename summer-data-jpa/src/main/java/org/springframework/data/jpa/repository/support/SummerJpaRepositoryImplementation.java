@@ -11,4 +11,11 @@ import org.springframework.data.repository.NoRepositoryBean;
 @NoRepositoryBean
 public interface SummerJpaRepositoryImplementation<T, ID> extends JpaRepositoryImplementation<T, ID> {
 
+    void logicDeleteById(ID id);
+
+    void logicDelete(T entity);
+
+    void logicDelete(Iterable<? extends T> entities);
+
+    void logicDeleteAll();
 }

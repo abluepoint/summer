@@ -29,7 +29,6 @@ final class SummerNativeJpaQuery extends  SummerAbstractStringBasedJpaQuery{
                           QueryMethodEvaluationContextProvider evaluationContextProvider, SpelExpressionParser parser) {
 
         super(method, em, queryString, evaluationContextProvider, parser);
-
         Parameters<?, ?> parameters = method.getParameters();
 
         if (parameters.hasSortParameter() && !queryString.contains("#sort")) {

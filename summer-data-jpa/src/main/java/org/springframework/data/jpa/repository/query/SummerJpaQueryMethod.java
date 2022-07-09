@@ -1,5 +1,6 @@
 package org.springframework.data.jpa.repository.query;
 
+import com.abluepoint.summer.data.jpa.entity.LogicDeletable;
 import org.springframework.data.jpa.provider.QueryExtractor;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
@@ -25,6 +26,11 @@ public class SummerJpaQueryMethod extends JpaQueryMethod {
         this.method = method;
         this.javaClassName = method.getDeclaringClass().getName();
         this.javaMethodName = method.getName();
+
+        if(method.getDeclaringClass().isAssignableFrom(LogicDeletable.class)){
+
+        }
+
     }
 
     public Method getMethod() {
