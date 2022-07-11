@@ -61,6 +61,12 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
             throw new BadCredentialsException("only post method allowed");
         }
 
+        UsernamePasswordAuthenticationToken authRequest = buildAuthenticationToken(request);
+
+        return getAuthenticationManager().authenticate(authRequest);
+    }
+
+    protected UsernamePasswordAuthenticationToken buildAuthenticationToken(HttpServletRequest request) throws IOException {
         String body = StreamUtils.copyToString(request.getInputStream(), Charset.forName("UTF-8"));
         String username = null, password = null;
 
@@ -93,8 +99,7 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
         password = decrypt(password);
 
         UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
-
-        return getAuthenticationManager().authenticate(authRequest);
+        return authRequest;
     }
 
     protected String decrypt(String password) {
