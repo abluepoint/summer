@@ -13,15 +13,15 @@ import java.util.List;
 public class PageResult<T> {
 
     private Integer pageSize;
-    private Integer pageNo;
+    private Integer pageNumber;
     private long totalCount;
     private Integer totalPage;
 
-    private List<T> list;
+    private List<T> content;
 
     public static <T> PageResult<T> of(Page<T> page) {
         PageResult<T> pageResult = new PageResult(page.getSize(),page.getNumber()+1,page.getTotalElements(),page.getTotalPages());
-        pageResult.setList(page.getContent());
+        pageResult.setContent(page.getContent());
         return pageResult;
     }
 
@@ -31,7 +31,7 @@ public class PageResult<T> {
 
     public PageResult(Integer pageSize, Integer pageNo, long totalCount, Integer totalPage) {
         this.pageSize = pageSize;
-        this.pageNo = pageNo;
+        this.pageNumber = pageNo;
         this.totalCount = totalCount;
         this.totalPage = totalPage;
     }
@@ -44,12 +44,12 @@ public class PageResult<T> {
         this.pageSize = pageSize;
     }
 
-    public Integer getPageNo() {
-        return pageNo;
+    public Integer getPageNumber() {
+        return pageNumber;
     }
 
-    public void setPageNo(Integer pageNo) {
-        this.pageNo = pageNo;
+    public void setPageNumber(Integer pageNumber) {
+        this.pageNumber = pageNumber;
     }
 
     public long getTotalCount() {
@@ -68,11 +68,11 @@ public class PageResult<T> {
         this.totalPage = totalPage;
     }
 
-    public List<T> getList() {
-        return list;
+    public List<T> getContent() {
+        return content;
     }
 
-    public void setList(List<T> list) {
-        this.list = list;
+    public void setContent(List<T> content) {
+        this.content = content;
     }
 }

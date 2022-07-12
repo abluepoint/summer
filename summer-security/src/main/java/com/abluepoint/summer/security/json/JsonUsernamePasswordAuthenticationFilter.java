@@ -37,11 +37,6 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
 
     private ObjectMapper objectMapper;
 
-    public JsonUsernamePasswordAuthenticationFilter(String pattern) {
-        super(new AntPathRequestMatcher(pattern));
-        objectMapper = new ObjectMapper();
-    }
-
     public JsonUsernamePasswordAuthenticationFilter(ObjectMapper objectMapper,String pattern) {
         super(new AntPathRequestMatcher(pattern));
         this.objectMapper = objectMapper;
