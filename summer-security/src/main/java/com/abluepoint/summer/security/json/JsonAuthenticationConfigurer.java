@@ -26,10 +26,6 @@ public class JsonAuthenticationConfigurer<T extends JsonAuthenticationConfigurer
         this.authenticationFilter = authenticationFilter;
     }
 
-    public JsonAuthenticationConfigurer() {
-        this.authenticationFilter = new JsonUsernamePasswordAuthenticationFilter("/api/login");
-    }
-
     @Override
     public void configure(B http) throws Exception {
         authenticationFilter.setAuthenticationManager(http.getSharedObject(AuthenticationManager.class));

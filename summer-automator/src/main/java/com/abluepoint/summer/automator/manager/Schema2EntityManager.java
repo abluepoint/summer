@@ -34,9 +34,16 @@ public class Schema2EntityManager {
     private static final Logger logger = LoggerFactory.getLogger(Schema2EntityManager.class);
 
     private SchemaRepository schemaRepository;
+    private Set<String> ignoredColumn;
 
     public Schema2EntityManager(SchemaRepository schemaRepository) {
         this.schemaRepository = schemaRepository;
+        this.ignoredColumn = new HashSet<>();
+        this.ignoredColumn.add("id");
+        this.ignoredColumn.add("create_time");
+        this.ignoredColumn.add("created_by");
+        this.ignoredColumn.add("update_time");
+        this.ignoredColumn.add("updated_by");
     }
 
     public void generate(String targetProjectName, String basePackage, String dbName, String templateBasePath) {
@@ -52,17 +59,10 @@ public class Schema2EntityManager {
         }
 
         List<String> tables = schemaRepository.findTableNamesByDbName(dbName);
-        Set<String> ignoredColumn = new HashSet<>();
-        ignoredColumn.add("created_on");
-        ignoredColumn.add("created_by");
-        ignoredColumn.add("updated_on");
-        ignoredColumn.add("updated_by");
+
         tables.forEach(tableName -> {
             List<Column> list = schemaRepository.findColumnByDbNameAndTableName(dbName, tableName);
             generateTable(tableName, list, basePackage, basePackageFile, ignoredColumn, templateBasePath);
-            //            if (tableName.startsWith("sys_")) {
-            //                generateTable(tableName, list, basePackage, basePackageFile, ignoredColumn, templateBasePath);
-            //            }
         });
 
     }
@@ -78,12 +78,6 @@ public class Schema2EntityManager {
         if (!baseDataPackageFile.exists()) {
             baseDataPackageFile.mkdirs();
         }
-
-        Set<String> ignoredColumn = new HashSet<>();
-        ignoredColumn.add("created_on");
-        ignoredColumn.add("created_by");
-        ignoredColumn.add("updated_on");
-        ignoredColumn.add("updated_by");
 
         List<Column> list = schemaRepository.findColumnByDbNameAndTableName(dbName, tableName);
         generateTable(tableName, list, basePackage, baseDataPackageFile, ignoredColumn, templateBasePath);
@@ -106,15 +100,11 @@ public class Schema2EntityManager {
         Set<String> fieldsImportType = new HashSet<>();
         List<Column> fields = new ArrayList();
 
-        Set<String> ignoreColumn = new HashSet<>();
-        ignoreColumn.add("id");
-        ignoreColumn.addAll(ignoredColumn);
-
         list.forEach(item -> {
             if (!item.getJavaTypeName().startsWith("java.lang")) {
                 fieldsImportType.add(item.getJavaTypeName());
             }
-            if (!ignoreColumn.contains(item.getColumnName())) {
+            if (!ignoredColumn.contains(item.getColumnName())) {
                 fields.add(item);
             }
         });
@@ -140,5 +130,9 @@ public class Schema2EntityManager {
         File repoClassFile = new File(repoFile, repoClassFileName);
         FreemarkerUtils.createFile(templateBasePath + "/repo/repo.ftl", context, repoFile, repoClassFileName);
 
+    }
+
+    public void setIgnoredColumn(Set<String> ignoredColumn) {
+        this.ignoredColumn = ignoredColumn;
     }
 }

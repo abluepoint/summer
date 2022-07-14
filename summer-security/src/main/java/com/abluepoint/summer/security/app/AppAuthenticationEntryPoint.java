@@ -26,7 +26,6 @@ import java.time.LocalDateTime;
 /**
  * 认证入口EntryPoint
  */
-
 public class AppAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private static final Logger log = LoggerFactory.getLogger(AppAuthenticationEntryPoint.class);
 
@@ -40,6 +39,9 @@ public class AppAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+
+        log.debug("auth error",authException);
+
         response.setStatus(HttpStatus.OK.value());
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

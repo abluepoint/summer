@@ -59,7 +59,6 @@ public class AppJwtTokenFilter extends OncePerRequestFilter {
                 throw new CredentialsExpiredException("Token expires");
             }
 
-
             String username = jwt.getSubject();
             try {
                 jwtManager.verify(username, jwt.getToken());
@@ -68,15 +67,12 @@ public class AppJwtTokenFilter extends OncePerRequestFilter {
             }
 
             SecurityContext securityContext = SecurityContextHolder.getContext();
-            if (securityContext == null) {
-                throw new SessionAuthenticationException("read user from session Failed");
-            }
-            if (securityContext.getAuthentication() == null) {
+            if (securityContext == null || securityContext.getAuthentication() == null) {
                 throw new SessionAuthenticationException("read user from session Failed");
             }
 
             UserDetails user = (UserDetails) securityContext.getAuthentication().getPrincipal();
-            if (securityContext == null || user.getPassword() == null) {
+            if (user == null || user.getUsername() == null) {
                 throw new SessionAuthenticationException("read user from session Failed");
             }
             if (!username.equals(user.getUsername())) {

@@ -4,15 +4,10 @@ import com.abluepoint.summer.automator.app.AppContext;
 import com.abluepoint.summer.automator.app.AppContextTest;
 import com.abluepoint.summer.automator.model.data.Column;
 import com.abluepoint.summer.automator.model.data.Table;
-import com.alibaba.druid.pool.DruidDataSource;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class SchemaRepositoryTest {
 

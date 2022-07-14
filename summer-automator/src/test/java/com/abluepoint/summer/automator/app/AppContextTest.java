@@ -1,26 +1,28 @@
 package com.abluepoint.summer.automator.app;
 
 import com.abluepoint.summer.automator.data.SchemaRepository;
-import com.abluepoint.summer.automator.data.SchemaRepositoryTest;
 import com.abluepoint.summer.automator.manager.SchemaManager;
-import com.alibaba.druid.pool.DruidDataSource;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+/**
+ * HikariCP
+ */
 public class AppContextTest {
     @BeforeAll
     public static void beforeAll() {
         AppContext appContext = AppContext.getAppContext();
 
-        DruidDataSource dataSource = new DruidDataSource();
-        dataSource.setUrl("jdbc:mysql://10.14.3.2:3306/id_test?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true");
-        dataSource.setUsername("root");
-        dataSource.setPassword("123456");
-        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:mysql://10.14.3.2:3306/id_test?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true");
+        config.setUsername("root");
+        config.setPassword("123456");
+        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        HikariDataSource dataSource = new HikariDataSource(config);
 
         appContext.registerBean(DataSource.class.getName(),dataSource);
 

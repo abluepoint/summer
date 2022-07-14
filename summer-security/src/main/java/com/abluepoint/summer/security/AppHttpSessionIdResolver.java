@@ -38,7 +38,7 @@ public class AppHttpSessionIdResolver implements HttpSessionIdResolver {
                     request.setAttribute(DECODED_JWT_ATTR, jwt);
                     String jti = jwt.getClaim(PublicClaims.JWT_ID).asString();
                     if (StringUtils.hasText(jti)) {
-                        return Arrays.asList(jwtToken);
+                        return Arrays.asList(jti);
                     }
                 } catch (Exception e) {
                     // no op
