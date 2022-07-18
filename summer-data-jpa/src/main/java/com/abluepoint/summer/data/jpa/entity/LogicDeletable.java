@@ -1,7 +1,7 @@
 package com.abluepoint.summer.data.jpa.entity;
 
 public interface LogicDeletable {
-    public Integer getIsDeleted() ;
+    public Byte getIsDeleted() ;
 
-    public void setIsDeleted(Integer isDeleted) ;
+    public void setIsDeleted(Byte isDeleted) ;
 }

@@ -13,7 +13,6 @@ public class BaseEntity extends LogicDeletableEntity {
     @Id
     private Long id;
 
-
     public Long getId() {
         return this.id;
     }

@@ -4,12 +4,12 @@ import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
 
 @MappedSuperclass
-public class BaseStringIdEntity extends AbstractEntity  {
+public class BaseStringIdEntity extends AbstractEntity implements LogicDeletable {
 
     @Id
     private String id;
 
-    private Integer isDeleted;
+    private Byte isDeleted;
 
     public String getId() {
         return id;
@@ -19,11 +19,11 @@ public class BaseStringIdEntity extends AbstractEntity  {
         this.id = id;
     }
 
-    public Integer getIsDeleted() {
+    public Byte getIsDeleted() {
         return isDeleted;
     }
 
-    public void setIsDeleted(Integer isDeleted) {
+    public void setIsDeleted(Byte isDeleted) {
         this.isDeleted = isDeleted;
     }
 

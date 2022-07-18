@@ -4,13 +4,13 @@ import javax.persistence.MappedSuperclass;
 
 @MappedSuperclass
 public class LogicDeletableEntity extends AbstractEntity implements LogicDeletable{
-    private Integer isDeleted;
+    private Byte isDeleted;
 
-    public Integer getIsDeleted() {
+    public Byte getIsDeleted() {
         return this.isDeleted;
     }
 
-    public void setIsDeleted(Integer isDeleted) {
+    public void setIsDeleted(Byte isDeleted) {
         this.isDeleted = isDeleted;
     }
 }
