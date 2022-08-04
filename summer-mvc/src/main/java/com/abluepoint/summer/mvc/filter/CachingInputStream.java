@@ -9,7 +9,6 @@ public class CachingInputStream extends ServletInputStream {
 
     private final ByteArrayInputStream cacheInputStream;
 
-
     public CachingInputStream(byte[] requestBody) {
         cacheInputStream = new ByteArrayInputStream(requestBody);
     }

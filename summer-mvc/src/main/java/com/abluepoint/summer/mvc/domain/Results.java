@@ -26,7 +26,7 @@ public class Results {
     }
 
     public static <T> Result<T> fail(int code, String msg, T data) {
-        log.debug("build fail result,code: {}, msg: {}", code, msg);
+        log.debug("response fail result,code: {}, msg: {}", code, msg);
         return new Result<>(code, msg, data);
     }
 
@@ -36,17 +36,17 @@ public class Results {
 
     public static ModelAndView failView(int code, String msg, Object data) {
         ModelAndView mav = new ModelAndView(new MappingJackson2JsonView());
-        log.debug("build fail ModelAndView,code: {}, msg: {}", code, msg);
+        log.debug("response fail result,code: {}, msg: {}", code, msg);
         mav.addObject("code", code);
-        mav.addObject("msg", msg);
+        mav.addObject("message", msg);
         mav.addObject("data", data);
         return mav;
     }
 
     public static ModelAndView failView(int code, String msg) {
         ModelAndView mav = new ModelAndView(new MappingJackson2JsonView());
-        log.debug("build fail ModelAndView,code: {}, msg: {}", code, msg);
-        mav.addObject("code", code);
+        log.debug("response fail result,code: {}, msg: {}", code, msg);
+        mav.addObject("message", code);
         mav.addObject("msg", msg);
         return mav;
     }

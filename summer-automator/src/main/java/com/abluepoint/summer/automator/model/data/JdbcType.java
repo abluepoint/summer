@@ -18,7 +18,7 @@ public class JdbcType {
     public static final Map<String, Class> MYSQL_JAVA_TYPE = new HashMap() {{
         put("char", String.class);
         put("varchar", String.class);
-        put("tinyint", Short.class);
+        put("tinyint", Byte.class);
         put("smallint", Short.class);
         put("int", Integer.class);
         put("float", Float.class);
