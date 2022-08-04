@@ -46,8 +46,8 @@ public class Results {
     public static ModelAndView failView(int code, String msg) {
         ModelAndView mav = new ModelAndView(new MappingJackson2JsonView());
         log.debug("response fail result,code: {}, msg: {}", code, msg);
-        mav.addObject("message", code);
-        mav.addObject("msg", msg);
+        mav.addObject("code", code);
+        mav.addObject("message", msg);
         return mav;
     }
 
