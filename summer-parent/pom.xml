@@ -9,7 +9,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.abluepoint.summer</groupId>
     <artifactId>summer-parent</artifactId>
-    <version>3.2.4</version>
+    <version>3.2.5-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <parent>
@@ -31,7 +31,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
-        <summer.version>3.2.4</summer.version>
+        <summer.version>3.2.5-SNAPSHOT</summer.version>
     </properties>
 
     <dependencyManagement>
@@ -104,13 +104,13 @@
 
     <build>
         <plugins>
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-war-plugin</artifactId>-->
-<!--                <configuration>-->
-<!--                    <failOnMissingWebXml>false</failOnMissingWebXml>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
+            <!--            <plugin>-->
+            <!--                <groupId>org.apache.maven.plugins</groupId>-->
+            <!--                <artifactId>maven-war-plugin</artifactId>-->
+            <!--                <configuration>-->
+            <!--                    <failOnMissingWebXml>false</failOnMissingWebXml>-->
+            <!--                </configuration>-->
+            <!--            </plugin>-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
@@ -139,29 +139,29 @@
     </build>
 
     <distributionManagement>
-        <!--		<repository>-->
-        <!--			<id>releases</id>-->
-        <!--			<name>maven-releases</name>-->
-        <!--			<url>http://nexus.teleinfo.cn/repository/maven-releases/</url>-->
-        <!--		</repository>-->
-
-        <!--		<snapshotRepository>-->
-        <!--			<id>snapshots</id>-->
-        <!--			<name>maven-snapshots</name>-->
-        <!--			<url>http://nexus.teleinfo.cn/repository/maven-snapshots/</url>-->
-        <!--		</snapshotRepository>-->
-
         <repository>
-            <id>teleinfo-releases</id>
-            <name>teleinfo-releases</name>
-            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-releases/</url>
+            <id>releases</id>
+            <name>maven-releases</name>
+            <url>http://nexus.teleinfo.cn/repository/maven-releases/</url>
         </repository>
 
         <snapshotRepository>
-            <id>teleinfo-snapshots</id>
-            <name>teleinfo-snapshots</name>
-            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-snapshots/</url>
+            <id>snapshots</id>
+            <name>maven-snapshots</name>
+            <url>http://nexus.teleinfo.cn/repository/maven-snapshots/</url>
         </snapshotRepository>
+
+        <!--        <repository>-->
+        <!--            <id>teleinfo-releases</id>-->
+        <!--            <name>teleinfo-releases</name>-->
+        <!--            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-releases/</url>-->
+        <!--        </repository>-->
+
+        <!--        <snapshotRepository>-->
+        <!--            <id>teleinfo-snapshots</id>-->
+        <!--            <name>teleinfo-snapshots</name>-->
+        <!--            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-snapshots/</url>-->
+        <!--        </snapshotRepository>-->
     </distributionManagement>
 
 </project>
