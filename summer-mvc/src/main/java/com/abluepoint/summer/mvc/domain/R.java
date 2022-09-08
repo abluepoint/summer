@@ -43,6 +43,11 @@ public class R {
         return Results.fail(codeMessage.getCode(), message, data);
     }
 
+    public static <T> Result<T> failByMessage(MessageSource messageSource,Integer code,String messageKey, Object... args) {
+        String message = messageSource.getMessage(messageKey, args, getDefaultLocale());
+        return Results.fail(code, message, null);
+    }
+
     public static <T> Result<T> fail(CodeMessage codeMessage, Object... args) {
         return fail(null, codeMessage, args);
     }

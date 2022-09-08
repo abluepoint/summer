@@ -6,7 +6,9 @@
 
 package com.abluepoint.summer.security.app;
 
+import com.abluepoint.summer.common.exception.CodeMessage;
 import com.abluepoint.summer.common.exception.CodeMessageEnum;
+import com.abluepoint.summer.common.exception.Messageable;
 import com.abluepoint.summer.mvc.domain.R;
 import com.abluepoint.summer.mvc.domain.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,15 +40,21 @@ public class AppAuthenticationEntryPoint implements AuthenticationEntryPoint {
     }
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authenticationException) throws IOException {
 
-        log.debug("auth error",authException);
+        log.debug("auth error",authenticationException);
 
         response.setStatus(HttpStatus.OK.value());
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result result = R.failByMessage(messageSource,null, CodeMessageEnum.UNAUTHORIZED);
+        Result result = null;
+        if(authenticationException instanceof Messageable){
+            result = R.failByMessage(messageSource,((Messageable) authenticationException).getCode(),((Messageable) authenticationException).getMessageKey(),((Messageable) authenticationException).getArgs());
+        }else{
+            result = R.failByMessage(messageSource,null, CodeMessageEnum.UNAUTHORIZED);
+        }
+
         result.setTimestamp(LocalDateTime.now());
         result.setPath(request.getContextPath());
 
