@@ -22,7 +22,7 @@ public class R {
     }
 
     public static <T> Result<T> ok(T data) {
-        return ok(data, CodeMessageEnum.OK, null);
+        return ok(data, CodeMessageEnum.OK);
     }
 
     public static <T> Result<T> ok(T data, CodeMessage codeMessage, Object... args) {
@@ -35,15 +35,20 @@ public class R {
     }
 
     public static <T> Result<T> fail(T data, CodeMessage codeMessage, Object... args) {
-        return failByMessage(AppContextUtil.getAppContext(),data,codeMessage,args);
+        return failByMessageWithData(AppContextUtil.getAppContext(), data, codeMessage, args);
     }
 
-    public static <T> Result<T> failByMessage(MessageSource messageSource, T data, CodeMessage codeMessage, Object... args) {
+    public static <T> Result<T> failByMessageWithData(MessageSource messageSource, T data, CodeMessage codeMessage, Object... args) {
         String message = messageSource.getMessage(codeMessage.getMessageKey(), args, getDefaultLocale());
         return Results.fail(codeMessage.getCode(), message, data);
     }
 
-    public static <T> Result<T> failByMessage(MessageSource messageSource,Integer code,String messageKey, Object... args) {
+    public static <T> Result<T> failByMessage(MessageSource messageSource, CodeMessage codeMessage, Object... args) {
+        String message = messageSource.getMessage(codeMessage.getMessageKey(), args, getDefaultLocale());
+        return Results.fail(codeMessage.getCode(), message, null);
+    }
+
+    public static <T> Result<T> failByMessage(MessageSource messageSource, Integer code, String messageKey, Object... args) {
         String message = messageSource.getMessage(messageKey, args, getDefaultLocale());
         return Results.fail(code, message, null);
     }

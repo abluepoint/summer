@@ -37,7 +37,7 @@ public class AppAccessDeniedHandler implements AccessDeniedHandler {
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result result = R.failByMessage(messageSource,null, CodeMessageEnum.FORBIDDEN);
+        Result<Object> result = R.failByMessage(messageSource, CodeMessageEnum.FORBIDDEN);
         result.setTimestamp(LocalDateTime.now());
         result.setPath(request.getContextPath());
         objectMapper.writeValue(response.getOutputStream(), result);

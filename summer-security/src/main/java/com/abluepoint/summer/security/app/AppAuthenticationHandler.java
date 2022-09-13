@@ -7,6 +7,7 @@
 package com.abluepoint.summer.security.app;
 
 import com.abluepoint.summer.common.exception.CodeMessageEnum;
+import com.abluepoint.summer.common.exception.Messageable;
 import com.abluepoint.summer.mvc.domain.R;
 import com.abluepoint.summer.mvc.domain.Result;
 import com.abluepoint.summer.security.AuthenticationHandler;
@@ -64,7 +65,13 @@ public class AppAuthenticationHandler implements AuthenticationHandler {
 
         log.info("authentication failure",exception);
 
-        Result result = R.failByMessage(messageSource, null, CodeMessageEnum.LOGIN_FAILED);
+        Result<Object> result ;
+        if(exception instanceof Messageable){
+            result = R.failByMessage(messageSource,((Messageable) exception).getCode(),((Messageable) exception).getMessageKey(),((Messageable) exception).getArgs());
+        }else{
+            result = R.failByMessage(messageSource, CodeMessageEnum.LOGIN_FAILED);
+        }
+
         result.setTimestamp(LocalDateTime.now());
         result.setPath(request.getContextPath());
 

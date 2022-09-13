@@ -48,12 +48,7 @@ public class AppAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setCharacterEncoding("utf-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Result result = null;
-        if(authenticationException instanceof Messageable){
-            result = R.failByMessage(messageSource,((Messageable) authenticationException).getCode(),((Messageable) authenticationException).getMessageKey(),((Messageable) authenticationException).getArgs());
-        }else{
-            result = R.failByMessage(messageSource,null, CodeMessageEnum.UNAUTHORIZED);
-        }
+        Result<Object> result = R.failByMessage(messageSource, CodeMessageEnum.UNAUTHORIZED);
 
         result.setTimestamp(LocalDateTime.now());
         result.setPath(request.getContextPath());
