@@ -15,6 +15,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -28,6 +29,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 import java.util.Set;
 
 public class GlobalHandlerExceptionResolver extends SummerHandlerExceptionResolver {
@@ -39,6 +41,7 @@ public class GlobalHandlerExceptionResolver extends SummerHandlerExceptionResolv
         this.requestLoggingSupport = requestLoggingSupport;
     }
 
+    // 参考数据
     // @ExceptionHandler(MissingServletRequestParameterException.class)
     // @ResponseStatus(HttpStatus.BAD_REQUEST)
     // public R handleError(MissingServletRequestParameterException e) {
@@ -114,7 +117,7 @@ public class GlobalHandlerExceptionResolver extends SummerHandlerExceptionResolv
     //     return R.fail(ResultCode.MEDIA_TYPE_NOT_SUPPORTED, e.getMessage());
     // }
     //
-    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    //@ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
     // @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
     // public R handleError(HttpMediaTypeNotAcceptableException e) {
     //     String message = e.getMessage() + " " + StringUtil.join(e.getSupportedMediaTypes());
@@ -127,9 +130,16 @@ public class GlobalHandlerExceptionResolver extends SummerHandlerExceptionResolv
         String afterMsg = requestLoggingSupport.getAfterMessage(request);
 
         if (ex instanceof MissingServletRequestParameterException) {
+            ((MissingServletRequestParameterException) ex).getParameterName();
 
-        }else if(ex instanceof MethodArgumentTypeMismatchException){
-
+        } else if (ex instanceof MethodArgumentTypeMismatchException) {
+            ((MethodArgumentTypeMismatchException) ex).getName();
+        } else if (ex instanceof BindException) {
+            List<ObjectError> allErrors = ((BindException) ex).getAllErrors();
+            allErrors.forEach(item ->{
+                System.out.println(item.getObjectName());
+                System.out.println(item.getCode());
+            });
         }
 
         if (logger.isDebugEnabled()) {
