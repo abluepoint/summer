@@ -28,6 +28,11 @@ public class AppHttpSessionIdResolver implements HttpSessionIdResolver {
         this.cookieHttpSessionIdResolver = new CookieHttpSessionIdResolver();
     }
 
+    /**
+     * 优先从Header Authorization中取sessionId,若不存在从cookie中取
+     * @param request the current request
+     * @return sessionIds
+     */
     @Override
     public List<String> resolveSessionIds(HttpServletRequest request) {
         if (requestMatcher.matches(request)) {

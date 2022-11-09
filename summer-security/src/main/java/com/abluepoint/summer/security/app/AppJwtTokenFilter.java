@@ -66,6 +66,7 @@ public class AppJwtTokenFilter extends OncePerRequestFilter {
                 throw new BadCredentialsException("JWT token verify fail", e);
             }
 
+            // 获取securityContext
             SecurityContext securityContext = SecurityContextHolder.getContext();
             if (securityContext == null || securityContext.getAuthentication() == null) {
                 throw new SessionAuthenticationException("read user from session Failed");
