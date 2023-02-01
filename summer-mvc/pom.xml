@@ -9,7 +9,7 @@
 	<parent>
 		<groupId>com.abluepoint.summer</groupId>
 		<artifactId>summer-parent</artifactId>
-		<version>3.2.5-SNAPSHOT</version>
+		<version>3.2.6-SNAPSHOT</version>
 		<relativePath>../summer-parent/pom.xml</relativePath>
 	</parent>
 	<artifactId>summer-mvc</artifactId>

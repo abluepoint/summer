@@ -9,13 +9,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.abluepoint.summer</groupId>
     <artifactId>summer-parent</artifactId>
-    <version>3.2.5-SNAPSHOT</version>
+    <version>3.2.6-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <parent>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-starter-parent</artifactId>
-        <version>2021.0.0</version>
+        <version>2021.0.4</version>
     </parent>
 
     <modules>
