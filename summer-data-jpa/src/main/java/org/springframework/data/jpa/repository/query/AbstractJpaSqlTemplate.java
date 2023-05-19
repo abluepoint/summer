@@ -10,7 +10,6 @@ import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import javax.persistence.Query;
 import java.util.List;
 import java.util.Map;
 
