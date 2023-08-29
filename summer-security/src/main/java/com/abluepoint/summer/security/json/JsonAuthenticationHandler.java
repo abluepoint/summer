@@ -17,10 +17,10 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.session.web.http.CookieHttpSessionIdResolver;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
@@ -49,7 +49,7 @@ public class JsonAuthenticationHandler implements AuthenticationHandler {
 	}
 
 	@Override
-	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
+	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
 		HttpResult httpResponseEntity = new HttpResult(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(), exception.getMessage(),request.getContextPath());
 		response.setStatus(HttpStatus.UNAUTHORIZED.value());
 		response.setCharacterEncoding("utf-8");

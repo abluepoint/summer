@@ -15,7 +15,7 @@ import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 
 public enum SummerJpaQueryFactory {
     INSTANCE;

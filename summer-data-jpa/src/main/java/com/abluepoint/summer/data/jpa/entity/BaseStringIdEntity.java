@@ -1,7 +1,7 @@
 package com.abluepoint.summer.data.jpa.entity;
 
-import javax.persistence.Id;
-import javax.persistence.MappedSuperclass;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
 
 @MappedSuperclass
 public class BaseStringIdEntity extends AbstractEntity implements LogicDeletable {

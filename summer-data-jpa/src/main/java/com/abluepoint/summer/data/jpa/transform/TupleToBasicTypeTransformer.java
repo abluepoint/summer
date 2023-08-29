@@ -7,13 +7,12 @@
 package com.abluepoint.summer.data.jpa.transform;
 
 import com.abluepoint.summer.common.exception.CodeMessageEnum;
-import com.abluepoint.summer.data.jpa.JpaSummerException;
 import com.abluepoint.summer.data.jpa.JpaSummerRuntimeException;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TupleElement;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
 import java.util.List;
 
 public class TupleToBasicTypeTransformer implements TupleTransformer {

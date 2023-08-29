@@ -8,18 +8,12 @@ package org.springframework.data.jpa.repository.support;
 import com.abluepoint.summer.common.exception.CodeMessageEnum;
 import com.abluepoint.summer.data.jpa.JpaSummerRuntimeException;
 import com.abluepoint.summer.data.jpa.entity.LogicDeletable;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-
 
 @Repository
 @Transactional(readOnly = true)

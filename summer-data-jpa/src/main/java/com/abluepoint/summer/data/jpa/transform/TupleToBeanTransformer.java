@@ -16,8 +16,8 @@ import org.hibernate.property.access.spi.Setter;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TupleElement;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
@@ -58,9 +58,9 @@ public class TupleToBeanTransformer implements TupleTransformer {
                     if (tuple.get(i) != null) {
                         parameterType = settersType[i];
                         if (conversionService.canConvert(tuple.get(i).getClass(), parameterType)) {
-                            setters[i].set(result, conversionService.convert(tuple.get(i), parameterType), null);
+                            setters[i].set(result, conversionService.convert(tuple.get(i), parameterType));
                         } else {
-                            setters[i].set(result, tuple.get(i), null);
+                            setters[i].set(result, tuple.get(i));
                         }
                     }
 
@@ -94,7 +94,7 @@ public class TupleToBeanTransformer implements TupleTransformer {
                     alias = JpaNameUtils.camelCaseName(alias);
                 }
                 aliases[i] = alias;
-                currentSetter = propertyAccessStrategy.buildPropertyAccess(resultClass, alias).getSetter();
+                currentSetter = propertyAccessStrategy.buildPropertyAccess(resultClass, alias,true).getSetter();
                 setters[i] = currentSetter;
 
                 settersType[i] = getParameterType(currentSetter, alias);

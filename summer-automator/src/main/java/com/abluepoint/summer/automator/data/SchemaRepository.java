@@ -24,23 +24,13 @@ public class SchemaRepository {
 
     public List<Table> findByDbName(String dbName) {
         String sql = "select TABLE_NAME as tableName ,TABLE_COMMENT as tableComment FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA= ?;";
-        List<Table> list = jdbcTemplate.query(sql, new RowMapper<Table>() {
-            @Override
-            public Table mapRow(ResultSet rs, int rowNum) throws SQLException {
-                return new Table(rs.getString("tableName"), rs.getString("tableComment"));
-            }
-        }, dbName);
+        List<Table> list = jdbcTemplate.query(sql, (rs, rowNum) -> new Table(rs.getString("tableName"), rs.getString("tableComment")), dbName);
         return list;
     }
 
     public Table findByDbNameAndTableName(String dbName, String tableName) {
         String sql = "select TABLE_NAME as tableName ,TABLE_COMMENT as tableComment FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA= ? and TABLE_NAME= ?;";
-        Table table = jdbcTemplate.queryForObject(sql, new RowMapper<Table>() {
-            @Override
-            public Table mapRow(ResultSet rs, int rowNum) throws SQLException {
-                return new Table(rs.getString("tableName"), rs.getString("tableComment"));
-            }
-        }, dbName, tableName);
+        Table table = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new Table(rs.getString("tableName"), rs.getString("tableComment")), dbName, tableName);
         return table;
     }
 
@@ -52,16 +42,13 @@ public class SchemaRepository {
                 "COLUMN_COMMENT as columnComment " +
                 "FROM `information_schema`.`COLUMNS` " +
                 "WHERE TABLE_SCHEMA= ? AND TABLE_NAME= ? ORDER BY ORDINAL_POSITION;";
-        List<Column> list = jdbcTemplate.query(sql, new RowMapper<Column>() {
-            @Override
-            public Column mapRow(ResultSet rs, int rowNum) throws SQLException {
-                Column column = new Column();
-                column.setColumnName(rs.getString("columnName"));
-                column.setColumnDataType(rs.getString("columnDataType"));
-                column.setColumnKey(rs.getString("columnKey"));
-                column.setColumnComment(rs.getString("columnComment"));
-                return column;
-            }
+        List<Column> list = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Column column = new Column();
+            column.setColumnName(rs.getString("columnName"));
+            column.setColumnDataType(rs.getString("columnDataType"));
+            column.setColumnKey(rs.getString("columnKey"));
+            column.setColumnComment(rs.getString("columnComment"));
+            return column;
         }, dbName, tableName);
         return list;
     }

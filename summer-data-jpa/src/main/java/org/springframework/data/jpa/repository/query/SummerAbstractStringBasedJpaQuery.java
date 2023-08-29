@@ -21,8 +21,8 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import java.util.*;
 
 public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
@@ -89,7 +89,7 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
         DeclaredQuery declaredQuery = queryMap.get(querySql);
         if (declaredQuery == null) {
             JpaQueryMethod method = getQueryMethod();
-            declaredQuery = new ExpressionBasedStringQuery(querySql, method.getEntityInformation(), parser);
+            declaredQuery = new ExpressionBasedStringQuery(querySql, method.getEntityInformation(), parser,true);
             Assert.isTrue(method.isNativeQuery() || !declaredQuery.usesJdbcStyleParameters(), "JDBC style parameters (?) are not supported for JPA queries.");
             queryMap.put(querySql, declaredQuery);
         }
@@ -148,8 +148,8 @@ public class SummerAbstractStringBasedJpaQuery extends AbstractJpaQuery {
         DeclaredQuery declaredCountQuery = countQueryMap.get(countQuerySql);
         if (declaredCountQuery == null) {
             JpaQueryMethod method = getQueryMethod();
-            DeclaredQuery middleCountQuery = DeclaredQuery.of(countQuerySql);
-            declaredCountQuery = ExpressionBasedStringQuery.from(middleCountQuery, method.getEntityInformation(), parser);
+            DeclaredQuery middleCountQuery = DeclaredQuery.of(countQuerySql,true);
+            declaredCountQuery = ExpressionBasedStringQuery.from(middleCountQuery, method.getEntityInformation(), parser,true);
             countQueryMap.put(countQuerySql, declaredCountQuery);
         }
 

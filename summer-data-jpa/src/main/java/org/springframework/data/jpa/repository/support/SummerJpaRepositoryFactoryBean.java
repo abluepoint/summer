@@ -15,8 +15,8 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.springframework.lang.Nullable;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 public class SummerJpaRepositoryFactoryBean<T extends Repository<S, ID>, S, ID>
         extends JpaRepositoryFactoryBean<T, S, ID> {
@@ -41,13 +41,11 @@ public class SummerJpaRepositoryFactoryBean<T extends Repository<S, ID>, S, ID>
         this.entityManager = entityManager;
     }
 
-    @Autowired
     public void setEntityPathResolver(ObjectProvider<EntityPathResolver> resolver) {
         super.setEntityPathResolver(resolver);
         this.entityPathResolver = resolver.getIfAvailable(() -> SimpleEntityPathResolver.INSTANCE);
     }
 
-    @Autowired
     public void setQueryMethodFactory(@Nullable JpaQueryMethodFactory factory) {
         super.setQueryMethodFactory(factory);
         if (factory != null) {

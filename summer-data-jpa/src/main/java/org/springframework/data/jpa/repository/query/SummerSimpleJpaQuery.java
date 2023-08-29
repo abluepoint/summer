@@ -9,7 +9,7 @@ package org.springframework.data.jpa.repository.query;
 import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 
 public class SummerSimpleJpaQuery extends SummerAbstractStringBasedJpaQuery {
 

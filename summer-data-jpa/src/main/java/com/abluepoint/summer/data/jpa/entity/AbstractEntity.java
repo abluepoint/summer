@@ -7,8 +7,7 @@
 package com.abluepoint.summer.data.jpa.entity;
 
 
-import javax.persistence.MappedSuperclass;
-import java.io.Serializable;
+import jakarta.persistence.MappedSuperclass;
 import java.time.LocalDateTime;
 
 @MappedSuperclass

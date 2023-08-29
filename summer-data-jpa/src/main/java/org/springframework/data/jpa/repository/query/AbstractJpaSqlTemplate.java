@@ -7,6 +7,7 @@
 package org.springframework.data.jpa.repository.query;
 
 import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
+import jakarta.persistence.Query;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
@@ -23,7 +24,7 @@ public abstract class AbstractJpaSqlTemplate implements JpaSqlTemplate {
      */
     protected void setParameters(String sql, Map<String, Object> paramMap, Query query) {
         if (paramMap != null) {
-            DeclaredQuery declaredQuery = DeclaredQuery.of(sql);
+            DeclaredQuery declaredQuery = DeclaredQuery.of(sql,true);
             List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
             String name;
             for (StringQuery.ParameterBinding binding : list) {
@@ -45,7 +46,7 @@ public abstract class AbstractJpaSqlTemplate implements JpaSqlTemplate {
     }
 
     protected  <E> Query getSelectPageQuery(String queryString, Map<String, Object> parameter, Pageable pageable, Class<E> resultType) {
-        DeclaredQuery declaredQuery = DeclaredQuery.of(queryString);
+        DeclaredQuery declaredQuery = DeclaredQuery.of(queryString,true);
         Sort sort = pageable.getSortOr(Sort.unsorted());
         String sortedQueryString = QueryUtils.applySorting(queryString, sort, declaredQuery.getAlias());
 

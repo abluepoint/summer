@@ -25,6 +25,7 @@
         <module>../summer-mvc</module>
         <module>../summer-security</module>
         <module>../summer-boot-starter</module>
+        <module>../summer-data-jpa-test</module>
     </modules>
 
     <properties>
@@ -135,27 +136,15 @@
     <distributionManagement>
         <repository>
             <id>releases</id>
-            <name>maven-releases</name>
-            <url>http://nexus.teleinfo.cn/repository/maven-releases/</url>
+            <name>teleinfo-releases</name>
+            <url>https://nexus.teleinfo.cn:9443/nexus/repository/maven-releases/</url>
         </repository>
 
         <snapshotRepository>
             <id>snapshots</id>
-            <name>maven-snapshots</name>
-            <url>http://nexus.teleinfo.cn/repository/maven-snapshots/</url>
+            <name>teleinfo-snapshots</name>
+            <url>https://nexus.teleinfo.cn:9443/nexus/repository/maven-snapshots/</url>
         </snapshotRepository>
-
-        <!--        <repository>-->
-        <!--            <id>teleinfo-releases</id>-->
-        <!--            <name>teleinfo-releases</name>-->
-        <!--            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-releases/</url>-->
-        <!--        </repository>-->
-
-        <!--        <snapshotRepository>-->
-        <!--            <id>teleinfo-snapshots</id>-->
-        <!--            <name>teleinfo-snapshots</name>-->
-        <!--            <url>https://teleinfo.abluepoint.com:9443/nexus/repository/maven-snapshots/</url>-->
-        <!--        </snapshotRepository>-->
     </distributionManagement>
 
 </project>

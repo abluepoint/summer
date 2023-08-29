@@ -1,6 +1,6 @@
 package com.abluepoint.summer.security.util;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 public abstract class JwtTokenUtil {
     public static String getJwtToken(HttpServletRequest request) {

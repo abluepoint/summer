@@ -8,8 +8,8 @@ package com.abluepoint.summer.data.jpa.transform;
 
 import org.springframework.lang.Nullable;
 
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TupleElement;
 import java.util.*;
 import java.util.stream.Collectors;
 

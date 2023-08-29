@@ -1,6 +1,6 @@
 package com.abluepoint.summer.data.jpa.entity;
 
-import javax.persistence.MappedSuperclass;
+import jakarta.persistence.MappedSuperclass;
 
 @MappedSuperclass
 public class LogicDeletableEntity extends AbstractEntity implements LogicDeletable{

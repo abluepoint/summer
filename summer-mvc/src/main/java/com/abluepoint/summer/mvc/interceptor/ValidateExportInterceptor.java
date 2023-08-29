@@ -7,30 +7,24 @@
 package com.abluepoint.summer.mvc.interceptor;
 
 import com.abluepoint.summer.common.exception.CodeMessageEnum;
-import com.abluepoint.summer.common.exception.SummerException;
 import com.abluepoint.summer.common.util.AppContextUtil;
 import com.abluepoint.summer.mvc.annotation.*;
 import com.abluepoint.summer.mvc.context.Context;
-import com.abluepoint.summer.mvc.filter.CachingSupportServletRequestWrap;
 import com.abluepoint.summer.mvc.manager.JsonSchemaManager;
 import com.abluepoint.summer.mvc.validate.Style;
 import com.abluepoint.summer.mvc.validate.ValidateException;
 import com.abluepoint.summer.mvc.validate.ValidateExceptions;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.ValidationMessage;
-import org.springframework.http.HttpMethod;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.util.WebUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

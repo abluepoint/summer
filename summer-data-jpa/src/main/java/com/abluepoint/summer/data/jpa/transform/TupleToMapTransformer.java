@@ -7,9 +7,9 @@
 package com.abluepoint.summer.data.jpa.transform;
 
 import com.abluepoint.summer.data.jpa.util.JpaNameUtils;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TupleElement;
 
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

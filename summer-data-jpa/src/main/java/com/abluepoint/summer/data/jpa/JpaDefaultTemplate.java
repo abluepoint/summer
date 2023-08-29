@@ -24,9 +24,9 @@ public class JpaDefaultTemplate implements JpaTemplate {
         this.jpaTemplateSource = jpaTemplateSource;
     }
 
-    //    private boolean isNative(String templateName) {
-    //        return templateName.startsWith("sql-");
-    //    }
+    //private boolean isNative(String templateName) {
+    //    return templateName.startsWith("sql-");
+    //}
 
     @Override
     public <T> T selectOne(String templateName, Class<T> resultType) throws Exception {

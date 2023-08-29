@@ -6,8 +6,8 @@
 
 package com.abluepoint.summer.data.jpa.transform;
 
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TupleElement;
 import java.util.List;
 
 public interface TupleTransformer {
