@@ -9,6 +9,7 @@ package com.abluepoint.summer.data.jpa.template;
 
 import com.abluepoint.summer.data.jpa.transform.TupleTransformer;
 import com.abluepoint.summer.data.jpa.transform.TupleTransformers;
+import jakarta.persistence.EntityManager;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.query.AbstractJpaSqlTemplate;
 import org.springframework.util.ClassUtils;
 
-import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

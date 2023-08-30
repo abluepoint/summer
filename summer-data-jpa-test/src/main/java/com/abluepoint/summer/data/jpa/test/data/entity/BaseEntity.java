@@ -1,6 +1,6 @@
 package com.abluepoint.summer.data.jpa.test.data.entity;
 
-import cn.teleinfo.summer.data.jpa.entity.LogicDeletable;
+import com.abluepoint.summer.data.jpa.entity.LogicDeletable;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.GenericGenerator;

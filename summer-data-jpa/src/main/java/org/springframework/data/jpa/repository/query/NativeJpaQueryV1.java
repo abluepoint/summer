@@ -42,49 +42,49 @@ import org.springframework.lang.Nullable;
  */
 final class NativeJpaQueryV1 extends AbstractStringBasedJpaQueryV1 {
 
-	/**
-	 * Creates a new {@link NativeJpaQueryV1} encapsulating the query annotated on the given {@link JpaQueryMethod}.
-	 *
-	 * @param method must not be {@literal null}.
-	 * @param em must not be {@literal null}.
-	 * @param queryString must not be {@literal null} or empty.
-	 * @param countQueryString must not be {@literal null} or empty.
-	 * @param rewriter the query rewriter to use.
-	 */
-	public NativeJpaQueryV1(JpaQueryMethod method, EntityManager em, String queryString, @Nullable String countQueryString,
-							QueryRewriter rewriter, QueryMethodEvaluationContextProvider evaluationContextProvider,
-							SpelExpressionParser parser) {
+    /**
+     * Creates a new {@link NativeJpaQueryV1} encapsulating the query annotated on the given {@link JpaQueryMethod}.
+     *
+     * @param method           must not be {@literal null}.
+     * @param em               must not be {@literal null}.
+     * @param queryString      must not be {@literal null} or empty.
+     * @param countQueryString must not be {@literal null} or empty.
+     * @param rewriter         the query rewriter to use.
+     */
+    public NativeJpaQueryV1(JpaQueryMethodExtendV1 method, EntityManager em, String queryString, @Nullable String countQueryString,
+                            QueryRewriter rewriter, QueryMethodEvaluationContextProvider evaluationContextProvider,
+                            SpelExpressionParser parser) {
 
-		super(method, em, queryString, countQueryString, rewriter, evaluationContextProvider, parser);
+        super(method, em, queryString, countQueryString, rewriter, evaluationContextProvider, parser);
 
-		Parameters<?, ?> parameters = method.getParameters();
+        Parameters<?, ?> parameters = method.getParameters();
 
-		if (parameters.hasSortParameter() && !queryString.contains("#sort")) {
-			throw new InvalidJpaQueryMethodException("Cannot use native queries with dynamic sorting in method " + method);
-		}
-	}
+        if (parameters.hasSortParameter() && !queryString.contains("#sort")) {
+            throw new InvalidJpaQueryMethodException("Cannot use native queries with dynamic sorting in method " + method);
+        }
+    }
 
-	@Override
-	protected Query createJpaQuery(String queryString, Sort sort, Pageable pageable, ReturnedType returnedType) {
+    @Override
+    protected Query createJpaQuery(String queryString, Sort sort, Pageable pageable, ReturnedType returnedType, DeclaredQuery declaredQuery) {
 
-		EntityManager em = getEntityManager();
-		Class<?> type = getTypeToQueryFor(returnedType);
+        EntityManager em = getEntityManager();
+        Class<?> type = getTypeToQueryFor(returnedType, declaredQuery);
 
-		return type == null ? em.createNativeQuery(potentiallyRewriteQuery(queryString, sort, pageable))
-				: em.createNativeQuery(potentiallyRewriteQuery(queryString, sort, pageable), type);
-	}
+        return type == null ? em.createNativeQuery(potentiallyRewriteQuery(queryString, sort, pageable))
+                : em.createNativeQuery(potentiallyRewriteQuery(queryString, sort, pageable), type);
+    }
 
-	@Nullable
-	private Class<?> getTypeToQueryFor(ReturnedType returnedType) {
+    @Nullable
+    private Class<?> getTypeToQueryFor(ReturnedType returnedType, DeclaredQuery declaredQuery) {
 
-		Class<?> result = getQueryMethod().isQueryForEntity() ? returnedType.getDomainType() : null;
+        Class<?> result = getQueryMethod().isQueryForEntity() ? returnedType.getDomainType() : null;
 
-		if (this.getQuery().hasConstructorExpression() || this.getQuery().isDefaultProjection()) {
-			return result;
-		}
+        if (declaredQuery.hasConstructorExpression() || declaredQuery.isDefaultProjection()) {
+            return result;
+        }
 
-		return returnedType.isProjecting() && !getMetamodel().isJpaManaged(returnedType.getReturnedType()) //
-				? Tuple.class
-				: result;
-	}
+        return returnedType.isProjecting() && !getMetamodel().isJpaManaged(returnedType.getReturnedType()) //
+                ? Tuple.class
+                : result;
+    }
 }

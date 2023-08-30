@@ -26,21 +26,25 @@ public abstract class AbstractJpaSqlTemplate implements JpaSqlTemplate {
      * @param query
      */
     protected void setParameters(String sql, Map<String, Object> paramMap, Query query) {
-        DeclaredQuery declaredQuery = DeclaredQuery.of(sql, true);
-        List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
-        String name;
-        for (StringQuery.ParameterBinding binding : list) {
-            name = binding.getName();
-            query.setParameter(name, paramMap.get(name));
+        if (paramMap != null) {
+            DeclaredQuery declaredQuery = DeclaredQuery.of(sql,true);
+            List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
+            String name;
+            for (StringQuery.ParameterBinding binding : list) {
+                name = binding.getName();
+                query.setParameter(name, paramMap.get(name));
+            }
         }
     }
 
     private void setParameters(DeclaredQuery declaredQuery,Map<String, Object> paramMap, Query query) {
-        List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
-        String name;
-        for (StringQuery.ParameterBinding binding : list) {
-            name = binding.getName();
-            query.setParameter(name, paramMap.get(name));
+        if (paramMap != null) {
+            List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
+            String name;
+            for (StringQuery.ParameterBinding binding : list) {
+                name = binding.getName();
+                query.setParameter(name, paramMap.get(name));
+            }
         }
     }
 

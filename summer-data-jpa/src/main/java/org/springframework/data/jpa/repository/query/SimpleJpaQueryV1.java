@@ -46,7 +46,7 @@ final class SimpleJpaQueryV1 extends AbstractStringBasedJpaQueryV1 {
 	 * @param evaluationContextProvider must not be {@literal null}
 	 * @param parser must not be {@literal null}
 	 */
-	public SimpleJpaQueryV1(JpaQueryMethod method, EntityManager em, @Nullable String countQueryString,
+	public SimpleJpaQueryV1(JpaQueryMethodExtendV1 method, EntityManager em, @Nullable String countQueryString,
 							QueryRewriter queryRewriter, QueryMethodEvaluationContextProvider evaluationContextProvider, SpelExpressionParser parser) {
 		this(method, em, method.getRequiredAnnotatedQuery(), countQueryString, queryRewriter, evaluationContextProvider, parser);
 	}
@@ -62,17 +62,20 @@ final class SimpleJpaQueryV1 extends AbstractStringBasedJpaQueryV1 {
 	 * @param evaluationContextProvider must not be {@literal null}
 	 * @param parser must not be {@literal null}
 	 */
-	public SimpleJpaQueryV1(JpaQueryMethod method, EntityManager em, String queryString, @Nullable String countQueryString, QueryRewriter queryRewriter,
+	public SimpleJpaQueryV1(JpaQueryMethodExtendV1 method, EntityManager em, String queryString, @Nullable String countQueryString, QueryRewriter queryRewriter,
 							QueryMethodEvaluationContextProvider evaluationContextProvider, SpelExpressionParser parser) {
 
 		super(method, em, queryString, countQueryString, queryRewriter, evaluationContextProvider, parser);
 
-		validateQuery(getQuery().getQueryString(), "Validation failed for query for method %s", method);
-
-		if (method.isPageQuery()) {
-			validateQuery(getCountQuery().getQueryString(),
-					String.format("Count query validation failed for method %s", method));
-		}
+		/**
+		 *  todo: 如何继续校验
+		 */
+		//validateQuery(getQuery().getQueryString(), "Validation failed for query for method %s", method);
+		//
+		//if (method.isPageQuery()) {
+		//	validateQuery(getCountQuery().getQueryString(),
+		//			String.format("Count query validation failed for method %s", method));
+		//}
 	}
 
 	/**
