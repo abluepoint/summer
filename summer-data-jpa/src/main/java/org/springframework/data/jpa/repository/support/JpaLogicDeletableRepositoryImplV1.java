@@ -17,16 +17,16 @@ import java.util.Optional;
 
 @Repository
 @Transactional(readOnly = true)
-public class SummerSimpleJpaRepository<T, ID> extends SimpleJpaRepository<T, ID> implements SummerJpaRepositoryImplementation<T, ID> {
+public class JpaLogicDeletableRepositoryImplV1<T, ID> extends SimpleJpaRepository<T, ID> implements JpaLogicDeletableRepositoryV1<T, ID> {
 
     private EntityManager entityManager;
 
-    public SummerSimpleJpaRepository(JpaEntityInformation<T, ?> entityInformation, EntityManager entityManager) {
+    public JpaLogicDeletableRepositoryImplV1(JpaEntityInformation<T, ?> entityInformation, EntityManager entityManager) {
         super(entityInformation, entityManager);
         this.entityManager = entityManager;
     }
 
-    public SummerSimpleJpaRepository(Class<T> domainClass, EntityManager em) {
+    public JpaLogicDeletableRepositoryImplV1(Class<T> domainClass, EntityManager em) {
         super(domainClass, em);
         this.entityManager = entityManager;
     }

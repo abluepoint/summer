@@ -7,7 +7,7 @@ import org.springframework.data.repository.core.RepositoryMetadata;
 
 import java.lang.reflect.Method;
 
-public class SummerJpaQueryMethod extends JpaQueryMethod {
+public class JpaQueryMethodExtendV1 extends JpaQueryMethod {
 
     private final Method method;
     private final String javaClassName;
@@ -21,15 +21,16 @@ public class SummerJpaQueryMethod extends JpaQueryMethod {
      * @param factory   must not be {@literal null}
      * @param extractor must not be {@literal null}
      */
-    protected SummerJpaQueryMethod(Method method, RepositoryMetadata metadata, ProjectionFactory factory, QueryExtractor extractor) {
+    protected JpaQueryMethodExtendV1(Method method, RepositoryMetadata metadata, ProjectionFactory factory, QueryExtractor extractor) {
         super(method, metadata, factory, extractor);
         this.method = method;
         this.javaClassName = method.getDeclaringClass().getName();
         this.javaMethodName = method.getName();
 
-        if(method.getDeclaringClass().isAssignableFrom(LogicDeletable.class)){
-
-        }
+        //todo: 支持逻辑删除
+        //if(method.getDeclaringClass().isAssignableFrom(LogicDeletable.class)){
+        //
+        //}
 
     }
 

@@ -8,7 +8,7 @@ package org.springframework.data.jpa.repository.support;
 import org.springframework.data.repository.NoRepositoryBean;
 
 @NoRepositoryBean
-public interface SummerJpaRepositoryImplementation<T, ID> extends JpaRepositoryImplementation<T, ID> {
+public interface JpaLogicDeletableRepositoryV1<T, ID> extends JpaRepositoryImplementation<T, ID> {
 
     void logicDeleteById(ID id);
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020 abluepoint All Rights Reserved.
- * File:SummerJpaParametersParameterAccessor.java
+ * File:JpaParametersParameterAccessorExtendV1.java
  * Date:2020-12-29 15:14:29
  */
 
@@ -13,16 +13,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public class SummerJpaParametersParameterAccessor extends JpaParametersParameterAccessor{
+public class JpaParametersParameterAccessorExtendV1 extends JpaParametersParameterAccessor{
 
     private Map<String,Object> namedParameterMap;
     /**
-     * Creates a new {@link SummerJpaParametersParameterAccessor}.
+     * Creates a new {@link JpaParametersParameterAccessorExtendV1}.
      *
      * @param parameters must not be {@literal null}.
      * @param values     must not be {@literal null}.
      */
-    SummerJpaParametersParameterAccessor(Parameters<?, ?> parameters, Object[] values) {
+    JpaParametersParameterAccessorExtendV1(Parameters<?, ?> parameters, Object[] values) {
         super(parameters, values);
         initParameterMap(parameters);
     }

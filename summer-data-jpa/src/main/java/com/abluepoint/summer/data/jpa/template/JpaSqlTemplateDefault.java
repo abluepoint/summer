@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class JpaSqlTemplateDefault extends AbstractJpaSqlTemplate {
 
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
 
     public JpaSqlTemplateDefault(EntityManager entityManager) {
         this.entityManager = entityManager;

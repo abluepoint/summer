@@ -1,12 +1,13 @@
 /*
  * Copyright (c) 2020 abluepoint All Rights Reserved.
- * File:SummerJpaRepositoryFactoryBean.java
+ * File:JpaRepositoryFactoryBeanV1.java
  * Date:2020-12-29 11:11:29
  */
 package org.springframework.data.jpa.repository.support;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.query.EscapeCharacter;
 import org.springframework.data.jpa.repository.query.JpaQueryMethodFactory;
 import org.springframework.data.querydsl.EntityPathResolver;
@@ -14,9 +15,6 @@ import org.springframework.data.querydsl.SimpleEntityPathResolver;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.springframework.lang.Nullable;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 
 public class SummerJpaRepositoryFactoryBean<T extends Repository<S, ID>, S, ID>
         extends JpaRepositoryFactoryBean<T, S, ID> {
@@ -56,15 +54,15 @@ public class SummerJpaRepositoryFactoryBean<T extends Repository<S, ID>, S, ID>
 
     @Override
     protected RepositoryFactorySupport createRepositoryFactory(EntityManager entityManager) {
-        SummerJpaRepositoryFactory summerJpaRepositoryFactory = new SummerJpaRepositoryFactory(entityManager);
-        summerJpaRepositoryFactory.setEntityPathResolver(entityPathResolver);
-        summerJpaRepositoryFactory.setEscapeCharacter(escapeCharacter);
+        JpaRepositoryFactoryV1 jpaRepositoryFactoryV1 = new JpaRepositoryFactoryV1(entityManager);
+        jpaRepositoryFactoryV1.setEntityPathResolver(entityPathResolver);
+        jpaRepositoryFactoryV1.setEscapeCharacter(escapeCharacter);
 
         if (queryMethodFactory != null) {
-            summerJpaRepositoryFactory.setQueryMethodFactory(queryMethodFactory);
+            jpaRepositoryFactoryV1.setQueryMethodFactory(queryMethodFactory);
         }
 
-        return summerJpaRepositoryFactory;
-
+        return jpaRepositoryFactoryV1;
     }
+
 }

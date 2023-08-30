@@ -14,6 +14,9 @@ import org.springframework.data.domain.Sort;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 执行查询的模板方法类,其它功能不依赖它
+ */
 public abstract class AbstractJpaSqlTemplate implements JpaSqlTemplate {
     /**
      * 根据sql设置用到的参数
@@ -23,25 +26,21 @@ public abstract class AbstractJpaSqlTemplate implements JpaSqlTemplate {
      * @param query
      */
     protected void setParameters(String sql, Map<String, Object> paramMap, Query query) {
-        if (paramMap != null) {
-            DeclaredQuery declaredQuery = DeclaredQuery.of(sql,true);
-            List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
-            String name;
-            for (StringQuery.ParameterBinding binding : list) {
-                name = binding.getName();
-                query.setParameter(name, paramMap.get(name));
-            }
+        DeclaredQuery declaredQuery = DeclaredQuery.of(sql, true);
+        List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
+        String name;
+        for (StringQuery.ParameterBinding binding : list) {
+            name = binding.getName();
+            query.setParameter(name, paramMap.get(name));
         }
     }
 
     private void setParameters(DeclaredQuery declaredQuery,Map<String, Object> paramMap, Query query) {
-        if (paramMap != null) {
-            List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
-            String name;
-            for (StringQuery.ParameterBinding binding : list) {
-                name = binding.getName();
-                query.setParameter(name, paramMap.get(name));
-            }
+        List<StringQuery.ParameterBinding> list = declaredQuery.getParameterBindings();
+        String name;
+        for (StringQuery.ParameterBinding binding : list) {
+            name = binding.getName();
+            query.setParameter(name, paramMap.get(name));
         }
     }
 

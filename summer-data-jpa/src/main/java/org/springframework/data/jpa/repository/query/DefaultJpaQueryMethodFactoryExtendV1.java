@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020 abluepoint All Rights Reserved.
- * File:SummerJpaQueryMethodFactory.java
+ * File:DefaultJpaQueryMethodFactoryExtendV1.java
  * Date:2020-12-29 13:09:29
  */
 
@@ -12,17 +12,17 @@ import org.springframework.data.repository.core.RepositoryMetadata;
 
 import java.lang.reflect.Method;
 
-public class SummerJpaQueryMethodFactory extends DefaultJpaQueryMethodFactory {
+public class DefaultJpaQueryMethodFactoryExtendV1 extends DefaultJpaQueryMethodFactory {
 
     private final QueryExtractor extractor;
 
-    public SummerJpaQueryMethodFactory(QueryExtractor extractor) {
+    public DefaultJpaQueryMethodFactoryExtendV1(QueryExtractor extractor) {
         super(extractor);
         this.extractor = extractor;
     }
 
     @Override
     public JpaQueryMethod build(Method method, RepositoryMetadata metadata, ProjectionFactory factory) {
-        return new SummerJpaQueryMethod(method, metadata, factory, extractor);
+        return new JpaQueryMethodExtendV1(method, metadata, factory, extractor);
     }
 }
