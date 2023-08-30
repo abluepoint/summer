@@ -1,0 +1,37 @@
+spring:
+  profiles:
+    active: dmdev
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/id_test?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true&tinyInt1isBit=false
+    username: root
+    password: 1q2w3e4r
+  jpa:
+    hibernate:
+      ddl-auto: none
+---
+spring:
+  config:
+    activate:
+      on-profile: dmdev
+  datasource:
+    url: jdbc:dm://10.14.153.101:31676?schema=IDTEST
+    username: IDTEST
+    password: IDTEST001
+    driver-class-name: dm.jdbc.driver.DmDriver
+  jpa:
+    database-platform: org.hibernate.dialect.DmDialect
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.DmDialect
+        default_schema: IDTEST
+        temp:
+          use_jdbc_metadata_defaults: false
