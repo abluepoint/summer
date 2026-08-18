@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: summer-sample
+  datasource:
+    url: jdbc:h2:mem:summer;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+
+summer:
+  common:
+    enabled: true
+  web:
+    enabled: true
+    cache-request-body: true
+    wrap-responses: true
+  data:
+    jpa:
+      enabled: true
+  security:
+    enabled: true
+    authorization-server:
+      enabled: true
+      issuer: ${SUMMER_SAMPLE_ISSUER:http://127.0.0.1:8080}
+      user:
+        username: ${SUMMER_SAMPLE_USER:summer-user}
+        password: ${SUMMER_SAMPLE_USER_PASSWORD:summer-user-demo-only}
+      clients:
+        - id: ${SUMMER_SAMPLE_CLIENT_ID:summer-client}
+          secret: ${SUMMER_SAMPLE_CLIENT_SECRET:summer-client-demo-only}
+          grant-types:
+            - client_credentials
+            - authorization_code
+            - refresh_token
+          redirect-uris:
+            - http://127.0.0.1:8080/login/oauth2/code/summer
+          scopes:
+            - openid
+            - profile
+            - customer.read
+            - customer.write
+    resource-server:
+      enabled: true
+      protected-paths:
+        - /api/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    level: "%5p [requestId:%X{requestId:-none}]"
