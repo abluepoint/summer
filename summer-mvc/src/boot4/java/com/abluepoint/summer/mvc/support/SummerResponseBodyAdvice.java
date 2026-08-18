@@ -8,7 +8,10 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
+import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -39,7 +42,12 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             ServerHttpRequest request,
             ServerHttpResponse response
     ) {
-        if (body instanceof ApiResponse<?> || body instanceof UnwrappedResponse || isFrameworkEndpoint(request)) {
+        if (body instanceof ApiResponse<?>
+                || body instanceof UnwrappedResponse
+                || ByteArrayHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
+                || ResourceHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
+                || ResourceRegionHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
+                || isFrameworkEndpoint(request)) {
             return body;
         }
 

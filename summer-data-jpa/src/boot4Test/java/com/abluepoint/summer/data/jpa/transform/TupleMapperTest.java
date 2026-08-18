@@ -25,18 +25,40 @@ class TupleMapperTest {
         assertThat(mapper.map(tuple, CustomerView.class).getCustomerId()).isEqualTo(7L);
     }
 
+    @Test
+    void preservesExistingCamelCaseAliases() {
+        Tuple tuple = tuple(Map.of("customerId", 7L, "displayName", "Summer"));
+
+        assertThat(mapper.map(tuple, CustomerRecord.class)).isEqualTo(new CustomerRecord(7L, "Summer"));
+    }
+
+    @Test
+    void mapsNullableColumnsToList() {
+        Tuple tuple = tupleWithEntries(List.of(
+                Map.entry("customer_id", 7L),
+                new java.util.AbstractMap.SimpleImmutableEntry<>("display_name", null)
+        ));
+
+        assertThat(mapper.toList(tuple)).containsExactly(7L, null);
+    }
+
     private static Tuple tuple(Map<String, Object> values) {
+        return tupleWithEntries(values.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .toList());
+    }
+
+    private static Tuple tupleWithEntries(List<Map.Entry<String, Object>> entries) {
         Tuple tuple = mock(Tuple.class);
-        List<String> aliases = values.keySet().stream().sorted().toList();
         List<TupleElement<?>> elements = new java.util.ArrayList<>();
-        aliases.forEach(alias -> {
+        entries.forEach(entry -> {
             TupleElement<?> element = mock(TupleElement.class);
-            when(element.getAlias()).thenReturn(alias);
+            when(element.getAlias()).thenReturn(entry.getKey());
             elements.add(element);
         });
         when(tuple.getElements()).thenReturn(elements);
-        for (int index = 0; index < aliases.size(); index++) {
-            when(tuple.get(index)).thenReturn(values.get(aliases.get(index)));
+        for (int index = 0; index < entries.size(); index++) {
+            when(tuple.get(index)).thenReturn(entries.get(index).getValue());
         }
         return tuple;
     }

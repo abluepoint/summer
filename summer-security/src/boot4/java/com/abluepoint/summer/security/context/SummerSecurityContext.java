@@ -14,12 +14,14 @@ public final class SummerSecurityContext {
 
     public static String principalName() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication == null ? "anonymous" : authentication.getName();
+        return authentication == null || !authentication.isAuthenticated()
+                ? "anonymous"
+                : authentication.getName();
     }
 
     public static Set<String> authorities() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
+        if (authentication == null || !authentication.isAuthenticated()) {
             return Set.of();
         }
         return authentication.getAuthorities().stream()

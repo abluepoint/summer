@@ -1,5 +1,6 @@
 package com.abluepoint.summer.common.context;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public final class SummerContextHolder {
@@ -19,7 +20,7 @@ public final class SummerContextHolder {
 
     public static Scope open(SummerContext context) {
         SummerContext previous = CURRENT.get();
-        CURRENT.set(context);
+        CURRENT.set(Objects.requireNonNull(context, "context"));
         return new Scope(previous);
     }
 

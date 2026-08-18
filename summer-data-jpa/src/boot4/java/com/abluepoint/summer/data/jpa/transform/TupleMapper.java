@@ -13,6 +13,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,7 +47,7 @@ public final class TupleMapper {
         for (int index = 0; index < tuple.getElements().size(); index++) {
             values.add(tuple.get(index));
         }
-        return List.copyOf(values);
+        return Collections.unmodifiableList(values);
     }
 
     public <T> T map(Tuple tuple, Class<T> targetType) {
@@ -150,6 +151,21 @@ public final class TupleMapper {
     }
 
     static String toCamelCase(String value) {
+        boolean hasSeparator = value.chars().anyMatch(character ->
+                character == '_' || character == '-' || Character.isWhitespace(character));
+        if (!hasSeparator) {
+            if (value.isEmpty()) {
+                return value;
+            }
+            boolean allUpperCase = value.chars()
+                    .filter(Character::isLetter)
+                    .allMatch(Character::isUpperCase);
+            if (allUpperCase) {
+                return value.toLowerCase(Locale.ROOT);
+            }
+            return Character.toLowerCase(value.charAt(0)) + value.substring(1);
+        }
+
         StringBuilder result = new StringBuilder(value.length());
         boolean capitalize = false;
         for (char character : value.toLowerCase(Locale.ROOT).toCharArray()) {

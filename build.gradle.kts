@@ -1,8 +1,25 @@
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.DefaultTask
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+abstract class VerifyModuleBoundaries : DefaultTask() {
+    @get:Input
+    abstract val violations: ListProperty<String>
+
+    @TaskAction
+    fun verify() {
+        val detectedViolations = violations.get()
+        check(detectedViolations.isEmpty()) {
+            "Illegal module dependencies detected:\n${detectedViolations.joinToString("\n")}"
+        }
+    }
+}
 
 plugins {
     base
@@ -82,29 +99,25 @@ val allowedProjectDependencies = mapOf(
     "summer-data-jpa-test" to setOf("summer-dependencies", "summer-boot-starter", "summer-data-jpa"),
 )
 
-val verifyModuleBoundaries by tasks.registering {
+val verifyModuleBoundaries by tasks.registering(VerifyModuleBoundaries::class) {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     description = "Fails the build when a project declares a dependency outside the approved module graph."
+}
 
-    doLast {
-        val violations = mutableListOf<String>()
+gradle.projectsEvaluated {
+    val detectedViolations = allowedProjectDependencies.flatMap { (projectName, allowed) ->
+        val declaredProjects = project(":$projectName").configurations
+            .flatMap { configuration -> configuration.dependencies.withType(ProjectDependency::class.java) }
+            .map { dependency -> dependency.path.removePrefix(":") }
+            .toSet()
 
-        allowedProjectDependencies.forEach { (projectName, allowed) ->
-            val module = project(":$projectName")
-            val declaredProjects = module.configurations
-                .flatMap { configuration -> configuration.dependencies.withType(ProjectDependency::class.java) }
-                .map { dependency -> dependency.path.removePrefix(":") }
-                .toSet()
-
-            declaredProjects
-                .filterNot(allowed::contains)
-                .sorted()
-                .forEach { forbidden -> violations += "$projectName -> $forbidden" }
-        }
-
-        check(violations.isEmpty()) {
-            "Illegal module dependencies detected:\n${violations.joinToString("\n")}"
-        }
+        declaredProjects
+            .filterNot(allowed::contains)
+            .sorted()
+            .map { forbidden -> "$projectName -> $forbidden" }
+    }
+    verifyModuleBoundaries.configure {
+        violations.set(detectedViolations)
     }
 }
 

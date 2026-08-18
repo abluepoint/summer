@@ -58,7 +58,10 @@ public final class ClasspathSqlTemplateSource implements SqlTemplateSource {
             Matcher marker = TEMPLATE_MARKER.matcher(line.strip());
             if (marker.matches()) {
                 current = marker.group(1);
-                sections.putIfAbsent(current, new StringBuilder());
+                if (sections.containsKey(current)) {
+                    throw new IllegalArgumentException("Duplicate SQL template '" + current + "'");
+                }
+                sections.put(current, new StringBuilder());
             } else if (current != null) {
                 sections.get(current).append(line).append('\n');
             }

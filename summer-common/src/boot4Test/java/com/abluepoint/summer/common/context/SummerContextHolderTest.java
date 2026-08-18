@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 class SummerContextHolderTest {
 
@@ -45,5 +46,12 @@ class SummerContextHolderTest {
 
         assertThat(observed).hasValue(context);
         assertThat(SummerContextHolder.current()).isEmpty();
+    }
+
+    @Test
+    void rejectsNullContextAtPublicBindingBoundary() {
+        assertThatNullPointerException()
+                .isThrownBy(() -> SummerContextHolder.open(null))
+                .withMessage("context");
     }
 }

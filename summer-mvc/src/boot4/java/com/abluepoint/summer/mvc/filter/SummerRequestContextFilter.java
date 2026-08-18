@@ -36,13 +36,17 @@ public final class SummerRequestContextFilter extends OncePerRequestFilter {
         HttpServletRequest effectiveRequest = cacheRequestBody && hasBody(request)
                 ? new CachedBodyHttpServletRequest(request)
                 : request;
-
+        String previousRequestId = MDC.get(REQUEST_ID_MDC_KEY);
         response.setHeader(REQUEST_ID_HEADER, requestId);
         MDC.put(REQUEST_ID_MDC_KEY, requestId);
         try (SummerContextHolder.Scope ignored = SummerContextHolder.open(context)) {
             filterChain.doFilter(effectiveRequest, response);
         } finally {
-            MDC.remove(REQUEST_ID_MDC_KEY);
+            if (previousRequestId == null) {
+                MDC.remove(REQUEST_ID_MDC_KEY);
+            } else {
+                MDC.put(REQUEST_ID_MDC_KEY, previousRequestId);
+            }
         }
     }
 

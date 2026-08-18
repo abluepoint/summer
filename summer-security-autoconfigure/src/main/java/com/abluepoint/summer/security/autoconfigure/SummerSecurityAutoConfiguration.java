@@ -211,6 +211,12 @@ public class SummerSecurityAutoConfiguration {
         if (configured.getId() == null || configured.getSecret() == null) {
             throw new IllegalStateException("OAuth2 client id and secret are required");
         }
+        if (configured.getId().isBlank()) {
+            throw new IllegalStateException("OAuth2 client id must not be blank");
+        }
+        if (configured.getSecret().isBlank()) {
+            throw new IllegalStateException("OAuth2 client secret must not be blank");
+        }
 
         RegisteredClient.Builder builder = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId(configured.getId())

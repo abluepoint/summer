@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -22,6 +23,23 @@ class SummerRequestContextFilterTest {
 
         assertThat(filteredRequest(json)).isInstanceOf(CachedBodyHttpServletRequest.class);
         assertThat(filteredRequest(form)).isSameAs(form);
+    }
+
+    @Test
+    void restoresUpstreamRequestIdAfterFiltering() throws Exception {
+        MockHttpServletRequest request = request("application/json", "{}");
+        request.addHeader(SummerRequestContextFilter.REQUEST_ID_HEADER, "inner-request");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MDC.put(SummerRequestContextFilter.REQUEST_ID_MDC_KEY, "outer-request");
+
+        try {
+            filter.doFilter(request, response, (servletRequest, servletResponse) ->
+                    assertThat(MDC.get(SummerRequestContextFilter.REQUEST_ID_MDC_KEY)).isEqualTo("inner-request"));
+
+            assertThat(MDC.get(SummerRequestContextFilter.REQUEST_ID_MDC_KEY)).isEqualTo("outer-request");
+        } finally {
+            MDC.remove(SummerRequestContextFilter.REQUEST_ID_MDC_KEY);
+        }
     }
 
     private ServletRequest filteredRequest(MockHttpServletRequest request) throws Exception {

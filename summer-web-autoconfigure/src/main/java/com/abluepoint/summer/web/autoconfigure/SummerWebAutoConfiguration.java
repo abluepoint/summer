@@ -6,6 +6,7 @@ import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
 import com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingFilterBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -23,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 public class SummerWebAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean(name = "summerRequestContextFilter")
+    @ConditionalOnMissingFilterBean(SummerRequestContextFilter.class)
     FilterRegistrationBean<SummerRequestContextFilter> summerRequestContextFilter(SummerWebProperties properties) {
         FilterRegistrationBean<SummerRequestContextFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new SummerRequestContextFilter(properties.isCacheRequestBody()));
