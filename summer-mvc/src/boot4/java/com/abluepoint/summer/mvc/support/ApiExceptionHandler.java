@@ -6,6 +6,7 @@ import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.message.MessageResolver;
 import com.abluepoint.summer.mvc.api.ApiError;
 import com.abluepoint.summer.mvc.api.ApiResponse;
+import com.abluepoint.summer.mvc.validate.FieldValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -27,6 +28,19 @@ public class ApiExceptionHandler {
 
     public ApiExceptionHandler(MessageResolver messageResolver) {
         this.messageResolver = messageResolver;
+    }
+
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFieldValidation(FieldValidationException exception) {
+        List<ApiError.FieldViolation> violations = exception.violations().stream()
+                .map(violation -> new ApiError.FieldViolation(violation.field(), violation.message()))
+                .toList();
+        ApiError error = new ApiError(
+                CommonErrorCode.INVALID_ARGUMENT.code(),
+                CommonErrorCode.INVALID_ARGUMENT.defaultMessage(),
+                violations
+        );
+        return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
     }
 
     @ExceptionHandler(SummerException.class)
