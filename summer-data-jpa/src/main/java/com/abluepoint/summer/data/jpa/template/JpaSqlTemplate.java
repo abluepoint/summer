@@ -1,6 +1,5 @@
 package com.abluepoint.summer.data.jpa.template;
 
-import com.abluepoint.summer.data.jpa.transform.TupleMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
@@ -13,18 +12,17 @@ public final class JpaSqlTemplate {
     private final EntityManager entityManager;
     private final SqlTemplateSource templateSource;
     private final FreemarkerSqlRenderer renderer;
-    private final TupleMapper tupleMapper;
+    private final SqlResultProjectionAdapter resultProjectionAdapter;
 
     public JpaSqlTemplate(
             EntityManager entityManager,
             SqlTemplateSource templateSource,
-            FreemarkerSqlRenderer renderer,
-            TupleMapper tupleMapper
+            FreemarkerSqlRenderer renderer
     ) {
         this.entityManager = entityManager;
         this.templateSource = templateSource;
         this.renderer = renderer;
-        this.tupleMapper = tupleMapper;
+        this.resultProjectionAdapter = new SqlResultProjectionAdapter();
     }
 
     public <T> List<T> query(
@@ -41,7 +39,7 @@ public final class JpaSqlTemplate {
 
         @SuppressWarnings("unchecked")
         List<Tuple> rows = query.getResultList();
-        return rows.stream().map(tuple -> tupleMapper.map(tuple, targetType)).toList();
+        return rows.stream().map(tuple -> resultProjectionAdapter.project(tuple, targetType)).toList();
     }
 
     public long count(

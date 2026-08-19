@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.support;
 
+import com.abluepoint.summer.mvc.api.RawResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.io.ByteArrayResource;
@@ -7,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
@@ -20,7 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SummerResponseBodyAdviceTest {
 
-    private final SummerResponseBodyAdvice advice = new SummerResponseBodyAdvice(new ObjectMapper());
+    private final SummerResponseBodyAdvice advice = new SummerResponseBodyAdvice(
+            new ObjectMapper(),
+            () -> "request-123"
+    );
 
     @Test
     void leavesBinaryDownloadsUnwrapped() throws Exception {
@@ -73,6 +78,35 @@ class SummerResponseBodyAdviceTest {
         assertThat(result).isSameAs(body);
     }
 
+    @Test
+    void wrapsApplicationResponsesWithTheCommonContractAndRequestId() throws Exception {
+        Method method = DownloadController.class.getDeclaredMethod("text");
+        MockHttpServletResponse servletResponse = new MockHttpServletResponse();
+
+        Object result = advice.beforeBodyWrite(
+                "hello",
+                new MethodParameter(method, -1),
+                MediaType.TEXT_PLAIN,
+                StringHttpMessageConverter.class,
+                new ServletServerHttpRequest(new MockHttpServletRequest("GET", "/hello")),
+                new ServletServerHttpResponse(servletResponse)
+        );
+
+        assertThat(result).isInstanceOf(String.class);
+        assertThat((String) result)
+                .contains("\"success\":true")
+                .contains("\"data\":\"hello\"")
+                .contains("\"requestId\":\"request-123\"");
+        assertThat(servletResponse.getContentType()).startsWith("application/json");
+    }
+
+    @Test
+    void explicitRawResponseDisablesWrapping() throws Exception {
+        Method method = DownloadController.class.getDeclaredMethod("raw");
+
+        assertThat(advice.supports(new MethodParameter(method, -1), StringHttpMessageConverter.class)).isFalse();
+    }
+
     private static final class DownloadController {
         byte[] download() {
             return new byte[0];
@@ -84,6 +118,15 @@ class SummerResponseBodyAdviceTest {
 
         ResourceRegion region() {
             return new ResourceRegion(new ByteArrayResource(new byte[0]), 0, 0);
+        }
+
+        String text() {
+            return "hello";
+        }
+
+        @RawResponse
+        String raw() {
+            return "raw";
         }
     }
 }

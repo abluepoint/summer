@@ -1,9 +1,8 @@
 package com.abluepoint.summer.mvc.support;
 
-import com.abluepoint.summer.common.context.SummerContextHolder;
-import com.abluepoint.summer.common.response.UnwrappedResponse;
-import com.abluepoint.summer.mvc.api.ApiResponse;
+import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
+import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.core.MethodParameter;
@@ -22,9 +21,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     private final ObjectMapper objectMapper;
+    private final RequestIdAccessor requestIdAccessor;
 
-    public SummerResponseBodyAdvice(ObjectMapper objectMapper) {
+    public SummerResponseBodyAdvice(ObjectMapper objectMapper, RequestIdAccessor requestIdAccessor) {
         this.objectMapper = objectMapper;
+        this.requestIdAccessor = requestIdAccessor;
     }
 
     @Override
@@ -43,7 +44,6 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             ServerHttpResponse response
     ) {
         if (body instanceof ApiResponse<?>
-                || body instanceof UnwrappedResponse
                 || ByteArrayHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
                 || ResourceHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
                 || ResourceRegionHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
@@ -51,7 +51,7 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-        ApiResponse<Object> wrapped = ApiResponse.success(body, requestId());
+        ApiResponse<Object> wrapped = ApiResponse.success(body, requestIdAccessor.currentRequestId());
         if (StringHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
             response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
             try {
@@ -70,7 +70,4 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
                 || path.startsWith("/actuator/");
     }
 
-    private static String requestId() {
-        return SummerContextHolder.current().map(context -> context.requestId()).orElse("unbound");
-    }
 }

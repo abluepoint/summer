@@ -6,4 +6,6 @@ public interface ErrorCode {
     String code();
 
     String defaultMessage();
+
+    ErrorCategory category();
 }

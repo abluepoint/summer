@@ -4,7 +4,6 @@ import com.abluepoint.summer.data.jpa.template.ClasspathSqlTemplateSource;
 import com.abluepoint.summer.data.jpa.template.FreemarkerSqlRenderer;
 import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import com.abluepoint.summer.data.jpa.template.SqlTemplateSource;
-import com.abluepoint.summer.data.jpa.transform.TupleMapper;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -34,18 +33,11 @@ public class SummerDataJpaAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    TupleMapper summerTupleMapper() {
-        return new TupleMapper();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
     JpaSqlTemplate summerJpaSqlTemplate(
             EntityManager entityManager,
             SqlTemplateSource templateSource,
-            FreemarkerSqlRenderer renderer,
-            TupleMapper tupleMapper
+            FreemarkerSqlRenderer renderer
     ) {
-        return new JpaSqlTemplate(entityManager, templateSource, renderer, tupleMapper);
+        return new JpaSqlTemplate(entityManager, templateSource, renderer);
     }
 }

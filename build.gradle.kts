@@ -54,7 +54,7 @@ subprojects {
         dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
     }
 
-    if (name != "summer-data-jpa-test") {
+    if (name != "summer-sample") {
         pluginManager.apply("maven-publish")
 
         pluginManager.withPlugin("java") {
@@ -82,21 +82,21 @@ val allowedProjectDependencies = mapOf(
     "summer-data-jpa" to setOf("summer-dependencies", "summer-common"),
     "summer-security" to setOf("summer-dependencies", "summer-common"),
     "summer-common-autoconfigure" to setOf("summer-dependencies", "summer-common"),
-    "summer-web-autoconfigure" to setOf("summer-dependencies", "summer-common", "summer-mvc"),
+    "summer-mvc-autoconfigure" to setOf("summer-dependencies", "summer-common", "summer-mvc"),
     "summer-data-jpa-autoconfigure" to setOf("summer-dependencies", "summer-common", "summer-data-jpa"),
     "summer-security-autoconfigure" to setOf("summer-dependencies", "summer-common", "summer-security"),
     "summer-common-starter" to setOf("summer-dependencies", "summer-common-autoconfigure"),
-    "summer-web-starter" to setOf("summer-dependencies", "summer-common-starter", "summer-web-autoconfigure"),
+    "summer-mvc-starter" to setOf("summer-dependencies", "summer-common-starter", "summer-mvc-autoconfigure"),
     "summer-data-jpa-starter" to setOf("summer-dependencies", "summer-common-starter", "summer-data-jpa-autoconfigure"),
     "summer-security-starter" to setOf("summer-dependencies", "summer-common-starter", "summer-security-autoconfigure"),
     "summer-boot-starter" to setOf(
         "summer-dependencies",
         "summer-common-starter",
-        "summer-web-starter",
+        "summer-mvc-starter",
         "summer-data-jpa-starter",
         "summer-security-starter",
     ),
-    "summer-data-jpa-test" to setOf("summer-dependencies", "summer-boot-starter", "summer-data-jpa"),
+    "summer-sample" to setOf("summer-dependencies", "summer-boot-starter", "summer-data-jpa"),
 )
 
 val verifyModuleBoundaries by tasks.registering(VerifyModuleBoundaries::class) {

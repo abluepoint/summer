@@ -1,16 +1,16 @@
 package com.abluepoint.summer.mvc.support;
 
-import com.abluepoint.summer.common.context.SummerContextHolder;
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.message.MessageResolver;
-import com.abluepoint.summer.mvc.api.ApiError;
-import com.abluepoint.summer.mvc.api.ApiResponse;
+import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
+import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -25,9 +25,17 @@ public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     private final MessageResolver messageResolver;
+    private final ErrorStatusResolver errorStatusResolver;
+    private final RequestIdAccessor requestIdAccessor;
 
-    public ApiExceptionHandler(MessageResolver messageResolver) {
+    public ApiExceptionHandler(
+            MessageResolver messageResolver,
+            ErrorStatusResolver errorStatusResolver,
+            RequestIdAccessor requestIdAccessor
+    ) {
         this.messageResolver = messageResolver;
+        this.errorStatusResolver = errorStatusResolver;
+        this.requestIdAccessor = requestIdAccessor;
     }
 
     @ExceptionHandler(FieldValidationException.class)
@@ -51,7 +59,8 @@ public class ApiExceptionHandler {
                 LocaleContextHolder.getLocale()
         );
         ApiError error = new ApiError(exception.errorCode().code(), message, List.of());
-        return ResponseEntity.status(statusFor(exception)).body(ApiResponse.failure(error, requestId()));
+        return ResponseEntity.status(errorStatusResolver.resolve(exception.errorCode()))
+                .body(ApiResponse.failure(error, requestId()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -81,18 +90,7 @@ public class ApiExceptionHandler {
         return ResponseEntity.internalServerError().body(ApiResponse.failure(error, requestId()));
     }
 
-    private static HttpStatus statusFor(SummerException exception) {
-        return switch (exception.errorCode().code()) {
-            case "SUMMER-400" -> HttpStatus.BAD_REQUEST;
-            case "SUMMER-401" -> HttpStatus.UNAUTHORIZED;
-            case "SUMMER-403" -> HttpStatus.FORBIDDEN;
-            case "SUMMER-404" -> HttpStatus.NOT_FOUND;
-            case "SUMMER-409" -> HttpStatus.CONFLICT;
-            default -> HttpStatus.INTERNAL_SERVER_ERROR;
-        };
-    }
-
-    private static String requestId() {
-        return SummerContextHolder.current().map(context -> context.requestId()).orElse("unbound");
+    private String requestId() {
+        return requestIdAccessor.currentRequestId();
     }
 }

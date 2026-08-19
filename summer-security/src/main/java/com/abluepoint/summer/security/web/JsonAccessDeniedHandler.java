@@ -1,7 +1,8 @@
 package com.abluepoint.summer.security.web;
 
-import com.abluepoint.summer.common.context.SummerContextHolder;
 import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -11,6 +12,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public final class JsonAccessDeniedHandler implements AccessDeniedHandler {
 
@@ -29,16 +31,14 @@ public final class JsonAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getOutputStream(), SecurityErrorResponse.of(
+        ApiError error = new ApiError(
                 CommonErrorCode.FORBIDDEN.code(),
                 CommonErrorCode.FORBIDDEN.defaultMessage(),
-                requestId(request)
-        ));
-    }
-
-    private static String requestId(HttpServletRequest request) {
-        return SummerContextHolder.current()
-                .map(context -> context.requestId())
-                .orElseGet(() -> request.getRequestId());
+                List.of()
+        );
+        objectMapper.writeValue(
+                response.getOutputStream(),
+                ApiResponse.failure(error, SecurityRequestIds.from(request))
+        );
     }
 }
