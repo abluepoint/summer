@@ -1,16 +1,15 @@
 package com.abluepoint.summer.mvc.annotation;
 
-/*
- * Copyright (c) 2020 abluepoint All Rights Reserved.
- * File:FieldLists.java
- * Date:2020-03-10 11:08:10
- */
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.lang.annotation.*;
-
-@Target({ ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface FieldLists {
-    FieldList [] value() default {};
+
+    FieldList[] value() default {};
 }

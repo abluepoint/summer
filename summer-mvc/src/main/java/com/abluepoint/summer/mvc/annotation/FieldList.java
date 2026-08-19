@@ -1,20 +1,25 @@
 package com.abluepoint.summer.mvc.annotation;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-/*
- * Copyright (c) 2020 abluepoint All Rights Reserved.
- * File:FieldList.java
- * Date:2020-03-10 11:08:10
- */
-
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Repeatable(FieldLists.class)
 public @interface FieldList {
+
     String param();
+
     String name() default "";
+
     String countParam() default "";
-    Item [] items() default {};
+
+    int maxSize() default -1;
+
+    Item[] items() default {};
 }

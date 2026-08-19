@@ -1,75 +1,69 @@
 package com.abluepoint.summer.data.jpa.template;
 
-import com.abluepoint.summer.data.jpa.JpaSummerException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.abluepoint.summer.data.jpa.transform.TupleMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.persistence.Tuple;
 
 import java.util.List;
 import java.util.Map;
 
-public interface JpaSqlTemplate {
+public final class JpaSqlTemplate {
 
-	/**
-	 * Retrieve a single row mapped from the statement key.
-	 *
-	 * @param <T>       the returned object type
-	 * @param queryString
-	 * @return Mapped object
-	 */
-	<T> T selectOne(String queryString,Class<T> resultType) throws JpaSummerException;
+    private final EntityManager entityManager;
+    private final SqlTemplateSource templateSource;
+    private final FreemarkerSqlRenderer renderer;
+    private final TupleMapper tupleMapper;
 
-	/**
-	 * Retrieve a single row mapped from the statement key and parameter.
-	 *
-	 * @param <T>       the returned object type
-	 * @param queryString Unique identifier matching the statement to use.
-	 * @param parameter A parameter object to pass to the statement.
-	 * @return Mapped object
-	 */
-	<T> T selectOne(String queryString, Map<String,Object> parameter,Class<T> resultType) throws JpaSummerException;
+    public JpaSqlTemplate(
+            EntityManager entityManager,
+            SqlTemplateSource templateSource,
+            FreemarkerSqlRenderer renderer,
+            TupleMapper tupleMapper
+    ) {
+        this.entityManager = entityManager;
+        this.templateSource = templateSource;
+        this.renderer = renderer;
+        this.tupleMapper = tupleMapper;
+    }
 
-	/**
-	 * Retrieve a list of mapped objects from the statement key and parameter.
-	 *
-	 * @param <E>       the returned list element type
-	 * @param queryString Unique identifier matching the statement to use.
-	 * @return List of mapped object
-	 */
-	<E> List<E> selectList(String queryString,Class<E> resultType);
+    public <T> List<T> query(
+            String location,
+            String templateName,
+            Map<String, ?> templateParameters,
+            Map<String, ?> queryParameters,
+            Class<T> targetType
+    ) {
+        String source = templateSource.load(location, templateName);
+        String sql = renderer.render(templateName, source, templateParameters);
+        Query query = entityManager.createNativeQuery(sql, Tuple.class);
+        bind(query, queryParameters);
 
-	/**
-	 * Retrieve a list of mapped objects from the statement key and parameter.
-	 *
-	 * @param <E>       the returned list element type
-	 * @param queryString Unique identifier matching the statement to use.
-	 * @param parameter A parameter object to pass to the statement.
-	 * @return List of mapped object
-	 */
-	<E> List<E> selectList(String queryString, Map<String,Object> parameter,Class<E> resultType);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = query.getResultList();
+        return rows.stream().map(tuple -> tupleMapper.map(tuple, targetType)).toList();
+    }
 
+    public long count(
+            String location,
+            String templateName,
+            Map<String, ?> templateParameters,
+            Map<String, ?> queryParameters
+    ) {
+        String source = templateSource.load(location, templateName);
+        String sql = renderer.render(templateName, source, templateParameters);
+        Query query = entityManager.createNativeQuery(sql);
+        bind(query, queryParameters);
+        Object result = query.getSingleResult();
+        if (!(result instanceof Number number)) {
+            throw new IllegalStateException("Count query did not return a numeric result: " + result);
+        }
+        return number.longValue();
+    }
 
-	/**
-	 * Retrieve a list of mapped objects from the statement key and parameter,
-	 * within the specified row bounds.
-	 *
-	 * @param <E>       the returned list element type
-	 * @param queryString Unique identifier matching the statement to use.
-	 * @param pageable  Bounds to limit object retrieval
-	 * @return List of mapped object
-	 */
-	<E> Page<E> selectPage(String queryString,String countString, Pageable pageable,Class<E> resultType);
-
-	/**
-	 * Retrieve a list of mapped objects from the statement key and parameter,
-	 * within the specified row bounds.
-	 *
-	 * @param <E>       the returned list element type
-	 * @param queryString Unique identifier matching the statement to use.
-	 * @param parameter A parameter object to pass to the statement.
-	 * @param pageable  Bounds to limit object retrieval
-	 * @return List of mapped object
-	 */
-	<E> Page<E> selectPage(String queryString,String countString, Map<String,Object> parameter, Pageable pageable,Class<E> resultType);
-
-
+    private static void bind(Query query, Map<String, ?> parameters) {
+        if (parameters != null) {
+            parameters.forEach(query::setParameter);
+        }
+    }
 }

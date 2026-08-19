@@ -3,17 +3,6 @@ plugins {
     java
 }
 
-sourceSets {
-    named("main") {
-        java.setSrcDirs(listOf("src/boot4/java"))
-        resources.setSrcDirs(listOf("src/boot4/resources"))
-    }
-    named("test") {
-        java.setSrcDirs(listOf("src/boot4Test/java"))
-        resources.setSrcDirs(listOf("src/boot4Test/resources"))
-    }
-}
-
 dependencies {
     implementation(platform(project(":summer-dependencies")))
     implementation(project(":summer-boot-starter"))

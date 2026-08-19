@@ -1,11 +1,5 @@
 package com.abluepoint.summer.mvc.validate;
 
-/*
- * Copyright (c) 2020 abluepoint All Rights Reserved.
- * File:Style.java
- * Date:2020-03-10 16:38:10
- */
-
 import java.util.Map;
 
 public interface Style {
