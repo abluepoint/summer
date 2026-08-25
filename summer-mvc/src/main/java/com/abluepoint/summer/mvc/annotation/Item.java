@@ -17,5 +17,7 @@ public @interface Item {
 
     boolean required() default false;
 
+    boolean nullable() default false;
+
     String style();
 }

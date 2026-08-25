@@ -2,6 +2,7 @@ package com.abluepoint.summer.mvc.interceptor;
 
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldList;
+import com.abluepoint.summer.mvc.annotation.FieldSource;
 import com.abluepoint.summer.mvc.annotation.Item;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
 import com.abluepoint.summer.mvc.validate.FieldValues;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -110,6 +112,35 @@ class FieldValidationInterceptorTest {
         assertThat(FieldValues.from(request).asMap().get("items")).isEqualTo(List.of(
                 Map.of("sku", "A-1", "quantity", 2),
                 Map.of("sku", "B-2", "quantity", 5)
+        ));
+    }
+
+    @Test
+    void validatesAndExportsTypedFieldListsFromPathVariables() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle",
+                        new PatternStyle(String.class, "non-blank text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of(
+                "items.count", "1",
+                "items[0].sku", "A-1",
+                "items[0].quantity", "2"
+        ));
+
+        interceptor.preHandle(
+                request,
+                new MockHttpServletResponse(),
+                new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("pathBatch"))
+        );
+
+        assertThat(FieldValues.from(request).asMap().get("items")).isEqualTo(List.of(
+                Map.of("sku", "A-1", "quantity", 2)
         ));
     }
 
@@ -240,6 +271,17 @@ class FieldValidationInterceptorTest {
                 }
         )
         void batch() {
+        }
+
+        @FieldList(
+                param = "items",
+                source = FieldSource.PATH,
+                items = {
+                        @Item(param = "sku", name = "sku", required = true, style = "textStyle"),
+                        @Item(param = "quantity", name = "quantity", required = true, style = "integerStyle")
+                }
+        )
+        void pathBatch() {
         }
 
         @FieldList(param = "emptyItems")

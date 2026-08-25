@@ -12,7 +12,7 @@ class Customer extends BaseLongEntity {
     @Column(nullable = false, unique = true, length = 200)
     private String email;
 
-    @Column(nullable = false, length = 200)
+    @Column(length = 200)
     private String displayName;
 
     @Column(nullable = false)
@@ -36,5 +36,13 @@ class Customer extends BaseLongEntity {
 
     boolean isActive() {
         return active;
+    }
+
+    void changeDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    void changeActive(boolean active) {
+        this.active = active;
     }
 }

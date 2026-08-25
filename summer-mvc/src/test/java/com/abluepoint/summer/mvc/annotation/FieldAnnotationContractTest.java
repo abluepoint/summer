@@ -22,4 +22,25 @@ class FieldAnnotationContractTest {
         assertThat(FieldLists.class.getAnnotation(Target.class).value())
                 .contains(ElementType.ANNOTATION_TYPE);
     }
+
+    @Test
+    void fieldSourcesAreExplicitAndRemainParamByDefault() throws Exception {
+        assertThat(FieldSource.values()).containsExactly(
+                FieldSource.PARAM,
+                FieldSource.JSON,
+                FieldSource.PATH
+        );
+        assertThat(Field.class.getDeclaredMethod("source").getDefaultValue())
+                .isEqualTo(FieldSource.PARAM);
+        assertThat(FieldList.class.getDeclaredMethod("source").getDefaultValue())
+                .isEqualTo(FieldSource.PARAM);
+    }
+
+    @Test
+    void nullableAndStrictJsonContractsRemainOptIn() throws Exception {
+        assertThat(Field.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
+        assertThat(Item.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
+        assertThat(FieldContract.class.getDeclaredMethod("rejectUnknownJson").getDefaultValue())
+                .isEqualTo(false);
+    }
 }

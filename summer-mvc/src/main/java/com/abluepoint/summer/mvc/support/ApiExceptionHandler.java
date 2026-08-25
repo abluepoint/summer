@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -75,6 +76,16 @@ public class ApiExceptionHandler {
                 CommonErrorCode.INVALID_ARGUMENT.code(),
                 CommonErrorCode.INVALID_ARGUMENT.defaultMessage(),
                 violations
+        );
+        return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException exception) {
+        ApiError error = new ApiError(
+                CommonErrorCode.INVALID_ARGUMENT.code(),
+                CommonErrorCode.INVALID_ARGUMENT.defaultMessage(),
+                List.of(new ApiError.FieldViolation("$", "must be valid JSON"))
         );
         return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
     }

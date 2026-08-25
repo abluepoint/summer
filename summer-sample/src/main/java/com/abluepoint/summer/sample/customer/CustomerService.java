@@ -2,57 +2,79 @@ package com.abluepoint.summer.sample.customer;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import com.abluepoint.summer.sample.shared.CustomerView;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Map;
 
 @Service
 class CustomerService {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomerService.class);
-    private static final String SQL_RESOURCE = "classpath:sql/customer-queries.sql";
-
     private final CustomerRepository repository;
-    private final JpaSqlTemplate sqlTemplate;
-    private final Counter queryCounter;
+    private final CustomerQuery customerQuery;
 
-    CustomerService(CustomerRepository repository, JpaSqlTemplate sqlTemplate, MeterRegistry meterRegistry) {
+    CustomerService(CustomerRepository repository, CustomerQuery customerQuery) {
         this.repository = repository;
-        this.sqlTemplate = sqlTemplate;
-        this.queryCounter = Counter.builder("summer.data.template.queries")
-                .description("Freemarker SQL template queries executed by the sample")
-                .register(meterRegistry);
+        this.customerQuery = customerQuery;
     }
 
     @Transactional(readOnly = true)
     CustomerView findByEmail(String email) {
-        queryCounter.increment();
-        List<CustomerView> customers = sqlTemplate.query(
-                SQL_RESOURCE,
-                "findByEmail",
-                Map.of("activeOnly", true),
-                Map.of("email", email),
-                CustomerView.class
-        );
-        log.info("data_event=template_query template=findByEmail rows={}", customers.size());
-        return customers.stream().findFirst()
+        Customer customer = repository.findByEmail(email)
                 .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+        return toView(customer);
+    }
+
+    @Transactional(readOnly = true)
+    CustomerPage list(CustomerListQuery query) {
+        long totalElements = customerQuery.count(query);
+        long totalPages = totalElements == 0
+                ? 0
+                : ((totalElements - 1) / query.size()) + 1;
+        return new CustomerPage(
+                customerQuery.list(query),
+                query.page(),
+                query.size(),
+                totalElements,
+                totalPages,
+                query.projection().name().toLowerCase(java.util.Locale.ROOT)
+        );
     }
 
     @Transactional
-    CustomerView create(CreateCustomerRequest request) {
-        if (repository.findByEmail(request.email()).isPresent()) {
+    CustomerView update(String email, UpdateCustomerCommand command) {
+        Customer customer = repository.findByEmail(email)
+                .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+        if (command.displayNamePresent()) {
+            customer.changeDisplayName(command.displayName());
+        }
+        if (command.activePresent()) {
+            customer.changeActive(command.active());
+        }
+        return toView(customer);
+    }
+
+    @Transactional
+    void delete(String email) {
+        Customer customer = repository.findByEmail(email)
+                .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+        repository.delete(customer);
+    }
+
+    @Transactional
+    CustomerView create(CreateCustomerCommand command) {
+        if (repository.findByEmail(command.email()).isPresent()) {
             throw new SummerException(CommonErrorCode.CONFLICT);
         }
-        Customer saved = repository.save(new Customer(request.email(), request.displayName()));
-        return new CustomerView(saved.getId(), saved.getEmail(), saved.getDisplayName(), saved.isActive());
+        Customer saved = repository.save(new Customer(command.email(), command.displayName()));
+        return toView(saved);
+    }
+
+    private CustomerView toView(Customer customer) {
+        return new CustomerView(
+                customer.getId(),
+                customer.getEmail(),
+                customer.getDisplayName(),
+                customer.isActive()
+        );
     }
 }

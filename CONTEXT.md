@@ -17,8 +17,8 @@ Summer 4 中统一 HTTP 请求、参数、校验、错误与响应语义的框�
 _Avoid_: Web capability、summer-web
 
 **Parameter contract**:
-Summer MVC 中面向查询、表单及动态请求参数的长期契约，用于声明参数要求并产生经过验证的类型化值。
-_Avoid_: 旧版 Field 兼容、JSON Schema 校验、DTO 校验
+Summer MVC 中覆盖查询/表单参数、JSON body 和路径变量的长期传输字段契约，用于声明来源、presence、nullability、Style 规则和未知字段策略，并产生经过验证的类型化值。
+_Avoid_: 旧版 Field 兼容、JSON Schema 校验、DTO 校验替代品、隐式来源优先级
 
 **Style**:
 参数契约中可复用的参数语义，负责验证原始参数并将其导出为约定类型。

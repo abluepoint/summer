@@ -13,10 +13,13 @@ spring:
 summer:
   common:
     enabled: true
-  web:
+  mvc:
     enabled: true
     cache-request-body: true
     wrap-responses: true
+  sample:
+    data:
+      sql-resource: classpath:sql/customer-queries.sql
   data:
     jpa:
       enabled: true

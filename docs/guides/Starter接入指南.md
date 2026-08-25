@@ -18,9 +18,9 @@
 | --- | --- | --- |
 | `summer.common.enabled` | `true` | 消息解析与公共基座。 |
 | `summer.mvc.enabled` | `true` | MVC 自动配置总开关。 |
-| `summer.mvc.cache-request-body` | `true` | 独立启用请求体重复读取；请求关联过滤器不受此开关影响。 |
+| `summer.mvc.cache-request-body` | `true` | 独立启用请求体重复读取；JSON Field/FieldList 依赖此能力，请求关联过滤器不受此开关影响。 |
 | `summer.mvc.wrap-responses` | `true` | Controller 返回值统一包装；OAuth2/Actuator 自动跳过。 |
-| `summer.mvc.field-validation.enabled` | `true` | 开启查询参数、表单参数的 Field/Style 校验与类型化导出。 |
+| `summer.mvc.field-validation.enabled` | `true` | 开启 PARAM、JSON、PATH 来源的 Field/Style 校验与类型化导出。 |
 | `summer.mvc.field-validation.max-list-size` | `100` | `FieldList` 全局最大元素数，必须为正整数。 |
 | `summer.data.jpa.enabled` | `true` | SQL 模板源、渲染器、JpaSqlTemplate 与内部结果投影适配器。 |
 | `summer.security.enabled` | `true` | 安全自动配置总开关。 |
@@ -37,16 +37,47 @@
 
 ## Field/Style 参数校验
 
-`@Field` 适合校验查询参数、表单参数和其他动态参数，并把通过校验的字符串转换为 Controller 可显式读取的类型化值：
+`@Field` 通过 `FieldSource` 显式声明输入来源，并把通过 Style 校验的值转换为 Controller 可显式读取的类型化结果：
+
+| `FieldSource` | 输入 | 说明 |
+| --- | --- | --- |
+| `PARAM` | 查询参数和表单参数 | 默认值，兼容既有声明。 |
+| `JSON` | JSON request body | 支持根标量和点分嵌套标量；依赖请求体缓存。 |
+| `PATH` | URI template variable | 用于稳定校验资源标识。 |
 
 ```java
 @GetMapping("/orders")
-@Field(param = "page", required = true, style = "integerStyle")
+@Field(
+        param = "page",
+        source = FieldSource.PARAM,
+        required = true,
+        style = "integerStyle"
+)
 OrderView query(FieldValues fields) {
     Integer page = fields.get("page", Integer.class);
     // 查询并返回结果
 }
 ```
+
+JSON Parameter contract 可以和正常的 `@RequestBody` 反序列化、Jakarta Bean Validation 同时使用。Field/Style 负责传输字段白名单、可复用 Style、类型转换和聚合 Field violation；Bean Validation 继续负责 DTO 字段约束与跨字段对象约束：
+
+```java
+@PatchMapping("/customers/{email}")
+@FieldContract(rejectUnknownJson = true)
+@Field(param = "email", source = FieldSource.PATH, required = true, style = "customerEmailStyle")
+@Field(param = "displayName", source = FieldSource.JSON, nullable = true, style = "displayNameStyle")
+@Field(param = "active", source = FieldSource.JSON, style = "booleanStyle")
+CustomerView update(
+        FieldValues fields,
+        @Valid @RequestBody UpdateCustomerRequest request
+) {
+    boolean displayNameWasPresent = fields.contains("displayName");
+    String displayName = fields.get("displayName", String.class);
+    // omitted: contains=false；显式 null: contains=true 且 get(...) == null
+}
+```
+
+`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。`@FieldContract(rejectUnknownJson = true)` 会拒绝未声明属性，默认关闭以保持兼容。请求体只解析一次，随后仍可由 Jackson 绑定 DTO；malformed JSON 统一返回 HTTP 400。若真实 MVC 映射声明 JSON Field/FieldList 或严格 JSON `FieldContract`，却配置 `summer.mvc.cache-request-body=false`，应用会在启动时以明确配置错误失败；只使用 PARAM/PATH 的应用仍可关闭缓存。
 
 内置 Style 以 Spring Bean 名注册：
 
@@ -72,7 +103,7 @@ Style customerCodeStyle() {
 }
 ```
 
-列表参数使用 `@FieldList`。默认数量参数为 `<param>.count`，也可以通过 `countParam` 指定；`maxSize` 可收紧单个接口的列表上限，但不能突破全局上限：
+PARAM/PATH 列表使用显式数量参数。默认数量参数为 `<param>.count`，也可以通过 `countParam` 指定；`maxSize` 可收紧单个接口的列表上限，但不能突破全局上限：
 
 ```java
 @PostMapping("/orders")
@@ -100,9 +131,32 @@ items[1].sku=B-2
 items[1].quantity=5
 ```
 
+JSON `FieldList` 从实际数组长度取得元素数，只接受一层对象数组，并支持 Item 内的点分嵌套标量路径：
+
+```java
+@PostMapping("/orders")
+@FieldContract(rejectUnknownJson = true)
+@FieldList(
+        param = "items",
+        source = FieldSource.JSON,
+        maxSize = 20,
+        items = {
+                @Item(param = "sku", name = "sku", required = true, style = "emptyStyle"),
+                @Item(param = "details.quantity", name = "quantity", required = true, style = "integerStyle"),
+                @Item(param = "note", name = "note", nullable = true, style = "emptyStyle")
+        }
+)
+OrderView create(FieldValues fields) {
+    List<Map<String, Object>> items = fields.get("items", List.class);
+    // 创建并返回结果
+}
+```
+
+局部 `maxSize` 与 `summer.mvc.field-validation.max-list-size` 取更小值。primitive array、nested array 和递归 FieldList 不在支持范围内；数组元素必须是 JSON object。
+
 所有字段错误会一次聚合为 HTTP 400，错误码为 `SUMMER_INVALID_ARGUMENT`，并通过 `violations` 返回字段路径和原因；校验失败时不会导出部分结果。未知 Style、空 `FieldList.items` 等属于应用配置错误，会失败关闭。
 
-Bean Validation 仍是 DTO 和 JSON 请求体的首选方案。Field/Style 主要用于参数化请求和类型化导出；旧版 JSON Schema、全局 Context 和静态应用上下文链路不在本次兼容范围内。
+Bean Validation 与 Field/Style 是互补契约，不互相替代。旧版 JSON Schema、全局 Context 和静态应用上下文链路不在本次兼容范围内。
 
 应用 JSON 端点默认返回 `success/data/error/requestId/timestamp`。OAuth2/OIDC、Actuator、文件、字节流与 Range 响应自动绕过；应用端点可使用 `@RawResponse` 显式保留原始响应。
 

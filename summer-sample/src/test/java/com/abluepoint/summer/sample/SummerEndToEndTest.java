@@ -10,10 +10,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,8 +35,11 @@ class SummerEndToEndTest {
     @Autowired
     JpaSqlTemplate sqlTemplate;
 
+    @Autowired
+    SampleDataProperties dataProperties;
+
     @Test
-    void issuesTokenAndUsesItForProtectedTemplateQuery() throws Exception {
+    void issuesTokenAndUsesItForAProtectedCustomerRead() throws Exception {
         String token = accessToken("customer.read");
 
         mockMvc.perform(get("/api/customers/{email}", "demo@summer.local")
@@ -70,6 +76,93 @@ class SummerEndToEndTest {
     }
 
     @Test
+    void rejectsUnknownFieldsWhenCreatingCustomers() throws Exception {
+        String token = accessToken("customer.write");
+
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"strict@summer.local","displayName":"Strict","nickname":"extra"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+                .andExpect(jsonPath("$.error.violations[0].field").value("nickname"));
+    }
+
+    @Test
+    void rejectsMalformedJsonWhenCreatingCustomers() throws Exception {
+        String token = accessToken("customer.write");
+
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+                .andExpect(jsonPath("$.error.violations[0].field").value("$"));
+    }
+
+    @Test
+    void listsCustomersWithBoundedPaginationAndStableDefaultOrdering() throws Exception {
+        String token = accessToken("customer.read");
+
+        MvcResult first = mockMvc.perform(get("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .queryParam("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(1))
+                .andExpect(jsonPath("$.data.projection").value("detail"))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andReturn();
+        MvcResult second = mockMvc.perform(get("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .queryParam("size", "1"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<?> firstItems = JsonPath.read(first.getResponse().getContentAsString(), "$.data.items");
+        List<?> secondItems = JsonPath.read(second.getResponse().getContentAsString(), "$.data.items");
+        assertThat(secondItems).isEqualTo(firstItems);
+    }
+
+    @Test
+    void rejectsInvalidCustomerListParametersAsAggregatedFieldViolations() throws Exception {
+        String token = accessToken("customer.read");
+
+        mockMvc.perform(get("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .queryParam("page", "-1")
+                        .queryParam("size", "101")
+                        .queryParam("sort", "drop-table")
+                        .queryParam("direction", "sideways")
+                        .queryParam("projection", "everything"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+                .andExpect(jsonPath("$.error.violations.length()").value(5));
+    }
+
+    @Test
+    void listsCustomersWithAllowlistedFilteringSortingAndProjection() throws Exception {
+        String token = accessToken("customer.read");
+
+        mockMvc.perform(get("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .queryParam("active", "true")
+                        .queryParam("sort", "displayName")
+                        .queryParam("direction", "desc")
+                        .queryParam("projection", "summary")
+                        .queryParam("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.projection").value("summary"))
+                .andExpect(jsonPath("$.data.items.length()").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].email").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].active").doesNotExist());
+    }
+
+    @Test
     void rejectsDuplicateCustomerWithConflictResponse() throws Exception {
         String token = accessToken("customer.write");
 
@@ -83,6 +176,111 @@ class SummerEndToEndTest {
     }
 
     @Test
+    void partiallyUpdatesCustomersWithOmissionAndExplicitNullSemantics() throws Exception {
+        String token = accessToken("customer.write");
+        String email = "patch@summer.local";
+
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"displayName\":\"Before Patch\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/customers/{email}", email)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"active\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.displayName").value("Before Patch"))
+                .andExpect(jsonPath("$.data.active").value(false));
+
+        MvcResult cleared = mockMvc.perform(patch("/api/customers/{email}", email)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.active").value(false))
+                .andReturn();
+
+        Object clearedDisplayName = JsonPath.read(
+                cleared.getResponse().getContentAsString(),
+                "$.data.displayName"
+        );
+        assertThat(clearedDisplayName).isNull();
+
+        String readToken = accessToken("customer.read");
+        mockMvc.perform(get("/api/customers/{email}", email)
+                        .header("Authorization", "Bearer " + readToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.active").value(false));
+        MvcResult inactiveCustomers = mockMvc.perform(get("/api/customers")
+                        .header("Authorization", "Bearer " + readToken)
+                        .queryParam("active", "false")
+                        .queryParam("size", "100"))
+                .andExpect(status().isOk())
+                .andReturn();
+        List<String> inactiveEmails = JsonPath.read(
+                inactiveCustomers.getResponse().getContentAsString(),
+                "$.data.items[*].email"
+        );
+        assertThat(inactiveEmails).contains(email);
+    }
+
+    @Test
+    void rejectsImmutableAndUnknownPatchFieldsWithNullViolations() throws Exception {
+        String token = accessToken("customer.write");
+
+        mockMvc.perform(patch("/api/customers/{email}", "demo@summer.local")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"changed@summer.local","active":null,"extra":true}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+                .andExpect(jsonPath("$.error.violations.length()").value(3));
+    }
+
+    @Test
+    void returnsNotFoundWhenPatchingAMissingCustomer() throws Exception {
+        String token = accessToken("customer.write");
+
+        mockMvc.perform(patch("/api/customers/{email}", "missing-patch@summer.local")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"active\":false}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+    }
+
+    @Test
+    void physicallyDeletesCustomersAndReturnsNotFoundForRepeatedDelete() throws Exception {
+        String writeToken = accessToken("customer.write");
+        String email = "delete@summer.local";
+
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + writeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"displayName\":\"Delete Me\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/customers/{email}", email)
+                        .header("Authorization", "Bearer " + writeToken))
+                .andExpect(status().isNoContent())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEmpty());
+
+        String readToken = accessToken("customer.read");
+        mockMvc.perform(get("/api/customers/{email}", email)
+                        .header("Authorization", "Bearer " + readToken))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/customers/{email}", email)
+                        .header("Authorization", "Bearer " + writeToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+    }
+
+    @Test
     void returnsNotFoundForMissingCustomer() throws Exception {
         String token = accessToken("customer.read");
 
@@ -91,6 +289,17 @@ class SummerEndToEndTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+    }
+
+    @Test
+    void rejectsInvalidCustomerPathThroughTheParameterContract() throws Exception {
+        String token = accessToken("customer.read");
+
+        mockMvc.perform(get("/api/customers/{email}", "not-an-email")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+                .andExpect(jsonPath("$.error.violations[0].field").value("email"));
     }
 
     @Test
@@ -181,7 +390,7 @@ class SummerEndToEndTest {
 
     private long activeCustomerCount() {
         return sqlTemplate.count(
-                "classpath:sql/customer-queries.sql",
+                dataProperties.sqlResource(),
                 "countActive",
                 Map.of(),
                 Map.of()

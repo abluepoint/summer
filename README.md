@@ -40,8 +40,13 @@ dependencies {
 核心端点：
 
 - `POST /oauth2/token`：客户端凭据换取访问令牌。
-- `GET /api/customers/{email}`：需要 `customer.read` scope，执行 Freemarker SQL 模板查询。
-- `POST /api/customers`：需要 `customer.write` scope，演示 Jakarta Validation 与统一错误响应。
+- `GET /api/customers`：需要 `customer.read` scope，演示 Field/Style 查询参数、受限分页、筛选、稳定排序、命名投影和 Freemarker SQL template 读模型。
+- `GET /api/customers/{email}`：需要 `customer.read` scope，演示 PATH Field/Style 资源标识校验。
+- `POST /api/customers`：需要 `customer.write` scope，演示严格 JSON Field/Style 与 Jakarta Bean Validation 共存。
+- `PATCH /api/customers/{email}`：需要 `customer.write` scope，演示 PATH + JSON 混合契约、字段 omission 与显式 null 的不同语义。
+- `DELETE /api/customers/{email}`：需要 `customer.write` scope，物理删除 Customer 并返回 `204 No Content`。
 - `GET /actuator/health`、`GET /actuator/metrics`：健康与指标。
+
+Summer MVC 的 Parameter contract 通过 `FieldSource.PARAM`、`FieldSource.JSON` 和 `FieldSource.PATH` 覆盖查询/表单、JSON body 与路径变量。Sample 的 SQL template 资源由全局属性 `summer.sample.data.sql-resource` 绑定到不可变配置 Bean，动态读取集中在 `CustomerQuery`；`CustomerService` 只负责业务编排和事务，不持有 SQL resource、`JpaSqlTemplate` 或查询 Counter。
 
 统一术语见 [CONTEXT.md](CONTEXT.md)，架构决策见 [docs/adr](docs/adr)，详细说明见 [产品范围](docs/architecture/产品范围.md)、[模块边界](docs/architecture/模块边界.md)、[OAuth2/OIDC 安全模型](docs/architecture/OAuth2-OIDC安全模型.md)、[Starter 接入指南](docs/guides/Starter接入指南.md) 和 [迁移与验收说明](docs/guides/迁移与验收说明.md)。

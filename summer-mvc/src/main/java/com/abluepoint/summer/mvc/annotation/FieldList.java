@@ -15,6 +15,8 @@ public @interface FieldList {
 
     String param();
 
+    FieldSource source() default FieldSource.PARAM;
+
     String name() default "";
 
     String countParam() default "";
