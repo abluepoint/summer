@@ -1,19 +1,17 @@
 # Summer 4
 
-Summer 4 是基于 Java 21、Spring Boot 4.0、Spring Cloud 2025.1.2 和 Spring Modulith 2.0 的企业应用基础框架产品线。构建系统统一为 Gradle Kotlin DSL，安全体系统一为 OAuth2/OIDC，并提供 Summer MVC、Freemarker SQL template 与窄化结果投影等可复用能力。
+Summer 4 是企业应用基础框架，提供 Common、MVC、Data JPA、Security 四类可复用能力，以 Gradle Kotlin DSL 构建，通过独立 Starter 接入。
 
-## 模块
+`summer4` 分支按 ADR 0001–0016 整理架构。框架、参考后端 `summer-sample`、参考前端 `summer-ui` 各自承担独立职责；AICT IAM、BFF 和连接服务属于消费框架的产品应用。先读 [整体架构](docs/architecture/整体架构.md) 和 [现状与目标差异](docs/architecture/现状与目标差异.md)。
 
-- `summer-dependencies`：唯一版本与 BOM 入口。
-- `summer-common`、`summer-mvc`、`summer-data-jpa`、`summer-security`：核心能力模块。
-- `summer-*-autoconfigure`：条件化自动配置。
-- `summer-*-starter`：按能力域接入入口。
-- `summer-boot-starter`：MVC、Data JPA、Security、Actuator 聚合入口。
-- `summer-sample`：展示和验证框架能力的 Modulith 参考应用，不属于框架产品能力。
+## 当前实现状态
 
-`summer-parent` 与 `summer-automator` 已退出活动分支，历史实现通过 Git 追溯。Gradle 构建、`summer-dependencies` 和版本目录是当前唯一构建与依赖治理来源。
+- 15 个 Gradle 子项目已存在，涵盖依赖平台、四类能力、四类自动配置、四类 Starter、聚合 Starter 和 Sample。
+- 最新决策采用官方 Arco Design Pro React/Vite、OIDC public client + PKCE，以及不可变 Customer username；这些决策尚未全部实现。
+- 当前 Customer API 仍使用 email 路径，注册客户端仍要求 secret，`summer-ui` 尚未创建。不要按目标契约调用现有后端。
+- 工作区中的 AICT 业务实现目前仍位于 Sample；其迁出安排见 [迁移计划](docs/guides/summer4迁移计划.md)。
 
-## 快速接入
+## 接入与构建
 
 ```kotlin
 dependencies {
@@ -22,31 +20,30 @@ dependencies {
 }
 ```
 
-也可以只引入 `summer-common-starter`、`summer-mvc-starter`、`summer-data-jpa-starter` 或 `summer-security-starter`。
+也可只引入 `summer-common-starter`、`summer-mvc-starter`、`summer-data-jpa-starter` 或 `summer-security-starter`。授权服务与资源保护需要显式启用，详见 [Starter 接入指南](docs/guides/Starter接入指南.md)。
 
-## 构建与验证
+仓库固定基线为 Java toolchain 21、Gradle 9.0.0、Spring Boot 4.0.7、Spring Cloud 2025.1.2、Spring Modulith 2.0.7。版本事实来源为 [版本目录](gradle/libs.versions.toml)、[Wrapper](gradle/wrapper/gradle-wrapper.properties) 和 [依赖平台](summer-dependencies/build.gradle.kts)，本次架构整理不升级依赖。
 
 ```bash
-./gradlew clean check
+./gradlew check
+./gradlew :summer-sample:bootJar
 ./gradlew :summer-sample:bootRun
 ```
 
-构建固定使用 Java 21 toolchain；本机无 JDK 21 时由 Gradle toolchain resolver 获取。集成测试会通过 Testcontainers 拉起 PostgreSQL，并验证 OAuth2 令牌到受保护模板查询的完整链路。
+完整验收需要可用的容器运行时和 PostgreSQL Testcontainers；执行结果必须核对是否跳过。Sample 使用 `create-drop` 和演示身份/临时密钥，仅连接可丢弃的开发数据库；演示凭据通过环境变量注入。前端未来独立使用 Node/Vite 构建，Gradle 不构建前端，Sample JAR 不嵌入前端产物。
 
-## 示例鉴权链路
+## 文档入口
 
-示例应用显式开启 Authorization Server 与 Resource Server。演示凭据通过 `SUMMER_SAMPLE_CLIENT_ID`、`SUMMER_SAMPLE_CLIENT_SECRET`、`SUMMER_SAMPLE_USER`、`SUMMER_SAMPLE_USER_PASSWORD` 注入；未设置时只使用标记为 demo-only 的本地演示值，不应复制到生产环境。
+| 文档 | 用途 |
+| --- | --- |
+| [CONTEXT](CONTEXT.md) | 唯一领域术语表 |
+| [ADR 索引](docs/adr/README.md) | 决策、替代关系与来源 |
+| [整体架构](docs/architecture/整体架构.md) | 产品分层、请求链路、数据与部署职责 |
+| [产品范围](docs/architecture/产品范围.md) | 保留能力、应用边界与非目标 |
+| [模块边界](docs/architecture/模块边界.md) | 15 个构建模块、依赖规则与 Sample 包归属 |
+| [安全模型](docs/architecture/OAuth2-OIDC安全模型.md) | Bearer、登录会话、OIDC 与产品 BFF 的职责 |
+| [现状与目标差异](docs/architecture/现状与目标差异.md) | 源码证据、未完成项与本次验证 |
+| [summer4 迁移计划](docs/guides/summer4迁移计划.md) | 分阶段迁移、验收与回退 |
+| [迁移与验收说明](docs/guides/迁移与验收说明.md) | Gradle 基线与后续完整质量门禁 |
 
-核心端点：
-
-- `POST /oauth2/token`：客户端凭据换取访问令牌。
-- `GET /api/customers`：需要 `customer.read` scope，演示 Field/Style 查询参数、受限分页、筛选、稳定排序、命名投影和 Freemarker SQL template 读模型。
-- `GET /api/customers/{email}`：需要 `customer.read` scope，演示 PATH Field/Style 资源标识校验。
-- `POST /api/customers`：需要 `customer.write` scope，演示严格 JSON Field/Style 与 Jakarta Bean Validation 共存。
-- `PATCH /api/customers/{email}`：需要 `customer.write` scope，演示 PATH + JSON 混合契约、字段 omission 与显式 null 的不同语义。
-- `DELETE /api/customers/{email}`：需要 `customer.write` scope，物理删除 Customer 并返回 `204 No Content`。
-- `GET /actuator/health`、`GET /actuator/metrics`：健康与指标。
-
-Summer MVC 的 Parameter contract 通过 `FieldSource.PARAM`、`FieldSource.JSON` 和 `FieldSource.PATH` 覆盖查询/表单、JSON body 与路径变量。Sample 的 SQL template 资源由全局属性 `summer.sample.data.sql-resource` 绑定到不可变配置 Bean，动态读取集中在 `CustomerQuery`；`CustomerService` 只负责业务编排和事务，不持有 SQL resource、`JpaSqlTemplate` 或查询 Counter。
-
-统一术语见 [CONTEXT.md](CONTEXT.md)，架构决策见 [docs/adr](docs/adr)，详细说明见 [产品范围](docs/architecture/产品范围.md)、[模块边界](docs/architecture/模块边界.md)、[OAuth2/OIDC 安全模型](docs/architecture/OAuth2-OIDC安全模型.md)、[Starter 接入指南](docs/guides/Starter接入指南.md) 和 [迁移与验收说明](docs/guides/迁移与验收说明.md)。
+需求和任务以 [GitHub Issues](https://github.com/abluepoint/summer/issues) 为准；最新 Summer UI 规格为 [Issue #69](https://github.com/abluepoint/summer/issues/69)。

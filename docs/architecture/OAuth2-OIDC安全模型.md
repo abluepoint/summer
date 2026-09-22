@@ -1,48 +1,68 @@
 # OAuth2/OIDC 安全模型
 
-## 职责边界
+本文件描述 ADR 0004、0008、0010、0015 的目标契约，并单列现有偏差；不要把目标配置当作已实现的接入参数。完整规格见 [Issue #69](https://github.com/abluepoint/summer/issues/69)。
 
-- Authorization Server：管理注册客户端、授权类型、scope、临时 RSA 签名密钥、OIDC 元数据和令牌签发。
-- Resource Server：对配置的受保护路径执行 JWT 校验，并将 scope 映射为 `SCOPE_*` authority。
-- 应用安全链：提供授权码流程所需登录页；不接管资源服务之外的公开端点。
-- 业务方法：使用 `@PreAuthorize` 做细粒度 scope 决策。
+## 框架与应用职责
 
-过滤链按顺序隔离：授权服务端点为 Order 1，受保护资源为 Order 2，登录/公开应用端点为 Order 3。
+| 位置 | 职责 | 会话/响应 |
+| --- | --- | --- |
+| Authorization Server 链（Order 1） | 授权、OIDC 元数据、令牌签发及协议退出 | 按需登录会话；原生 OAuth2/OIDC 响应 |
+| Resource Server 链（Order 2，目标） | 校验 API Bearer JWT，scope 映射 `SCOPE_*` | `STATELESS`，不从 HttpSession 恢复 API 身份；401/403 用统一错误 |
+| 登录/公开应用链（Order 3） | Spring form login、saved request、CSRF、登录会话 | `IF_REQUIRED`，登录/CSRF 保持原生语义 |
+| 业务方法 | `@PreAuthorize` 最终授权 | read/write 独立，Customer 与 principal 无绑定 |
+| AICT BFF（独立产品） | Product Session、服务器端换票、CSRF 与 Origin 校验 | 产品 Cookie，不改变框架默认 Bearer 语义 |
 
-## 配置模型
+能力实现留在 Security，装配留在 Security autoconfigure；应用身份、企业权限、固定跳转和产品端点白名单由应用拥有。禁止用“第一个 AuthenticationSuccessHandler Bean”隐式决定所有消费者的登录行为。
 
-```yaml
-summer:
-  security:
-    enabled: true
-    authorization-server:
-      enabled: true
-      issuer: https://identity.example.com
-      clients:
-        - id: application-client
-          secret: ${APPLICATION_CLIENT_SECRET}
-          grant-types: [client_credentials, authorization_code, refresh_token]
-          redirect-uris: [https://app.example.com/login/oauth2/code/summer]
-          scopes: [openid, profile, customer.read]
-    resource-server:
-      enabled: true
-      protected-paths: [/api/**]
-```
+## 当前源码偏差
 
-安全模块没有生产默认客户端。Authorization Server 开启但未配置客户端时启动失败。示例中的 demo-only 值仅用于本地验证，生产必须由受控配置通道注入，并替换内存客户端、用户和临时 JWK Bean。
+当前 `SummerSecurityAutoConfiguration` 的资源链实际为 `IF_REQUIRED`，同时关闭 CSRF，并对 `DELETE /api/v1/session` 放行；登录链从 ApplicationContext 选第一个 success handler。Sample 的 `LocalConsoleAuthenticationConfiguration` 在 form login 后将本地构造的 JwtAuthenticationToken 存入 session，跳转 `/`；该配置虽写着开发用途，但没有 Profile 门禁。
 
-## 错误与会话策略
+这些是已存在的 AICT 控制台适配，不是 ADR 0015 所选的 Summer UI PKCE 链路。应先将产品适配隔离到应用侧，再恢复通用资源链与 saved authorization request 行为；必须通过 Cookie 与 Bearer、CSRF、登录跳转的真实行为测试验收。当前整理只记录差异，未改动这些代码。
 
-- 无令牌、令牌无效或过期：HTTP 401，错误码 `SUMMER_UNAUTHORIZED`。
-- 令牌有效但权限不足：HTTP 403，错误码 `SUMMER_FORBIDDEN`。
-- Security 复用 Summer Common 的 `ApiResponse`/`ApiError`，不维护重复安全响应类型；方法级拒绝 advice 使用高优先级，避免被 MVC 通用异常处理降级为 500。
-- 资源服务使用 `STATELESS`，不使用 HttpSession 恢复认证。
-- 授权码登录链使用 `IF_REQUIRED`，只为交互式授权保存必要状态。
-- 安全日志只记录事件、主体标识和认证类型，不记录 token、secret 或密码。
+## Summer UI public client（目标）
 
-## 演进点
+| 项目 | 约定 |
+| --- | --- |
+| client | `summer-ui`，authentication method `none`，无 secret |
+| grant | 仅 `authorization_code`，强制 PKCE `S256`，无需 consent |
+| scope | `openid profile customer.read customer.write`，按实际授予的 scope 控制界面 |
+| callback / logout | `/oauth2/callback` / `/login?logout`，与公开 origin 一致 |
+| 生命周期 | code 5 分钟；access token 与 ID Token 各 15 分钟 |
+| 不启用 | refresh token、offline_access、password grant、client_credentials、动态注册、UserInfo |
 
-- 通过覆盖 `RegisteredClientRepository` 接入持久化客户端。
-- 通过覆盖 `JWKSource` 接入 HSM/KMS 或轮换密钥集。
-- 通过覆盖 `UserDetailsService` 或增加联合身份配置接入企业 IdP。
-- 保持 Authorization Server 与 Resource Server Bean 边界，后续可无业务 API 变更地拆分部署。
+Sample 迁移后仅注册 public `summer-ui`，移除其旧 `summer-client` 实例。框架继续支持其他应用显式配置 confidential clients/client_credentials；有 secret 且未指定认证方法的既有配置继续使用 basic/post。当前配置仍强制要求非空 secret，因此上表尚不能直接应用。
+
+## 浏览器身份与登录
+
+前端使用固定版本的 `oidc-client-ts` 完成 discovery、state/nonce、PKCE、callback、ID Token 校验与 RP-Initiated Logout。access token、ID Token 和认证状态仅保存在内存。sessionStorage 只保存短时单次 PKCE 交易及必要的非敏感恢复信息；成功、终止或 logout 后清除；不启用 silent renewal。
+
+登录页先获取匿名、不可缓存、原始 JSON 的 `GET /csrf`，再以 form-urlencoded 提交标准 `POST /login`。Spring Security 恢复 saved authorization request；失败进入 `/login?error`。不增加 JSON 密码登录端点。
+
+身份显示按 `name → preferred_username → sub`，不加入 Customer/email/role/authority 业务 claims。API 使用 access token；界面依据实际授予的 scopes，后端方法授权是最终裁决。401 最多重启一次 PKCE，恢复视图/草稿但不重放写操作；403 不触发登录。
+
+## 登录会话与退出
+
+登录 session 闲置 30 分钟过期，无 remember-me、并发 session 上限或自定义绝对寿命；保留 fixation protection。JSESSIONID 为 HttpOnly、SameSite=Lax，生产 HTTPS 设置 Secure，本地 HTTP 不设置。
+
+退出先清理浏览器认证/PKCE 状态，并以仍在局部调用上下文中的 ID Token 发起 OIDC RP-Initiated Logout；后端销毁登录 session、删除 Cookie，返回已注册的 `/login?logout`。退出或 session 过期不意味着已签发 access token 立即失效，它在自身 15 分钟期限内仍可能可用；本目标不增加 revocation/introspection。
+
+## 同源路由与响应
+
+| 浏览器请求 | 目标 | 响应语义 |
+| --- | --- | --- |
+| `GET /login`、`/oauth2/callback`、`/customer/**`、官方页面深链 | SPA / index.html fallback | 前端页面 |
+| `POST /login`、`/csrf` | Spring 登录链 | form login / 原始 CSRF JSON |
+| `/oauth2/**`、`/.well-known/**`、`/connect/**` | Spring 协议端点 | 原生协议，不加业务 Bearer 或 envelope |
+| `/api/**` | 资源服务与业务 Controller | 统一响应；成功 DELETE 204 例外 |
+| Actuator、文件、字节流、Range | 各自处理链 | 原生管理/资源响应 |
+
+开发浏览器 origin 为 `http://127.0.0.1:5173`，Vite 代理到后端 `http://127.0.0.1:8080`；UI 集成 issuer 使用浏览器 origin，后端独立测试保留后端 origin。生产使用一个外部 HTTPS origin，issuer/redirect/logout 外配，不增加 wildcard CORS。
+
+当前 MVC advice 的显式路径旁路只有 `/oauth2/`、`/.well-known/`、`/actuator/`；新 `/csrf` 应显式 RawResponse，`/connect/**` 和 logout 必须结合真实安全过滤链测试，不能假定所有协议响应都经过 MVC advice。
+
+## 生产扩展责任
+
+框架授权服务默认关闭，启用后必须有客户端配置。Sample 的内存用户/客户端/authorization/consent 与临时 JWK 属于演示设施。生产应用负责持久化 RegisteredClientRepository、authorization/consent、企业身份源与轮换 JWK/KMS/HSM；不在框架里加入 IAM 产品模型。
+
+安全事件只记录必要主体标识、认证类型和请求关联，不记录密码、secret、原始 token。完整测试门禁见 [迁移计划](../guides/summer4迁移计划.md)。

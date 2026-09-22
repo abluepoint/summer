@@ -1,5 +1,11 @@
 # Starter 接入指南
 
+本指南描述当前可用的框架接入能力。Summer UI 的 public client/PKCE 配置尚待实现，目标见 [安全模型](../architecture/OAuth2-OIDC安全模型.md)；不要向当前客户端配置直接填入未支持的 `none` 选项。
+
+后续 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md) 已决定由 MVC 自动管理必要的请求体缓存并移除 `summer.mvc.cache-request-body`。该迁移尚未实现，下文缓存开关及其启动检查仍描述当前代码行为，不是目标配置方式。
+
+[ADR 0022](../adr/0022-define-styles-without-builtin-names.md) 已确认 Style 全部由应用公共配置定义，框架提供链式规则构建能力，不预注册具名 Style；下文内置名称与覆盖方式同样只描述当前实现，迁移目标以该 ADR 为准。
+
 ## 组合
 
 | 目标 | 依赖 |
@@ -59,20 +65,20 @@ OrderView query(FieldValues fields) {
 }
 ```
 
-JSON Parameter contract 可以和正常的 `@RequestBody` 反序列化、Jakarta Bean Validation 同时使用。Field/Style 负责传输字段白名单、可复用 Style、类型转换和聚合 Field violation；Bean Validation 继续负责 DTO 字段约束与跨字段对象约束：
+JSON Parameter contract 可以和正常的 `@RequestBody` 反序列化、Jakarta Bean Validation 同时使用。Field/Style 负责传输字段白名单、可复用 Style、类型转换和聚合 Field violation；Bean Validation 继续负责 DTO 字段约束与跨字段对象约束。下例为应用自定义 Order 契约，DTO 和 orderCodeStyle 由应用提供；它演示 nullable 能力，不是 Customer 的目标契约：
 
 ```java
-@PatchMapping("/customers/{email}")
+@PatchMapping("/orders/{orderCode}")
 @FieldContract(rejectUnknownJson = true)
-@Field(param = "email", source = FieldSource.PATH, required = true, style = "customerEmailStyle")
-@Field(param = "displayName", source = FieldSource.JSON, nullable = true, style = "displayNameStyle")
+@Field(param = "orderCode", source = FieldSource.PATH, required = true, style = "orderCodeStyle")
+@Field(param = "note", source = FieldSource.JSON, nullable = true, style = "emptyStyle")
 @Field(param = "active", source = FieldSource.JSON, style = "booleanStyle")
-CustomerView update(
+OrderView update(
         FieldValues fields,
-        @Valid @RequestBody UpdateCustomerRequest request
+        @Valid @RequestBody UpdateOrderRequest request
 ) {
-    boolean displayNameWasPresent = fields.contains("displayName");
-    String displayName = fields.get("displayName", String.class);
+    boolean noteWasPresent = fields.contains("note");
+    String note = fields.get("note", String.class);
     // omitted: contains=false；显式 null: contains=true 且 get(...) == null
 }
 ```
@@ -158,11 +164,11 @@ OrderView create(FieldValues fields) {
 
 Bean Validation 与 Field/Style 是互补契约，不互相替代。旧版 JSON Schema、全局 Context 和静态应用上下文链路不在本次兼容范围内。
 
-应用 JSON 端点默认返回 `success/data/error/requestId/timestamp`。OAuth2/OIDC、Actuator、文件、字节流与 Range 响应自动绕过；应用端点可使用 `@RawResponse` 显式保留原始响应。
+应用 JSON 端点默认返回 `success/data/error/requestId/timestamp`。当前 MVC 显式旁路 `/oauth2/`、`/.well-known/`、`/actuator/`，并跳过文件、字节流与 Range converter；应用端点可使用 `@RawResponse` 显式保留原始响应。OIDC logout 和新增 `/csrf` 的完整验证见 [现状与目标差异](../architecture/现状与目标差异.md)。
 
 ## 最小安全接入
 
 1. 显式开启 Authorization Server/Resource Server。
-2. 从安全配置通道提供客户端 secret。
+2. 当前自动配置要求从安全配置通道提供 confidential client secret；浏览器 public client 的无 secret 配置按 ADR 0015 实施后才可接入。
 3. 为业务端点配置 scope，并用 `@PreAuthorize("hasAuthority('SCOPE_xxx')")` 验证。
 4. 生产覆盖内存客户端、用户和临时 JWK 实现。
