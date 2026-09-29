@@ -3,6 +3,7 @@ package com.abluepoint.summer.mvc.autoconfigure;
 import com.abluepoint.summer.common.message.MessageResolver;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
+import com.abluepoint.summer.mvc.annotation.FieldList;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.filter.CachedBodyHttpServletRequest;
 import com.abluepoint.summer.mvc.filter.RequestCorrelationFilter;
@@ -271,6 +272,22 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
+    void failsAtStartupWhenAFieldListHasAnInvalidSizeRange() {
+        contextRunner
+                .withBean("integerStyle", Style.class, () -> Styles.integer().build())
+                .withPropertyValues("summer.mvc.field-validation.max-list-size=4")
+                .withUserConfiguration(InvalidFieldListWebConfiguration.class)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasMessageContaining("Invalid FieldList configurations")
+                            .hasMessageContaining("field=items")
+                            .hasMessageContaining("minSize=5")
+                            .hasMessageContaining("effective maxSize=4");
+                });
+    }
+
+    @Test
     void failsAtStartupWhenAFieldReferencesAnUnknownStyle() {
         contextRunner
                 .withUserConfiguration(MissingStyleWebConfiguration.class)
@@ -342,4 +359,24 @@ class SummerMvcAutoConfigurationTest {
     @Import(MissingStyleController.class)
     static class MissingStyleWebConfiguration {
     }
+
+    @RestController
+    private static final class InvalidFieldListController {
+
+        @PostMapping("/invalid-list")
+        @FieldList(
+                param = "items",
+                minSize = 5,
+                items = @Field(param = "value", style = "integerStyle")
+        )
+        void invalidList() {
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(InvalidFieldListController.class)
+    static class InvalidFieldListWebConfiguration {
+    }
+
 }

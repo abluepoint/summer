@@ -105,7 +105,7 @@ class ParameterStyles {
 
 字段必须显式引用应用定义的 Style，例如 `style = "customerEmail"`。引用不存在的 Style 会在应用启动阶段失败，诊断信息包含处理器、字段和 Style 名称；不会等到请求到达后才发现配置错误。
 
-PARAM/PATH 列表使用显式数量参数。默认数量参数为 `<param>.count`，也可以通过 `countParam` 指定；`maxSize` 可收紧单个接口的列表上限，但不能突破全局上限：
+FieldList 使用 Field 子项，来源由实际请求自动推断。Query/form 通过连续索引提交，不再提交 countParam；JSON 只接受一层对象数组，子字段路径相对于每个元素：
 
 ```java
 @PostMapping("/orders")
@@ -113,8 +113,9 @@ PARAM/PATH 列表使用显式数量参数。默认数量参数为 `<param>.count
         param = "items",
         maxSize = 20,
         items = {
-                @Item(param = "sku", name = "sku", required = true, style = "text"),
-                @Item(param = "quantity", name = "quantity", required = true, style = "integerValue")
+                @Field(param = "sku", style = "text"),
+                @Field(param = "details.quantity", style = "integerValue"),
+                @Field(param = "note", required = false, nullable = true, style = "text")
         }
 )
 OrderView create(FieldValues fields) {
@@ -123,39 +124,18 @@ OrderView create(FieldValues fields) {
 }
 ```
 
-对应请求参数格式：
+Query/form 示例：
 
 ```text
-items.count=2
 items[0].sku=A-1
-items[0].quantity=2
+items[0].details.quantity=2
 items[1].sku=B-2
-items[1].quantity=5
+items[1].details.quantity=5
 ```
 
-JSON `FieldList` 从实际数组长度取得元素数，只接受一层对象数组，并支持 Item 内的点分嵌套标量路径：
+集合默认 `required=true`、`nullable=false`、`minSize=1`，因此缺失、显式 null 和空数组分别按各自规则处理，`[]` 始终返回 HTTP 400。`maxSize` 未声明时使用公共默认 `summer.mvc.field-validation.max-list-size`（默认 100），显式值直接覆盖公共默认，局部值可以大于公共默认。启动时校验 `1 <= minSize <= 有效 maxSize`，非法范围、空子项、0 或负 maxSize 会失败关闭。
 
-```java
-@PostMapping("/orders")
-@FieldContract
-@FieldList(
-        param = "items",
-        source = FieldSource.JSON,
-        maxSize = 20,
-        items = {
-                @Item(param = "sku", name = "sku", required = true, style = "text"),
-                @Item(param = "details.quantity", name = "quantity", required = true, style = "integerValue"),
-                @Item(param = "note", name = "note", nullable = true, style = "text")
-        }
-)
-OrderView create(FieldValues fields) {
-    List<Map<String, Object>> items = fields.get("items", List.class);
-    // 创建并返回结果
-}
-```
-
-局部 `maxSize` 与 `summer.mvc.field-validation.max-list-size` 取更小值。primitive array、nested array 和递归 FieldList 不在支持范围内；数组元素必须是 JSON object。
-
+Query/form 索引必须从 0 开始连续；索引缺口、从 1 开始、未知子字段以及 PATH 列表均返回 HTTP 400。只支持对象数组和对象内的标量字段，不支持 primitive array、nested array 或递归 FieldList。
 所有字段错误会一次聚合为 HTTP 400，错误码为 `SUMMER_INVALID_ARGUMENT`，并通过 `violations` 返回字段路径和原因；校验失败时不会导出部分结果。未知 Style、空 `FieldList.items` 等属于应用配置错误，会失败关闭。
 
 Bean Validation 与 Field/Style 是互补契约，不互相替代。旧版 JSON Schema、全局 Context 和静态应用上下文链路不在本次兼容范围内。

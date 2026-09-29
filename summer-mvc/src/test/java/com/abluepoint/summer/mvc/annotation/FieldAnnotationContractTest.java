@@ -30,14 +30,19 @@ class FieldAnnotationContractTest {
                 .doesNotContain("source");
         assertThat(Field.class.getDeclaredMethod("required").getDefaultValue())
                 .isEqualTo(true);
-        assertThat(FieldList.class.getDeclaredMethod("source").getDefaultValue())
-                .isEqualTo(FieldSource.PARAM);
+        assertThat(FieldList.class.getDeclaredMethods())
+                .extracting(java.lang.reflect.Method::getName)
+                .doesNotContain("source", "countParam");
+        assertThat(FieldList.class.getDeclaredMethod("required").getDefaultValue()).isEqualTo(true);
+        assertThat(FieldList.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
+        assertThat(FieldList.class.getDeclaredMethod("minSize").getDefaultValue()).isEqualTo(1);
+        assertThat(FieldList.class.getDeclaredMethod("maxSize").getDefaultValue()).isEqualTo(-1);
     }
 
     @Test
     void nullableAndStrictJsonContractsRemainOptIn() throws Exception {
         assertThat(Field.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
-        assertThat(Item.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
+        assertThat(Field.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
         assertThat(FieldContract.class.getDeclaredMethods()).isEmpty();
     }
 }

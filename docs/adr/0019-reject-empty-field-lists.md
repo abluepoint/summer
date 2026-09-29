@@ -14,4 +14,4 @@ Query/表单无集合参数表示该来源未提供；JSON 提供 `[]` 表示出
 
 ## 实现状态
 
-当前 FieldList 尚无 minSize，JSON 路径可以接受空数组；非空集合约束、相关注解默认值和启动检查尚未实现。后续须同步迁移实现、调用方与测试，不能把本次文档修订作为代码验收证据。
+实现已完成：FieldList 使用 Field[] 子项，来源按实际 Query/form 索引或 JSON 数组自动推断，移除 source/countParam/Item 入口；required、nullable、minSize、maxSize 在集合层独立生效。JSON 空数组、Query/form 空索引集合及所有 minSize 以下的集合均返回 HTTP 400，局部 maxSize 直接覆盖公共默认值。启动阶段同时检查子项、数量范围和 Style 引用；PATH 列表、primitive array、nested array 与递归集合不受支持。HTTP seam、注解契约和自动配置测试已覆盖上述行为。

@@ -3,7 +3,6 @@ package com.abluepoint.summer.mvc.interceptor;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldList;
 import com.abluepoint.summer.mvc.annotation.FieldSource;
-import com.abluepoint.summer.mvc.annotation.Item;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
 import com.abluepoint.summer.mvc.validate.FieldValues;
 import com.abluepoint.summer.mvc.validate.PatternStyle;
@@ -97,7 +96,6 @@ class FieldValidationInterceptorTest {
                 100
         );
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addParameter("items.count", "2");
         request.addParameter("items[0].sku", "A-1");
         request.addParameter("items[0].quantity", "2");
         request.addParameter("items[1].sku", "B-2");
@@ -116,7 +114,7 @@ class FieldValidationInterceptorTest {
     }
 
     @Test
-    void validatesAndExportsTypedFieldListsFromPathVariables() throws Exception {
+    void rejectsFieldListsFromPathVariables() throws Exception {
         FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
                 new StyleRegistry(Map.of(
                         "integerStyle",
@@ -133,15 +131,11 @@ class FieldValidationInterceptorTest {
                 "items[0].quantity", "2"
         ));
 
-        interceptor.preHandle(
+        assertThatThrownBy(() -> interceptor.preHandle(
                 request,
                 new MockHttpServletResponse(),
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("pathBatch"))
-        );
-
-        assertThat(FieldValues.from(request).asMap().get("items")).isEqualTo(List.of(
-                Map.of("sku", "A-1", "quantity", 2)
-        ));
+        )).isInstanceOf(FieldValidationException.class);
     }
 
     @Test
@@ -163,7 +157,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("items.count", "is required")
+                        new FieldValidationException.Violation("items", "is required")
                 ));
     }
 
@@ -179,7 +173,12 @@ class FieldValidationInterceptorTest {
                 100
         );
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addParameter("items.count", "3");
+        request.addParameter("items[0].sku", "A");
+        request.addParameter("items[0].quantity", "1");
+        request.addParameter("items[1].sku", "B");
+        request.addParameter("items[1].quantity", "1");
+        request.addParameter("items[2].sku", "C");
+        request.addParameter("items[2].quantity", "1");
 
         assertThatThrownBy(() -> interceptor.preHandle(
                 request,
@@ -187,7 +186,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("items.count", "must be at most 2")
+                        new FieldValidationException.Violation("items", "must contain at most 2 items")
                 ));
     }
 
@@ -266,8 +265,8 @@ class FieldValidationInterceptorTest {
                 param = "items",
                 maxSize = 2,
                 items = {
-                        @Item(param = "sku", name = "sku", required = true, style = "textStyle"),
-                        @Item(param = "quantity", name = "quantity", required = true, style = "integerStyle")
+                        @Field(param = "sku", name = "sku", required = true, style = "textStyle"),
+                        @Field(param = "quantity", name = "quantity", required = true, style = "integerStyle")
                 }
         )
         void batch() {
@@ -275,10 +274,9 @@ class FieldValidationInterceptorTest {
 
         @FieldList(
                 param = "items",
-                source = FieldSource.PATH,
                 items = {
-                        @Item(param = "sku", name = "sku", required = true, style = "textStyle"),
-                        @Item(param = "quantity", name = "quantity", required = true, style = "integerStyle")
+                        @Field(param = "sku", name = "sku", required = true, style = "textStyle"),
+                        @Field(param = "quantity", name = "quantity", required = true, style = "integerStyle")
                 }
         )
         void pathBatch() {

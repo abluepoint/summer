@@ -67,12 +67,12 @@ Expand Summer Sample Customer into a complete CRUD reference. Use Repository per
 
 - Summer MVC remains the owner of unified HTTP parameter, validation, error and response semantics.
 - The Parameter contract expands from query/form and dynamic parameters to query/form parameters, JSON bodies and path variables.
-- Scalar Field sources are inferred automatically from Query/form, JSON and PATH input; the public Field source setting is removed. FieldList source migration remains part of the collection follow-up.
+- Scalar Field sources are inferred automatically from Query/form, JSON and PATH input; the public Field source setting is removed. FieldList sources are inferred from indexed Query/form parameters or JSON arrays; PATH lists are unsupported.
 - JSON Field paths use Spring-style property paths. Root and nested scalar values are supported.
 - FieldList supports a one-level JSON array of objects, including nested scalar paths inside each declared item.
 - Primitive arrays, nested arrays and recursive object-array declarations are not added in this change.
 - Field and FieldList continue to export validated, typed values into FieldValues.
-- Field and Item gain a nullable setting whose default is false. Required controls whether a value must be present; nullable controls whether a present JSON value may be null.
+- Field and FieldList use required=true and nullable=false by default. Required controls whether a value must be present; nullable controls whether a present JSON value may be null. FieldList items are Field[] and collection size is configured independently with minSize/maxSize.
 - FieldValues gains a presence operation and changes its immutable storage so an explicitly validated null can be retained.
 - Existing FieldValues retrieval behavior remains compatible for non-null values.
 - FieldContract is a marker for an explicit contract. Unknown Query/form, JSON and PATH fields are rejected consistently; there is no leniency switch.
@@ -113,7 +113,7 @@ Expand Summer Sample Customer into a complete CRUD reference. Use Repository per
 - End-to-end coverage verifies JSON unknown-field rejection, malformed JSON, invalid path values, invalid query values and aggregate Field violations through the unified response.
 - Summer MVC integration tests exercise the public Parameter contract through MVC request handling for query/form, path and JSON sources.
 - Summer MVC integration coverage includes JSON strings, numbers, booleans, nested paths, missing values, explicit null, invalid node types, aggregate failures and prevention of partial value export.
-- FieldList integration coverage includes JSON object arrays, actual array-size enforcement, item-required rules, nested item scalar paths and maximum-size violations.
+- FieldList integration coverage includes JSON object arrays, actual array-size enforcement, non-empty collection rules, indexed Query/form input, contiguous indexes, child Field rules, nested item scalar paths and local maximum-size overrides.
 - A combined MVC test proves that the interceptor can read JSON before the same request is deserialized into a valid RequestBody DTO.
 - A compatibility test proves ordinary RequestBody plus Jakarta Bean Validation endpoints continue to work without Field annotations.
 - Malformed JSON tests prove both Field-enabled and ordinary DTO endpoints return HTTP 400 rather than a generic server error.

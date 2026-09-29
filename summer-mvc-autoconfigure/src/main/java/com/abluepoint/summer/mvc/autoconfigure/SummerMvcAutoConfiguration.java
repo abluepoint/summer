@@ -161,9 +161,12 @@ public class SummerMvcAutoConfiguration {
         @ConditionalOnMissingBean
         StyleReferenceValidator summerStyleReferenceValidator(
                 ObjectProvider<RequestMappingHandlerMapping> handlerMappings,
-                StyleRegistry styleRegistry
+                StyleRegistry styleRegistry,
+                SummerMvcProperties properties
         ) {
-            return new StyleReferenceValidator(handlerMappings, styleRegistry);
+            return new StyleReferenceValidator(
+                    handlerMappings, styleRegistry, properties.getFieldValidation().getMaxListSize()
+            );
         }
 
         @Bean

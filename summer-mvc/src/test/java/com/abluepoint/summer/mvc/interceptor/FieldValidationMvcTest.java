@@ -4,7 +4,6 @@ import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
 import com.abluepoint.summer.mvc.annotation.FieldList;
 import com.abluepoint.summer.mvc.annotation.FieldSource;
-import com.abluepoint.summer.mvc.annotation.Item;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.filter.CachedBodyFilter;
 import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
@@ -205,7 +204,7 @@ class FieldValidationMvcTest {
     }
 
     @Test
-    void readsAFieldListCountFromTheDeclaredPathSource() throws Exception {
+    void rejectsFieldListsFromPathVariables() throws Exception {
         FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
                 new StyleRegistry(Map.of(
                         "integerStyle",
@@ -218,10 +217,8 @@ class FieldValidationMvcTest {
                 .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
                 .build();
 
-        MvcResult result = mockMvc.perform(get("/path-items/{count}", "0")).andReturn();
-
-        assertThat(result.getResponse().getStatus()).isEqualTo(200);
-        assertThat(result.getResponse().getContentAsString()).isEqualTo("0");
+        assertThatThrownBy(() -> mockMvc.perform(get("/path-items/{count}", "0")))
+                .hasRootCauseInstanceOf(com.abluepoint.summer.mvc.validate.FieldValidationException.class);
     }
 
     @Test
@@ -778,6 +775,22 @@ class FieldValidationMvcTest {
     }
 
     @Test
+    void rejectsEmptyJsonArraysEvenWhenCollectionIsOptionalAndNullable() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        MockMvc mockMvc = optionalJsonFieldListMockMvc(objectMapper, "request-empty-list");
+
+        MvcResult result = mockMvc.perform(post("/optional-json-items")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"items\":[]}"))
+                .andReturn();
+
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(response.get("error").get("violations").toString())
+                .contains("must contain at least 1 items");
+    }
+
+    @Test
     void enforcesTheLocalJsonFieldListLimit() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         MockMvc mockMvc = jsonFieldListMockMvc(10, objectMapper, "request-json-list-local-limit");
@@ -797,22 +810,21 @@ class FieldValidationMvcTest {
     }
 
     @Test
-    void enforcesTheGlobalJsonFieldListLimit() throws Exception {
+    void allowsAnExplicitListLimitToExceedThePublicDefault() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         MockMvc mockMvc = jsonFieldListMockMvc(1, objectMapper, "request-json-list-global-limit");
 
         MvcResult result = mockMvc.perform(post("/json-items")
                         .contentType(APPLICATION_JSON)
                         .content("""
-                                {"items":[{"sku":"A"},{"sku":"B"}]}
+                                {"items":[
+                                  {"sku":"A","details":{"quantity":1},"note":"one"},
+                                  {"sku":"B","details":{"quantity":2},"note":"two"}
+                                ]}
                                 """))
                 .andReturn();
 
-        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
-        assertThat(result.getResponse().getStatus()).isEqualTo(400);
-        assertThat(response.get("error").get("violations").toString()).isEqualTo(
-                "[{\"field\":\"items\",\"message\":\"must contain at most 1 items\"}]"
-        );
+        assertThat(result.getResponse().getStatus()).isEqualTo(200);
     }
 
     @Test
@@ -850,6 +862,27 @@ class FieldValidationMvcTest {
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
         assertThat(result.getResponse().getStatus()).isEqualTo(400);
         assertThat(response.get("error").get("violations").size()).isEqualTo(3);
+    }
+
+    private MockMvc optionalJsonFieldListMockMvc(ObjectMapper objectMapper, String requestId) {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of("textStyle", new PatternStyle(
+                        String.class, "text", Map.of(), Pattern.compile(".*\\S.*")
+                ))),
+                100,
+                objectMapper
+        );
+        ApiExceptionHandler exceptionHandler = new ApiExceptionHandler(
+                (errorCode, arguments, locale) -> errorCode.defaultMessage(),
+                new DefaultErrorStatusResolver(),
+                () -> requestId
+        );
+        return MockMvcBuilders.standaloneSetup(new OptionalFieldListController())
+                .addFilters(new CachedBodyFilter())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .setControllerAdvice(exceptionHandler)
+                .build();
     }
 
     private MockMvc jsonFieldListMockMvc(int maxListSize, ObjectMapper objectMapper, String requestId) {
@@ -910,9 +943,7 @@ class FieldValidationMvcTest {
         @GetMapping("/path-items/{count}")
         @FieldList(
                 param = "items",
-                source = FieldSource.PATH,
-                countParam = "count",
-                items = @Item(param = "quantity", name = "quantity", style = "integerStyle")
+                items = @Field(param = "quantity", name = "quantity", style = "integerStyle")
         )
         Integer pathFieldList(FieldValues values) {
             return values.get("items", java.util.List.class).size();
@@ -991,20 +1022,34 @@ class FieldValidationMvcTest {
         @FieldContract
         @FieldList(
                 param = "items",
-                source = FieldSource.JSON,
                 maxSize = 2,
                 items = {
-                        @Item(param = "sku", name = "sku", required = true, style = "textStyle"),
-                        @Item(
+                        @Field(param = "sku", name = "sku", required = true, style = "textStyle"),
+                        @Field(
                                 param = "details.quantity",
                                 name = "quantity",
                                 required = true,
                                 style = "integerStyle"
                         ),
-                        @Item(param = "note", name = "note", nullable = true, style = "textStyle")
+                        @Field(param = "note", name = "note", required = false, nullable = true, style = "textStyle")
                 }
         )
         Object jsonItems(FieldValues values) {
+            return values.get("items", List.class);
+        }
+    }
+
+    @RestController
+    private static final class OptionalFieldListController {
+
+        @PostMapping("/optional-json-items")
+        @FieldList(
+                param = "items",
+                required = false,
+                nullable = true,
+                items = @Field(param = "sku", style = "textStyle")
+        )
+        Object items(FieldValues values) {
             return values.get("items", List.class);
         }
     }

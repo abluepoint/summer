@@ -15,13 +15,15 @@ public @interface FieldList {
 
     String param();
 
-    FieldSource source() default FieldSource.PARAM;
-
     String name() default "";
 
-    String countParam() default "";
+    boolean required() default true;
+
+    boolean nullable() default false;
+
+    int minSize() default 1;
 
     int maxSize() default -1;
 
-    Item[] items() default {};
+    Field[] items() default {};
 }
