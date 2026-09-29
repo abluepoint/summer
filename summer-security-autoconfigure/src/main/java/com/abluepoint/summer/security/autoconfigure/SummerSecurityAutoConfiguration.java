@@ -50,7 +50,7 @@ import java.util.UUID;
 @AutoConfiguration
 @EnableMethodSecurity
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnClass({SecurityFilterChain.class, OAuth2AuthorizationServerConfigurer.class})
+@ConditionalOnClass(SecurityFilterChain.class)
 @EnableConfigurationProperties(SummerSecurityProperties.class)
 @ConditionalOnProperty(prefix = "summer.security", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SummerSecurityAutoConfiguration {
@@ -181,6 +181,9 @@ public class SummerSecurityAutoConfiguration {
             JsonAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
         String[] protectedPaths = properties.getResourceServer().getProtectedPaths().toArray(String[]::new);
+        if (protectedPaths.length == 0) {
+            throw new IllegalStateException("At least one summer.security.resource-server.protected-paths entry is required");
+        }
         http.securityMatcher(protectedPaths)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

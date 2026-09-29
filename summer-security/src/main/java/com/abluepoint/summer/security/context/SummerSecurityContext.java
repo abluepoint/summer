@@ -28,4 +28,22 @@ public final class SummerSecurityContext {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toUnmodifiableSet());
     }
+
+    /**
+     * Returns whether the current Spring Security principal is authenticated.
+     * The framework deliberately reads the native SecurityContext instead of
+     * introducing a product session or a second request-scoped context.
+     */
+    public static boolean authenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated();
+    }
+
+    public static boolean hasAuthority(String authority) {
+        return authenticated() && authorities().contains(authority);
+    }
+
+    public static boolean hasScope(String scope) {
+        return scope != null && hasAuthority("SCOPE_" + scope);
+    }
 }

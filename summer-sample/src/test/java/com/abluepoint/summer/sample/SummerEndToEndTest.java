@@ -328,6 +328,23 @@ class SummerEndToEndTest {
     }
 
     @Test
+    void enforcesCustomerReadAndWriteScopesIndependently() throws Exception {
+        String writeOnlyToken = accessToken("customer.write");
+        mockMvc.perform(get("/api/customers/{email}", "demo@summer.local")
+                        .header("Authorization", "Bearer " + writeOnlyToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+
+        String readOnlyToken = accessToken("customer.read");
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + readOnlyToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"scope-check@summer.local\",\"displayName\":\"Scope Check\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+    }
+
+    @Test
     void exposesHealthAndMetrics() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())

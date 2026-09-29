@@ -78,6 +78,21 @@ class SecurityAuthenticationAuditTest {
                 });
     }
 
+    @Test
+    void rejectsAnEmptyResourceServerPathList() {
+        contextRunner
+                .withUserConfiguration(TestWebSecurityConfiguration.class)
+                .withPropertyValues(
+                        "summer.security.resource-server.enabled=true",
+                        "summer.security.resource-server.protected-paths="
+                )
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseMessage("At least one summer.security.resource-server.protected-paths entry is required");
+                });
+    }
+
     private record AuditEvent(String event, String principal, Map<String, ?> attributes) {
     }
 

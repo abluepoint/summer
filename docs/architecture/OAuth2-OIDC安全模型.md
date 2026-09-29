@@ -14,11 +14,13 @@
 
 能力实现留在 Security，装配留在 Security autoconfigure；应用身份、企业权限、固定跳转和产品端点白名单由应用拥有。禁止用“第一个 AuthenticationSuccessHandler Bean”隐式决定所有消费者的登录行为。
 
-## 当前源码偏差
+## 当前实现边界
 
-当前 `SummerSecurityAutoConfiguration` 的资源链实际为 `IF_REQUIRED`，同时关闭 CSRF，并对 `DELETE /api/v1/session` 放行；登录链从 ApplicationContext 选第一个 success handler。Sample 的 `LocalConsoleAuthenticationConfiguration` 在 form login 后将本地构造的 JwtAuthenticationToken 存入 session，跳转 `/`；该配置虽写着开发用途，但没有 Profile 门禁。
+`summer-security` 只提供 Spring Security 主体、权限、Bearer 资源校验和协议错误处理；`summer-security-autoconfigure` 负责按条件装配过滤链。资源链固定使用 `STATELESS`，只从配置的保护路径匹配 Bearer API，不从 `HttpSession` 恢复 API 身份。授权服务和登录链只在应用显式启用时装配。
 
-这些是已存在的 AICT 控制台适配，不是 ADR 0015 所选的 Summer UI PKCE 链路。应先将产品适配隔离到应用侧，再恢复通用资源链与 saved authorization request 行为；必须通过 Cookie 与 Bearer、CSRF、登录跳转的真实行为测试验收。当前整理只记录差异，未改动这些代码。
+应用可以通过自己的 `RegisteredClientRepository`、`UserDetailsService`、JWK、授权服务设置和过滤链接管产品策略；自动配置只在应用没有提供这些 Bean 时创建通用内存实现。这样 Sample 可以保留演示用的内存用户/客户端，未来的 `summer-ui` public client 或其他产品可以拥有自己的注册策略，框架不会读取 Product Session、企业成员或 Customer 业务上下文。
+
+资源端点的读写授权由业务端点声明的 scope 独立完成。`SummerSecurityContext` 只读取 Spring 原生 `SecurityContextHolder`，提供主体、authority 和 `SCOPE_*` 查询，不维护自建 ThreadLocal、产品会话或通用上下文袋。
 
 ## Summer UI public client（目标）
 
