@@ -26,7 +26,7 @@ AICT 产品迁出必须先落实目标仓库/应用和完整接收副本，核�
 ## 关键兼容性与验收
 
 - 请求日志按 [ADR 0020](../adr/0020-separate-http-request-logging-responsibilities.md) 分离 MVC 请求数据管理、HTTP 日志快照生成与日志输出职责，范围止于请求摘要与按需请求正文。后续验证默认输出 requestId、请求方法、路径、响应状态和耗时且不记录正文；公共配置开启正文后统一脱敏、限长，无需逐接口声明。验证日志和字段校验共享读取能力、业务请求体保持完整、日志快照处理不影响业务输入；具体日志配置细节与缓存容量策略留待实现设计。
-- 按 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md) 移除 summer.mvc.cache-request-body 属性、条件装配、专属 JsonFieldCachingValidator 及旧配置示例，由 MVC 自动管理必要缓存。验证 JSON Field/FieldList 校验后业务仍可读取完整正文，开启正文日志后与字段校验共用读取能力，无 Field 的接口也无须另开缓存；默认关闭正文日志的策略不变。
+- 按 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md) 已移除 `summer.mvc.cache-request-body` 属性、条件装配、专属 `JsonFieldCachingValidator` 及旧配置示例，由 MVC 自动管理必要缓存。#73 已验证 JSON Field/FieldList 校验后业务仍可读取完整正文，日志消费者与字段校验共用读取能力，无 Field 的接口也无须另开缓存；默认关闭正文日志的策略不变。业务请求体大小与日志预览长度分别由各自边界负责。
 - 后续 Field 配置简化按 [ADR 0017](../adr/0017-simplify-configuration-with-explicit-field-contracts.md)、[ADR 0018](../adr/0018-infer-field-sources-automatically.md)、[ADR 0019](../adr/0019-reject-empty-field-lists.md)、[ADR 0022](../adr/0022-define-styles-without-builtin-names.md) 及其替代关系整理实施规格后再迁移。需审查默认必填变化，验证实际来源推断与冲突、缺失与 null，以及 Query/表单/JSON 的空字符串和全空白字符串均进入 Style 校验；可选邮箱传空字符串不能被当作省略。Java 公共 Style 定义与字段引用保持统一，链式定义写法已确认，尚未实现。
 - 按 ADR 0022 取消框架内置具名 Style 自动注册及 Field.style 的 emptyStyle 默认回退。框架提供类型、格式与约束构建能力，应用用 @Configuration/@Bean 显式定义包括基础类型在内的所需 Style，名称默认取 Bean 方法名；迁移旧引用与 Sample 公共定义，验证同一 Bean 可被多个字段复用、构建规则生效，未定义的名称按既有启动检查规则报错。
 - 删除 Field/FieldList 的 source 属性及使用方赋值，同步迁移运行时读取、严格未知字段检查、请求体缓存联动与相关启动检查；不保留手动覆盖入口。验证同一普通字段可在不同请求从受支持的不同来源读取，同名多来源仍返回 400，不能因删除配置而回退为旧 PARAM 默认行为。

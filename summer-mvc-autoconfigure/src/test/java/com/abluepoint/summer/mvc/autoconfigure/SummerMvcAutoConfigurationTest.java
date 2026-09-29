@@ -72,13 +72,13 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
-    void disablesOnlyCachedBodyFilterWhenItsSwitchIsOff() {
+    void ignoresTheRemovedCachedBodySwitchAndKeepsBodyCachingAvailable() {
         contextRunner
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context).hasBean("summerRequestCorrelationFilter");
-                    assertThat(context).doesNotHaveBean("summerCachedBodyFilter");
+                    assertThat(context).hasBean("summerCachedBodyFilter");
                 });
     }
 
@@ -191,22 +191,15 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
-    void failsAtStartupWhenAJsonFieldContractIsDeclaredWithoutRequestBodyCaching() {
+    void startsWithAJsonFieldContractRegardlessOfTheRemovedCachedBodySwitch() {
         contextRunner
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .withUserConfiguration(JsonFieldWebConfiguration.class)
-                .run(context -> {
-                    assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasMessageContaining(
-                                    "JSON Field validation requires summer.mvc.cache-request-body=true"
-                            )
-                            .hasMessageContaining("JsonFieldController#jsonField");
-                });
+                .run(context -> assertThat(context).hasNotFailed());
     }
 
     @Test
-    void allowsParamOnlyContractsWhenRequestBodyCachingIsDisabled() {
+    void startsWithParamOnlyContractsWhenTheRemovedCachedBodySwitchIsOff() {
         contextRunner
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .withUserConfiguration(ParamFieldWebConfiguration.class)
@@ -214,18 +207,11 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
-    void failsAtStartupWhenAStrictJsonContractIsDeclaredWithoutRequestBodyCaching() {
+    void startsWithAStrictJsonContractRegardlessOfTheRemovedCachedBodySwitch() {
         contextRunner
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .withUserConfiguration(StrictJsonFieldWebConfiguration.class)
-                .run(context -> {
-                    assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasMessageContaining(
-                                    "JSON Field validation requires summer.mvc.cache-request-body=true"
-                            )
-                            .hasMessageContaining("StrictJsonFieldController#strictJsonField");
-                });
+                .run(context -> assertThat(context).hasNotFailed());
     }
 
     @RestController

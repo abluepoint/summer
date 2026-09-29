@@ -2,7 +2,7 @@
 
 本指南描述当前可用的框架接入能力。Summer UI 的 public client/PKCE 配置尚待实现，目标见 [安全模型](../architecture/OAuth2-OIDC安全模型.md)；不要向当前客户端配置直接填入未支持的 `none` 选项。
 
-后续 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md) 已决定由 MVC 自动管理必要的请求体缓存并移除 `summer.mvc.cache-request-body`。该迁移尚未实现，下文缓存开关及其启动检查仍描述当前代码行为，不是目标配置方式。
+按 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md)，MVC 自动管理请求体缓存；无需配置 `summer.mvc.cache-request-body`。JSON Field/FieldList、DTO 和 HTTP 日志消费者共享同一份可重复读取的请求体。
 
 [ADR 0022](../adr/0022-define-styles-without-builtin-names.md) 已确认 Style 全部由应用公共配置定义，框架提供链式规则构建能力，不预注册具名 Style；下文内置名称与覆盖方式同样只描述当前实现，迁移目标以该 ADR 为准。
 
@@ -24,7 +24,6 @@
 | --- | --- | --- |
 | `summer.common.enabled` | `true` | 消息解析与公共基座。 |
 | `summer.mvc.enabled` | `true` | MVC 自动配置总开关。 |
-| `summer.mvc.cache-request-body` | `true` | 独立启用请求体重复读取；JSON Field/FieldList 依赖此能力，请求关联过滤器不受此开关影响。 |
 | `summer.mvc.wrap-responses` | `true` | Controller 返回值统一包装；OAuth2/Actuator 自动跳过。 |
 | `summer.mvc.field-validation.enabled` | `true` | 开启 PARAM、JSON、PATH 来源的 Field/Style 校验与类型化导出。 |
 | `summer.mvc.field-validation.max-list-size` | `100` | `FieldList` 全局最大元素数，必须为正整数。 |
@@ -83,7 +82,9 @@ OrderView update(
 }
 ```
 
-`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。`@FieldContract(rejectUnknownJson = true)` 会拒绝未声明属性，默认关闭以保持兼容。请求体只解析一次，随后仍可由 Jackson 绑定 DTO；malformed JSON 统一返回 HTTP 400。若真实 MVC 映射声明 JSON Field/FieldList 或严格 JSON `FieldContract`，却配置 `summer.mvc.cache-request-body=false`，应用会在启动时以明确配置错误失败；只使用 PARAM/PATH 的应用仍可关闭缓存。
+`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。`@FieldContract(rejectUnknownJson = true)` 会拒绝未声明属性，默认关闭以保持兼容。MVC 会在请求链开始时缓存可重复读取的完整正文，Field 校验、Jackson DTO 绑定和 HTTP 日志消费者可以按各自职责读取；malformed JSON 统一返回 HTTP 400。
+
+请求体缓存容量与业务请求体限制属于两个边界。MVC 不提供手动缓存开关，也不为了日志预览截断业务正文；缓存保存业务请求实际接收的完整正文。业务允许的请求体大小由应用或 Servlet 容器的请求限制负责，日志正文的脱敏和预览长度由 HTTP 日志快照配置负责，二者不会改变 `@RequestBody` 或 Field 读取到的数据。
 
 内置 Style 以 Spring Bean 名注册：
 

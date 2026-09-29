@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SummerMvcProperties {
 
     private boolean enabled = true;
-    private boolean cacheRequestBody = true;
     private boolean wrapResponses = true;
     private final FieldValidation fieldValidation = new FieldValidation();
 
@@ -16,14 +15,6 @@ public class SummerMvcProperties {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-    }
-
-    public boolean isCacheRequestBody() {
-        return cacheRequestBody;
-    }
-
-    public void setCacheRequestBody(boolean cacheRequestBody) {
-        this.cacheRequestBody = cacheRequestBody;
     }
 
     public boolean isWrapResponses() {

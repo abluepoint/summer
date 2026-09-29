@@ -12,11 +12,9 @@ import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
 import com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice;
 import com.abluepoint.summer.mvc.validate.EmptyStyle;
 import com.abluepoint.summer.mvc.validate.FieldValuesArgumentResolver;
-import com.abluepoint.summer.mvc.validate.JsonFieldCachingValidator;
 import com.abluepoint.summer.mvc.validate.PatternStyle;
 import com.abluepoint.summer.mvc.validate.Style;
 import com.abluepoint.summer.mvc.validate.StyleRegistry;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingFilterBean;
@@ -32,7 +30,6 @@ import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
@@ -59,7 +56,6 @@ public class SummerMvcAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "summer.mvc", name = "cache-request-body", havingValue = "true", matchIfMissing = true)
     @ConditionalOnMissingFilterBean(CachedBodyFilter.class)
     FilterRegistrationBean<CachedBodyFilter> summerCachedBodyFilter() {
         FilterRegistrationBean<CachedBodyFilter> registration = new FilterRegistrationBean<>();
@@ -184,14 +180,6 @@ public class SummerMvcAutoConfiguration {
         @ConditionalOnMissingBean
         FieldValuesArgumentResolver summerFieldValuesArgumentResolver() {
             return new FieldValuesArgumentResolver();
-        }
-
-        @Bean
-        @ConditionalOnProperty(prefix = "summer.mvc", name = "cache-request-body", havingValue = "false")
-        JsonFieldCachingValidator summerJsonFieldCachingValidator(
-                ObjectProvider<RequestMappingHandlerMapping> handlerMappings
-        ) {
-            return new JsonFieldCachingValidator(handlerMappings.orderedStream().toList());
         }
 
         @Bean
