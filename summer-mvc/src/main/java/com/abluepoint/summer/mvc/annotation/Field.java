@@ -23,5 +23,5 @@ public @interface Field {
 
     boolean nullable() default false;
 
-    String style() default "emptyStyle";
+    String style();
 }

@@ -27,4 +27,4 @@ class FieldStyles {
 
 ## 迁移状态
 
-当前自动配置仍注册 emptyStyle、integerStyle、longStyle、decimalStyle、booleanStyle，Field.style 默认 emptyStyle，示例中的链式构建 API 尚未实现。迁移须实现已确认的构建写法、取消内置具名 Style 自动注册与默认 emptyStyle 回退，并将使用方所需的规则显式定义到应用公共配置；按 ADR 0017 在启动时检查所有字段引用的 Style。取消内置名称不取消基础类型与格式规则的复用能力。本轮仅更新设计文档，尚未修改实现。
+自动配置不再注册 emptyStyle、integerStyle、longStyle、decimalStyle、booleanStyle，Field.style 不提供默认回退。`Styles` 提供基础类型、格式和长度/范围规则的链式构建能力，应用通过 `@Configuration`/`@Bean` 显式定义全部需要的 Style。启动阶段会遍历 MVC HandlerMethod 的 Field 及集合子字段引用，未知引用会以处理器、字段和 Style 名称诊断并失败关闭。取消内置名称不取消基础类型与格式规则的复用能力；FieldList 的结构迁移和来源推断由后续 ADR 实施票处理。

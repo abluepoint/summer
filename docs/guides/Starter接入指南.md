@@ -56,7 +56,7 @@
         param = "page",
         source = FieldSource.PARAM,
         required = true,
-        style = "integerStyle"
+        style = "customerPage"
 )
 OrderView query(FieldValues fields) {
     Integer page = fields.get("page", Integer.class);
@@ -70,8 +70,8 @@ JSON Parameter contract 可以和正常的 `@RequestBody` 反序列化、Jakarta
 @PatchMapping("/orders/{orderCode}")
 @FieldContract(rejectUnknownJson = true)
 @Field(param = "orderCode", source = FieldSource.PATH, required = true, style = "orderCodeStyle")
-@Field(param = "note", source = FieldSource.JSON, nullable = true, style = "emptyStyle")
-@Field(param = "active", source = FieldSource.JSON, style = "booleanStyle")
+@Field(param = "note", source = FieldSource.JSON, nullable = true, style = "text")
+@Field(param = "active", source = FieldSource.JSON, style = "booleanValue")
 OrderView update(
         FieldValues fields,
         @Valid @RequestBody UpdateOrderRequest request
@@ -86,29 +86,28 @@ OrderView update(
 
 请求体缓存容量与业务请求体限制属于两个边界。MVC 不提供手动缓存开关，也不为了日志预览截断业务正文；缓存保存业务请求实际接收的完整正文。业务允许的请求体大小由应用或 Servlet 容器的请求限制负责，日志正文的脱敏和预览长度由 HTTP 日志快照配置负责，二者不会改变 `@RequestBody` 或 Field 读取到的数据。
 
-内置 Style 以 Spring Bean 名注册：
-
-| Bean 名 | 导出类型 | 接受格式 |
-| --- | --- | --- |
-| `emptyStyle` | `String` | 非空参数值。 |
-| `integerStyle` | `Integer` | 十进制整数。 |
-| `longStyle` | `Long` | 十进制长整数。 |
-| `decimalStyle` | `BigDecimal` | 十进制数字。 |
-| `booleanStyle` | `Boolean` | `true` 或 `false`，忽略大小写。 |
-
-应用可以按 Bean 名新增 Style，也可以用同名 Bean 覆盖内置实现：
+框架不预注册具名 Style，也不为 `@Field.style` 提供空名称回退。应用在公共 Java 配置中以 `@Bean` 定义需要的 Style，Bean 方法名就是字段引用名；同一个 Bean 可以被多个字段复用。基础类型和常用规则通过 `Styles` 链式构建器表达：
 
 ```java
-@Bean("customerCodeStyle")
-Style customerCodeStyle() {
-    return new PatternStyle(
-            String.class,
-            "a customer code",
-            Map.of(),
-            Pattern.compile("C-\\d{6}")
-    );
+@Configuration(proxyBeanMethods = false)
+class ParameterStyles {
+
+    @Bean
+    Style customerEmail() {
+        return Styles.string()
+                .email()
+                .maxLength(200)
+                .build();
+    }
+
+    @Bean
+    Style customerPage() {
+        return Styles.integer().range(0, 999_999_999).build();
+    }
 }
 ```
+
+字段必须显式引用应用定义的 Style，例如 `style = "customerEmail"`。引用不存在的 Style 会在应用启动阶段失败，诊断信息包含处理器、字段和 Style 名称；不会等到请求到达后才发现配置错误。
 
 PARAM/PATH 列表使用显式数量参数。默认数量参数为 `<param>.count`，也可以通过 `countParam` 指定；`maxSize` 可收紧单个接口的列表上限，但不能突破全局上限：
 
@@ -118,8 +117,8 @@ PARAM/PATH 列表使用显式数量参数。默认数量参数为 `<param>.count
         param = "items",
         maxSize = 20,
         items = {
-                @Item(param = "sku", name = "sku", required = true, style = "emptyStyle"),
-                @Item(param = "quantity", name = "quantity", required = true, style = "integerStyle")
+                @Item(param = "sku", name = "sku", required = true, style = "text"),
+                @Item(param = "quantity", name = "quantity", required = true, style = "integerValue")
         }
 )
 OrderView create(FieldValues fields) {
@@ -148,9 +147,9 @@ JSON `FieldList` 从实际数组长度取得元素数，只接受一层对象数
         source = FieldSource.JSON,
         maxSize = 20,
         items = {
-                @Item(param = "sku", name = "sku", required = true, style = "emptyStyle"),
-                @Item(param = "details.quantity", name = "quantity", required = true, style = "integerStyle"),
-                @Item(param = "note", name = "note", nullable = true, style = "emptyStyle")
+                @Item(param = "sku", name = "sku", required = true, style = "text"),
+                @Item(param = "details.quantity", name = "quantity", required = true, style = "integerValue"),
+                @Item(param = "note", name = "note", nullable = true, style = "text")
         }
 )
 OrderView create(FieldValues fields) {

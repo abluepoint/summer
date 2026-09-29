@@ -14,6 +14,7 @@ import com.abluepoint.summer.mvc.validate.FieldValues;
 import com.abluepoint.summer.mvc.validate.PatternStyle;
 import com.abluepoint.summer.mvc.validate.Style;
 import com.abluepoint.summer.mvc.validate.StyleRegistry;
+import com.abluepoint.summer.mvc.validate.Styles;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
@@ -122,23 +123,25 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
-    void createsFieldValidationInfrastructureWithBuiltInStyles() {
+    void createsFieldValidationInfrastructureWithoutBuiltInStyles() {
         contextRunner.run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).hasSingleBean(StyleRegistry.class);
             assertThat(context).hasSingleBean(FieldValidationInterceptor.class);
-            assertThat(context).hasBean("emptyStyle");
-            assertThat(context).hasBean("integerStyle");
-            assertThat(context).hasBean("longStyle");
-            assertThat(context).hasBean("decimalStyle");
-            assertThat(context).hasBean("booleanStyle");
+            assertThat(context).doesNotHaveBean("emptyStyle");
+            assertThat(context).doesNotHaveBean("integerStyle");
+            assertThat(context).doesNotHaveBean("longStyle");
+            assertThat(context).doesNotHaveBean("decimalStyle");
+            assertThat(context).doesNotHaveBean("booleanStyle");
             assertThat(context).hasBean("summerFieldValidationWebMvcConfigurer");
         });
     }
 
     @Test
     void injectsTheApplicationObjectMapperIntoJsonFieldValidation() {
-        contextRunner.run(context -> assertThatCode(() -> {
+        contextRunner
+                .withBean("integerStyle", Style.class, () -> Styles.integer().build())
+                .run(context -> assertThatCode(() -> {
             MockHttpServletRequest request = new MockHttpServletRequest();
             request.setContentType("application/json");
             request.setContent("{\"age\":42}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -156,7 +159,7 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
-    void applicationStyleBeanOverridesTheBuiltInStyleByName() {
+    void applicationStyleBeanIsRegisteredByItsExplicitName() {
         Style customIntegerStyle = new PatternStyle(
                 String.class,
                 "a custom integer",
@@ -193,6 +196,7 @@ class SummerMvcAutoConfigurationTest {
     @Test
     void startsWithAJsonFieldContractRegardlessOfTheRemovedCachedBodySwitch() {
         contextRunner
+                .withBean("integerStyle", Style.class, () -> Styles.integer().build())
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .withUserConfiguration(JsonFieldWebConfiguration.class)
                 .run(context -> assertThat(context).hasNotFailed());
@@ -201,6 +205,7 @@ class SummerMvcAutoConfigurationTest {
     @Test
     void startsWithParamOnlyContractsWhenTheRemovedCachedBodySwitchIsOff() {
         contextRunner
+                .withBean("integerStyle", Style.class, () -> Styles.integer().build())
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .withUserConfiguration(ParamFieldWebConfiguration.class)
                 .run(context -> assertThat(context).hasNotFailed());
@@ -212,6 +217,19 @@ class SummerMvcAutoConfigurationTest {
                 .withPropertyValues("summer.mvc.cache-request-body=false")
                 .withUserConfiguration(StrictJsonFieldWebConfiguration.class)
                 .run(context -> assertThat(context).hasNotFailed());
+    }
+
+    @Test
+    void failsAtStartupWhenAFieldReferencesAnUnknownStyle() {
+        contextRunner
+                .withUserConfiguration(MissingStyleWebConfiguration.class)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasMessageContaining("handler=")
+                            .hasMessageContaining("field=missing")
+                            .hasMessageContaining("style=doesNotExist");
+                });
     }
 
     @RestController
@@ -257,5 +275,20 @@ class SummerMvcAutoConfigurationTest {
     @EnableWebMvc
     @Import(StrictJsonFieldController.class)
     static class StrictJsonFieldWebConfiguration {
+    }
+
+    @RestController
+    private static final class MissingStyleController {
+
+        @PostMapping("/missing-style")
+        @Field(param = "missing", required = true, style = "doesNotExist")
+        void missingStyle() {
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MissingStyleController.class)
+    static class MissingStyleWebConfiguration {
     }
 }

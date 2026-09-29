@@ -18,4 +18,8 @@ public final class StyleRegistry {
         }
         return style;
     }
+
+    public boolean contains(String name) {
+        return name != null && styles.containsKey(name);
+    }
 }
