@@ -2,6 +2,7 @@ package com.abluepoint.summer.mvc.filter;
 
 import com.abluepoint.summer.mvc.logging.RequestLogRecord;
 import com.abluepoint.summer.mvc.logging.RequestLogSink;
+import com.abluepoint.summer.mvc.logging.RequestBodySnapshotter;
 import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,9 +25,15 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
     private final RequestLogSink sink;
+    private final RequestBodySnapshotter bodySnapshotter;
 
     public RequestLoggingFilter(RequestLogSink sink) {
+        this(sink, null);
+    }
+
+    public RequestLoggingFilter(RequestLogSink sink, RequestBodySnapshotter bodySnapshotter) {
         this.sink = Objects.requireNonNull(sink, "sink");
+        this.bodySnapshotter = bodySnapshotter;
     }
 
     @Override
@@ -44,7 +51,8 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
                     request.getMethod(),
                     request.getRequestURI(),
                     response.getStatus(),
-                    elapsedMillis(startedAt)
+                    elapsedMillis(startedAt),
+                    bodySnapshotter == null ? null : bodySnapshotter.snapshot(request)
             );
             try {
                 sink.record(record);

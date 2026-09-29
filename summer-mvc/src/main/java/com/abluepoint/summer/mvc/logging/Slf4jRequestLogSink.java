@@ -10,6 +10,18 @@ public final class Slf4jRequestLogSink implements RequestLogSink {
 
     @Override
     public void record(RequestLogRecord record) {
+        if (record.bodyPreview() != null) {
+            LOGGER.info(
+                    "http_request requestId={} method={} path={} status={} durationMs={} bodyPreview={}",
+                    record.requestId(),
+                    record.method(),
+                    record.path(),
+                    record.status(),
+                    record.durationMillis(),
+                    record.bodyPreview()
+            );
+            return;
+        }
         LOGGER.info(
                 "http_request requestId={} method={} path={} status={} durationMs={}",
                 record.requestId(),

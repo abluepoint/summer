@@ -14,8 +14,19 @@ public record RequestLogRecord(
         String method,
         String path,
         int status,
-        long durationMillis
+        long durationMillis,
+        String bodyPreview
 ) {
+
+    public RequestLogRecord(
+            String requestId,
+            String method,
+            String path,
+            int status,
+            long durationMillis
+    ) {
+        this(requestId, method, path, status, durationMillis, null);
+    }
 
     public RequestLogRecord {
         requestId = requireText(requestId, "requestId");
@@ -26,6 +37,9 @@ public record RequestLogRecord(
         }
         if (durationMillis < 0) {
             throw new IllegalArgumentException("durationMillis must not be negative");
+        }
+        if (bodyPreview != null && bodyPreview.isBlank()) {
+            throw new IllegalArgumentException("bodyPreview must not be blank when present");
         }
     }
 

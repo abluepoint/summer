@@ -25,7 +25,7 @@
 | [0017](0017-simplify-configuration-with-explicit-field-contracts.md) | 每个 Field 契约明确完整，简化单项配置 | 默认 required=true、nullable=false；未知字段始终拒绝；Style 统一用 Java 公共配置；空集合与 minSize=0 由 0019 替代，框架预注册 Style 名称安排由 0022 替代，未完成迁移 |
 | [0018](0018-infer-field-sources-automatically.md) | Field 来源统一自动推断 | 移除 Field/FieldList 的 source 属性及手动覆盖入口；同名多来源返回 400；PATH 仅支持单值，集合走 Query/表单/JSON；尚未迁移 |
 | [0019](0019-reject-empty-field-lists.md) | FieldList 不允许空集合 | 部分替代 0017；minSize 默认 1，[] 返回 400，数量配置须满足 1 <= minSize <= 有效 maxSize；尚未实现 |
-| [0020](0020-separate-http-request-logging-responsibilities.md) | MVC、HTTP 日志适配层与日志模块分工 | 默认记录请求摘要；正文经公共配置开启并统一脱敏、限长；职责与范围保持收敛，缓存策略由 0021 补充，尚未实现 |
+| [0020](0020-separate-http-request-logging-responsibilities.md) | MVC、HTTP 日志适配层与日志模块分工 | 默认记录请求摘要；正文经公共配置开启并统一脱敏、限长；请求包装器保存完整正文，已实现 |
 | [0021](0021-manage-request-body-caching-automatically.md) | MVC 自动管理必要的请求体缓存 | 已移除 cache-request-body 及其专属启动检查，字段校验与 HTTP 日志适配共享完整 MVC 请求体；部分替代 0010、0013 |
 | [0022](0022-define-styles-without-builtin-names.md) | Style 由应用定义，不设框架内置名称 | 框架提供规则构建 API，应用以 Java 公共配置定义具名 Bean；链式定义写法已确认，部分替代 0017，尚未实现 |
 

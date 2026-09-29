@@ -24,7 +24,11 @@
 | --- | --- | --- |
 | `summer.common.enabled` | `true` | 消息解析与公共基座。 |
 | `summer.mvc.enabled` | `true` | MVC 自动配置总开关。 |
-| `summer.mvc.request-logging.enabled` | `true` | 输出 requestId、方法、路径、状态和耗时的结构化请求摘要；关闭后不注册请求日志过滤器。 || `summer.mvc.wrap-responses` | `true` | Controller 返回值统一包装；OAuth2/Actuator 自动跳过。 |
+| `summer.mvc.request-logging.enabled` | `true` | 输出 requestId、方法、路径、状态和耗时的结构化请求摘要；关闭后不注册请求日志过滤器。 |
+| `summer.mvc.request-logging.body.enabled` | `false` | 公共开启请求体日志预览；默认关闭，业务读取仍使用完整请求体。 |
+| `summer.mvc.request-logging.body.max-preview-length` | `2048` | 日志预览最大字符数，包含截断标记；不限制业务请求体大小。 |
+| `summer.mvc.request-logging.body.redacted-fields` | 内置敏感字段集合 | JSON 快照中替换为 `[REDACTED]` 的字段名；不允许为空。 |
+| `summer.mvc.wrap-responses` | `true` | Controller 返回值统一包装；OAuth2/Actuator 自动跳过。 |
 | `summer.mvc.field-validation.enabled` | `true` | 开启 PARAM、JSON、PATH 来源的 Field/Style 校验与类型化导出。 |
 | `summer.mvc.field-validation.max-list-size` | `100` | `FieldList` 全局最大元素数，必须为正整数。 |
 | `summer.data.jpa.enabled` | `true` | SQL 模板源、渲染器、JpaSqlTemplate 与内部结果投影适配器。 |
@@ -176,6 +180,23 @@ summer:
     request-logging:
       enabled: false
 ```
+
+如需为所有请求消费者开启正文预览，使用同一组公共配置。MVC 只从自动缓存的请求包装器生成日志副本；日志 sink 不读取 Servlet 原始流。JSON 对象和数组中的敏感字段默认替换为 `[REDACTED]`，预览超过上限时截断。正文日志的配置不会截断或修改 Controller、DTO、Field 读取到的完整请求体：
+
+```yaml
+summer:
+  mvc:
+    request-logging:
+      body:
+        enabled: true
+        max-preview-length: 2048
+        redacted-fields:
+          - password
+          - token
+          - client_secret
+```
+
+正文不是 JSON 时，文本请求按字符截断；二进制请求只记录 `[BODY_UNAVAILABLE]`。无法解析的 JSON 同样不会把原文写入日志。
 
 应用如需接入其他输出系统，可提供自己的 `RequestLogSink` Bean；实现只接收 `RequestLogRecord`，不读取 Servlet 请求流、不维护全局请求数据袋，也不改变业务响应。请求日志过滤器的装配顺序位于 requestId 关联过滤器之后，因此摘要中的 `requestId` 与响应头保持一致。
 

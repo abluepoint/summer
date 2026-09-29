@@ -112,6 +112,30 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
+    void bindsOneSharedPublicBodyLoggingConfiguration() {
+        contextRunner
+                .withPropertyValues(
+                        "summer.mvc.request-logging.body.enabled=true",
+                        "summer.mvc.request-logging.body.max-preview-length=96",
+                        "summer.mvc.request-logging.body.redacted-fields=password,accessToken"
+                )
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    SummerMvcProperties.RequestLogging.Body body = context
+                            .getBean(SummerMvcProperties.class)
+                            .getRequestLogging()
+                            .getBody();
+                    assertThat(body.isEnabled()).isTrue();
+                    assertThat(body.getMaxPreviewLength()).isEqualTo(96);
+                    assertThat(body.getRedactedFields()).containsExactlyInAnyOrder("password", "accessToken");
+                    FilterRegistrationBean<?> registration = context.getBean(
+                            "summerRequestLoggingFilter", FilterRegistrationBean.class
+                    );
+                    assertThat(registration.getFilter()).isInstanceOf(RequestLoggingFilter.class);
+                });
+    }
+
+    @Test
     void createsNoWebInfrastructureWhenDisabled() {
         contextRunner
                 .withPropertyValues("summer.mvc.enabled=false")

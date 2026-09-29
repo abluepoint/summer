@@ -2,10 +2,14 @@ package com.abluepoint.summer.mvc.filter;
 
 import com.abluepoint.summer.mvc.logging.RequestLogRecord;
 import com.abluepoint.summer.mvc.logging.RequestLogSink;
+import com.abluepoint.summer.mvc.logging.RequestBodySnapshotter;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,5 +66,53 @@ class RequestLoggingFilterTest {
 
         assertThat(observed).hasValueSatisfying(record ->
                 assertThat(record.requestId()).isEqualTo("unbound"));
+    }
+
+    @Test
+    void bodyLoggingIsDisabledByDefault() throws Exception {
+        AtomicReference<RequestLogRecord> observed = new AtomicReference<>();
+        RequestLoggingFilter logging = new RequestLoggingFilter(observed::set);
+        MockHttpServletRequest request = jsonRequest("{\"password\":\"do-not-log\"}");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        logging.doFilter(request, response, (requestInChain, responseInChain) -> {
+        });
+
+        assertThat(observed).hasValueSatisfying(record -> assertThat(record.bodyPreview()).isNull());
+    }
+
+    @Test
+    void bodySnapshotIsRedactedAndTruncatedWithoutChangingBusinessBody() throws Exception {
+        AtomicReference<RequestLogRecord> observed = new AtomicReference<>();
+        RequestBodySnapshotter snapshotter = new RequestBodySnapshotter(
+                new ObjectMapper(), true, 72, Set.of("password")
+        );
+        RequestLoggingFilter logging = new RequestLoggingFilter(observed::set, snapshotter);
+        MockHttpServletRequest request = jsonRequest(
+                "{\"password\":\"secret-value\",\"description\":\"complete business body\"}"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        new CachedBodyFilter().doFilter(request, response, (cachedRequest, cachedResponse) ->
+                logging.doFilter(cachedRequest, cachedResponse, (requestInChain, responseInChain) -> {
+                    CachedBodyHttpServletRequest cached = (CachedBodyHttpServletRequest) requestInChain;
+                    assertThat(new String(cached.body(), StandardCharsets.UTF_8))
+                            .contains("secret-value", "complete business body");
+                    assertThat(new String(cached.getInputStream().readAllBytes(), StandardCharsets.UTF_8))
+                            .contains("secret-value", "complete business body");
+                }));
+
+        assertThat(observed).hasValueSatisfying(record -> {
+            assertThat(record.bodyPreview()).hasSizeLessThanOrEqualTo(72);
+            assertThat(record.bodyPreview()).contains(RequestBodySnapshotter.REDACTED_VALUE);
+            assertThat(record.bodyPreview()).doesNotContain("secret-value");
+        });
+    }
+
+    private static MockHttpServletRequest jsonRequest(String body) {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/customers");
+        request.setContentType("application/json");
+        request.setContent(body.getBytes(StandardCharsets.UTF_8));
+        return request;
     }
 }

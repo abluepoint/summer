@@ -8,6 +8,7 @@ import com.abluepoint.summer.mvc.filter.RequestCorrelationFilter;
 import com.abluepoint.summer.mvc.filter.RequestLoggingFilter;
 import com.abluepoint.summer.mvc.interceptor.FieldValidationInterceptor;
 import com.abluepoint.summer.mvc.logging.RequestLogSink;
+import com.abluepoint.summer.mvc.logging.RequestBodySnapshotter;
 import com.abluepoint.summer.mvc.logging.Slf4jRequestLogSink;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
@@ -77,9 +78,22 @@ public class SummerMvcAutoConfiguration {
             havingValue = "true",
             matchIfMissing = true
     )
-    FilterRegistrationBean<RequestLoggingFilter> summerRequestLoggingFilter(RequestLogSink sink) {
+    FilterRegistrationBean<RequestLoggingFilter> summerRequestLoggingFilter(
+            RequestLogSink sink,
+            SummerMvcProperties properties,
+            ObjectMapper objectMapper
+    ) {
         FilterRegistrationBean<RequestLoggingFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new RequestLoggingFilter(sink));
+        SummerMvcProperties.RequestLogging.Body body = properties.getRequestLogging().getBody();
+        registration.setFilter(new RequestLoggingFilter(
+                sink,
+                new RequestBodySnapshotter(
+                        objectMapper,
+                        body.isEnabled(),
+                        body.getMaxPreviewLength(),
+                        body.getRedactedFields()
+                )
+        ));
         registration.setName("summerRequestLoggingFilter");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 22);
         return registration;
