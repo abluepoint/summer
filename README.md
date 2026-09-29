@@ -8,7 +8,7 @@ Summer 4 是企业应用基础框架，提供 Common、MVC、Data JPA、Security
 
 - 15 个 Gradle 子项目已存在，涵盖依赖平台、四类能力、四类自动配置、四类 Starter、聚合 Starter 和 Sample。
 - 最新决策采用官方 Arco Design Pro React/Vite、OIDC public client + PKCE，以及不可变 Customer username；这些决策尚未全部实现。
-- 当前 Customer API 仍使用 email 路径，注册客户端仍要求 secret，`summer-ui` 尚未创建。不要按目标契约调用现有后端。
+- `summer-ui` 已按官方 Arco Design Pro React/Vite `v2.8.1` 建立独立基线；Customer API 仍使用 email 路径，注册客户端仍要求 secret，暂不要按目标契约调用现有后端。
 - 工作区中的 AICT 业务实现目前仍位于 Sample；其迁出安排见 [迁移计划](docs/guides/summer4迁移计划.md)。
 
 ## 接入与构建
@@ -30,7 +30,7 @@ dependencies {
 ./gradlew :summer-sample:bootRun
 ```
 
-完整验收需要可用的容器运行时和 PostgreSQL Testcontainers；执行结果必须核对是否跳过。Sample 使用 `create-drop` 和演示身份/临时密钥，仅连接可丢弃的开发数据库；演示凭据通过环境变量注入。前端未来独立使用 Node/Vite 构建，Gradle 不构建前端，Sample JAR 不嵌入前端产物。
+完整验收需要可用的容器运行时和 PostgreSQL Testcontainers；执行结果必须核对是否跳过。Sample 使用 `create-drop` 和演示身份/临时密钥，仅连接可丢弃的开发数据库；演示凭据通过环境变量注入。前端使用 `summer-ui` 独立执行 Node/Vite 构建，Gradle 不构建前端，Sample JAR 不嵌入前端产物。
 
 ## 文档入口
 
