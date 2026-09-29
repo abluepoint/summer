@@ -24,14 +24,12 @@ class FieldAnnotationContractTest {
     }
 
     @Test
-    void fieldSourcesAreExplicitAndRemainParamByDefault() throws Exception {
-        assertThat(FieldSource.values()).containsExactly(
-                FieldSource.PARAM,
-                FieldSource.JSON,
-                FieldSource.PATH
-        );
-        assertThat(Field.class.getDeclaredMethod("source").getDefaultValue())
-                .isEqualTo(FieldSource.PARAM);
+    void fieldSourcesAreInferredAndRequiredByDefault() throws Exception {
+        assertThat(Field.class.getDeclaredMethods())
+                .extracting(java.lang.reflect.Method::getName)
+                .doesNotContain("source");
+        assertThat(Field.class.getDeclaredMethod("required").getDefaultValue())
+                .isEqualTo(true);
         assertThat(FieldList.class.getDeclaredMethod("source").getDefaultValue())
                 .isEqualTo(FieldSource.PARAM);
     }
@@ -40,7 +38,6 @@ class FieldAnnotationContractTest {
     void nullableAndStrictJsonContractsRemainOptIn() throws Exception {
         assertThat(Field.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
         assertThat(Item.class.getDeclaredMethod("nullable").getDefaultValue()).isEqualTo(false);
-        assertThat(FieldContract.class.getDeclaredMethod("rejectUnknownJson").getDefaultValue())
-                .isEqualTo(false);
+        assertThat(FieldContract.class.getDeclaredMethods()).isEmpty();
     }
 }

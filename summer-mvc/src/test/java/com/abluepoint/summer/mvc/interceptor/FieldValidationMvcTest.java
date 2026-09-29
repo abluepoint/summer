@@ -99,8 +99,109 @@ class FieldValidationMvcTest {
 
         assertThatThrownBy(() -> mockMvc.perform(
                 get("/field-collision/{customerId}", "42").param("id", "99")
-        )).hasRootCauseInstanceOf(IllegalStateException.class)
-                .hasRootCauseMessage("Parameter contract export 'id' uses multiple sources: [PARAM, PATH]");
+                )).hasRootCauseInstanceOf(com.abluepoint.summer.mvc.validate.FieldValidationException.class);
+    }
+
+    @Test
+    void rejectsUnknownQueryFieldsWithoutAnOptInStrictnessFlag() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+"))
+                )),
+                100
+        );
+        ApiExceptionHandler exceptionHandler = new ApiExceptionHandler(
+                (errorCode, arguments, locale) -> errorCode.defaultMessage(),
+                new DefaultErrorStatusResolver(),
+                () -> "request-unknown-query"
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldController())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .setControllerAdvice(exceptionHandler)
+                .build();
+
+        MvcResult result = mockMvc.perform(get("/field-values")
+                        .param("age", "42")
+                        .param("typo", "ignored"))
+                .andReturn();
+
+        JsonNode response = new ObjectMapper().readTree(result.getResponse().getContentAsString());
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(response.get("error").get("violations").toString())
+                .isEqualTo("[{\"field\":\"typo\",\"message\":\"is not allowed\"}]");
+    }
+
+    @Test
+    void rejectsAFieldProvidedByQueryAndJsonAtTheSameTime() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "textStyle",
+                        new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*")),
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "booleanStyle",
+                        new PatternStyle(Boolean.class, "true or false", Map.of(), Pattern.compile("true|false"))
+                )),
+                100,
+                objectMapper
+        );
+        ApiExceptionHandler exceptionHandler = new ApiExceptionHandler(
+                (errorCode, arguments, locale) -> errorCode.defaultMessage(),
+                new DefaultErrorStatusResolver(),
+                () -> "request-source-conflict"
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldController())
+                .addFilters(new CachedBodyFilter())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .setControllerAdvice(exceptionHandler)
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/json-fields")
+                        .param("displayName", "query")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"displayName\":\"json\",\"profile\":{\"age\":42},\"active\":true}"))
+                .andReturn();
+
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(response.get("error").get("violations").toString())
+                .contains("displayName", "one input source");
+    }
+
+    @Test
+    void infersFormParametersAndRejectsUnknownFormFields() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+"))
+                )),
+                100
+        );
+        ApiExceptionHandler exceptionHandler = new ApiExceptionHandler(
+                (errorCode, arguments, locale) -> errorCode.defaultMessage(),
+                new DefaultErrorStatusResolver(),
+                () -> "request-unknown-form"
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldController())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .setControllerAdvice(exceptionHandler)
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/form-field")
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("age", "42")
+                        .param("typo", "ignored"))
+                .andReturn();
+
+        JsonNode response = new ObjectMapper().readTree(result.getResponse().getContentAsString());
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(response.get("error").get("violations").toString())
+                .isEqualTo("[{\"field\":\"typo\",\"message\":\"is not allowed\"}]");
     }
 
     @Test
@@ -784,10 +885,15 @@ class FieldValidationMvcTest {
             return values.get("age", Integer.class);
         }
 
+        @PostMapping("/form-field")
+        @Field(param = "age", required = true, style = "integerStyle")
+        Integer formField(FieldValues values) {
+            return values.get("age", Integer.class);
+        }
+
         @GetMapping("/customers/{customerId}")
         @Field(
                 param = "customerId",
-                source = FieldSource.PATH,
                 required = true,
                 style = "integerStyle"
         )
@@ -795,15 +901,8 @@ class FieldValidationMvcTest {
             return values.get("customerId", Integer.class);
         }
 
-        @GetMapping("/field-collision/{customerId}")
-        @Field(
-                param = "customerId",
-                source = FieldSource.PATH,
-                name = "id",
-                required = true,
-                style = "integerStyle"
-        )
-        @Field(param = "id", name = "id", required = true, style = "integerStyle")
+        @GetMapping("/field-collision/{id}")
+        @Field(param = "id", required = true, style = "integerStyle")
         Integer collidingFieldValues(FieldValues values) {
             return values.get("id", Integer.class);
         }
@@ -822,13 +921,11 @@ class FieldValidationMvcTest {
         @GetMapping("/regions/{region}/customers/{customerId}")
         @Field(
                 param = "customerId",
-                source = FieldSource.PATH,
                 required = true,
                 style = "integerStyle"
         )
         @Field(
                 param = "region",
-                source = FieldSource.PATH,
                 required = true,
                 style = "regionStyle"
         )
@@ -837,9 +934,9 @@ class FieldValidationMvcTest {
         }
 
         @PostMapping("/json-fields")
-        @Field(param = "displayName", source = FieldSource.JSON, required = true, style = "textStyle")
-        @Field(param = "profile.age", source = FieldSource.JSON, required = true, style = "integerStyle")
-        @Field(param = "active", source = FieldSource.JSON, required = true, style = "booleanStyle")
+        @Field(param = "displayName", required = true, style = "textStyle")
+        @Field(param = "profile.age", required = true, style = "integerStyle")
+        @Field(param = "active", required = true, style = "booleanStyle")
         String jsonFields(FieldValues values, @RequestBody JsonRequest body) {
             return values.get("displayName", String.class)
                     + ":" + values.get("profile.age", Integer.class)
@@ -858,7 +955,7 @@ class FieldValidationMvcTest {
         }
 
         @PostMapping("/validated-json-fields")
-        @Field(param = "displayName", source = FieldSource.JSON, required = true, style = "textStyle")
+        @Field(param = "displayName", required = true, style = "textStyle")
         String validatedJsonFields(
                 FieldValues values,
                 @Valid @RequestBody ValidatedJsonRequest body
@@ -867,22 +964,22 @@ class FieldValidationMvcTest {
         }
 
         @PostMapping("/root-json-field")
-        @Field(param = "", name = "enabled", source = FieldSource.JSON, required = true, style = "booleanStyle")
+        @Field(param = "", name = "enabled", required = true, style = "booleanStyle")
         String rootJsonField(FieldValues values, @RequestBody Boolean body) {
             return values.get("enabled", Boolean.class) + ":" + body;
         }
 
         @PatchMapping("/patch-customers/{email}")
-        @FieldContract(rejectUnknownJson = true)
-        @Field(param = "email", source = FieldSource.PATH, required = true, style = "textStyle")
+        @FieldContract
+        @Field(param = "email", required = true, style = "textStyle")
         @Field(
                 param = "displayName",
-                source = FieldSource.JSON,
+                required = false,
                 nullable = true,
                 style = "textStyle"
         )
-        @Field(param = "active", source = FieldSource.JSON, style = "booleanStyle")
-        @Field(param = "profile.age", source = FieldSource.JSON, style = "integerStyle")
+        @Field(param = "active", required = false, style = "booleanStyle")
+        @Field(param = "profile.age", required = false, style = "integerStyle")
         String patchCustomer(FieldValues values) {
             return values.get("email", String.class)
                     + ":" + values.contains("displayName")
@@ -891,7 +988,7 @@ class FieldValidationMvcTest {
         }
 
         @PostMapping("/json-items")
-        @FieldContract(rejectUnknownJson = true)
+        @FieldContract
         @FieldList(
                 param = "items",
                 source = FieldSource.JSON,

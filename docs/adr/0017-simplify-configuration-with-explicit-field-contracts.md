@@ -88,7 +88,7 @@ public Style customerEmail() {
 
 不提供“忽略未知字段”的宽松模式或开关，包括全局配置和接口级设置；需要接收的字段必须明确声明。这项限制减少配置项，并确保使用 Field 契约的接口具有统一的严格行为。
 
-这部分替代 [ADR 0013](0013-expand-parameter-contracts-to-json-and-path.md) 中“严格未知字段校验通过方法级 FieldContract 选择启用”的使用方式，保留其传输字段白名单的方向。当前 `FieldContract.rejectUnknownJson` 默认 false，现有严格检查仅覆盖 JSON；始终严格的行为及 Query 检查尚未实现，迁移须处理旧开关用法。公共参数的归属与处理见下文。
+这部分替代 [ADR 0013](0013-expand-parameter-contracts-to-json-and-path.md) 中“严格未知字段校验通过方法级 FieldContract 选择启用”的使用方式，保留其传输字段白名单的方向。该段记录历史设计；现行行为见本文末的 2026-09-29 implementation status。公共参数的归属与处理见下文。
 
 ## 已确认的公共参数边界
 
@@ -150,3 +150,7 @@ FieldList 增加 `minSize`，默认 0；需要非空集合时显式声明 `minSi
 FieldList 继续负责集合的出现性、可空性和独立数量约束；子字段 param 相对于每个集合元素读取，并逐项校验，字段所在层级不因复用注解而改变。集合非空规则以 ADR 0019 为准。
 
 当前 FieldList.items 仍为 Item[]，Item 的 name 必填、required 默认 false。迁移须替换现有 Item 声明、更新读取与严格未知字段检查，并审查子字段的可选声明和导出别名；启动期 Style 引用检查同样覆盖集合子字段。本次未修改实现。
+
+## 2026-09-29 implementation status
+
+标量 `Field` 已落地本 ADR 的运行时契约：`required` 默认 `true`、`nullable` 默认 `false`；缺失和显式 JSON `null` 分别按两个约束处理，空字符串与全空白字符串均继续进入 Style 校验。`FieldContract` 不再提供 `rejectUnknownJson` 宽松开关，使用 Field 契约的接口对 Query/form、JSON 和 PATH 输入统一执行未声明字段检查并返回 400。DTO 绑定与 Jakarta Bean Validation 仍在 Field 校验之后独立执行。

@@ -2,7 +2,6 @@ package com.abluepoint.summer.sample.customer;
 
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
-import com.abluepoint.summer.mvc.annotation.FieldSource;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.validate.FieldValues;
 import com.abluepoint.summer.sample.shared.CustomerView;
@@ -29,12 +28,12 @@ class CustomerController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_customer.read')")
-    @Field(param = "page", source = FieldSource.PARAM, style = "customerPageStyle")
-    @Field(param = "size", source = FieldSource.PARAM, style = "customerPageSizeStyle")
-    @Field(param = "active", source = FieldSource.PARAM, style = "booleanStyle")
-    @Field(param = "sort", source = FieldSource.PARAM, style = "customerSortStyle")
-    @Field(param = "direction", source = FieldSource.PARAM, style = "customerSortDirectionStyle")
-    @Field(param = "projection", source = FieldSource.PARAM, style = "customerProjectionStyle")
+    @Field(param = "page", required = false, style = "customerPageStyle")
+    @Field(param = "size", required = false, style = "customerPageSizeStyle")
+    @Field(param = "active", required = false, style = "booleanStyle")
+    @Field(param = "sort", required = false, style = "customerSortStyle")
+    @Field(param = "direction", required = false, style = "customerSortDirectionStyle")
+    @Field(param = "projection", required = false, style = "customerProjectionStyle")
     CustomerPage list(FieldValues values) {
         Integer page = values.get("page", Integer.class);
         Integer size = values.get("size", Integer.class);
@@ -60,7 +59,6 @@ class CustomerController {
     @PreAuthorize("hasAuthority('SCOPE_customer.read')")
     @Field(
             param = "email",
-            source = FieldSource.PATH,
             required = true,
             style = "customerEmailStyle"
     )
@@ -70,16 +68,14 @@ class CustomerController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('SCOPE_customer.write')")
-    @FieldContract(rejectUnknownJson = true)
+    @FieldContract
     @Field(
             param = "email",
-            source = FieldSource.JSON,
             required = true,
             style = "customerEmailStyle"
     )
     @Field(
             param = "displayName",
-            source = FieldSource.JSON,
             required = true,
             style = "customerDisplayNameStyle"
     )
@@ -92,20 +88,19 @@ class CustomerController {
 
     @PatchMapping("/{email}")
     @PreAuthorize("hasAuthority('SCOPE_customer.write')")
-    @FieldContract(rejectUnknownJson = true)
+    @FieldContract
     @Field(
             param = "email",
-            source = FieldSource.PATH,
             required = true,
             style = "customerEmailStyle"
     )
     @Field(
             param = "displayName",
-            source = FieldSource.JSON,
+            required = false,
             nullable = true,
             style = "customerDisplayNameStyle"
     )
-    @Field(param = "active", source = FieldSource.JSON, style = "booleanStyle")
+    @Field(param = "active", required = false, style = "booleanStyle")
     CustomerView update(FieldValues values, @Valid @RequestBody UpdateCustomerRequest request) {
         Boolean active = values.get("active", Boolean.class);
         return service.update(
@@ -124,7 +119,6 @@ class CustomerController {
     @PreAuthorize("hasAuthority('SCOPE_customer.write')")
     @Field(
             param = "email",
-            source = FieldSource.PATH,
             required = true,
             style = "customerEmailStyle"
     )

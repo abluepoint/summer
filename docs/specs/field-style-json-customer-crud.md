@@ -67,7 +67,7 @@ Expand Summer Sample Customer into a complete CRUD reference. Use Repository per
 
 - Summer MVC remains the owner of unified HTTP parameter, validation, error and response semantics.
 - The Parameter contract expands from query/form and dynamic parameters to query/form parameters, JSON bodies and path variables.
-- Field and FieldList gain an explicit request-source setting backed by FieldSource values PARAM, JSON and PATH. The default remains PARAM for source compatibility.
+- Scalar Field sources are inferred automatically from Query/form, JSON and PATH input; the public Field source setting is removed. FieldList source migration remains part of the collection follow-up.
 - JSON Field paths use Spring-style property paths. Root and nested scalar values are supported.
 - FieldList supports a one-level JSON array of objects, including nested scalar paths inside each declared item.
 - Primitive arrays, nested arrays and recursive object-array declarations are not added in this change.
@@ -75,7 +75,7 @@ Expand Summer Sample Customer into a complete CRUD reference. Use Repository per
 - Field and Item gain a nullable setting whose default is false. Required controls whether a value must be present; nullable controls whether a present JSON value may be null.
 - FieldValues gains a presence operation and changes its immutable storage so an explicitly validated null can be retained.
 - Existing FieldValues retrieval behavior remains compatible for non-null values.
-- A method-level FieldContract controls strict JSON behavior. Its rejectUnknownJson setting defaults to false for compatibility; Summer Sample create and patch endpoints enable it.
+- FieldContract is a marker for an explicit contract. Unknown Query/form, JSON and PATH fields are rejected consistently; there is no leniency switch.
 - A handler must not declare multiple sources that export to the same FieldValues name. Such a contract is a configuration error rather than a runtime precedence rule.
 - JSON parsing occurs in the existing Field validation interceptor before RequestBody argument conversion.
 - JSON parsing reads only from the existing cached-body request wrapper. The same bytes remain readable by Jackson for DTO binding.

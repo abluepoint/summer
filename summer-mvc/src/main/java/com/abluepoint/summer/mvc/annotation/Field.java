@@ -15,11 +15,9 @@ public @interface Field {
 
     String param();
 
-    FieldSource source() default FieldSource.PARAM;
-
     String name() default "";
 
-    boolean required() default false;
+    boolean required() default true;
 
     boolean nullable() default false;
 

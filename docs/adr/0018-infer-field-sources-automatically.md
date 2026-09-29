@@ -21,3 +21,7 @@ Field 与 FieldList 的参数来源由框架自动推断，移除两者公开的
 路径变量只承载单值 Field；集合仅通过 Query、表单或 JSON 传递，不再支持 PATH FieldList。来源自动推断必须遵守此范围，不能把路径变量解释成集合或集合数量；普通 Field 对路径变量的读取与校验继续支持。例如订单 ID 可以来自 `/orders/{orderId}`，订单明细集合通过 Query/表单索引字段或 JSON 数组提交。
 
 当前 FieldList 仍允许声明 `source = PATH`，现有测试包含读取路径数量变量的用法；后续须迁移这些声明和测试，并取消 PATH 集合读取能力。本次仅记录决定，尚未修改注解、运行时或测试。
+
+## 2026-09-29 implementation status
+
+标量 `Field` 已移除公开 `source` 属性。运行时根据实际请求位置在 Query/form、JSON 和 PATH 之间推断来源；字段同时出现在多个来源时返回 400，不按优先级覆盖或合并。PATH 仅参与单值 Field。`FieldList` 的来源迁移、索引识别和集合语义由后续集合票据处理。

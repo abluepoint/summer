@@ -3,7 +3,6 @@ package com.abluepoint.summer.mvc.autoconfigure;
 import com.abluepoint.summer.common.message.MessageResolver;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
-import com.abluepoint.summer.mvc.annotation.FieldSource;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.filter.CachedBodyHttpServletRequest;
 import com.abluepoint.summer.mvc.filter.RequestCorrelationFilter;
@@ -288,7 +287,7 @@ class SummerMvcAutoConfigurationTest {
     private static final class JsonFieldController {
 
         @PostMapping("/json-field")
-        @Field(param = "age", source = FieldSource.JSON, required = true, style = "integerStyle")
+        @Field(param = "age", required = true, style = "integerStyle")
         void jsonField() {
         }
     }
@@ -306,7 +305,7 @@ class SummerMvcAutoConfigurationTest {
     private static final class StrictJsonFieldController {
 
         @PostMapping("/strict-json-field")
-        @FieldContract(rejectUnknownJson = true)
+        @FieldContract
         void strictJsonField() {
         }
     }

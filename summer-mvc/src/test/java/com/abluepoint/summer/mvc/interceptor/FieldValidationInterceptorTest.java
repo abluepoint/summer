@@ -79,7 +79,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("invalid"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("email", "is required"),
+                        new FieldValidationException.Violation("email", "must be non-blank text"),
                         new FieldValidationException.Violation("age", "must be an integer")
                 ));
         assertThat(FieldValues.from(request).asMap()).isEmpty();

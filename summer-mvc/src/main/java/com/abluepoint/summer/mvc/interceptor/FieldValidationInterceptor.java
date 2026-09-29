@@ -66,32 +66,17 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
                 handlerMethod.getMethod(),
                 FieldList.class
         );
-        validateFieldSourceConflicts(fields, fieldLists);
-        FieldContract fieldContract = AnnotatedElementUtils.findMergedAnnotation(
-                handlerMethod.getMethod(),
-                FieldContract.class
-        );
-        boolean rejectUnknownJson = fieldContract != null && fieldContract.rejectUnknownJson();
-        JsonNode jsonBody = readJsonBody(request, fields, fieldLists, rejectUnknownJson);
+        boolean fieldContract = !fields.isEmpty() || !fieldLists.isEmpty()
+                || AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), FieldContract.class) != null;
+        JsonNode jsonBody = readJsonBody(request, fields, fieldLists, fieldContract);
 
         Map<String, Object> values = new LinkedHashMap<>();
         List<FieldValidationException.Violation> violations = new ArrayList<>();
-        if (rejectUnknownJson) {
-            rejectUnknownJsonFields(jsonBody, fields, fieldLists, violations);
+        if (fieldContract) {
+            rejectUnknownRequestFields(request, jsonBody, fields, fieldLists, violations);
         }
         for (Field field : fields) {
-            readField(
-                    request,
-                    field.source(),
-                    field.param(),
-                    field.name(),
-                    field.required(),
-                    field.nullable(),
-                    field.style(),
-                    values,
-                    violations,
-                    jsonBody
-            );
+            readField(request, field, values, violations, jsonBody);
         }
         for (FieldList fieldList : fieldLists) {
             if (fieldList.items().length == 0) {
@@ -150,37 +135,6 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         }
         request.setAttribute(FieldValues.REQUEST_ATTRIBUTE, new FieldValues(values));
         return true;
-    }
-
-    private void validateFieldSourceConflicts(
-            Iterable<Field> fields,
-            Iterable<FieldList> fieldLists
-    ) {
-        Map<String, EnumSet<FieldSource>> sourcesByExportName = new LinkedHashMap<>();
-        for (Field field : fields) {
-            String exportName = StringUtils.hasText(field.name()) ? field.name() : field.param();
-            sourcesByExportName.computeIfAbsent(
-                    exportName,
-                    ignored -> EnumSet.noneOf(FieldSource.class)
-            ).add(field.source());
-        }
-        for (FieldList fieldList : fieldLists) {
-            String exportName = StringUtils.hasText(fieldList.name())
-                    ? fieldList.name()
-                    : fieldList.param();
-            sourcesByExportName.computeIfAbsent(
-                    exportName,
-                    ignored -> EnumSet.noneOf(FieldSource.class)
-            ).add(fieldList.source());
-        }
-        for (Map.Entry<String, EnumSet<FieldSource>> entry : sourcesByExportName.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                throw new IllegalStateException(
-                        "Parameter contract export '" + entry.getKey()
-                                + "' uses multiple sources: " + entry.getValue()
-                );
-            }
-        }
     }
 
     private void readJsonFieldList(
@@ -264,6 +218,81 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
 
     private void readField(
             HttpServletRequest request,
+            Field field,
+            Map<String, Object> values,
+            List<FieldValidationException.Violation> violations,
+            JsonNode jsonBody
+    ) {
+        EnumSet<FieldSource> presentSources = presentSources(request, jsonBody, field.param());
+        if (presentSources.size() > 1) {
+            violations.add(new FieldValidationException.Violation(
+                    field.param(),
+                    "must be provided by one input source"
+            ));
+            return;
+        }
+        if (presentSources.isEmpty()) {
+            if (field.required()) {
+                violations.add(new FieldValidationException.Violation(field.param(), "is required"));
+            }
+            return;
+        }
+        FieldSource source = presentSources.iterator().next();
+        if (source == FieldSource.JSON) {
+            readJsonField(
+                    jsonBody,
+                    field.param(),
+                    field.name(),
+                    field.required(),
+                    field.nullable(),
+                    field.style(),
+                    values,
+                    violations
+            );
+            return;
+        }
+        String rawValue = readRawValue(request, source, field.param());
+        if (rawValue == null) {
+            if (field.required()) {
+                violations.add(new FieldValidationException.Violation(field.param(), "is required"));
+            }
+            return;
+        }
+
+        Style style = styleRegistry.require(field.style());
+        if (!style.validate(rawValue)) {
+            violations.add(new FieldValidationException.Violation(field.param(), "must be " + style.getDesc()));
+            return;
+        }
+        try {
+            values.put(StringUtils.hasText(field.name()) ? field.name() : field.param(), style.getTypedObject(rawValue));
+        } catch (RuntimeException exception) {
+            violations.add(new FieldValidationException.Violation(field.param(), "must be " + style.getDesc()));
+        }
+    }
+
+    private EnumSet<FieldSource> presentSources(
+            HttpServletRequest request,
+            JsonNode jsonBody,
+            String param
+    ) {
+        EnumSet<FieldSource> sources = EnumSet.noneOf(FieldSource.class);
+        if (request.getParameterMap().containsKey(param)) {
+            sources.add(FieldSource.PARAM);
+        }
+        Object pathVariables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (pathVariables instanceof Map<?, ?> variables && variables.containsKey(param)) {
+            sources.add(FieldSource.PATH);
+        }
+        if (jsonBody != null && resolveJsonNode(jsonBody, param) != null) {
+            sources.add(FieldSource.JSON);
+        }
+        return sources;
+    }
+
+    /** Legacy collection item path used until FieldList is migrated by its own ticket. */
+    private void readField(
+            HttpServletRequest request,
             FieldSource source,
             String param,
             String name,
@@ -279,13 +308,12 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             return;
         }
         String rawValue = readRawValue(request, source, param);
-        if (!StringUtils.hasText(rawValue)) {
+        if (rawValue == null) {
             if (required) {
                 violations.add(new FieldValidationException.Violation(param, "is required"));
             }
             return;
         }
-
         Style style = styleRegistry.require(styleName);
         if (!style.validate(rawValue)) {
             violations.add(new FieldValidationException.Violation(param, "must be " + style.getDesc()));
@@ -416,14 +444,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             Iterable<FieldList> fieldLists,
             boolean strictJsonContract
     ) {
-        boolean requiresJson = strictJsonContract;
-        for (Field field : fields) {
-            requiresJson |= field.source() == FieldSource.JSON;
-        }
-        for (FieldList fieldList : fieldLists) {
-            requiresJson |= fieldList.source() == FieldSource.JSON;
-        }
-        if (!requiresJson) {
+        if (!strictJsonContract || !isJsonBodyCandidate(request)) {
             return null;
         }
         if (objectMapper == null) {
@@ -437,12 +458,77 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             throw new IllegalStateException("JSON Field validation requires request-body caching");
         }
         try {
+            if (cachedRequest.body().length == 0) {
+                return null;
+            }
             return objectMapper.readTree(cachedRequest.body());
         } catch (JacksonException exception) {
             throw new FieldValidationException(List.of(
                     new FieldValidationException.Violation("$", "must be valid JSON")
             ));
         }
+    }
+
+    private boolean isJsonBodyCandidate(HttpServletRequest request) {
+        String contentType = request.getContentType();
+        if (contentType != null) {
+            return contentType.toLowerCase().contains("json");
+        }
+        return request.getContentLengthLong() > 0;
+    }
+
+    private void rejectUnknownRequestFields(
+            HttpServletRequest request,
+            JsonNode jsonBody,
+            Iterable<Field> fields,
+            Iterable<FieldList> fieldLists,
+            List<FieldValidationException.Violation> violations
+    ) {
+        Set<String> declaredParameters = new LinkedHashSet<>();
+        for (Field field : fields) {
+            declaredParameters.add(field.param());
+        }
+        for (FieldList fieldList : fieldLists) {
+            String countParam = StringUtils.hasText(fieldList.countParam())
+                    ? fieldList.countParam()
+                    : fieldList.param() + ".count";
+            declaredParameters.add(countParam);
+            declaredParameters.add(fieldList.param());
+        }
+        for (String parameter : request.getParameterMap().keySet()) {
+            boolean declared = declaredParameters.contains(parameter);
+            if (!declared) {
+                for (FieldList fieldList : fieldLists) {
+                    if (parameter.startsWith(fieldList.param() + "[")) {
+                        declared = true;
+                        break;
+                    }
+                }
+            }
+            if (!declared) {
+                violations.add(new FieldValidationException.Violation(parameter, "is not allowed"));
+            }
+        }
+
+        Object pathVariables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (pathVariables instanceof Map<?, ?> variables) {
+            for (Object key : variables.keySet()) {
+                boolean declared = key instanceof String parameter && declaredParameters.contains(parameter);
+                if (!declared && key instanceof String parameter) {
+                    for (FieldList fieldList : fieldLists) {
+                        if (parameter.startsWith(fieldList.param() + "[")) {
+                            declared = true;
+                            break;
+                        }
+                    }
+                }
+                if (!declared) {
+                    violations.add(new FieldValidationException.Violation(String.valueOf(key), "is not allowed"));
+                }
+            }
+        }
+
+        rejectUnknownJsonFields(jsonBody, fields, fieldLists, violations);
     }
 
     private void rejectUnknownJsonFields(
@@ -457,9 +543,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         Set<String> declaredPaths = new LinkedHashSet<>();
         Map<String, FieldList> jsonFieldLists = new LinkedHashMap<>();
         for (Field field : fields) {
-            if (field.source() == FieldSource.JSON) {
-                declaredPaths.add(field.param());
-            }
+            declaredPaths.add(field.param());
         }
         for (FieldList fieldList : fieldLists) {
             if (fieldList.source() == FieldSource.JSON) {

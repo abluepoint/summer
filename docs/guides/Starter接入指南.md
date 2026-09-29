@@ -46,20 +46,12 @@
 
 ## Field/Style 参数校验
 
-`@Field` 通过 `FieldSource` 显式声明输入来源，并把通过 Style 校验的值转换为 Controller 可显式读取的类型化结果：
-
-| `FieldSource` | 输入 | 说明 |
-| --- | --- | --- |
-| `PARAM` | 查询参数和表单参数 | 默认值，兼容既有声明。 |
-| `JSON` | JSON request body | 支持根标量和点分嵌套标量；依赖请求体缓存。 |
-| `PATH` | URI template variable | 用于稳定校验资源标识。 |
+`@Field` 不配置输入来源。MVC 根据同一请求中实际出现的位置自动推断查询/表单参数、JSON 标量和 URI template variable；同一个字段同时出现在多个来源时返回 HTTP 400。通过 Style 校验的值会转换为 Controller 可显式读取的类型化结果。字段默认必填且不接受 null，可选字段显式写 `required = false`，允许 JSON null 时再写 `nullable = true`：
 
 ```java
 @GetMapping("/orders")
 @Field(
         param = "page",
-        source = FieldSource.PARAM,
-        required = true,
         style = "customerPage"
 )
 OrderView query(FieldValues fields) {
@@ -72,10 +64,10 @@ JSON Parameter contract 可以和正常的 `@RequestBody` 反序列化、Jakarta
 
 ```java
 @PatchMapping("/orders/{orderCode}")
-@FieldContract(rejectUnknownJson = true)
-@Field(param = "orderCode", source = FieldSource.PATH, required = true, style = "orderCodeStyle")
-@Field(param = "note", source = FieldSource.JSON, nullable = true, style = "text")
-@Field(param = "active", source = FieldSource.JSON, style = "booleanValue")
+@FieldContract
+@Field(param = "orderCode", style = "orderCodeStyle")
+@Field(param = "note", required = false, nullable = true, style = "text")
+@Field(param = "active", required = false, style = "booleanValue")
 OrderView update(
         FieldValues fields,
         @Valid @RequestBody UpdateOrderRequest request
@@ -86,7 +78,7 @@ OrderView update(
 }
 ```
 
-`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。`@FieldContract(rejectUnknownJson = true)` 会拒绝未声明属性，默认关闭以保持兼容。MVC 会在请求链开始时缓存可重复读取的完整正文，Field 校验、Jackson DTO 绑定和 HTTP 日志消费者可以按各自职责读取；malformed JSON 统一返回 HTTP 400。
+`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。空字符串和全空白字符串都算已传值，继续交给 Style 校验；不能用空白值绕过格式规则。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。使用 Field 契约的接口始终拒绝未声明的查询/表单、JSON 和路径字段，不提供宽松开关。MVC 会在请求链开始时缓存可重复读取的完整正文，Field 校验、Jackson DTO 绑定和 HTTP 日志消费者可以按各自职责读取；malformed JSON 统一返回 HTTP 400。
 
 请求体缓存容量与业务请求体限制属于两个边界。MVC 不提供手动缓存开关，也不为了日志预览截断业务正文；缓存保存业务请求实际接收的完整正文。业务允许的请求体大小由应用或 Servlet 容器的请求限制负责，日志正文的脱敏和预览长度由 HTTP 日志快照配置负责，二者不会改变 `@RequestBody` 或 Field 读取到的数据。
 
@@ -145,7 +137,7 @@ JSON `FieldList` 从实际数组长度取得元素数，只接受一层对象数
 
 ```java
 @PostMapping("/orders")
-@FieldContract(rejectUnknownJson = true)
+@FieldContract
 @FieldList(
         param = "items",
         source = FieldSource.JSON,
