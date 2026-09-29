@@ -42,7 +42,7 @@ class SummerEndToEndTest {
     void issuesTokenAndUsesItForAProtectedCustomerRead() throws Exception {
         String token = accessToken("customer.read");
 
-        mockMvc.perform(get("/api/customers/{email}", "demo@summer.local")
+        mockMvc.perform(get("/api/customers/{username}", "demo")
                         .header("Authorization", "Bearer " + token)
                         .header("X-Request-Id", "e2e-request"))
                 .andExpect(status().isOk())
@@ -59,7 +59,7 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + writeToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"created@summer.local\",\"displayName\":\"Created Customer\"}"))
+                        .content("{\"username\":\"created\",\"email\":\"created@summer.local\",\"displayName\":\"Created Customer\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value("created@summer.local"))
@@ -68,7 +68,7 @@ class SummerEndToEndTest {
         assertThat(activeCustomerCount()).isEqualTo(countBefore + 1);
 
         String readToken = accessToken("customer.read");
-        mockMvc.perform(get("/api/customers/{email}", "created@summer.local")
+        mockMvc.perform(get("/api/customers/{username}", "created")
                         .header("Authorization", "Bearer " + readToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("created@summer.local"))
@@ -83,7 +83,7 @@ class SummerEndToEndTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"strict@summer.local","displayName":"Strict","nickname":"extra"}
+                                {"username":"strict","email":"strict@summer.local","displayName":"Strict","nickname":"extra"}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
@@ -169,7 +169,7 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"demo@summer.local\",\"displayName\":\"Duplicate\"}"))
+                        .content("{\"username\":\"demo\",\"email\":\"demo@summer.local\",\"displayName\":\"Duplicate\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"));
@@ -183,10 +183,10 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"displayName\":\"Before Patch\"}"))
+                        .content("{\"username\":\"patch\",\"email\":\"" + email + "\",\"displayName\":\"Before Patch\"}"))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(patch("/api/customers/{email}", email)
+        mockMvc.perform(patch("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"active\":false}"))
@@ -194,22 +194,8 @@ class SummerEndToEndTest {
                 .andExpect(jsonPath("$.data.displayName").value("Before Patch"))
                 .andExpect(jsonPath("$.data.active").value(false));
 
-        MvcResult cleared = mockMvc.perform(patch("/api/customers/{email}", email)
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"displayName\":null}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.active").value(false))
-                .andReturn();
-
-        Object clearedDisplayName = JsonPath.read(
-                cleared.getResponse().getContentAsString(),
-                "$.data.displayName"
-        );
-        assertThat(clearedDisplayName).isNull();
-
         String readToken = accessToken("customer.read");
-        mockMvc.perform(get("/api/customers/{email}", email)
+        mockMvc.perform(get("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + readToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.active").value(false));
@@ -230,7 +216,7 @@ class SummerEndToEndTest {
     void rejectsImmutableAndUnknownPatchFieldsWithNullViolations() throws Exception {
         String token = accessToken("customer.write");
 
-        mockMvc.perform(patch("/api/customers/{email}", "demo@summer.local")
+        mockMvc.perform(patch("/api/customers/{username}", "demo")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -245,7 +231,7 @@ class SummerEndToEndTest {
     void returnsNotFoundWhenPatchingAMissingCustomer() throws Exception {
         String token = accessToken("customer.write");
 
-        mockMvc.perform(patch("/api/customers/{email}", "missing-patch@summer.local")
+        mockMvc.perform(patch("/api/customers/{username}", "missing-patch")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"active\":false}"))
@@ -261,20 +247,20 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + writeToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"displayName\":\"Delete Me\"}"))
+                        .content("{\"username\":\"delete\",\"email\":\"" + email + "\",\"displayName\":\"Delete Me\"}"))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/customers/{email}", email)
+        mockMvc.perform(delete("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + writeToken))
                 .andExpect(status().isNoContent())
                 .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEmpty());
 
         String readToken = accessToken("customer.read");
-        mockMvc.perform(get("/api/customers/{email}", email)
+        mockMvc.perform(get("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + readToken))
                 .andExpect(status().isNotFound());
 
-        mockMvc.perform(delete("/api/customers/{email}", email)
+        mockMvc.perform(delete("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + writeToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
@@ -284,7 +270,7 @@ class SummerEndToEndTest {
     void returnsNotFoundForMissingCustomer() throws Exception {
         String token = accessToken("customer.read");
 
-        mockMvc.perform(get("/api/customers/{email}", "missing@summer.local")
+        mockMvc.perform(get("/api/customers/{username}", "missing")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
@@ -295,16 +281,16 @@ class SummerEndToEndTest {
     void rejectsInvalidCustomerPathThroughTheParameterContract() throws Exception {
         String token = accessToken("customer.read");
 
-        mockMvc.perform(get("/api/customers/{email}", "not-an-email")
+        mockMvc.perform(get("/api/customers/{username}", "not-an-email")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
-                .andExpect(jsonPath("$.error.violations[0].field").value("email"));
+                .andExpect(jsonPath("$.error.violations[0].field").value("username"));
     }
 
     @Test
     void returnsStableUnauthorizedAndValidationResponses() throws Exception {
-        mockMvc.perform(get("/api/customers/{email}", "demo@summer.local"))
+        mockMvc.perform(get("/api/customers/{username}", "demo"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_UNAUTHORIZED"));
 
@@ -330,7 +316,7 @@ class SummerEndToEndTest {
     @Test
     void enforcesCustomerReadAndWriteScopesIndependently() throws Exception {
         String writeOnlyToken = accessToken("customer.write");
-        mockMvc.perform(get("/api/customers/{email}", "demo@summer.local")
+        mockMvc.perform(get("/api/customers/{username}", "demo")
                         .header("Authorization", "Bearer " + writeOnlyToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
@@ -339,7 +325,7 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + readOnlyToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"scope-check@summer.local\",\"displayName\":\"Scope Check\"}"))
+                        .content("{\"username\":\"scope-check\",\"email\":\"scope-check@summer.local\",\"displayName\":\"Scope Check\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }

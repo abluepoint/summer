@@ -35,7 +35,7 @@ class CustomerArchitectureTest {
 
     @Test
     void customerServiceOwnsReadAndWriteTransactionBoundaries() throws Exception {
-        assertThat(CustomerService.class.getDeclaredMethod("findByEmail", String.class)
+        assertThat(CustomerService.class.getDeclaredMethod("findByUsername", String.class)
                 .getAnnotation(Transactional.class).readOnly()).isTrue();
         assertThat(CustomerService.class.getDeclaredMethod("list", CustomerListQuery.class)
                 .getAnnotation(Transactional.class).readOnly()).isTrue();
