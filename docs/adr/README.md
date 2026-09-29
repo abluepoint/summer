@@ -19,7 +19,7 @@
 | [0011](0011-do-not-model-a-maven-parent-in-gradle.md) | Gradle 不模拟 Maven parent | 有效；平台约束与模块依赖分开 |
 | [0012](0012-keep-automator-outside-the-framework-repository.md) | Automator 在独立仓库演进 | 有效 |
 | [0013](0013-expand-parameter-contracts-to-json-and-path.md) | Parameter contract 覆盖 PARAM/JSON/PATH | 输入范围、presence/nullability、白名单保留；严格校验选择启用的默认方式由 0017 替代，显式来源配置由 0018 替代，关闭缓存的专属启动检查由 0021 替代 |
-| [0014](0014-use-official-arco-design-pro-as-summer-ui-baseline.md) | Summer UI 使用官方 Arco Design Pro | 已决定，尚未实现完整前端 |
+| [0014](0014-use-official-arco-design-pro-as-summer-ui-baseline.md) | Summer UI 使用官方 Arco Design Pro | 已决定，#84 已建立基线，业务与认证仍待后续票 |
 | [0015](0015-use-spring-security-public-client-pkce-for-summer-ui.md) | Summer UI 使用 public client + PKCE | 已决定，当前安全配置尚有差距 |
 | [0016](0016-identify-customers-by-username.md) | Customer 改用不可变 username | 已决定，当前后端仍为 email 路径 |
 | [0017](0017-simplify-configuration-with-explicit-field-contracts.md) | 每个 Field 契约明确完整，简化单项配置 | 默认 required=true、nullable=false；未知字段始终拒绝；Style 统一用 Java 公共配置；空集合与 minSize=0 由 0019 替代，框架预注册 Style 名称安排由 0022 替代，未完成迁移 |

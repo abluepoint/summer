@@ -1,0 +1,39 @@
+# Summer UI
+
+Summer UI 是独立的 React/Vite 前端，基于官方 `arco-design/arco-design-pro`
+`v2.8.1` 生成。官方模板在基线生成时固定到提交
+`bb6aebcceca6b294b438be4c13dc7328ee80d70b`，详见
+[`BASELINE.md`](./BASELINE.md)。本目录不复制或依赖仓库外的旧 UI 项目。
+
+## 开发
+
+使用仓库提交的 `yarn.lock` 和 Yarn 1 安装依赖：
+
+```bash
+yarn install --frozen-lockfile
+yarn dev
+```
+
+检查和生产构建：
+
+```bash
+yarn typecheck
+yarn lint
+yarn lint:style
+yarn build
+```
+
+Summer UI 由 Node/Vite 独立构建。Gradle 不调用前端包管理器，也不把
+`summer-ui/dist` 嵌入 Summer Sample JAR。
+
+## 导航基线
+
+- `Customer` 位于首个业务导航组，当前保留 `/customer/drawer`、
+  `/customer/modal` 和 `/customer/page` 三个后续实现接缝。
+- `/oauth2/callback` 作为认证任务的保留接缝，不在示例导航中展示。
+- 官方示例路由仍使用其原始 URL，菜单统一放在 `Arco Pro 示例` 下，便于
+  对照上游页面和开发 Mock。
+- 默认语言为简体中文，导航栏保留 `zh-CN` 和 `en-US` 切换。
+
+本票只建立前端基线和路由骨架，不实现 Customer 数据交互或 OIDC 协议。
+官方示例可以使用上游开发 Mock；Summer 业务和安全路由没有 Mock 回退。
