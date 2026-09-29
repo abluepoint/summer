@@ -139,7 +139,34 @@ class FieldValidationInterceptorTest {
     }
 
     @Test
-    void reportsMissingFieldListCountAsAFieldViolation() throws Exception {
+    void rejectsNonContiguousQueryFieldListIndexes() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle", new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle", new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("items[0].sku", "A");
+        request.addParameter("items[0].quantity", "1");
+        request.addParameter("items[2].sku", "C");
+        request.addParameter("items[2].quantity", "3");
+
+        assertThatThrownBy(() -> interceptor.preHandle(
+                request,
+                new MockHttpServletResponse(),
+                new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
+        )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
+                assertThat(exception.violations()).contains(
+                        new FieldValidationException.Violation(
+                                "items", "indexes must start at 0 and be contiguous"
+                        )
+                ));
+    }
+
+    @Test
+    void reportsMissingFieldListAsAFieldViolation() throws Exception {
         FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
                 new StyleRegistry(Map.of(
                         "integerStyle",
