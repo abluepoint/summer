@@ -5,6 +5,7 @@ where active = true
 
 -- listCustomers
 select id as customer_id,
+       username,
        email,
        display_name
 <#if detailProjection>
@@ -15,12 +16,14 @@ from summer_customer
 where active = :active
 </#if>
 order by
-<#if sortByDisplayName>
+<#if sortByUsername>
+  username
+<#elseif sortByDisplayName>
   display_name
 <#elseif sortByActive>
   active
 <#else>
-  email
+  username
 </#if>
 <#if descending>
   desc

@@ -10,6 +10,11 @@ import java.util.regex.Pattern;
 @Configuration(proxyBeanMethods = false)
 class CustomerParameterConfiguration {
 
+    @Bean("customerUsernameStyle")
+    Style customerUsernameStyle() {
+        return Styles.string().matches(Pattern.compile("[A-Za-z0-9][A-Za-z0-9_-]{2,63}"), "3-64 letters, digits, underscore or hyphen").build();
+    }
+
     @Bean("customerEmailStyle")
     Style customerEmailStyle() {
         return Styles.string()

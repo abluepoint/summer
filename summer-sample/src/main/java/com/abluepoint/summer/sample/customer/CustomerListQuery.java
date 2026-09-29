@@ -26,6 +26,7 @@ record CustomerListQuery(
     }
 
     enum SortField {
+        USERNAME,
         EMAIL,
         DISPLAY_NAME,
         ACTIVE
