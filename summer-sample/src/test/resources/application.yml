@@ -1,0 +1,50 @@
+summer:
+  sample:
+    data:
+      sql-resource: classpath:sql/customer-queries.sql
+  security:
+    enabled: true
+    authorization-server:
+      enabled: true
+      issuer: http://127.0.0.1:8080
+      user:
+        username: summer-user
+        password: summer-user-demo-only
+      clients:
+        - id: summer-ui
+          public-client: true
+          client-authentication-method: none
+          grant-types:
+            - authorization_code
+          redirect-uris:
+            - http://127.0.0.1:5173/oauth2/callback
+          post-logout-redirect-uris:
+            - http://127.0.0.1:5173/login?logout
+          scopes:
+            - openid
+            - profile
+            - customer.read
+            - customer.write
+        - id: summer-client
+          secret: summer-client-demo-only
+          grant-types:
+            - client_credentials
+            - authorization_code
+            - refresh_token
+          redirect-uris:
+            - http://127.0.0.1:8080/login/oauth2/code/summer
+          scopes:
+            - openid
+            - profile
+            - customer.read
+            - customer.write
+
+    resource-server:
+      enabled: true
+      protected-paths:
+        - /api/**
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

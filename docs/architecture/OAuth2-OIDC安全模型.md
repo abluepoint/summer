@@ -16,7 +16,7 @@
 
 ## 当前实现边界
 
-`summer-security` 只提供 Spring Security 主体、权限、Bearer 资源校验和协议错误处理；`summer-security-autoconfigure` 负责按条件装配过滤链。资源链固定使用 `STATELESS`，只从配置的保护路径匹配 Bearer API，不从 `HttpSession` 恢复 API 身份。授权服务和登录链只在应用显式启用时装配。
+`summer-security` 只提供 Spring Security 主体、权限、Bearer 资源校验和协议错误处理；`summer-security-autoconfigure` 负责按条件装配过滤链。资源链固定使用 `STATELESS`，只从配置的保护路径匹配 Bearer API，不从 `HttpSession` 恢复 API 身份。授权服务和登录链只在应用显式启用时装配，并提供原始 `/csrf` 端点给浏览器表单登录。
 
 应用可以通过自己的 `RegisteredClientRepository`、`UserDetailsService`、JWK、授权服务设置和过滤链接管产品策略；自动配置只在应用没有提供这些 Bean 时创建通用内存实现。这样 Sample 可以保留演示用的内存用户/客户端，未来的 `summer-ui` public client 或其他产品可以拥有自己的注册策略，框架不会读取 Product Session、企业成员或 Customer 业务上下文。
 
@@ -33,7 +33,7 @@
 | 生命周期 | code 5 分钟；access token 与 ID Token 各 15 分钟 |
 | 不启用 | refresh token、offline_access、password grant、client_credentials、动态注册、UserInfo |
 
-Sample 迁移后仅注册 public `summer-ui`，移除其旧 `summer-client` 实例。框架继续支持其他应用显式配置 confidential clients/client_credentials；有 secret 且未指定认证方法的既有配置继续使用 basic/post。当前配置仍强制要求非空 secret，因此上表尚不能直接应用。
+Sample 的生产配置仅注册 public `summer-ui`，不再配置旧 `summer-client`。`public-client: true` 或 `client-authentication-method: none` 的注册不读取 secret，自动设置 authorization_code、PKCE S256、code 5 分钟、access/ID Token 15 分钟以及 post logout redirect；显式配置的 confidential client 仍沿用 basic/post 和应用声明的 grant。授权码和授权记录使用内存实现，应用重启后自然失效。
 
 ## 浏览器身份与登录
 

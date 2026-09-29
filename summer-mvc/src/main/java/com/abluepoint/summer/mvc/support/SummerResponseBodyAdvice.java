@@ -65,7 +65,8 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     private static boolean isFrameworkEndpoint(ServerHttpRequest request) {
         String path = request.getURI().getPath();
-        return path.startsWith("/oauth2/")
+        return path.equals("/csrf")
+                || path.startsWith("/oauth2/")
                 || path.startsWith("/.well-known/")
                 || path.startsWith("/actuator/");
     }
