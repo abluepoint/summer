@@ -11,17 +11,10 @@ import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
 import com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice;
 import com.abluepoint.summer.mvc.validate.FieldValuesArgumentResolver;
-<<<<<<< HEAD
-import com.abluepoint.summer.mvc.validate.PatternStyle;
 import com.abluepoint.summer.mvc.validate.Style;
-import com.abluepoint.summer.mvc.validate.StyleRegistry;
-=======
-import com.abluepoint.summer.mvc.validate.JsonFieldCachingValidator;
-import com.abluepoint.summer.mvc.validate.Style;
-import com.abluepoint.summer.mvc.validate.StyleRegistry;
 import com.abluepoint.summer.mvc.validate.StyleReferenceValidator;
+import com.abluepoint.summer.mvc.validate.StyleRegistry;
 import org.springframework.beans.factory.ObjectProvider;
->>>>>>> af43750 (feat(mvc): add application-defined style builders)
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingFilterBean;
