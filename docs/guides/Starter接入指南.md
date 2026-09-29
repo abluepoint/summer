@@ -24,7 +24,7 @@
 | --- | --- | --- |
 | `summer.common.enabled` | `true` | 消息解析与公共基座。 |
 | `summer.mvc.enabled` | `true` | MVC 自动配置总开关。 |
-| `summer.mvc.wrap-responses` | `true` | Controller 返回值统一包装；OAuth2/Actuator 自动跳过。 |
+| `summer.mvc.request-logging.enabled` | `true` | 输出 requestId、方法、路径、状态和耗时的结构化请求摘要；关闭后不注册请求日志过滤器。 || `summer.mvc.wrap-responses` | `true` | Controller 返回值统一包装；OAuth2/Actuator 自动跳过。 |
 | `summer.mvc.field-validation.enabled` | `true` | 开启 PARAM、JSON、PATH 来源的 Field/Style 校验与类型化导出。 |
 | `summer.mvc.field-validation.max-list-size` | `100` | `FieldList` 全局最大元素数，必须为正整数。 |
 | `summer.data.jpa.enabled` | `true` | SQL 模板源、渲染器、JpaSqlTemplate 与内部结果投影适配器。 |
@@ -165,6 +165,19 @@ OrderView create(FieldValues fields) {
 Bean Validation 与 Field/Style 是互补契约，不互相替代。旧版 JSON Schema、全局 Context 和静态应用上下文链路不在本次兼容范围内。
 
 应用 JSON 端点默认返回 `success/data/error/requestId/timestamp`。当前 MVC 显式旁路 `/oauth2/`、`/.well-known/`、`/actuator/`，并跳过文件、字节流与 Range converter；应用端点可使用 `@RawResponse` 显式保留原始响应。OIDC logout 和新增 `/csrf` 的完整验证见 [现状与目标差异](../architecture/现状与目标差异.md)。
+
+## 请求日志
+
+请求日志由 HTTP 适配层在请求完成后生成不可变摘要，再交给 `RequestLogSink` 输出。默认输出包含 `requestId`、请求方法、路径、响应状态和耗时（毫秒），请求正文默认不记录。应用可通过公共配置关闭整条摘要日志链：
+
+```yaml
+summer:
+  mvc:
+    request-logging:
+      enabled: false
+```
+
+应用如需接入其他输出系统，可提供自己的 `RequestLogSink` Bean；实现只接收 `RequestLogRecord`，不读取 Servlet 请求流、不维护全局请求数据袋，也不改变业务响应。请求日志过滤器的装配顺序位于 requestId 关联过滤器之后，因此摘要中的 `requestId` 与响应头保持一致。
 
 ## 最小安全接入
 

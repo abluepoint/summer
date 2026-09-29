@@ -5,7 +5,10 @@ import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.filter.CachedBodyFilter;
 import com.abluepoint.summer.mvc.filter.RequestCorrelationFilter;
+import com.abluepoint.summer.mvc.filter.RequestLoggingFilter;
 import com.abluepoint.summer.mvc.interceptor.FieldValidationInterceptor;
+import com.abluepoint.summer.mvc.logging.RequestLogSink;
+import com.abluepoint.summer.mvc.logging.Slf4jRequestLogSink;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
@@ -50,6 +53,34 @@ public class SummerMvcAutoConfiguration {
         registration.setFilter(new RequestCorrelationFilter());
         registration.setName("summerRequestCorrelationFilter");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 20);
+        return registration;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(
+            prefix = "summer.mvc.request-logging",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    RequestLogSink summerRequestLogSink() {
+        return new Slf4jRequestLogSink();
+    }
+
+    @Bean
+    @ConditionalOnMissingFilterBean(RequestLoggingFilter.class)
+    @ConditionalOnProperty(
+            prefix = "summer.mvc.request-logging",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    FilterRegistrationBean<RequestLoggingFilter> summerRequestLoggingFilter(RequestLogSink sink) {
+        FilterRegistrationBean<RequestLoggingFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new RequestLoggingFilter(sink));
+        registration.setName("summerRequestLoggingFilter");
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 22);
         return registration;
     }
 

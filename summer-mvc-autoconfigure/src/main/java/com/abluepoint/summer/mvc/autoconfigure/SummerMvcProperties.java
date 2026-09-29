@@ -7,6 +7,7 @@ public class SummerMvcProperties {
 
     private boolean enabled = true;
     private boolean wrapResponses = true;
+    private final RequestLogging requestLogging = new RequestLogging();
     private final FieldValidation fieldValidation = new FieldValidation();
 
     public boolean isEnabled() {
@@ -23,6 +24,23 @@ public class SummerMvcProperties {
 
     public void setWrapResponses(boolean wrapResponses) {
         this.wrapResponses = wrapResponses;
+    }
+
+    public RequestLogging getRequestLogging() {
+        return requestLogging;
+    }
+
+    public static class RequestLogging {
+
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
     }
 
     public FieldValidation getFieldValidation() {

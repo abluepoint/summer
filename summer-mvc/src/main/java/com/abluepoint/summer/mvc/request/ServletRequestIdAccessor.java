@@ -25,6 +25,11 @@ public final class ServletRequestIdAccessor implements RequestIdAccessor {
         Object requestId = request.getAttribute(RequestCorrelationFilter.REQUEST_ID_ATTRIBUTE);
         return requestId instanceof String value && !value.isBlank()
                 ? value
-                : request.getRequestId();
+                : fallbackRequestId(request);
+    }
+
+    private static String fallbackRequestId(HttpServletRequest request) {
+        String requestId = request.getRequestId();
+        return requestId == null || requestId.isBlank() ? UNBOUND_REQUEST_ID : requestId;
     }
 }

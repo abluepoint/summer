@@ -7,7 +7,9 @@ import com.abluepoint.summer.mvc.annotation.FieldSource;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.filter.CachedBodyHttpServletRequest;
 import com.abluepoint.summer.mvc.filter.RequestCorrelationFilter;
+import com.abluepoint.summer.mvc.filter.RequestLoggingFilter;
 import com.abluepoint.summer.mvc.interceptor.FieldValidationInterceptor;
+import com.abluepoint.summer.mvc.logging.RequestLogSink;
 import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
 import com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice;
 import com.abluepoint.summer.mvc.validate.FieldValues;
@@ -80,6 +82,32 @@ class SummerMvcAutoConfigurationTest {
                     assertThat(context).hasNotFailed();
                     assertThat(context).hasBean("summerRequestCorrelationFilter");
                     assertThat(context).hasBean("summerCachedBodyFilter");
+                });
+    }
+
+    @Test
+    void registersRequestLoggingFilterWithARequestLogSink() {
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(RequestLogSink.class);
+            assertThat(context).hasBean("summerRequestLoggingFilter");
+            FilterRegistrationBean<?> logging = context.getBean(
+                    "summerRequestLoggingFilter",
+                    FilterRegistrationBean.class
+            );
+            assertThat(logging.getFilter()).isInstanceOf(RequestLoggingFilter.class);
+            assertThat(logging.getOrder()).isEqualTo(org.springframework.core.Ordered.HIGHEST_PRECEDENCE + 22);
+        });
+    }
+
+    @Test
+    void disablesRequestLoggingWithItsPublicApplicationProperty() {
+        contextRunner
+                .withPropertyValues("summer.mvc.request-logging.enabled=false")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).doesNotHaveBean(RequestLogSink.class);
+                    assertThat(context).doesNotHaveBean("summerRequestLoggingFilter");
                 });
     }
 

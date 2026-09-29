@@ -20,4 +20,6 @@ MVC 管理共享请求数据，HTTP 日志适配层消费这些数据并生成�
 
 本次确认默认摘要、正文按需开启的策略。后续 [ADR 0021](0021-manage-request-body-caching-automatically.md) 已确认由 MVC 自动管理必要缓存并移除 `summer.mvc.cache-request-body`，其与 ADR 0010 的替代关系由该决定记录；具体缓存容量与读取机制留待实现设计。
 
-当前 MVC 已有 RequestCorrelationFilter、CachedBodyFilter 和可重复读取请求体的包装器，但尚未形成上述完整日志适配能力；包装器内的 readAllBytes 未设置自身读取上限。实施时须区分请求体可接受大小与日志预览长度，不得用截断业务请求体的方式限制日志。已有架构检查不构成请求日志能力的验收证据。
+当前 MVC 使用 `RequestLoggingFilter` 采集请求完成后的摘要，并将不可变的 `RequestLogRecord` 交给 `RequestLogSink`；默认 `Slf4jRequestLogSink` 只输出结构化摘要。过滤器负责 HTTP 生命周期和快照，sink 只负责输出，不读取 Servlet 请求流。`summer.mvc.request-logging.enabled` 默认开启，可由应用公共配置关闭；请求正文仍不在本决定的默认输出范围内。对应的 HTTP seam 测试验证 requestId、方法、路径、状态和耗时，并验证输出失败不会改变业务响应。
+
+请求体能力仍由 MVC 的请求数据管理负责。当前缓存包装器内的 `readAllBytes` 未设置自身读取上限；后续正文日志实现须区分请求体可接受大小与日志预览长度，不得用截断业务请求体的方式限制日志。已有架构检查不构成请求日志能力的验收证据。
