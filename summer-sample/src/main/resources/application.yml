@@ -31,14 +31,15 @@ summer:
         username: ${SUMMER_SAMPLE_USER:summer-user}
         password: ${SUMMER_SAMPLE_USER_PASSWORD:summer-user-demo-only}
       clients:
-        - id: ${SUMMER_SAMPLE_CLIENT_ID:summer-client}
-          secret: ${SUMMER_SAMPLE_CLIENT_SECRET:summer-client-demo-only}
+        - id: ${SUMMER_SAMPLE_CLIENT_ID:summer-ui}
+          public-client: true
+          client-authentication-method: none
           grant-types:
-            - client_credentials
             - authorization_code
-            - refresh_token
           redirect-uris:
-            - http://127.0.0.1:8080/login/oauth2/code/summer
+            - ${SUMMER_SAMPLE_REDIRECT_URI:http://127.0.0.1:5173/oauth2/callback}
+          post-logout-redirect-uris:
+            - ${SUMMER_SAMPLE_POST_LOGOUT_REDIRECT_URI:http://127.0.0.1:5173/login?logout}
           scopes:
             - openid
             - profile

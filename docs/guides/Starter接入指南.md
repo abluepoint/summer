@@ -1,6 +1,6 @@
 # Starter 接入指南
 
-本指南描述当前可用的框架接入能力。Summer UI 的 public client/PKCE 配置尚待实现，目标见 [安全模型](../architecture/OAuth2-OIDC安全模型.md)；不要向当前客户端配置直接填入未支持的 `none` 选项。
+本指南描述当前可用的框架接入能力。授权服务支持 `summer-ui` public client 的 Authorization Code + PKCE（S256）链路，同时保留应用显式配置的 confidential client。
 
 按 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md)，MVC 自动管理请求体缓存；无需配置 `summer.mvc.cache-request-body`。JSON Field/FieldList、DTO 和 HTTP 日志消费者共享同一份可重复读取的请求体。
 
@@ -175,6 +175,6 @@ summer:
 ## 最小安全接入
 
 1. 显式开启 Authorization Server/Resource Server。
-2. 当前自动配置要求从安全配置通道提供 confidential client secret；浏览器 public client 的无 secret 配置按 ADR 0015 实施后才可接入。
+2. 浏览器客户端声明 `public-client: true`、`client-authentication-method: none`、`authorization_code` 和 redirect URI；自动配置强制 PKCE S256，并按 public client 默认设置 code 5 分钟、access/ID Token 15 分钟且不签发 refresh token。
 3. 为业务端点配置 scope，并用 `@PreAuthorize("hasAuthority('SCOPE_xxx')")` 验证。
-4. 生产覆盖内存客户端、用户和临时 JWK 实现。
+4. 生产覆盖内存客户端、用户和临时 JWK 实现。`GET /csrf` 返回原始 CSRF JSON，`/oauth2/**`、`/.well-known/**`、`/connect/**` 与协议登录响应不经过统一业务 envelope。

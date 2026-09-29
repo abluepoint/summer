@@ -36,13 +36,18 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.ArrayList;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -87,6 +92,12 @@ public class SummerSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    SummerCsrfEndpoint summerCsrfEndpoint() {
+        return new SummerCsrfEndpoint();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     PasswordEncoder summerPasswordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
@@ -121,6 +132,27 @@ public class SummerSecurityAutoConfiguration {
                 .password(passwordEncoder.encode(configured.getPassword()))
                 .roles("USER")
                 .build());
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
+    @ConditionalOnMissingBean(OAuth2TokenCustomizer.class)
+    OAuth2TokenCustomizer<JwtEncodingContext> summerJwtTokenCustomizer() {
+        return context -> {
+            RegisteredClient client = context.getRegisteredClient();
+            boolean publicClient = client.getClientAuthenticationMethods().contains(ClientAuthenticationMethod.NONE);
+            if (!publicClient || context.getTokenType() == null) {
+                return;
+            }
+            String tokenType = context.getTokenType().getValue();
+            if (OidcParameterNames.ID_TOKEN.equals(tokenType)) {
+                String username = context.getPrincipal().getName();
+                context.getClaims()
+                        .claim("preferred_username", username)
+                        .claim("name", username)
+                        .expiresAt(Instant.now().plus(Duration.ofMinutes(15)));
+            }
+        };
     }
 
     @Bean
@@ -211,25 +243,54 @@ public class SummerSecurityAutoConfiguration {
             SummerSecurityProperties.Client configured,
             PasswordEncoder passwordEncoder
     ) {
-        if (configured.getId() == null || configured.getSecret() == null) {
-            throw new IllegalStateException("OAuth2 client id and secret are required");
-        }
-        if (configured.getId().isBlank()) {
+        if (configured.getId() == null || configured.getId().isBlank()) {
             throw new IllegalStateException("OAuth2 client id must not be blank");
         }
-        if (configured.getSecret().isBlank()) {
-            throw new IllegalStateException("OAuth2 client secret must not be blank");
+        boolean publicClient = configured.isPublicClient()
+                || ClientAuthenticationMethod.NONE.getValue().equalsIgnoreCase(configured.getClientAuthenticationMethod());
+        if (publicClient) {
+            if (configured.getSecret() != null && !configured.getSecret().isBlank()) {
+                throw new IllegalStateException("Public OAuth2 client must not define a client secret");
+            }
+            if (configured.getGrantTypes().size() != 1
+                    || !configured.getGrantTypes().contains(AuthorizationGrantType.AUTHORIZATION_CODE.getValue())) {
+                throw new IllegalStateException("Public OAuth2 client supports authorization_code only");
+            }
+            if (configured.getRedirectUris().isEmpty()) {
+                throw new IllegalStateException("Public OAuth2 client requires at least one redirect URI");
+            }
+            if ("summer-ui".equals(configured.getId())
+                    && !Set.of("openid", "profile", "customer.read", "customer.write")
+                    .containsAll(configured.getScopes())) {
+                throw new IllegalStateException("summer-ui scopes must be limited to openid, profile, customer.read and customer.write");
+            }
+        } else {
+            if (configured.getSecret() == null || configured.getSecret().isBlank()) {
+                throw new IllegalStateException("OAuth2 client secret must not be blank");
+            }
         }
 
         RegisteredClient.Builder builder = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId(configured.getId())
-                .clientSecret(passwordEncoder.encode(configured.getSecret()))
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
-                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(false)
+                        .requireProofKey(publicClient)
+                        .build());
+        if (publicClient) {
+            builder.clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+                    .tokenSettings(TokenSettings.builder()
+                            .authorizationCodeTimeToLive(Duration.ofMinutes(5))
+                            .accessTokenTimeToLive(Duration.ofMinutes(15))
+                            .build());
+        } else {
+            builder.clientSecret(passwordEncoder.encode(configured.getSecret()))
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+        }
 
         configured.getGrantTypes().forEach(grantType -> builder.authorizationGrantType(grantType(grantType)));
         configured.getRedirectUris().forEach(builder::redirectUri);
+        configured.getPostLogoutRedirectUris().forEach(builder::postLogoutRedirectUri);
         configured.getScopes().forEach(builder::scope);
         return builder.build();
     }

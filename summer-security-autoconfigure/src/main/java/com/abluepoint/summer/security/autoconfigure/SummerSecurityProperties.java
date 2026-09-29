@@ -108,7 +108,10 @@ public class SummerSecurityProperties {
     public static class Client {
         private String id;
         private String secret;
+        private boolean publicClient;
+        private String clientAuthenticationMethod;
         private List<String> redirectUris = new ArrayList<>();
+        private List<String> postLogoutRedirectUris = new ArrayList<>();
         private List<String> scopes = new ArrayList<>(List.of("openid", "profile"));
         private List<String> grantTypes = new ArrayList<>(List.of("client_credentials"));
 
@@ -128,12 +131,36 @@ public class SummerSecurityProperties {
             this.secret = secret;
         }
 
+        public boolean isPublicClient() {
+            return publicClient;
+        }
+
+        public void setPublicClient(boolean publicClient) {
+            this.publicClient = publicClient;
+        }
+
+        public String getClientAuthenticationMethod() {
+            return clientAuthenticationMethod;
+        }
+
+        public void setClientAuthenticationMethod(String clientAuthenticationMethod) {
+            this.clientAuthenticationMethod = clientAuthenticationMethod;
+        }
+
         public List<String> getRedirectUris() {
             return redirectUris;
         }
 
         public void setRedirectUris(List<String> redirectUris) {
             this.redirectUris = redirectUris == null ? new ArrayList<>() : new ArrayList<>(redirectUris);
+        }
+
+        public List<String> getPostLogoutRedirectUris() {
+            return postLogoutRedirectUris;
+        }
+
+        public void setPostLogoutRedirectUris(List<String> postLogoutRedirectUris) {
+            this.postLogoutRedirectUris = postLogoutRedirectUris == null ? new ArrayList<>() : new ArrayList<>(postLogoutRedirectUris);
         }
 
         public List<String> getScopes() {
