@@ -57,6 +57,7 @@ class CustomerQuery {
     private Map<String, Object> templateParameters(CustomerListQuery query) {
         return Map.of(
                 "filterByActive", query.active() != null,
+                "sortByUsername", query.sort() == CustomerListQuery.SortField.USERNAME,
                 "sortByDisplayName", query.sort() == CustomerListQuery.SortField.DISPLAY_NAME,
                 "sortByActive", query.sort() == CustomerListQuery.SortField.ACTIVE,
                 "descending", query.direction() == CustomerListQuery.SortDirection.DESC,
