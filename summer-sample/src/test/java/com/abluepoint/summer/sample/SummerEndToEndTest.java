@@ -281,7 +281,7 @@ class SummerEndToEndTest {
     void rejectsInvalidCustomerPathThroughTheParameterContract() throws Exception {
         String token = accessToken("customer.read");
 
-        mockMvc.perform(get("/api/customers/{username}", "not-an-email")
+        mockMvc.perform(get("/api/customers/{username}", "x")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
