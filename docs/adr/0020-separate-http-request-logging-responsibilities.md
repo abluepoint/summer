@@ -22,4 +22,4 @@ MVC 管理共享请求数据，HTTP 日志适配层消费这些数据并生成�
 
 当前 MVC 使用 `RequestLoggingFilter` 采集请求完成后的摘要，并将不可变的 `RequestLogRecord` 交给 `RequestLogSink`；默认 `Slf4jRequestLogSink` 只输出结构化摘要。过滤器负责 HTTP 生命周期和快照，sink 只负责输出，不读取 Servlet 请求流。`summer.mvc.request-logging.enabled` 默认开启，可由应用公共配置关闭；`summer.mvc.request-logging.body.enabled` 默认关闭，开启后由同一组公共配置控制预览长度和 JSON 敏感字段名。正文快照只读取 MVC 自动缓存的请求包装器，先脱敏再截断；业务仍读取完整请求体。HTTP seam 测试验证默认关闭、requestId 关联、脱敏、截断、业务重复读取和输出失败不改变业务响应。
 
-请求体能力仍由 MVC 的请求数据管理负责。缓存包装器保存实际接收的完整正文；`summer.mvc.request-logging.body.max-preview-length` 只限制日志副本，不能替代应用或 Servlet 容器的请求大小限制。未知或不可解析的正文不会直接写入日志。已有架构检查不构成请求日志能力的验收证据。
+请求体能力仍由 MVC 的请求数据管理负责。缓存包装器保存实际接收的完整正文；`summer.mvc.request-logging.body.max-preview-length` 只限制日志副本，不能替代应用或 Servlet 容器的请求大小限制。日志预览仅支持可解析的 JSON 对象或对象数组，按配置字段名递归脱敏后截断；文本、缺失或其他 Content-Type、JSON 标量、标量数组及畸形 JSON 均输出 `[BODY_UNAVAILABLE]`。容器管理的表单和 multipart 没有 MVC 缓存副本，预览为空。已有架构检查不构成请求日志能力的验收证据。

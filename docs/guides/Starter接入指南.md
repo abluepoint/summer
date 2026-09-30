@@ -169,7 +169,7 @@ summer:
           - client_secret
 ```
 
-正文不是 JSON 时，文本请求按字符截断；二进制请求只记录 `[BODY_UNAVAILABLE]`。无法解析的 JSON 同样不会把原文写入日志。
+只有可解析的 JSON 对象或对象数组会生成字段脱敏后的正文预览。`text/*`、缺失或其他 Content-Type、JSON 标量、标量数组以及无法解析的 JSON 统一只记录 `[BODY_UNAVAILABLE]`，不复制原文。容器管理的 URL 编码表单和 multipart 请求没有 MVC 缓存副本，`bodyPreview` 为 `null`。字段名脱敏是明确的配置契约；应用仍需避免把凭据放在未列入脱敏字段的 JSON 值中。
 
 应用如需接入其他输出系统，可提供自己的 `RequestLogSink` Bean；实现只接收 `RequestLogRecord`，不读取 Servlet 请求流、不维护全局请求数据袋，也不改变业务响应。请求日志过滤器的装配顺序位于 requestId 关联过滤器之后，因此摘要中的 `requestId` 与响应头保持一致。
 
