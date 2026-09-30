@@ -23,7 +23,7 @@ async function signedInPage(route = '/customer/page?recovery=ready') {
     .fill(process.env.SUMMER_E2E_USERNAME || 'summer-user');
   await page.locator('input[autocomplete="current-password"]').fill(password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
-  await page.getByRole('button', { name: 'demo', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'summer.demo', exact: true }).waitFor();
   return { context, page };
 }
 

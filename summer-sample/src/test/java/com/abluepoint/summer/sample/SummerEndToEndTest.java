@@ -42,7 +42,7 @@ class SummerEndToEndTest {
     void issuesTokenAndUsesItForAProtectedCustomerRead() throws Exception {
         String token = accessToken("customer.read");
 
-        mockMvc.perform(get("/api/customers/{username}", "demo")
+        mockMvc.perform(get("/api/customers/{username}", "summer.demo")
                         .header("Authorization", "Bearer " + token)
                         .header("X-Request-Id", "e2e-request"))
                 .andExpect(status().isOk())
@@ -169,7 +169,7 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"demo\",\"email\":\"demo@summer.local\",\"displayName\":\"Duplicate\"}"))
+                        .content("{\"username\":\"summer.demo\",\"email\":\"demo@summer.local\",\"displayName\":\"Duplicate\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"));
@@ -216,7 +216,7 @@ class SummerEndToEndTest {
     void rejectsImmutableAndUnknownPatchFieldsWithNullViolations() throws Exception {
         String token = accessToken("customer.write");
 
-        mockMvc.perform(patch("/api/customers/{username}", "demo")
+        mockMvc.perform(patch("/api/customers/{username}", "summer.demo")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -336,7 +336,7 @@ class SummerEndToEndTest {
 
     @Test
     void returnsStableUnauthorizedAndValidationResponses() throws Exception {
-        mockMvc.perform(get("/api/customers/{username}", "demo"))
+        mockMvc.perform(get("/api/customers/{username}", "summer.demo"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_UNAUTHORIZED"));
 
@@ -362,7 +362,7 @@ class SummerEndToEndTest {
     @Test
     void enforcesCustomerReadAndWriteScopesIndependently() throws Exception {
         String writeOnlyToken = accessToken("customer.write");
-        mockMvc.perform(get("/api/customers/{username}", "demo")
+        mockMvc.perform(get("/api/customers/{username}", "summer.demo")
                         .header("Authorization", "Bearer " + writeOnlyToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));

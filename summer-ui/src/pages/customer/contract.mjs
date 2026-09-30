@@ -1,6 +1,6 @@
 const MODES = ['drawer', 'modal', 'page'];
 const SORTS = ['username', 'email', 'displayName', 'active'];
-const USERNAME = /^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/;
+const USERNAME = /^[a-z0-9](?:[a-z0-9._-]{1,62}[a-z0-9])$/;
 
 export function readListState(search) {
   const params = new URLSearchParams(search);
@@ -34,16 +34,30 @@ export function listSearch(state) {
 export function detailPath(mode, username, search = '') {
   if (!MODES.includes(mode) || !USERNAME.test(username))
     throw new Error('Invalid Customer route');
-  return `/customer/${mode}/${encodeURIComponent(username)}${search}`;
+  return `/customer/detail/${encodeURIComponent(username)}${search}`;
 }
 
 export function detailUsername(pathname, mode) {
   if (!MODES.includes(mode)) return null;
-  const prefix = `/customer/${mode}/`;
+  const prefix = pathname.startsWith('/customer/detail/')
+    ? '/customer/detail/'
+    : `/customer/${mode}/`;
   if (!pathname.startsWith(prefix)) return null;
   try {
     const value = decodeURIComponent(pathname.slice(prefix.length));
     return USERNAME.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function detailSource(from) {
+  if (typeof from !== 'string' || !from.startsWith('/customer/')) return null;
+  try {
+    const url = new URL(from, 'http://summer.local');
+    const match = /^\/customer\/(drawer|modal|page)$/.exec(url.pathname);
+    if (!match || url.origin !== 'http://summer.local') return null;
+    return { mode: match[1], url: from };
   } catch {
     return null;
   }

@@ -1,5 +1,8 @@
 # Issue #87 Customer 列表与详情交付记录
 
+后续 #93 将公开详情深链接统一为 `/customer/detail/:username`，Sample 种子用户名
+改为 `summer.demo`；以下表格保留 #87 交付时的历史验收记录。
+
 ## 需求追溯
 
 | 验收要求 | 实现 | 验证 |

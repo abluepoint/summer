@@ -32,7 +32,8 @@ Summer UI 由 Node/Vite 独立构建。Gradle 不调用前端包管理器，也�
 ## 导航基线
 
 - `Customer` 位于首个业务导航组，当前保留 `/customer/drawer`、
-  `/customer/modal` 和 `/customer/page` 三种交互模式。
+  `/customer/modal` 和 `/customer/page` 三种交互模式；它们共用公开的
+  `/customer/detail/:username` 详情深链接，Sample 示例用户名为 `summer.demo`。
 - `/oauth2/callback` 完成 OIDC PKCE 回调，不在示例导航中展示。
 - 官方示例路由仍使用其原始 URL，菜单统一放在 `Arco Pro 示例` 下，便于
   对照上游页面和开发 Mock。

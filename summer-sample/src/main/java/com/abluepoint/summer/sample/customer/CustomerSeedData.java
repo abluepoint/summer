@@ -8,6 +8,6 @@ class CustomerSeedData implements ApplicationRunner {
     private final CustomerRepository repository;
     CustomerSeedData(CustomerRepository repository) { this.repository = repository; }
     @Override @Transactional public void run(ApplicationArguments args) {
-        repository.findByUsername("demo").orElseGet(() -> repository.save(new Customer("demo", "demo@summer.local", "Summer Demo")));
+        repository.findByUsername("summer.demo").orElseGet(() -> repository.save(new Customer("summer.demo", "demo@summer.local", "Summer Demo")));
     }
 }

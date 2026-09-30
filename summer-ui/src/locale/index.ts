@@ -118,6 +118,8 @@ const i18n = {
     'customer.create.discard': 'Discard',
     'customer.create.continue': 'Continue editing',
     'customer.create.leave': 'Leave and discard the unsaved Customer?',
+    'customer.drawer.guide':
+      'Compare operation speed, list context, form capacity, narrow-screen fit, keyboard and focus behavior, and navigation and sharing with the other modes.',
     'customer.modal.guide':
       'Compare operation speed, list context, form capacity, narrow-screen fit, keyboard and focus behavior, and navigation and sharing with the other modes.',
     'customer.page.leave': 'Leave and discard unsaved Customer details?',
@@ -289,6 +291,8 @@ const i18n = {
     'customer.create.discard': '放弃',
     'customer.create.continue': '继续编辑',
     'customer.create.leave': '离开并放弃未保存的客户？',
+    'customer.drawer.guide':
+      '可从操作效率、列表上下文保留、表单容量、窄屏适配、键盘与焦点、导航与分享六方面对比交互模式。',
     'customer.modal.guide':
       '可从操作效率、列表上下文保留、表单容量、窄屏适配、键盘与焦点、导航与分享六方面对比交互模式。',
     'customer.page.leave': '离开并放弃未保存的客户信息？',
