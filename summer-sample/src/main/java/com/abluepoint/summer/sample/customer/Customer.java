@@ -4,13 +4,17 @@ import com.abluepoint.summer.data.jpa.entity.BaseLongEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "summer_customer")
+@Table(name = "summer_customer", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_summer_customer_username", columnNames = "username"),
+        @UniqueConstraint(name = "uk_summer_customer_email", columnNames = "email")
+})
 class Customer extends BaseLongEntity {
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(nullable = false, length = 64)
     private String username;
-    @Column(nullable = false, unique = true, length = 200)
+    @Column(nullable = false, length = 200)
     private String email;
     @Column(nullable = false, length = 200)
     private String displayName;
@@ -18,8 +22,6 @@ class Customer extends BaseLongEntity {
     private boolean active = true;
     protected Customer() {}
     Customer(String username, String email, String displayName) { this.username = username; this.email = email; this.displayName = displayName; }
-    /** Compatibility constructor for persistence fixtures; username is derived from the legacy first value. */
-    Customer(String email, String displayName) { this(email.substring(0, email.indexOf('@') > 0 ? email.indexOf('@') : email.length()), email, displayName); }
     String getUsername() { return username; }
     String getEmail() { return email; }
     String getDisplayName() { return displayName; }
