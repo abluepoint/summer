@@ -282,6 +282,9 @@ public class SummerSecurityAutoConfiguration {
         }
         boolean publicClient = configured.isPublicClient()
                 || ClientAuthenticationMethod.NONE.getValue().equalsIgnoreCase(configured.getClientAuthenticationMethod());
+        if ("summer-ui".equals(configured.getId()) && !publicClient) {
+            throw new IllegalStateException("summer-ui must be a public client");
+        }
         if (publicClient) {
             if (configured.getSecret() != null && !configured.getSecret().isBlank()) {
                 throw new IllegalStateException("Public OAuth2 client must not define a client secret");
@@ -294,9 +297,9 @@ public class SummerSecurityAutoConfiguration {
                 throw new IllegalStateException("Public OAuth2 client requires at least one redirect URI");
             }
             if ("summer-ui".equals(configured.getId())
-                    && !Set.of("openid", "profile", "customer.read", "customer.write")
-                    .containsAll(configured.getScopes())) {
-                throw new IllegalStateException("summer-ui scopes must be limited to openid, profile, customer.read and customer.write");
+                    && !Set.copyOf(configured.getScopes())
+                    .equals(Set.of("openid", "profile", "customer.read", "customer.write"))) {
+                throw new IllegalStateException("summer-ui scopes must be exactly openid, profile, customer.read and customer.write");
             }
         } else {
             if (configured.getSecret() == null || configured.getSecret().isBlank()) {
