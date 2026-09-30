@@ -41,5 +41,5 @@ class CustomerController {
     }
     @DeleteMapping("/{username}") @RawResponse @PreAuthorize("hasAuthority('SCOPE_customer.write')") @Field(param="username", required=true, style="customerUsernameStyle")
     ResponseEntity<Void> delete(FieldValues values) { service.delete(values.get("username",String.class)); return ResponseEntity.noContent().build(); }
-    private static CustomerListQuery.SortField sortField(String value) { return switch(value==null?"username":value){case "email"->CustomerListQuery.SortField.EMAIL; case "displayName"->CustomerListQuery.SortField.DISPLAY_NAME; case "active"->CustomerListQuery.SortField.ACTIVE; default->CustomerListQuery.SortField.USERNAME;}; }
+    private static CustomerListQuery.SortField sortField(String value) { return switch(value==null?"username":value){case "username"->CustomerListQuery.SortField.USERNAME; case "email"->CustomerListQuery.SortField.EMAIL; case "displayName"->CustomerListQuery.SortField.DISPLAY_NAME; case "active"->CustomerListQuery.SortField.ACTIVE; default->CustomerListQuery.SortField.USERNAME;}; }
 }

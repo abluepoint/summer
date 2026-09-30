@@ -18,6 +18,8 @@ where active = :active
 order by
 <#if sortByUsername>
   username
+<#elseif sortByEmail>
+  email
 <#elseif sortByDisplayName>
   display_name
 <#elseif sortByActive>
@@ -30,7 +32,7 @@ order by
 <#else>
   asc
 </#if>
-, id asc
+, username asc
 limit :limit offset :offset
 
 -- countCustomers
