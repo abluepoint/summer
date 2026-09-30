@@ -85,3 +85,24 @@ export function getCustomer(username: string) {
     `/api/customers/${encodeURIComponent(username)}`
   );
 }
+
+export async function deleteCustomer(username: string): Promise<void> {
+  try {
+    // DELETE is a raw 204 response, outside the business success envelope.
+    const response = await axios.delete(
+      `/api/customers/${encodeURIComponent(username)}`
+    );
+    if (response.status !== 204) throw new Error('Unexpected delete response');
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new SummerApiError(
+        readFailure(
+          error.response?.data,
+          error.response?.status || 0,
+          String(error.response?.headers?.['x-request-id'] || '')
+        )
+      );
+    }
+    throw error;
+  }
+}

@@ -7,6 +7,8 @@ import {
   detailUsername,
   readEnvelope,
   readFailure,
+  canConfirmDeletion,
+  pageAfterDeletion,
 } from '../src/pages/customer/contract.mjs';
 
 test('list URL restores valid pagination, filter and sort and rejects invalid values', () => {
@@ -40,6 +42,15 @@ test('list URL restores valid pagination, filter and sort and rejects invalid va
     }),
     '?page=2&size=50&active=false&sort=email&direction=desc'
   );
+});
+
+test('deletion needs exact username and falls back only when the page is gone', () => {
+  assert.equal(canConfirmDeletion('alice', 'alice'), true);
+  for (const typed of ['Alice', 'alice ', ' alice', 'ali', ''])
+    assert.equal(canConfirmDeletion(typed, 'alice'), false);
+  assert.equal(pageAfterDeletion(2, 10, 20), 1);
+  assert.equal(pageAfterDeletion(2, 10, 21), 2);
+  assert.equal(pageAfterDeletion(0, 10, 0), 0);
 });
 
 test('Customer detail links use username and preserve list state', () => {
