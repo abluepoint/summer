@@ -19,7 +19,11 @@ Sample JAR 不包含 `summer-ui/dist`。前端使用官方 Arco Pro v2.8.1 模�
 `SUMMER_SAMPLE_POST_LOGOUT_REDIRECT_URI` 为表中的外部地址，并用
 `SUMMER_BACKEND_ORIGIN=http://127.0.0.1:8093 VITE_ENABLE_MOCK=false yarn dev --host 127.0.0.1 --port 5193 --strictPort`
 启动 Vite。生产设置相同三项为公开 HTTPS origin，并把
-`SUMMER_SAMPLE_SESSION_COOKIE_SECURE=true`。数据库由 `SPRING_DATASOURCE_URL`、
+`SUMMER_SAMPLE_SESSION_COOKIE_SECURE=true`、`SERVER_FORWARD_HEADERS_STRATEGY=framework`。
+后者让 Spring 按 Caddy 提供的 `X-Forwarded-Proto`/`X-Forwarded-Host` 生成登录
+重定向；仅在后端只接受可信反向代理流量时启用。只设置 HTTPS issuer 而不处理
+转发头会使登录重定向落到 HTTP，真实浏览器验收已复现该失败。数据库由
+`SPRING_DATASOURCE_URL`、
 `SPRING_DATASOURCE_USERNAME` 和安全注入的 `SPRING_DATASOURCE_PASSWORD` 提供。
 账号密码、Token 和密钥不要写入 Vite 变量或部署文件。
 
@@ -41,6 +45,16 @@ HTTP origin，然后运行 `caddy run --config summer-ui/deploy/Caddyfile`。Cad
 这需要可用的 Docker daemon 和 `caddy:2` 镜像。独立的假后端只验证代理路由，
 不能代替真实 Spring/PostgreSQL 浏览器验收。
 
+公开 HTTPS origin 的本地复验使用同一 `Caddyfile`，令容器站点为
+`SUMMER_PUBLIC_HOST=localhost:8194`、宿主映射 `127.0.0.1:5194:8194`，后端内部
+地址仅给 Caddy 的 `SUMMER_BACKEND_ORIGIN`。后端的 issuer、redirect、logout 分别
+设为 `https://localhost:5194`、`https://localhost:5194/oauth2/callback`、
+`https://localhost:5194/login?logout`，并启用上述转发头和 Secure Cookie 设置。
+在真实 PostgreSQL 后端、Mock 关闭、Caddy 内部测试证书下执行
+`SUMMER_E2E_HTTPS_ORIGIN=https://localhost:5194 SUMMER_E2E_PASSWORD_FILE=<私有口令文件> yarn test:e2e:public-issuer`
+及将 `SUMMER_E2E_ORIGIN` 设为相同 origin 的 `yarn test:e2e:narrow`。脚本的浏览器
+上下文仅为本地内部测试证书忽略信任错误；正式公开域名仍须使用可信证书。
+
 ## 合同修正与追溯
 
 | 来源 | #93 实现和验收 |
@@ -49,7 +63,9 @@ HTTP origin，然后运行 `caddy run --config summer-ui/deploy/Caddyfile`。Cad
 | #69 AC08/AC13；`CONTEXT.md` Customer username；ADR 0016 | `CustomerParameterConfiguration` 与共享 `CustomerForm` 均使用 `^[a-z0-9](?:[a-z0-9._-]{1,62}[a-z0-9])$`；MockMvc 和前端单测覆盖大小写、点、首尾符号及 3/64/65 长度边界 |
 | #69 AC07/AC11 输入保真 | 新建表单不裁剪 displayName；email 与 displayName 原样校验、提交和存储 |
 | #69 AC03/AC55 | Sample 种子用户名为 `summer.demo`；三个 Customer 模式从各自列表进入 `/customer/detail/:username`，保留查询参数和返回来源；Drawer 显示六维取舍与模式入口，Modal/Page 保留各自说明 |
-| #69 AC41–45；ADR 0023 | 401 后仅保存白名单内的表单草稿与 Modal/Drawer 模式，重新登录后恢复编辑且不自动重放写请求；短会话重新登录和内存 Token 边界由真实浏览器验证 |
+| #69 AC41–45；ADR 0015 | 401 后仅保存白名单内的表单草稿与 Modal/Drawer 模式，重新登录后恢复编辑且不自动重放写请求；短会话重新登录和内存 Token 边界由真实浏览器验证 |
+| #69 AC59 | 390px 真正完成 Drawer 创建、Modal 编辑、Page 键盘编辑、详情删除；断言首错聚焦、Tab 焦点锁定、Esc/遮罩确认和无横向溢出 |
+| #69 AC63 | 同一 Caddy 配置下以公开 HTTPS origin 配置真实 Spring，断言 discovery 中所有 HTTP URL、授权 callback、RP logout、Secure Cookie、浏览器请求和重定向均不指向内部 origin |
 | #70 TS-QA | 后端、前端、模块边界、真实 PostgreSQL 浏览器和静态代理各自报告，不互相替代 |
 
 ## 三种交互模式对比
@@ -76,11 +92,13 @@ HTTP origin，然后运行 `caddy run --config summer-ui/deploy/Caddyfile`。Cad
 | `yarn test:mock-boundary` | 官方示例 Mock 开关有效；Summer API 始终走后端 |
 | `test:e2e:auth`、`recovery`、`customer`、`delete`、`customer-create`、`customer-edit`、`customer-modal`、`customer-page`、`quality` | 真实 PostgreSQL + Spring + Mock 关闭的本地同源 Vite，九套浏览器脚本通过；含 OIDC PKCE、失败分类、无写请求重放、三种 Customer 模式、桌面/390px、控制台与网络、同源及 Token 存储检查 |
 | `test:e2e:session-expiry` | 独立的 15 秒服务端 session 配置；等待服务端超时粒度后，新登录流程和原路径恢复通过 |
+| `test:e2e:narrow`、`test:e2e:public-issuer` | 在本地 Caddy HTTPS + 真实 Spring/PostgreSQL 上验证 AC59/AC63；测试证书由 Caddy 内部 CA 提供，浏览器仅在本地忽略其信任错误 |
 
 真实浏览器脚本在本地独立的 `127.0.0.1:5193` 与 `127.0.0.1:8093` 进程运行，
 数据库是临时 PostgreSQL。受控 400/401/403/409/500 和网络故障由浏览器拦截，
 正常 CRUD 与种子数据读取落在真实后端。`caddy:2` 容器测试使用构建后的 dist
-及假后端，仅证明代理配置的路径分流。测试脚本创建的 Customer 已清理。
+及假后端，仅证明代理配置的路径分流；下述 HTTPS 补验则通过同一配置接入真实
+Spring/PostgreSQL。测试脚本创建的 Customer 已清理。
 
 ## 审阅与发布边界
 
@@ -90,6 +108,23 @@ HTTP origin，然后运行 `caddy run --config summer-ui/deploy/Caddyfile`。Cad
 `git diff --check` 无空白错误；标准轴和需求轴均未发现阻断项。
 此次只提供部署配置与本地验收证据，未执行公开域名部署。实际发布时仍须验证
 目标环境 DNS/TLS、反向代理、外部 issuer/redirect 和持久数据库迁移。
+
+以 `c0e4c05` 集成基线重新执行完整 `./gradlew check :summer-sample:bootJar
+--rerun-tasks`：34 份 JUnit 报告、167 tests、0 failure/error/skipped，模块边界任务
+执行。前端 `yarn test` 为 19/19，typecheck、lint、stylelint、build 均通过，lint
+仍为 0 error/40 条基线 warning；Vite/Caddy 代理各 12/12，Mock 边界通过。
+重建后的 dist 在 Caddy 内部 CA 签发的本地 HTTPS 站点与真实 PostgreSQL Sample
+上通过 `test:e2e:public-issuer` 和 `test:e2e:narrow`；数据库验收后仅余
+`summer.demo` 种子。此前未处理转发头时，登录请求落在 HTTP 并得到 400；启用
+`SERVER_FORWARD_HEADERS_STRATEGY=framework` 后复测通过。此证据证明公开 URL
+传播与浏览器安全属性，不等同于公开 DNS 和受信任证书的生产部署验收。
+
+### #93 补验审阅
+
+补验固定点为已集成 #73/#78/#80/#81/#82/#84/#87 的 `c0e4c05`。
+
+- **规范轴**：对照 `AGENTS.md`、`CONTEXT.md`、ADR 0014/0015/0016/0023、敏感信息输出和 Sample/UI 边界，无硬性违背。两份独立浏览器脚本有少量登录夹具重复（判断性的 Duplicated Code），保持各自可独立运行；没有复制业务表单或认证实现。
+- **规格轴**：对照 #69 AC59/AC63 和 Issue #93，390px 流程实际提交 POST/PATCH/DELETE 并回读持久化，焦点与遮罩断言通过。公开 HTTPS 浏览器红灯定位到缺失的转发头处理配置，补齐部署指引后在真实 Spring/PostgreSQL 上通过。目标环境的公开 DNS 与受信任证书无法在本机证明，发布前仍需验收。
 
 ## 回滚
 
