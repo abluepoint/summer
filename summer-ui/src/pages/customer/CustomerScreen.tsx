@@ -127,16 +127,21 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   const [actionBusy, setActionBusy] = useState(false);
   const focusTimer = useRef<number | null>(null);
   const recovered = useRef(
-    mode === 'drawer' ? readCustomerDraft(sessionStorage) : undefined
+    mode === 'drawer' || mode === 'modal'
+      ? readCustomerDraft(sessionStorage)
+      : undefined
   );
   const recoveredEdit = useRef(editRecovery(recovered.current));
   const [draft, setDraft] = useState<CustomerDraft>(() =>
-    mode === 'drawer' && !recoveredEdit.current
+    mode !== 'page' && !recoveredEdit.current
       ? customerDraft(recovered.current)
       : emptyCustomerDraft()
   );
   const [createOpen, setCreateOpen] = useState(
-    () => mode === 'drawer' && Object.values(draft).some(Boolean)
+    () =>
+      mode !== 'page' &&
+      !recoveredEdit.current &&
+      Object.values(draft).some(Boolean)
   );
   const [createBusy, setCreateBusy] = useState(false);
   const [editOriginal, setEditOriginal] = useState<CustomerDraft | null>(
@@ -193,6 +198,23 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       window.removeEventListener('beforeunload', beforeUnload);
     };
   }, [editOriginal, editDraft, history, t]);
+
+  useEffect(() => {
+    if (!createOpen || !Object.values(draft).some(Boolean)) return undefined;
+    const unblock = history.block(() =>
+      isAuthRedirecting() ? undefined : t['customer.create.leave']
+    );
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (isAuthRedirecting()) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      unblock();
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  }, [createOpen, draft, history, t]);
 
   useEffect(
     () => () => {
@@ -492,7 +514,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
             dataIndex: 'username',
             render: (username: string, record: Customer) => (
               <Space>
-                {mode === 'drawer' && (
+                {mode !== 'page' && (
                   <Button
                     id={`customer-edit-trigger-${username}`}
                     type="text"
@@ -517,6 +539,35 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
 
   return (
     <Card title={detail ? t['customer.detail'] : t['customer.list']}>
+      {mode === 'modal' && (
+        <Alert
+          type="info"
+          style={{ marginBottom: 16 }}
+          content={
+            <Space direction="vertical">
+              <Typography.Text>{t['customer.modal.guide']}</Typography.Text>
+              <Space wrap>
+                <Button
+                  size="mini"
+                  onClick={() =>
+                    history.push(`/customer/drawer${location.search}`)
+                  }
+                >
+                  {t['menu.customer.drawer']}
+                </Button>
+                <Button
+                  size="mini"
+                  onClick={() =>
+                    history.push(`/customer/page${location.search}`)
+                  }
+                >
+                  {t['menu.customer.page']}
+                </Button>
+              </Space>
+            </Space>
+          }
+        />
+      )}
       {isDetailRoute && (
         <Button
           style={{ marginBottom: 16 }}
@@ -594,7 +645,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           />
           {canWrite && (
             <Space style={{ marginTop: 16 }}>
-              {mode === 'drawer' && (
+              {mode !== 'page' && (
                 <Button
                   id={`customer-edit-trigger-${customer.username}`}
                   onClick={() => openEdit(customer)}
@@ -626,7 +677,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       )}
       {!isDetailRoute && !error && (
         <>
-          {mode === 'drawer' && canWrite && (
+          {mode !== 'page' && canWrite && (
             <Button
               id="customer-create-trigger"
               type="primary"
@@ -724,7 +775,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
                               label: t['customer.actions'],
                               value: (
                                 <Space>
-                                  {mode === 'drawer' && (
+                                  {mode !== 'page' && (
                                     <Button
                                       id={`customer-edit-trigger-${item.username}`}
                                       type="text"
@@ -900,6 +951,35 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           )}
         </Drawer>
       )}
+      {mode === 'modal' && (
+        <Modal
+          title={t['customer.edit.title']}
+          visible={editOriginal !== null}
+          footer={null}
+          unmountOnExit
+          focusLock
+          autoFocus
+          maskClosable
+          escToExit
+          onCancel={requestCloseEdit}
+          style={{
+            width: compact ? 'calc(100vw - 32px)' : 520,
+            maxWidth: 'calc(100vw - 32px)',
+          }}
+        >
+          {editOriginal && (
+            <CustomerForm
+              value={editDraft}
+              original={editOriginal}
+              onChange={setEditDraft}
+              onCancel={requestCloseEdit}
+              onBusyChange={setEditBusy}
+              onSuccess={edited}
+              canWrite={canWrite}
+            />
+          )}
+        </Modal>
+      )}
       {mode === 'drawer' && (
         <Drawer
           title={t['customer.create.title']}
@@ -920,6 +1000,34 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
             />
           )}
         </Drawer>
+      )}
+      {mode === 'modal' && (
+        <Modal
+          title={t['customer.create.title']}
+          visible={createOpen}
+          footer={null}
+          unmountOnExit
+          focusLock
+          autoFocus
+          maskClosable
+          escToExit
+          onCancel={requestCloseCreate}
+          style={{
+            width: compact ? 'calc(100vw - 32px)' : 520,
+            maxWidth: 'calc(100vw - 32px)',
+          }}
+        >
+          {createOpen && (
+            <CustomerForm
+              value={draft}
+              onChange={setDraft}
+              onCancel={requestCloseCreate}
+              onBusyChange={setCreateBusy}
+              onSuccess={created}
+              canWrite={canWrite}
+            />
+          )}
+        </Modal>
       )}
     </Card>
   );
