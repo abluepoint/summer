@@ -24,6 +24,7 @@ import org.springframework.security.config.annotation.web.configuration.OAuth2Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -31,9 +32,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.oidc.authentication.OidcLogoutAuthenticationToken;
+import org.springframework.security.oauth2.server.authorization.oidc.web.authentication.OidcLogoutAuthenticationSuccessHandler;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
@@ -43,6 +48,8 @@ import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
@@ -123,6 +130,13 @@ public class SummerSecurityAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
+    OAuth2AuthorizationService summerAuthorizationService() {
+        return new InMemoryOAuth2AuthorizationService();
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
+    @ConditionalOnMissingBean
     UserDetailsService summerUserDetailsService(SummerSecurityProperties properties, PasswordEncoder passwordEncoder) {
         SummerSecurityProperties.User configured = properties.getAuthorizationServer().getUser();
         if (configured.getUsername() == null || configured.getPassword() == null) {
@@ -191,9 +205,21 @@ public class SummerSecurityAutoConfiguration {
         OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
         MediaTypeRequestMatcher htmlMatcher = new MediaTypeRequestMatcher(MediaType.TEXT_HTML);
         htmlMatcher.setIgnoredMediaTypes(Set.of(MediaType.ALL));
+        OidcLogoutAuthenticationSuccessHandler logoutSuccessHandler = new OidcLogoutAuthenticationSuccessHandler();
+        SecurityContextLogoutHandler securityContextLogoutHandler = new SecurityContextLogoutHandler();
+        CookieClearingLogoutHandler cookieClearingLogoutHandler = new CookieClearingLogoutHandler("JSESSIONID");
+        logoutSuccessHandler.setLogoutHandler((request, response, authentication) -> {
+            OidcLogoutAuthenticationToken oidcLogout = (OidcLogoutAuthenticationToken) authentication;
+            if (oidcLogout.isPrincipalAuthenticated()) {
+                securityContextLogoutHandler.logout(request, response,
+                        (Authentication) oidcLogout.getPrincipal());
+            }
+            cookieClearingLogoutHandler.logout(request, response, authentication);
+        });
 
         http.securityMatcher(authorizationServer.getEndpointsMatcher())
-                .with(authorizationServer, server -> server.oidc(Customizer.withDefaults()))
+                .with(authorizationServer, server -> server.oidc(oidc -> oidc
+                        .logoutEndpoint(logout -> logout.logoutResponseHandler(logoutSuccessHandler))))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
                         new LoginUrlAuthenticationEntryPoint("/login"),
@@ -235,7 +261,15 @@ public class SummerSecurityAutoConfiguration {
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
     SecurityFilterChain summerLoginSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
-                .formLogin(Customizer.withDefaults());
+                .formLogin(Customizer.withDefaults())
+                .sessionManagement(session -> session
+                        .sessionFixation(fixation -> fixation.changeSessionId())
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .logout(logout -> logout
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                        .logoutSuccessUrl("/login?logout"));
         return http.build();
     }
 
