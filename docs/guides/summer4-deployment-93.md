@@ -3,7 +3,7 @@
 ## 构建和配置
 
 后端从仓库根目录执行 `./gradlew :summer-sample:bootJar`；前端在 `summer-ui/`
-执行 `yarn install --frozen-lockfile --ignore-scripts`、`yarn build`。两套构建互不调用。
+执行 `yarn install --frozen-lockfile`、`yarn build`。两套构建互不调用。
 Sample JAR 不包含 `summer-ui/dist`。前端使用官方 Arco Pro v2.8.1 模板，固定提交
 `bb6aebcceca6b294b438be4c13dc7328ee80d70b`、Yarn 1 和唯一的 `yarn.lock`；
 上游路由清单和版本来源见 `summer-ui/BASELINE.md`。

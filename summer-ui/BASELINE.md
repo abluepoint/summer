@@ -43,8 +43,28 @@ yarn build
 `setLang` 更新上下文，CustomerForm 从当前语言字典读取此提示。
 
 审阅：Standards 轴无新增违反仓库约定的改动；Spec 轴对应 #84 安装、
-单锁文件与 #69 AC01/AC05 的这两处遗漏已补齐。该续验未重新运行真实
-浏览器登录流程；完整浏览器验收沿用 #93 的独立证据。
+单锁文件与 #69 AC01/AC05 的这两处遗漏已补齐。
+
+## 真实浏览器续验
+
+在独立的 Summer Sample H2 进程（8094）和 Vite 开发进程（5194）上，
+开启官方开发 Mock，并使用权限为 `0600` 的私有临时密码文件运行。
+后端使用 `SUMMER_SAMPLE_USER_PASSWORD` 与 `SUMMER_SAMPLE_ISSUER`、
+`SUMMER_SAMPLE_REDIRECT_URI`、`SUMMER_SAMPLE_POST_LOGOUT_REDIRECT_URI`
+配置对应的本地 origin，监听 8094；前端以
+`SUMMER_BACKEND_ORIGIN=http://127.0.0.1:8094 VITE_ENABLE_MOCK=true yarn dev --host 127.0.0.1 --port 5194 --strictPort`
+启动。在 `summer-ui/` 执行：
+
+```bash
+SUMMER_E2E_ORIGIN=http://127.0.0.1:5194 \
+SUMMER_E2E_PASSWORD_FILE=<private-file> yarn test:e2e:baseline
+```
+
+真实 Chrome 对 17 条保留的官方示例路由逐条执行菜单进入和直接打开；
+`zh-CN`、`en-US` 各自覆盖 Customer 的 Drawer、Modal、Page 列表、
+创建校验、编辑与详情，并核对登录页随语言设置切换。浏览器无未捕获
+页面异常。测试只读取密码文件，不打印凭据；测试完成后关闭浏览器、
+前后端进程并删除临时密码文件。
 
 回滚时删除本票新增的 `summer-ui` 目录即可，不影响 Gradle 模块、Summer
 Sample 或其他后端能力。
