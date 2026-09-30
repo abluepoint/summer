@@ -1,7 +1,5 @@
 package com.abluepoint.summer.sample.customer;
 
-import com.abluepoint.summer.sample.shared.CustomerSummaryView;
-import com.abluepoint.summer.sample.shared.CustomerView;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
