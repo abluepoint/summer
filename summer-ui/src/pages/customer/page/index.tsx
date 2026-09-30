@@ -1,6 +1,6 @@
 import React from 'react';
-import CustomerRoutePlaceholder from '../CustomerRoutePlaceholder';
+import CustomerScreen from '../CustomerScreen';
 
 export default function CustomerPage() {
-  return <CustomerRoutePlaceholder mode="page" />;
+  return <CustomerScreen mode="page" />;
 }

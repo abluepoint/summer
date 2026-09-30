@@ -47,7 +47,7 @@ try {
     await page.waitForURL(`${base}/customer/page?from=auth-e2e`, {
       timeout: 20000,
     });
-    await page.getByText('Customer 工作区').waitFor();
+    await page.getByText('客户列表').waitFor();
     const storage = await page.evaluate(() => ({
       session: { ...sessionStorage },
       local: { ...localStorage },

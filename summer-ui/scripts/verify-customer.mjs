@@ -1,0 +1,94 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  readListState,
+  listSearch,
+  detailPath,
+  detailUsername,
+  readEnvelope,
+  readFailure,
+} from '../src/pages/customer/contract.mjs';
+
+test('list URL restores valid pagination, filter and sort and rejects invalid values', () => {
+  assert.deepEqual(
+    readListState('?page=2&size=50&active=false&sort=email&direction=desc'),
+    {
+      page: 2,
+      size: 50,
+      active: 'false',
+      sort: 'email',
+      direction: 'desc',
+    }
+  );
+  assert.deepEqual(
+    readListState('?page=-1&size=500&active=maybe&sort=id&direction=down'),
+    {
+      page: 0,
+      size: 20,
+      active: '',
+      sort: 'username',
+      direction: 'asc',
+    }
+  );
+  assert.equal(
+    listSearch({
+      page: 2,
+      size: 50,
+      active: 'false',
+      sort: 'email',
+      direction: 'desc',
+    }),
+    '?page=2&size=50&active=false&sort=email&direction=desc'
+  );
+});
+
+test('Customer detail links use username and preserve list state', () => {
+  assert.equal(
+    detailPath('drawer', 'alice_1', '?page=2'),
+    '/customer/drawer/alice_1?page=2'
+  );
+  assert.equal(detailUsername('/customer/drawer/alice_1', 'drawer'), 'alice_1');
+  assert.equal(detailUsername('/customer/drawer', 'drawer'), null);
+  assert.equal(detailUsername('/customer/drawer/not%2Fvalid', 'drawer'), null);
+});
+
+test('business envelopes return data and retain request metadata on failure', () => {
+  assert.deepEqual(
+    readEnvelope(
+      { success: true, data: { username: 'alice' }, requestId: 'req-1' },
+      200
+    ),
+    { username: 'alice' }
+  );
+  assert.deepEqual(
+    readFailure(
+      {
+        success: false,
+        error: {
+          code: 'CUSTOMER_NOT_FOUND',
+          message: 'Missing',
+          violations: [],
+        },
+        requestId: 'req-2',
+        timestamp: '2026-09-30T00:00:00Z',
+      },
+      404
+    ),
+    {
+      status: 404,
+      code: 'CUSTOMER_NOT_FOUND',
+      message: 'Missing',
+      violations: [],
+      requestId: 'req-2',
+      timestamp: '2026-09-30T00:00:00Z',
+    }
+  );
+  for (const status of [401, 403, 404, 500]) {
+    assert.equal(readFailure(undefined, status, 'header-id').status, status);
+    assert.equal(
+      readFailure(undefined, status, 'header-id').requestId,
+      'header-id'
+    );
+  }
+  assert.equal(readFailure({ error: null }, 500).status, 500);
+});
