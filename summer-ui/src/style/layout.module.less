@@ -136,3 +136,14 @@
   width: 100%;
   min-height: calc(100vh - @nav-size-height);
 }
+
+@media (max-width: 768px) {
+  .layout-navbar,
+  .layout-content {
+    min-width: 0;
+  }
+
+  .layout-content-wrapper {
+    padding: 12px;
+  }
+}
