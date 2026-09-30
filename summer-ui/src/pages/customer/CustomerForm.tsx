@@ -62,6 +62,14 @@ export default function CustomerForm({
     setRequestId('');
   }
 
+  function focusFirstError(fields: string[]) {
+    const first = fields[0];
+    if (first)
+      window.requestAnimationFrame(() =>
+        document.getElementById(`customer-${first}`)?.focus()
+      );
+  }
+
   async function submit() {
     if (!canWrite) return;
     if (submitting.current) return;
@@ -76,6 +84,7 @@ export default function CustomerForm({
           ])
         )
       );
+      focusFirstError(Object.keys(validation));
       return;
     }
     const changes = original ? changedCustomerFields(original, value) : null;
@@ -95,6 +104,7 @@ export default function CustomerForm({
       if (failure instanceof SummerApiError) {
         const mapped = mapCustomerFailure(failure);
         setErrors(mapped.fields);
+        focusFirstError(Object.keys(mapped.fields));
         setRequestId(failure.requestId);
         if (failure.status === 400 || failure.status === 409) {
           setFormError(
@@ -116,7 +126,11 @@ export default function CustomerForm({
               ? t['customer.error.network']
               : failure.message || t['customer.error.save']
           );
-          if (failure.status !== 0) Message.error(t['customer.error.save']);
+          Message.error(
+            failure.status === 0
+              ? t['customer.error.network']
+              : t['customer.error.save']
+          );
         }
       } else {
         setFormError(t['customer.error.network']);
@@ -167,6 +181,7 @@ export default function CustomerForm({
           help={errors[field]}
         >
           <Input
+            id={`customer-${field}`}
             value={value[field]}
             onChange={(next) => change(field, next)}
             disabled={busy}

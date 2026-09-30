@@ -4,14 +4,17 @@ import svgrPlugin from '@arco-plugins/vite-plugin-svgr';
 import vitePluginForArco from '@arco-plugins/vite-react';
 import setting from './src/settings.json';
 
+var backendOrigin =
+  process.env.SUMMER_BACKEND_ORIGIN || 'http://127.0.0.1:8080';
+
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
     host: '127.0.0.1',
     proxy: {
-      '/api': 'http://127.0.0.1:8080',
+      '/api': backendOrigin,
       '/oauth2': {
-        target: 'http://127.0.0.1:8080',
+        target: backendOrigin,
         bypass: (request) => {
           if (
             request.method === 'GET' &&
@@ -21,11 +24,11 @@ export default defineConfig({
           }
         },
       },
-      '/.well-known': 'http://127.0.0.1:8080',
-      '/connect': 'http://127.0.0.1:8080',
-      '/csrf': 'http://127.0.0.1:8080',
+      '/.well-known': backendOrigin,
+      '/connect': backendOrigin,
+      '/csrf': backendOrigin,
       '/login': {
-        target: 'http://127.0.0.1:8080',
+        target: backendOrigin,
         bypass: (request) => {
           if (request.method === 'GET') return '/index.html';
         },

@@ -169,7 +169,7 @@ try {
   );
   await save().click();
   await drawer()
-    .getByText('此客户已不存在。草稿会保留至您关闭抽屉。')
+    .getByText('此客户已不存在。草稿会保留至您放弃本次编辑。')
     .waitFor();
   assert.equal(await field('名称').inputValue(), 'Missing target draft');
   await drawer().getByRole('button', { name: '取消' }).click();
@@ -255,7 +255,7 @@ try {
   created = false;
   await save().click();
   await drawer()
-    .getByText('此客户已不存在。草稿会保留至您关闭抽屉。')
+    .getByText('此客户已不存在。草稿会保留至您放弃本次编辑。')
     .waitFor();
   assert.equal(await field('名称').inputValue(), 'Deleted while editing');
   await drawer().getByRole('button', { name: '取消' }).click();

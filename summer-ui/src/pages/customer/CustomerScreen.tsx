@@ -45,6 +45,7 @@ import {
   readListState,
 } from './contract.mjs';
 import CustomerForm, { CustomerDraft } from './CustomerForm';
+import { pageFormSearch } from './page/return-contract.mjs';
 import {
   customerDraft,
   editRecovery,
@@ -231,6 +232,15 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   }
 
   function openEdit(record: Customer) {
+    if (mode === 'page') {
+      history.push({
+        pathname: `/customer/page/edit/${encodeURIComponent(record.username)}`,
+        search: pageFormSearch(
+          `/customer/page${location.search}${location.hash}`
+        ),
+      });
+      return;
+    }
     if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
     focusTimer.current = null;
     setCreateOpen(false);
@@ -483,6 +493,15 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
     }
   }
 
+  function openPageCreate() {
+    history.push({
+      pathname: '/customer/page/create',
+      search: pageFormSearch(
+        `${location.pathname}${location.search}${location.hash}`
+      ),
+    });
+  }
+
   const columns = [
     {
       title: t['customer.username'],
@@ -514,15 +533,13 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
             dataIndex: 'username',
             render: (username: string, record: Customer) => (
               <Space>
-                {mode !== 'page' && (
-                  <Button
-                    id={`customer-edit-trigger-${username}`}
-                    type="text"
-                    onClick={() => openEdit(record)}
-                  >
-                    {t['customer.edit']}
-                  </Button>
-                )}
+                <Button
+                  id={`customer-edit-trigger-${username}`}
+                  type="text"
+                  onClick={() => openEdit(record)}
+                >
+                  {t['customer.edit']}
+                </Button>
                 <Button
                   status="danger"
                   type="text"
@@ -562,6 +579,38 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
                   }
                 >
                   {t['menu.customer.page']}
+                </Button>
+              </Space>
+            </Space>
+          }
+        />
+      )}
+      {mode === 'page' && !isDetailRoute && (
+        <Alert
+          type="info"
+          style={{ marginBottom: 16 }}
+          title={t['customer.page.descriptionTitle']}
+          content={
+            <Space direction="vertical">
+              <Typography.Text>
+                {t['customer.page.description']}
+              </Typography.Text>
+              <Space wrap>
+                <Button
+                  type="text"
+                  onClick={() =>
+                    history.push(`/customer/drawer${location.search}`)
+                  }
+                >
+                  {t['menu.customer.drawer']}
+                </Button>
+                <Button
+                  type="text"
+                  onClick={() =>
+                    history.push(`/customer/modal${location.search}`)
+                  }
+                >
+                  {t['menu.customer.modal']}
                 </Button>
               </Space>
             </Space>
@@ -645,14 +694,12 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           />
           {canWrite && (
             <Space style={{ marginTop: 16 }}>
-              {mode !== 'page' && (
-                <Button
-                  id={`customer-edit-trigger-${customer.username}`}
-                  onClick={() => openEdit(customer)}
-                >
-                  {t['customer.edit']}
-                </Button>
-              )}
+              <Button
+                id={`customer-edit-trigger-${customer.username}`}
+                onClick={() => openEdit(customer)}
+              >
+                {t['customer.edit']}
+              </Button>
               <Button
                 disabled={actionBusy}
                 onClick={() => requestActiveChange(customer)}
@@ -682,6 +729,16 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
               id="customer-create-trigger"
               type="primary"
               onClick={openCreate}
+              style={{ marginBottom: 16 }}
+            >
+              {t['customer.create.open']}
+            </Button>
+          )}
+          {mode === 'page' && canWrite && (
+            <Button
+              id="customer-create-trigger"
+              type="primary"
+              onClick={openPageCreate}
               style={{ marginBottom: 16 }}
             >
               {t['customer.create.open']}
@@ -775,15 +832,13 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
                               label: t['customer.actions'],
                               value: (
                                 <Space>
-                                  {mode !== 'page' && (
-                                    <Button
-                                      id={`customer-edit-trigger-${item.username}`}
-                                      type="text"
-                                      onClick={() => openEdit(item)}
-                                    >
-                                      {t['customer.edit']}
-                                    </Button>
-                                  )}
+                                  <Button
+                                    id={`customer-edit-trigger-${item.username}`}
+                                    type="text"
+                                    onClick={() => openEdit(item)}
+                                  >
+                                    {t['customer.edit']}
+                                  </Button>
                                   <Button
                                     status="danger"
                                     type="text"
