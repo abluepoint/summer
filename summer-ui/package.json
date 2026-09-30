@@ -13,6 +13,7 @@
     "test:e2e:customer": "node scripts/e2e-customer.mjs",
     "test:e2e:delete": "node scripts/e2e-delete.mjs",
     "test:e2e:customer-create": "node scripts/e2e-customer-create.mjs",
+    "test:e2e:customer-edit": "node scripts/e2e-customer-edit.mjs",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ --ext .ts,.tsx,.js,.jsx",

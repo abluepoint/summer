@@ -115,3 +115,12 @@ export function createCustomer(payload: {
 }) {
   return businessData<Customer>(() => axios.post('/api/customers', payload));
 }
+
+export function updateCustomer(
+  username: string,
+  payload: Partial<Pick<Customer, 'email' | 'displayName' | 'active'>>
+) {
+  return businessData<Customer>(() =>
+    axios.patch(`/api/customers/${encodeURIComponent(username)}`, payload)
+  );
+}

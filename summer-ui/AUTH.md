@@ -25,12 +25,14 @@ services. Do not place credentials or a client secret in Vite variables.
 
 The validated OIDC transaction holds the pre-login relative route, including
 query and hash. A successful callback navigates within the SPA so its in-memory
-user survives. Only the OIDC transaction uses `sessionStorage`; the access and
-ID Tokens stay in `oidc-client-ts`'s in-memory user store. The Customer draft
-helper accepts only `username`, `email`, `displayName`, and `active`; the later
-Customer form ticket can consume it once. Callback failure and logout clear
-transaction and draft state. Reloading a protected route starts a new PKCE
-flow; no write request is replayed. UserInfo is not requested.
+user survives. Only OIDC transaction state and an allowlisted
+Customer draft use `sessionStorage`; access and ID Tokens stay in
+`oidc-client-ts`'s in-memory user store. Create recovery stores the three form
+fields. Edit recovery also stores the target username and original email/name
+so the restored form can calculate a minimal PATCH. The draft remains until
+the user saves or discards it. Callback failure and logout clear transaction
+and draft state. Reloading a protected route starts a new PKCE flow; no write
+request is replayed. UserInfo is not requested.
 
 ## Verification and rollback
 

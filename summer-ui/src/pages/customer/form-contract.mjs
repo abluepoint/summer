@@ -31,8 +31,43 @@ export function customerPayload(value) {
   const draft = customerDraft(value);
   return {
     username: draft.username,
-    email: draft.email.trim(),
+    email: draft.email,
     displayName: draft.displayName.trim(),
+  };
+}
+
+export function changedCustomerFields(original, value) {
+  const before = customerDraft(original);
+  const after = customerDraft(value);
+  const changes = {};
+  for (const field of ['email', 'displayName']) {
+    if (after[field] !== before[field]) changes[field] = after[field];
+  }
+  return changes;
+}
+
+export function isEditDirty(original, value) {
+  return ['email', 'displayName'].some(
+    (field) => value[field] !== original[field]
+  );
+}
+
+export function editRecovery(value) {
+  if (
+    value?.editUsername !== value?.username ||
+    typeof value?.editUsername !== 'string' ||
+    !USERNAME.test(value.editUsername) ||
+    typeof value?.originalEmail !== 'string' ||
+    typeof value?.originalDisplayName !== 'string'
+  )
+    return null;
+  return {
+    original: {
+      username: value.editUsername,
+      email: value.originalEmail,
+      displayName: value.originalDisplayName,
+    },
+    draft: customerDraft(value),
   };
 }
 
