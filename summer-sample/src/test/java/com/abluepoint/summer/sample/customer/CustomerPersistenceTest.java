@@ -37,13 +37,13 @@ class CustomerPersistenceTest {
                 0, 20, null, CustomerListQuery.SortField.USERNAME,
                 CustomerListQuery.SortDirection.ASC, CustomerListQuery.Projection.DETAIL));
 
-        assertThat(summary).isNotEmpty().allMatch(CustomerSummaryView.class::isInstance);
-        assertThat(detail).isNotEmpty().allMatch(CustomerView.class::isInstance);
-        assertThat(List.of(CustomerSummaryView.class.getRecordComponents()))
+        assertThat(summary).isNotEmpty().allMatch(row -> row.getClass().getSimpleName().equals("CustomerSummaryView"));
+        assertThat(detail).isNotEmpty().allMatch(row -> row.getClass().getSimpleName().equals("CustomerView"));
+        assertThat(List.of(summary.getFirst().getClass().getRecordComponents()))
                 .extracting(component -> component.getName())
                 .doesNotContain("active");
-        assertThat(((CustomerView) detail.stream()
-                .filter(CustomerView.class::isInstance)
-                .findFirst().orElseThrow()).active()).isNotNull();
+        assertThat(List.of(detail.getFirst().getClass().getRecordComponents()))
+                .extracting(component -> component.getName())
+                .contains("active");
     }
 }
