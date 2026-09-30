@@ -59,7 +59,10 @@ public class ApiExceptionHandler {
                 exception.messageArguments(),
                 LocaleContextHolder.getLocale()
         );
-        ApiError error = new ApiError(exception.errorCode().code(), message, List.of());
+        List<ApiError.FieldViolation> violations = exception.violations().stream()
+                .map(violation -> new ApiError.FieldViolation(violation.field(), violation.message()))
+                .toList();
+        ApiError error = new ApiError(exception.errorCode().code(), message, violations);
         return ResponseEntity.status(errorStatusResolver.resolve(exception.errorCode()))
                 .body(ApiResponse.failure(error, requestId()));
     }

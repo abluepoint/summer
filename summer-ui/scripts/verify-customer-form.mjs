@@ -186,4 +186,12 @@ test('field violations map to fields and unknown violations stay visible', () =>
     fields: {},
     other: [],
   });
+  assert.deepEqual(mapCustomerFailure({
+    code: 'SUMMER_CONFLICT',
+    violations: [{ field: 'username', message: 'is already in use' }],
+  }), { fields: { username: 'is already in use' }, other: [] });
+  assert.deepEqual(mapCustomerFailure({
+    code: 'SUMMER_CONFLICT',
+    violations: [{ field: 'email', message: 'is already in use' }],
+  }), { fields: { email: 'is already in use' }, other: [] });
 });

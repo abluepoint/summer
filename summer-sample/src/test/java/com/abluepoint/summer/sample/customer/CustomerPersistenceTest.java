@@ -19,7 +19,7 @@ class CustomerPersistenceTest {
 
     @Test
     void initializesEntityIdentityAndAuditFieldsWhenPersisted() {
-        Customer saved = repository.saveAndFlush(new Customer("audit@summer.local", "Audit Customer"));
+        Customer saved = repository.saveAndFlush(new Customer("audit", "audit@summer.local", "Audit Customer"));
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getCreatedAt()).isNotNull();

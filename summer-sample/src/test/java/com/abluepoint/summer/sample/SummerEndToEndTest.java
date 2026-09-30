@@ -172,7 +172,36 @@ class SummerEndToEndTest {
                         .content("{\"username\":\"summer.demo\",\"email\":\"demo@summer.local\",\"displayName\":\"Duplicate\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"))
+                .andExpect(jsonPath("$.error.violations[0].field").value("username"));
+
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"different-demo\",\"email\":\"demo@summer.local\",\"displayName\":\"Duplicate\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.violations[0].field").value("email"));
+    }
+
+    @Test
+    void emptyPatchReturnsTheUnchangedCustomerAndEmailConflictNamesTheField() throws Exception {
+        String token = accessToken("customer.write");
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"patch-conflict-owner\",\"email\":\"patch-conflict@summer.local\",\"displayName\":\"Owner\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch("/api/customers/{username}", "summer.demo")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("summer.demo"))
+                .andExpect(jsonPath("$.data.email").value("demo@summer.local"));
+        mockMvc.perform(patch("/api/customers/{username}", "summer.demo")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"patch-conflict@summer.local\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.violations[0].field").value("email"));
     }
 
     @Test
@@ -300,6 +329,21 @@ class SummerEndToEndTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+                .andExpect(jsonPath("$.error.violations[0].field").value("username"));
+
+        String writeToken = accessToken("customer.write");
+        mockMvc.perform(get("/api/customers/{username}", "demo@summer.local")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.violations[0].field").value("username"));
+        mockMvc.perform(patch("/api/customers/{username}", "demo@summer.local")
+                        .header("Authorization", "Bearer " + writeToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.violations[0].field").value("username"));
+        mockMvc.perform(delete("/api/customers/{username}", "demo@summer.local")
+                        .header("Authorization", "Bearer " + writeToken))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.violations[0].field").value("username"));
     }
 

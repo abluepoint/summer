@@ -5,4 +5,5 @@ interface CustomerRepository extends BaseRepository<Customer, Long> {
     Optional<Customer> findByUsername(String username);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+    boolean existsByEmailAndUsernameNot(String email, String username);
 }
