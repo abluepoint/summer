@@ -224,7 +224,7 @@ class SummerEndToEndTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
-                .andExpect(jsonPath("$.error.violations.length()").value(3));
+                .andExpect(jsonPath("$.error.violations.length()").value(2));
     }
 
     @Test
@@ -298,7 +298,7 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + readOnlyToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"new@summer.local\",\"displayName\":\"New Customer\"}"))
+                        .content("{\"username\":\"new\",\"email\":\"new@summer.local\",\"displayName\":\"New Customer\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
 
@@ -306,7 +306,7 @@ class SummerEndToEndTest {
         mockMvc.perform(post("/api/customers")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"not-an-email\",\"displayName\":\"\"}"))
+                        .content("{\"username\":\"invalid\",\"email\":\"not-an-email\",\"displayName\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
