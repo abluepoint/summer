@@ -81,10 +81,20 @@ export function saveCustomerDraft(storage, draft) {
 export function consumeCustomerDraft(storage) {
   const value = storage.getItem(DRAFT_KEY);
   storage.removeItem(DRAFT_KEY);
+  return parseCustomerDraft(value);
+}
+
+function parseCustomerDraft(value) {
   if (!value) return undefined;
   try {
     return JSON.parse(value);
   } catch {
     return undefined;
   }
+}
+
+// Keep a recovered draft available across route remounts. The form removes it
+// only after the user explicitly saves or discards the recovered work.
+export function readCustomerDraft(storage) {
+  return parseCustomerDraft(storage.getItem(DRAFT_KEY));
 }

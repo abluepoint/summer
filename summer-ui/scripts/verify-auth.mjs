@@ -6,6 +6,7 @@ import {
   safeReturnTo,
   saveCustomerDraft,
   consumeCustomerDraft,
+  readCustomerDraft,
   LOGIN_START_KEY,
   UNAUTHORIZED_RESTART_KEY,
   claimLoginStart,
@@ -67,6 +68,8 @@ test('draft recovery is single-use and stores only Customer fields', () => {
     displayName: 'Bluepoint',
     active: true,
   });
+  assert.equal(readCustomerDraft(storage).username, 'bluepoint');
+  assert.equal(readCustomerDraft(storage).username, 'bluepoint');
   assert.deepEqual(consumeCustomerDraft(storage), {
     username: 'bluepoint',
     email: 'contact@example.test',

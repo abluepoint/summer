@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Button,
   Card,
   Descriptions,
+  Drawer,
   Empty,
   Input,
   Message,
@@ -19,7 +20,12 @@ import {
 import { useHistory, useLocation } from 'react-router-dom';
 import useLocale from '@/utils/useLocale';
 import clipboard from '@/utils/clipboard';
-import { getAuthenticatedUser } from '@/auth/oidc';
+import {
+  DRAFT_KEY,
+  getAuthenticatedUser,
+  readCustomerDraft,
+  registerCustomerDraftProvider,
+} from '@/auth/oidc';
 import {
   Customer,
   CustomerPage,
@@ -36,6 +42,8 @@ import {
   pageAfterDeletion,
   readListState,
 } from './contract.mjs';
+import CustomerForm, { CustomerDraft } from './CustomerForm';
+import { customerDraft, emptyCustomerDraft } from './form-contract.mjs';
 
 type Mode = 'drawer' | 'modal' | 'page';
 
@@ -108,6 +116,16 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   const [typedUsername, setTypedUsername] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<SummerApiError | null>(null);
+  const focusTimer = useRef<number | null>(null);
+  const [draft, setDraft] = useState<CustomerDraft>(() =>
+    mode === 'drawer'
+      ? customerDraft(readCustomerDraft(sessionStorage))
+      : emptyCustomerDraft()
+  );
+  const [createOpen, setCreateOpen] = useState(
+    () => mode === 'drawer' && Object.values(draft).some(Boolean)
+  );
+  const [createBusy, setCreateBusy] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -122,6 +140,54 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       live = false;
     };
   }, [location.pathname, revision]);
+
+  useEffect(() => {
+    if (!createOpen) return undefined;
+    return registerCustomerDraftProvider(() => draft);
+  }, [createOpen, draft]);
+
+  useEffect(
+    () => () => {
+      if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
+    },
+    []
+  );
+
+  function openCreate() {
+    if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
+    focusTimer.current = null;
+    setCreateOpen(true);
+  }
+
+  function closeCreate() {
+    setCreateOpen(false);
+    setDraft(emptyCustomerDraft());
+    sessionStorage.removeItem(DRAFT_KEY);
+    // Arco's focus lock finishes its close transition after React commits.
+    focusTimer.current = window.setTimeout(() => {
+      document.getElementById('customer-create-trigger')?.focus();
+      focusTimer.current = null;
+    }, 500);
+  }
+
+  function requestCloseCreate() {
+    if (createBusy) return;
+    if (Object.values(draft).some(Boolean)) {
+      Modal.confirm({
+        title: t['customer.create.discardTitle'],
+        content: t['customer.create.discardMessage'],
+        okText: t['customer.create.discard'],
+        cancelText: t['customer.create.continue'],
+        onOk: closeCreate,
+      });
+    } else closeCreate();
+  }
+
+  function created() {
+    closeCreate();
+    setRevision((value) => value + 1);
+    Message.success(t['customer.create.success']);
+  }
 
   useEffect(() => {
     const update = () => setCompact(window.innerWidth <= 768);
@@ -156,22 +222,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       .then((result) => {
         if (!live) return;
         if (requestedDetail) setCustomer(result as Customer);
-        else {
-          const nextPage = result as CustomerPage;
-          const validPage = pageAfterDeletion(
-            requestedState.page,
-            requestedState.size,
-            nextPage.totalElements
-          );
-          if (validPage !== requestedState.page) {
-            history.replace({
-              pathname: `/customer/${mode}`,
-              search: listSearch({ ...requestedState, page: validPage }),
-            });
-            return;
-          }
-          setPage(nextPage);
-        }
+        else setPage(result as CustomerPage);
       })
       .catch((failure) => {
         if (!live) return;
@@ -194,7 +245,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
     return () => {
       live = false;
     };
-  }, [mode, location.pathname, location.search, revision, history]);
+  }, [mode, location.pathname, location.search, revision]);
 
   function beginDelete(username: string) {
     setDeleteTarget(username);
@@ -361,6 +412,16 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       )}
       {!isDetailRoute && !error && (
         <>
+          {mode === 'drawer' && canWrite && (
+            <Button
+              id="customer-create-trigger"
+              type="primary"
+              onClick={openCreate}
+              style={{ marginBottom: 16 }}
+            >
+              {t['customer.create.open']}
+            </Button>
+          )}
           <Space wrap style={{ marginBottom: 16 }}>
             <Input
               value={lookup}
@@ -592,6 +653,27 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           />
         )}
       </Modal>
+      {mode === 'drawer' && (
+        <Drawer
+          title={t['customer.create.title']}
+          visible={createOpen}
+          width={compact ? '100%' : 440}
+          footer={null}
+          unmountOnExit
+          onCancel={requestCloseCreate}
+        >
+          {createOpen && (
+            <CustomerForm
+              value={draft}
+              onChange={setDraft}
+              onCancel={requestCloseCreate}
+              onBusyChange={setCreateBusy}
+              onSuccess={created}
+              canWrite={canWrite}
+            />
+          )}
+        </Drawer>
+      )}
     </Card>
   );
 }

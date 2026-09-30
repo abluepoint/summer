@@ -11,6 +11,7 @@ import {
   safeReturnTo,
   saveCustomerDraft,
   consumeCustomerDraft,
+  readCustomerDraft,
   LOGIN_START_KEY,
   claimLoginStart,
   completeLoginStart,
@@ -168,4 +169,9 @@ export async function getAccessTokenFromMemory() {
   return (await getAuthenticatedUser())?.access_token;
 }
 
-export { saveCustomerDraft, consumeCustomerDraft };
+export {
+  saveCustomerDraft,
+  consumeCustomerDraft,
+  readCustomerDraft,
+  DRAFT_KEY,
+};
