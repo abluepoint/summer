@@ -12,7 +12,7 @@ class CustomerParameterConfiguration {
 
     @Bean("customerUsernameStyle")
     Style customerUsernameStyle() {
-        return Styles.string().matches(Pattern.compile("[A-Za-z0-9][A-Za-z0-9_-]{2,63}"), "3-64 letters, digits, underscore or hyphen").build();
+        return Styles.string().matches(Pattern.compile("[a-z0-9][a-z0-9._-]{1,62}[a-z0-9]"), "3-64 lowercase letters, digits, dot, underscore or hyphen; begin and end with a letter or digit").build();
     }
 
     @Bean("customerEmailStyle")

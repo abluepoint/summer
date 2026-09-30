@@ -14,6 +14,10 @@ single browser origin is `127.0.0.1:5173`; Vite proxies `/api/**`, the OIDC
 protocol paths, `/csrf`, and only `POST /login` to `127.0.0.1:8080`. It serves
 `GET /login` and `/oauth2/callback` as SPA routes. The matching redirect and
 post-logout URIs are registered in Summer Sample's `application.yml`.
+Set `SUMMER_BACKEND_ORIGIN` before starting Vite when the backend does not
+listen on the default `http://127.0.0.1:8080`. Set `VITE_ENABLE_MOCK=false` for
+integrated browser acceptance; it disables the upstream example mocks while
+leaving their default development behavior available for template demos.
 
 The authority, client ID, callback URI, and post-logout URI can be set with
 `VITE_OIDC_AUTHORITY`, `VITE_OIDC_CLIENT_ID`, `VITE_OIDC_REDIRECT_URI`, and

@@ -1,0 +1,27 @@
+{$SUMMER_PUBLIC_HOST} {
+    root * {$SUMMER_UI_DIST}
+
+    @callback path /oauth2/callback
+    @formLogin {
+        method POST
+        path /login
+    }
+    @backend path /api /api/* /oauth2 /oauth2/* /.well-known /.well-known/* /connect /connect/* /csrf
+
+    route {
+        handle @callback {
+            try_files {path} /index.html
+            file_server
+        }
+        handle @formLogin {
+            reverse_proxy {$SUMMER_BACKEND_ORIGIN}
+        }
+        handle @backend {
+            reverse_proxy {$SUMMER_BACKEND_ORIGIN}
+        }
+        handle {
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}

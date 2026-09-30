@@ -1,4 +1,4 @@
-const USERNAME = /^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/;
+const USERNAME = /^[a-z0-9](?:[a-z0-9._-]{1,62}[a-z0-9])$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FIELDS = ['username', 'email', 'displayName'];
 
@@ -32,7 +32,7 @@ export function customerPayload(value) {
   return {
     username: draft.username,
     email: draft.email,
-    displayName: draft.displayName.trim(),
+    displayName: draft.displayName,
   };
 }
 

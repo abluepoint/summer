@@ -304,6 +304,37 @@ class SummerEndToEndTest {
     }
 
     @Test
+    void enforcesThePublishedCustomerUsernameBoundaryOnCreateAndPath() throws Exception {
+        String writeToken = accessToken("customer.write");
+        String readToken = accessToken("customer.read");
+        String[] valid = {"a.b", "a_b", "a-b", "a..b", "a" + "b".repeat(62) + "c"};
+        for (int i = 0; i < valid.length; i++) {
+            String username = valid[i];
+            mockMvc.perform(post("/api/customers")
+                            .header("Authorization", "Bearer " + writeToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"" + username + "\",\"email\":\"contract93-" + i + "@summer.local\",\"displayName\":\" Name \"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.username").value(username))
+                    .andExpect(jsonPath("$.data.displayName").value(" Name "));
+            mockMvc.perform(get("/api/customers/{username}", username)
+                            .header("Authorization", "Bearer " + readToken))
+                    .andExpect(status().isOk());
+        }
+
+        String[] invalid = {"ab", "a" + "b".repeat(63) + "c", "Abc", "aBc", ".ab", "_ab", "-ab", "ab.", "ab_", "ab-", "a b", "a@b"};
+        for (int i = 0; i < invalid.length; i++) {
+            String username = invalid[i];
+            mockMvc.perform(post("/api/customers")
+                            .header("Authorization", "Bearer " + writeToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"" + username + "\",\"email\":\"invalid93-" + i + "@summer.local\",\"displayName\":\"Name\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.violations[0].field").value("username"));
+        }
+    }
+
+    @Test
     void returnsStableUnauthorizedAndValidationResponses() throws Exception {
         mockMvc.perform(get("/api/customers/{username}", "demo"))
                 .andExpect(status().isUnauthorized())
