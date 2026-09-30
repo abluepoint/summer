@@ -147,7 +147,7 @@ const i18n = {
     'customer.active.success': 'Customer status updated.',
     'customer.active.failed': 'Customer status could not be changed.',
     'customer.validation.username':
-      'Use 3–64 letters, digits, underscores or hyphens; start with a letter or digit.',
+      'Use 3–64 lowercase letters, digits, dots, underscores or hyphens; start and end with a letter or digit.',
     'customer.validation.email':
       'Enter a valid email address (up to 200 characters).',
     'customer.validation.displayName':
@@ -317,7 +317,7 @@ const i18n = {
     'customer.active.success': '客户状态已更新。',
     'customer.active.failed': '客户状态修改失败。',
     'customer.validation.username':
-      '请输入 3–64 位字母、数字、下划线或连字符，首位须为字母或数字。',
+      '请输入 3–64 位小写字母、数字、点号、下划线或连字符，首尾须为字母或数字。',
     'customer.validation.email': '请输入有效邮箱，最长 200 个字符。',
     'customer.validation.displayName': '请输入非空白名称，最长 200 个字符。',
     'customer.error.validation': '请检查客户字段。',

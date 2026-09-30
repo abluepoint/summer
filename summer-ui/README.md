@@ -14,6 +14,11 @@ yarn install --frozen-lockfile
 yarn dev
 ```
 
+本子项目安装依赖时不会自动安装 Git hooks；需要本地检查时运行下方检查命令。
+官方模板的 `prepare` 会在安装时执行 `husky install` 和 `husky add`，
+但本目录位于仓库子目录，在 Git worktree 中执行会因找不到 `.git` 而失败，
+也可能改动仓库根的 hooks。因此 Summer UI 移除了该自动步骤。
+
 检查和生产构建：
 
 ```bash
