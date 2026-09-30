@@ -58,6 +58,7 @@ class CustomerQuery {
         return Map.of(
                 "filterByActive", query.active() != null,
                 "sortByUsername", query.sort() == CustomerListQuery.SortField.USERNAME,
+                "sortByEmail", query.sort() == CustomerListQuery.SortField.EMAIL,
                 "sortByDisplayName", query.sort() == CustomerListQuery.SortField.DISPLAY_NAME,
                 "sortByActive", query.sort() == CustomerListQuery.SortField.ACTIVE,
                 "descending", query.direction() == CustomerListQuery.SortDirection.DESC,

@@ -58,4 +58,15 @@ class CustomerArchitectureTest {
                 .map(Field::getType))
                 .doesNotContain(JpaSqlTemplate.class);
     }
+
+    @Test
+    void repositoryStaysASimpleEntityReaderWithoutMvcOrQueryInfrastructure() {
+        Stream<Class<?>> fieldTypes = Arrays.stream(CustomerRepository.class.getDeclaredFields())
+                .map(Field::getType);
+        Stream<Class<?>> methodTypes = Arrays.stream(CustomerRepository.class.getDeclaredMethods())
+                .flatMap(method -> Stream.concat(Stream.of(method.getReturnType()), Arrays.stream(method.getParameterTypes())));
+
+        assertThat(Stream.concat(fieldTypes, methodTypes))
+                .noneMatch(type -> type == JpaSqlTemplate.class || type == FieldValues.class || type == CustomerPage.class);
+    }
 }

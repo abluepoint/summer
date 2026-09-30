@@ -47,7 +47,7 @@ class CustomerParameterConfiguration {
 
     @Bean("customerSortStyle")
     Style customerSortStyle() {
-        return Styles.string().oneOf("email", "displayName", "active").build();
+        return Styles.string().oneOf("username", "email", "displayName", "active").build();
     }
 
     @Bean("customerSortDirectionStyle")
