@@ -47,7 +47,11 @@ Sample 的生产配置仅注册 public `summer-ui`，不再配置旧 `summer-cli
 
 登录 session 闲置 30 分钟过期，无 remember-me、并发 session 上限或自定义绝对寿命；保留 fixation protection。JSESSIONID 为 HttpOnly、SameSite=Lax，生产 HTTPS 设置 Secure，本地 HTTP 不设置。
 
+Summer Sample 用 `server.servlet.session.timeout=30m` 配置 inactivity 超时。Cookie 的 Secure 属性由 `SUMMER_SAMPLE_SESSION_COOKIE_SECURE` 控制，本地 HTTP 默认 false；通过 HTTPS 对外部署时必须设为 true，并保持代理与应用的公开 origin 一致。Spring Security 登录时更换 session ID。授权服务默认使用内存授权记录；生产接入应提供持久化 `OAuth2AuthorizationService`。
+
 退出先清理浏览器认证/PKCE 状态，并以仍在局部调用上下文中的 ID Token 发起 OIDC RP-Initiated Logout；后端销毁登录 session、删除 Cookie，返回已注册的 `/login?logout`。退出或 session 过期不意味着已签发 access token 立即失效，它在自身 15 分钟期限内仍可能可用；本目标不增加 revocation/introspection。
+
+服务端 `/connect/logout` 只接受经授权记录验证的 ID Token 和已注册的 post logout URI。无效 hint 返回 400，不把失败请求重定向到任意地址；浏览器在退出调用失败时仍须清理本地认证状态，具体浏览器流程由 #86 验收。
 
 ## 同源路由与响应
 
