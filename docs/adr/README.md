@@ -28,11 +28,12 @@
 | [0020](0020-separate-http-request-logging-responsibilities.md) | MVC、HTTP 日志适配层与日志模块分工 | 默认记录请求摘要；正文经公共配置开启并统一脱敏、限长；请求包装器保存完整正文，已实现 |
 | [0021](0021-manage-request-body-caching-automatically.md) | MVC 自动管理必要的请求体缓存 | 已移除 cache-request-body 及其专属启动检查，字段校验与 HTTP 日志适配共享完整 MVC 请求体；部分替代 0010、0013 |
 | [0022](0022-define-styles-without-builtin-names.md) | Style 由应用定义，不设框架内置名称 | 框架提供规则构建 API，应用以 Java 公共配置定义具名 Bean；链式定义写法已确认，部分替代 0017，尚未实现 |
+| [0023](0023-consolidate-identity-frontend-in-summer-ui.md) | 身份管理前端统一到 Summer UI | 替代 AICT 规格中的独立 `aict-identity` / Vben 前端选择；服务端安全边界另行明确 |
 
 ## 来源与适用范围
 
 2026-09-22 整理时，本工作树只有 ADR 0001–0013。通过 `git worktree list` 找到 `core` 工作树中的未提交 ADR 0014–0016，并与 2026-09-08 的 [Issue #69](https://github.com/abluepoint/summer/issues/69) 核对；本次将三份 ADR 原文同步到 `summer4`，同时补入其新增领域词汇。未修改来源工作树，也未把未提交文件描述为远端提交。
 
-AICT 的 Vben、同源 BFF、Product Session、IAM 与独立连接服务属于另一产品范围。核验来源是本地工作区尚未提交的 `docs/specs/aict-identity-console-connection-service-complete-spec-v2.md` 与 `docs/specs/aict-unified-identity-technical-design.md`，不包含在本次架构文档提交中。它们不替代 Summer UI 的 Arco/PKCE 决策；Summer UI 决策也不自动取消 AICT 产品需求。
+AICT 的 IAM、BFF 与独立连接服务仍有各自的服务端职责，但前端不再使用独立 `aict-identity` 或 Vben 工程，见 ADR 0023。AICT 规格中的业务要求不因前端合并而自动取消；其中旧前端技术选型须按 ADR 0023 重新对齐。现有 Summer UI 的 Arco/PKCE 决策也不自动证明 AICT 的 BFF 安全契约已实现。
 
 历史日志只用于定位线索，Issue 关闭状态不能替代代码及测试证据。后续决策冲突必须新增 ADR 并写明替代关系，不删除或重写旧决定来掩盖变更。
