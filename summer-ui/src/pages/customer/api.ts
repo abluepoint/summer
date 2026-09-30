@@ -40,14 +40,11 @@ export class SummerApiError extends Error implements CustomerApiFailure {
   }
 }
 
-async function getBusinessData<T>(
-  url: string,
-  params?: Record<string, unknown>
+async function businessData<T>(
+  request: () => Promise<{ data: unknown; status: number }>
 ): Promise<T> {
   try {
-    const response = await axios.get(url, {
-      params,
-    });
+    const response = await request();
     return readEnvelope(response.data, response.status) as T;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -61,6 +58,10 @@ async function getBusinessData<T>(
       throw new SummerApiError(error as CustomerApiFailure);
     throw error;
   }
+}
+
+function getBusinessData<T>(url: string, params?: Record<string, unknown>) {
+  return businessData<T>(() => axios.get(url, { params }));
 }
 
 export function listCustomers(state: {
@@ -105,4 +106,12 @@ export async function deleteCustomer(username: string): Promise<void> {
     }
     throw error;
   }
+}
+
+export function createCustomer(payload: {
+  username: string;
+  email: string;
+  displayName: string;
+}) {
+  return businessData<Customer>(() => axios.post('/api/customers', payload));
 }
