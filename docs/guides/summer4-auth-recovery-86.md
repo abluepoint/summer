@@ -14,6 +14,10 @@
 
 The code is confined to `summer-ui` and this guide. Protocol calls, form login and CSRF are outside the business API interceptor. No token is persisted; only the existing OIDC transaction and a narrow Customer draft may be stored in `sessionStorage`. The recovery marker prevents repeated 401 redirects until a successful business response. The browser suite requires the Summer backend and its UI integration profile; static and unit checks do not prove server session termination.
 
+The #86 diff was reviewed against `AGENTS.md`, ADR 0014/0015, and the issue. No documented-standard violation or unrequested backend change was found. The remaining acceptance limit is the current Customer placeholder: it has no form to register a draft provider or consume the saved draft. The #86 recovery interface and single-use draft tests are ready for that form. The existing browser script was strengthened to check RP logout and reauthentication, but was not run here because neither the backend on port 8080 nor Vite on port 5173 was running.
+
+Focused verification in this worktree: `yarn test` (6 passed, 0 failed/skipped), `yarn typecheck` passed, `yarn lint` (0 errors, 40 existing warnings), and `yarn build` passed. `node --check scripts/e2e-auth.mjs` passed. No browser or backend test result is claimed.
+
 ## Rollback
 
 Revert the #86 commit. This removes the request interceptor and recovery markers while returning browser logout to the #85 implementation. No database migration or server configuration is involved. A browser with an old recovery marker can remove the `summer.auth.*` session keys or close its tab; these keys contain no tokens.

@@ -12,7 +12,6 @@ import {
   saveCustomerDraft,
   consumeCustomerDraft,
   LOGIN_START_KEY,
-  UNAUTHORIZED_RESTART_KEY,
   claimLoginStart,
   completeLoginStart,
   claimUnauthorizedRestart,
@@ -160,7 +159,6 @@ export async function restartLoginAfterUnauthorized() {
     await startLogin();
     return true;
   } catch (error) {
-    storage.removeItem(UNAUTHORIZED_RESTART_KEY);
     redirecting = false;
     throw error;
   }
