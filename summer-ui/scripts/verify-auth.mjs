@@ -86,6 +86,31 @@ test('invalid interrupted draft is discarded', () => {
   assert.equal(storage.getItem(DRAFT_KEY), null);
 });
 
+test('edit recovery persists only target, fields and original values', () => {
+  const storage = memoryStorage();
+  saveCustomerDraft(storage, {
+    username: 'alice',
+    email: 'new@example.test',
+    displayName: 'New',
+    editUsername: 'alice',
+    originalEmail: 'old@example.test',
+    originalDisplayName: 'Old',
+    access_token: 'sensitive',
+    password: 'sensitive',
+  });
+  assert.deepEqual(
+    Object.keys(readCustomerDraft(storage)).sort(),
+    [
+      'displayName',
+      'editUsername',
+      'email',
+      'originalDisplayName',
+      'originalEmail',
+      'username',
+    ].sort()
+  );
+});
+
 test('missing or expired token starts one login until callback completes', () => {
   const storage = memoryStorage();
   assert.equal(claimLoginStart(storage), true);

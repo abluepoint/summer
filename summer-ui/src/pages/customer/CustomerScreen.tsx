@@ -23,6 +23,7 @@ import clipboard from '@/utils/clipboard';
 import {
   DRAFT_KEY,
   getAuthenticatedUser,
+  isAuthRedirecting,
   readCustomerDraft,
   registerCustomerDraftProvider,
 } from '@/auth/oidc';
@@ -33,6 +34,7 @@ import {
   deleteCustomer,
   getCustomer,
   listCustomers,
+  updateCustomer,
 } from './api';
 import {
   detailPath,
@@ -43,7 +45,12 @@ import {
   readListState,
 } from './contract.mjs';
 import CustomerForm, { CustomerDraft } from './CustomerForm';
-import { customerDraft, emptyCustomerDraft } from './form-contract.mjs';
+import {
+  customerDraft,
+  editRecovery,
+  emptyCustomerDraft,
+  isEditDirty,
+} from './form-contract.mjs';
 
 type Mode = 'drawer' | 'modal' | 'page';
 
@@ -116,16 +123,29 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   const [typedUsername, setTypedUsername] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<SummerApiError | null>(null);
+  const [actionError, setActionError] = useState<SummerApiError | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
   const focusTimer = useRef<number | null>(null);
+  const recovered = useRef(
+    mode === 'drawer' ? readCustomerDraft(sessionStorage) : undefined
+  );
+  const recoveredEdit = useRef(editRecovery(recovered.current));
   const [draft, setDraft] = useState<CustomerDraft>(() =>
-    mode === 'drawer'
-      ? customerDraft(readCustomerDraft(sessionStorage))
+    mode === 'drawer' && !recoveredEdit.current
+      ? customerDraft(recovered.current)
       : emptyCustomerDraft()
   );
   const [createOpen, setCreateOpen] = useState(
     () => mode === 'drawer' && Object.values(draft).some(Boolean)
   );
   const [createBusy, setCreateBusy] = useState(false);
+  const [editOriginal, setEditOriginal] = useState<CustomerDraft | null>(
+    () => recoveredEdit.current?.original || null
+  );
+  const [editDraft, setEditDraft] = useState<CustomerDraft>(
+    () => recoveredEdit.current?.draft || emptyCustomerDraft()
+  );
+  const [editBusy, setEditBusy] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -146,6 +166,34 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
     return registerCustomerDraftProvider(() => draft);
   }, [createOpen, draft]);
 
+  useEffect(() => {
+    if (!editOriginal) return undefined;
+    return registerCustomerDraftProvider(() => ({
+      ...editDraft,
+      editUsername: editOriginal.username,
+      originalEmail: editOriginal.email,
+      originalDisplayName: editOriginal.displayName,
+    }));
+  }, [editOriginal, editDraft]);
+
+  useEffect(() => {
+    if (!editOriginal || !isEditDirty(editOriginal, editDraft))
+      return undefined;
+    const unblock = history.block(() =>
+      isAuthRedirecting() ? undefined : t['customer.edit.leave']
+    );
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (isAuthRedirecting()) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      unblock();
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  }, [editOriginal, editDraft, history, t]);
+
   useEffect(
     () => () => {
       if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
@@ -156,7 +204,52 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   function openCreate() {
     if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
     focusTimer.current = null;
+    setEditOriginal(null);
     setCreateOpen(true);
+  }
+
+  function openEdit(record: Customer) {
+    if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
+    focusTimer.current = null;
+    setCreateOpen(false);
+    const original = customerDraft(record);
+    setEditOriginal(original);
+    setEditDraft(original);
+  }
+
+  function closeEdit() {
+    const username = editOriginal?.username;
+    setEditOriginal(null);
+    setEditDraft(emptyCustomerDraft());
+    sessionStorage.removeItem(DRAFT_KEY);
+    focusTimer.current = window.setTimeout(() => {
+      (
+        document.getElementById(`customer-edit-trigger-${username}`) ||
+        document.getElementById('customer-create-trigger')
+      )?.focus();
+      focusTimer.current = null;
+    }, 500);
+  }
+
+  function requestCloseEdit() {
+    if (editBusy) return;
+    if (editOriginal && isEditDirty(editOriginal, editDraft)) {
+      Modal.confirm({
+        title: t['customer.edit.discardTitle'],
+        content: t['customer.edit.discardMessage'],
+        okText: t['customer.create.discard'],
+        cancelText: t['customer.create.continue'],
+        onOk: closeEdit,
+      });
+    } else closeEdit();
+  }
+
+  function edited(updated?: Customer) {
+    closeEdit();
+    if (updated && customer?.username === updated.username)
+      setCustomer(updated);
+    setRevision((value) => value + 1);
+    if (updated) Message.success(t['customer.edit.success']);
   }
 
   function closeCreate() {
@@ -275,6 +368,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       setDeleteTarget(null);
       setTypedUsername('');
       setCustomer(null);
+      if (editOriginal?.username === deleteTarget) closeEdit();
       if (isDetailRoute) {
         history.replace(`/customer/${mode}${location.search}`);
       } else {
@@ -302,6 +396,53 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
     } finally {
       setDeleteBusy(false);
     }
+  }
+
+  function requestActiveChange(record: Customer) {
+    if (!canWrite || actionBusy) return;
+    Modal.confirm({
+      title:
+        t[
+          record.active
+            ? 'customer.deactivate.title'
+            : 'customer.activate.title'
+        ],
+      content:
+        t[
+          record.active
+            ? 'customer.deactivate.message'
+            : 'customer.activate.message'
+        ],
+      okText: t[record.active ? 'customer.deactivate' : 'customer.activate'],
+      cancelText: t['customer.create.cancel'],
+      onOk: async () => {
+        setActionBusy(true);
+        setActionError(null);
+        try {
+          const updated = await updateCustomer(record.username, {
+            active: !record.active,
+          });
+          if (customer?.username === updated.username) setCustomer(updated);
+          setRevision((value) => value + 1);
+          Message.success(t['customer.active.success']);
+        } catch (failure) {
+          setActionError(
+            failure instanceof SummerApiError
+              ? failure
+              : new SummerApiError({
+                  status: 0,
+                  code: '',
+                  message: '',
+                  violations: [],
+                  requestId: '',
+                  timestamp: '',
+                })
+          );
+        } finally {
+          setActionBusy(false);
+        }
+      },
+    });
   }
 
   function changeState(changes: Partial<typeof state>) {
@@ -349,14 +490,25 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           {
             title: t['customer.actions'],
             dataIndex: 'username',
-            render: (username: string) => (
-              <Button
-                status="danger"
-                type="text"
-                onClick={() => beginDelete(username)}
-              >
-                {t['customer.delete']}
-              </Button>
+            render: (username: string, record: Customer) => (
+              <Space>
+                {mode === 'drawer' && (
+                  <Button
+                    id={`customer-edit-trigger-${username}`}
+                    type="text"
+                    onClick={() => openEdit(record)}
+                  >
+                    {t['customer.edit']}
+                  </Button>
+                )}
+                <Button
+                  status="danger"
+                  type="text"
+                  onClick={() => beginDelete(username)}
+                >
+                  {t['customer.delete']}
+                </Button>
+              </Space>
             ),
           },
         ]
@@ -380,6 +532,47 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           retry={() => setRevision((value) => value + 1)}
         />
       )}
+      {actionError && (
+        <Alert
+          type="error"
+          title={
+            actionError.status === 403
+              ? t['auth.forbidden']
+              : actionError.status === 404
+              ? t['customer.error.404']
+              : actionError.status === 0
+              ? t['customer.error.network']
+              : t['customer.active.failed']
+          }
+          content={
+            <Space direction="vertical">
+              {actionError.message && (
+                <Typography.Text>{actionError.message}</Typography.Text>
+              )}
+              {actionError.requestId && (
+                <Space>
+                  <Typography.Text>
+                    requestId: {actionError.requestId}
+                  </Typography.Text>
+                  <Button
+                    size="mini"
+                    onClick={() =>
+                      clipboard(actionError.requestId).catch(() =>
+                        Message.error(t['customer.error.copyFailed'])
+                      )
+                    }
+                  >
+                    {t['customer.error.copyId']}
+                  </Button>
+                </Space>
+              )}
+              <Button size="mini" onClick={() => setActionError(null)}>
+                {t['customer.error.dismiss']}
+              </Button>
+            </Space>
+          }
+        />
+      )}
       {!loading && !error && detail && customer && (
         <>
           <Descriptions
@@ -400,13 +593,34 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
             ]}
           />
           {canWrite && (
-            <Button
-              style={{ marginTop: 16 }}
-              status="danger"
-              onClick={() => beginDelete(customer.username)}
-            >
-              {t['customer.delete']}
-            </Button>
+            <Space style={{ marginTop: 16 }}>
+              {mode === 'drawer' && (
+                <Button
+                  id={`customer-edit-trigger-${customer.username}`}
+                  onClick={() => openEdit(customer)}
+                >
+                  {t['customer.edit']}
+                </Button>
+              )}
+              <Button
+                disabled={actionBusy}
+                onClick={() => requestActiveChange(customer)}
+              >
+                {
+                  t[
+                    customer.active
+                      ? 'customer.deactivate'
+                      : 'customer.activate'
+                  ]
+                }
+              </Button>
+              <Button
+                status="danger"
+                onClick={() => beginDelete(customer.username)}
+              >
+                {t['customer.delete']}
+              </Button>
+            </Space>
           )}
         </>
       )}
@@ -509,13 +723,24 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
                             {
                               label: t['customer.actions'],
                               value: (
-                                <Button
-                                  status="danger"
-                                  type="text"
-                                  onClick={() => beginDelete(item.username)}
-                                >
-                                  {t['customer.delete']}
-                                </Button>
+                                <Space>
+                                  {mode === 'drawer' && (
+                                    <Button
+                                      id={`customer-edit-trigger-${item.username}`}
+                                      type="text"
+                                      onClick={() => openEdit(item)}
+                                    >
+                                      {t['customer.edit']}
+                                    </Button>
+                                  )}
+                                  <Button
+                                    status="danger"
+                                    type="text"
+                                    onClick={() => beginDelete(item.username)}
+                                  >
+                                    {t['customer.delete']}
+                                  </Button>
+                                </Space>
                               ),
                             },
                           ]
@@ -653,6 +878,28 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           />
         )}
       </Modal>
+      {mode === 'drawer' && (
+        <Drawer
+          title={t['customer.edit.title']}
+          visible={editOriginal !== null}
+          width={compact ? '100%' : 440}
+          footer={null}
+          unmountOnExit
+          onCancel={requestCloseEdit}
+        >
+          {editOriginal && (
+            <CustomerForm
+              value={editDraft}
+              original={editOriginal}
+              onChange={setEditDraft}
+              onCancel={requestCloseEdit}
+              onBusyChange={setEditBusy}
+              onSuccess={edited}
+              canWrite={canWrite}
+            />
+          )}
+        </Drawer>
+      )}
       {mode === 'drawer' && (
         <Drawer
           title={t['customer.create.title']}

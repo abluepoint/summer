@@ -63,11 +63,19 @@ export function safeReturnTo(value) {
   }
 }
 
-// Only Customer form fields are eligible for recovery. Credentials and tokens
+// Only Customer form fields and edit baseline metadata are eligible for recovery. Credentials and tokens
 // cannot be passed through this interface or copied into browser storage.
 export function saveCustomerDraft(storage, draft) {
   const allowed = {};
-  for (const key of ['username', 'email', 'displayName', 'active']) {
+  for (const key of [
+    'username',
+    'email',
+    'displayName',
+    'active',
+    'editUsername',
+    'originalEmail',
+    'originalDisplayName',
+  ]) {
     if (
       typeof draft?.[key] === 'string' ||
       (key === 'active' && typeof draft?.[key] === 'boolean')

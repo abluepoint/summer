@@ -10,8 +10,15 @@ import {
 } from '@arco-design/web-react';
 import clipboard from '@/utils/clipboard';
 import useLocale from '@/utils/useLocale';
-import { createCustomer, SummerApiError } from './api';
 import {
+  createCustomer,
+  Customer,
+  SummerApiError,
+  updateCustomer,
+} from './api';
+import {
+  changedCustomerFields,
+  customerDraft,
   customerPayload,
   mapCustomerFailure,
   validateCustomerDraft,
@@ -31,13 +38,15 @@ export default function CustomerForm({
   onCancel,
   onBusyChange,
   canWrite,
+  original,
 }: {
   value: CustomerDraft;
   onChange: (value: CustomerDraft) => void;
-  onSuccess: () => void;
+  onSuccess: (customer?: Customer) => void;
   onCancel: () => void;
   onBusyChange: (busy: boolean) => void;
   canWrite: boolean;
+  original?: CustomerDraft;
 }) {
   const t = useLocale();
   const submitting = useRef(false);
@@ -56,7 +65,7 @@ export default function CustomerForm({
   async function submit() {
     if (!canWrite) return;
     if (submitting.current) return;
-    const payload = customerPayload(value);
+    const payload = original ? customerDraft(value) : customerPayload(value);
     const validation = validateCustomerDraft(payload);
     if (Object.keys(validation).length) {
       setErrors(
@@ -69,6 +78,8 @@ export default function CustomerForm({
       );
       return;
     }
+    const changes = original ? changedCustomerFields(original, value) : null;
+    if (changes && !Object.keys(changes).length) return;
     submitting.current = true;
     setBusy(true);
     onBusyChange(true);
@@ -76,8 +87,10 @@ export default function CustomerForm({
     setFormError('');
     setRequestId('');
     try {
-      await createCustomer(payload);
-      onSuccess();
+      const customer = original
+        ? await updateCustomer(original.username, changes)
+        : await createCustomer(payload);
+      onSuccess(customer);
     } catch (failure) {
       if (failure instanceof SummerApiError) {
         const mapped = mapCustomerFailure(failure);
@@ -97,7 +110,9 @@ export default function CustomerForm({
           );
         } else if (failure.status !== 401) {
           setFormError(
-            failure.status === 0
+            original && failure.status === 404
+              ? t['customer.edit.missing']
+              : failure.status === 0
               ? t['customer.error.network']
               : failure.message || t['customer.error.save']
           );
@@ -147,7 +162,7 @@ export default function CustomerForm({
           label={
             t[field === 'displayName' ? 'customer.name' : `customer.${field}`]
           }
-          required
+          required={field !== 'username' || !original}
           validateStatus={errors[field] ? 'error' : undefined}
           help={errors[field]}
         >
@@ -155,12 +170,18 @@ export default function CustomerForm({
             value={value[field]}
             onChange={(next) => change(field, next)}
             disabled={busy}
+            readOnly={Boolean(original && field === 'username')}
             maxLength={field === 'username' ? 64 : 200}
             aria-label={
               t[field === 'displayName' ? 'customer.name' : `customer.${field}`]
             }
-            autoFocus={field === 'username'}
+            autoFocus={field === (original ? 'email' : 'username')}
           />
+          {original && field === 'username' && (
+            <Typography.Text type="secondary">
+              {t['customer.edit.usernameReadOnly']}
+            </Typography.Text>
+          )}
         </Form.Item>
       ))}
       <Space>
@@ -168,9 +189,16 @@ export default function CustomerForm({
           type="primary"
           htmlType="submit"
           loading={busy}
-          disabled={busy || !canWrite}
+          disabled={
+            busy ||
+            !canWrite ||
+            Boolean(
+              original &&
+                !Object.keys(changedCustomerFields(original, value)).length
+            )
+          }
         >
-          {t['customer.create.submit']}
+          {t[original ? 'customer.edit.submit' : 'customer.create.submit']}
         </Button>
         <Button onClick={onCancel} disabled={busy}>
           {t['customer.create.cancel']}
