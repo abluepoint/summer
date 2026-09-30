@@ -26,7 +26,7 @@ AICT 产品迁出必须先落实目标仓库/应用和完整接收副本，核�
 ## 关键兼容性与验收
 
 - 请求日志按 [ADR 0020](../adr/0020-separate-http-request-logging-responsibilities.md) 分离 MVC 请求数据管理、HTTP 日志快照生成与日志输出职责，范围止于请求摘要与按需请求正文。默认输出 requestId、请求方法、路径、响应状态和耗时且不记录正文；通过 `summer.mvc.request-logging.body.*` 公共配置开启正文后统一脱敏、限长，无需逐接口声明。HTTP seam 已验证日志和字段校验共享读取能力、业务请求体保持完整、日志快照处理不影响业务输入；业务请求体大小与日志预览长度由各自边界负责。
-- 按 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md) 已移除 `summer.mvc.cache-request-body` 属性、条件装配、专属 `JsonFieldCachingValidator` 及旧配置示例，由 MVC 自动管理必要缓存。#73 已验证 JSON Field/FieldList 校验后业务仍可读取完整正文，日志消费者与字段校验共用读取能力，无 Field 的接口也无须另开缓存；默认关闭正文日志的策略不变。业务请求体大小与日志预览长度分别由各自边界负责。
+- 按 [ADR 0021](../adr/0021-manage-request-body-caching-automatically.md) 已移除 `summer.mvc.cache-request-body` 属性、条件装配、专属 `JsonFieldCachingValidator` 及旧配置示例，由 MVC 自动管理必要缓存。#73 验证 JSON Field/FieldList 校验后业务读取完整正文、无 Field 的日志消费者复用正文，并用公共 `summer.mvc.request-body.max-bytes`（默认 1 MiB）限制缓存接收，超限返回带 requestId 的 413；读取中断不派发部分正文。表单和 multipart 须由容器限额。#78 的日志预览上限只影响脱敏日志副本。
 - 后续 Field 配置简化按 [ADR 0017](../adr/0017-simplify-configuration-with-explicit-field-contracts.md)、[ADR 0018](../adr/0018-infer-field-sources-automatically.md)、[ADR 0019](../adr/0019-reject-empty-field-lists.md)、[ADR 0022](../adr/0022-define-styles-without-builtin-names.md) 及其替代关系整理实施规格后再迁移。需审查默认必填变化，验证实际来源推断与冲突、缺失与 null，以及 Query/表单/JSON 的空字符串和全空白字符串均进入 Style 校验；可选邮箱传空字符串不能被当作省略。Java 公共 Style 定义与字段引用保持统一，链式定义写法已确认，尚未实现。
 - 按 ADR 0022 取消框架内置具名 Style 自动注册及 Field.style 的 emptyStyle 默认回退。框架提供类型、格式与约束构建能力，应用用 @Configuration/@Bean 显式定义包括基础类型在内的所需 Style，名称默认取 Bean 方法名；迁移旧引用与 Sample 公共定义，验证同一 Bean 可被多个字段复用、构建规则生效，未定义的名称按既有启动检查规则报错。
 - 删除 Field/FieldList 的 source 属性及使用方赋值，同步迁移运行时读取、严格未知字段检查、请求体缓存联动与相关启动检查；不保留手动覆盖入口。验证同一普通字段可在不同请求从受支持的不同来源读取，同名多来源仍返回 400，不能因删除配置而回退为旧 PARAM 默认行为。
@@ -46,6 +46,13 @@ AICT 产品迁出必须先落实目标仓库/应用和完整接收副本，核�
 - 拓扑验收同时核对公开 issuer、callback、logout、Cookie、GET/POST `/login`、SPA fallback；仅返回 HTTP 200 不足以完成验收。
 
 ## 回退与交付记录
+
+### Issue #73 请求体接收边界续验
+
+- **追溯**：Issue #70 的 TS-MVC“自动管理缓存不代表无限制读取”与 Issue #73 的完整复读、缓存大小、无 Field 日志消费者要求，对应 ADR 0021、`CachedBodyFilter`/`CachedBodyHttpServletRequest`、`CachedBodyFilterTest`、`CachedBodyHttpServletRequestTest`、`RequestLoggingFilterTest` 及 `SummerMvcAutoConfigurationTest`。
+- **接口与风险**：`summer.mvc.request-body.max-bytes` 是统一的 MVC 缓存请求体接收上限，默认 1 MiB；#78 的 `body.max-preview-length` 仍只限制日志副本。URL 编码表单和 multipart 走 Servlet 容器解析，必须由部署环境单独限额。超限返回带 requestId 的 JSON 413，日志只记录摘要；连接中断不派发部分正文。
+- **审阅与门禁**：本票按用户要求在当前会话独立完成双轴审阅。规范轴检查公共配置唯一性、Common 边界、过滤器职责和有界读取，无剩余发现；规格轴发现初版 413 会绕过日志摘要，已调整过滤器次序并回归成功/超限路径，无剩余发现。已知/未知 Content-Length、恰好边界、超限 HTTP 契约、请求中断、业务复读、脱敏预览和 requestId 关联由上述测试覆盖。最终 `./gradlew check --console=plain --quiet` 完成，XML 汇总 149 tests、0 failures、0 errors、0 skipped；`git diff --check` 无报错。此次改动不新增接口级开关；后续按实际部署容量决定是否调整默认上限。
+- **回退**：独立回退本票提交即可恢复原缓存实现及文档；回退会重新暴露无上限读入风险，生产环境应先维持网关/容器接收上限。此票不改数据库、Customer 契约或浏览器代码。
 
 后续每阶段形成可独立回退的提交，但提交/推送/发布按当次授权执行。AICT 移除前保留可核对的接收副本；Customer 与安全变化按契约整体回退，不能只退一侧。create-drop 回退仅适用于可丢弃 Sample 数据；持久库使用应用自有迁移方案。
 

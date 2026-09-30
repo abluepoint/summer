@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.autoconfigure;
 
+import com.abluepoint.summer.mvc.filter.CachedBodyHttpServletRequest;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.LinkedHashSet;
@@ -10,6 +11,7 @@ public class SummerMvcProperties {
 
     private boolean enabled = true;
     private boolean wrapResponses = true;
+    private final RequestBody requestBody = new RequestBody();
     private final RequestLogging requestLogging = new RequestLogging();
     private final FieldValidation fieldValidation = new FieldValidation();
 
@@ -31,6 +33,25 @@ public class SummerMvcProperties {
 
     public RequestLogging getRequestLogging() {
         return requestLogging;
+    }
+
+    public RequestBody getRequestBody() {
+        return requestBody;
+    }
+
+    public static class RequestBody {
+        private int maxBytes = CachedBodyHttpServletRequest.DEFAULT_MAX_BODY_BYTES;
+
+        public int getMaxBytes() {
+            return maxBytes;
+        }
+
+        public void setMaxBytes(int maxBytes) {
+            if (maxBytes < 1) {
+                throw new IllegalArgumentException("summer.mvc.request-body.max-bytes must be positive");
+            }
+            this.maxBytes = maxBytes;
+        }
     }
 
     public static class RequestLogging {

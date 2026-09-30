@@ -24,6 +24,7 @@
 | --- | --- | --- |
 | `summer.common.enabled` | `true` | 消息解析与公共基座。 |
 | `summer.mvc.enabled` | `true` | MVC 自动配置总开关。 |
+| `summer.mvc.request-body.max-bytes` | `1048576` (1 MiB) | MVC 缓存请求体的公共接收上限；超限返回 JSON 413。表单与 multipart 另由 Servlet 容器限额。 |
 | `summer.mvc.request-logging.enabled` | `true` | 输出 requestId、方法、路径、状态和耗时的结构化请求摘要；关闭后不注册请求日志过滤器。 |
 | `summer.mvc.request-logging.body.enabled` | `false` | 公共开启请求体日志预览；默认关闭，业务读取仍使用完整请求体。 |
 | `summer.mvc.request-logging.body.max-preview-length` | `2048` | 日志预览最大字符数，包含截断标记；不限制业务请求体大小。 |
@@ -80,7 +81,7 @@ OrderView update(
 
 `required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。空字符串和全空白字符串都算已传值，继续交给 Style 校验；不能用空白值绕过格式规则。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。使用 Field 契约的接口始终拒绝未声明的查询/表单、JSON 和路径字段，不提供宽松开关。MVC 会在请求链开始时缓存可重复读取的完整正文，Field 校验、Jackson DTO 绑定和 HTTP 日志消费者可以按各自职责读取；malformed JSON 统一返回 HTTP 400。
 
-请求体缓存容量与业务请求体限制属于两个边界。MVC 不提供手动缓存开关，也不为了日志预览截断业务正文；缓存保存业务请求实际接收的完整正文。业务允许的请求体大小由应用或 Servlet 容器的请求限制负责，日志正文的脱敏和预览长度由 HTTP 日志快照配置负责，二者不会改变 `@RequestBody` 或 Field 读取到的数据。
+MVC 不提供手动缓存开关。`summer.mvc.request-body.max-bytes` 统一限制 MVC 缓存的请求体，默认 1 MiB；已知或未知 Content-Length 超限均返回 JSON 413（`SUMMER_REQUEST_BODY_TOO_LARGE`，包含 requestId）。到达上限的正文仍完整交给 Field、`@RequestBody` 和业务代码，读取中断则不派发部分正文。URL 编码表单和 multipart 由 Servlet 容器管理，须在容器/应用上传设置中另行限额。`summer.mvc.request-logging.body.max-preview-length` 只截断脱敏后的日志副本，不替代请求接收上限。
 
 框架不预注册具名 Style，也不为 `@Field.style` 提供空名称回退。应用在公共 Java 配置中以 `@Bean` 定义需要的 Style，Bean 方法名就是字段引用名；同一个 Bean 可以被多个字段复用。基础类型和常用规则通过 `Styles` 链式构建器表达：
 

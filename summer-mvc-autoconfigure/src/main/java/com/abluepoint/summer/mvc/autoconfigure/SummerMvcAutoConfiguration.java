@@ -96,17 +96,20 @@ public class SummerMvcAutoConfiguration {
                 )
         ));
         registration.setName("summerRequestLoggingFilter");
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 22);
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 21);
         return registration;
     }
 
     @Bean
     @ConditionalOnMissingFilterBean(CachedBodyFilter.class)
-    FilterRegistrationBean<CachedBodyFilter> summerCachedBodyFilter() {
+    FilterRegistrationBean<CachedBodyFilter> summerCachedBodyFilter(
+            SummerMvcProperties properties,
+            ObjectMapper objectMapper
+    ) {
         FilterRegistrationBean<CachedBodyFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new CachedBodyFilter());
+        registration.setFilter(new CachedBodyFilter(properties.getRequestBody().getMaxBytes(), objectMapper));
         registration.setName("summerCachedBodyFilter");
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 21);
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 22);
         return registration;
     }
 

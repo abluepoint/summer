@@ -93,8 +93,8 @@ class RequestLoggingFilterTest {
         );
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        new CachedBodyFilter().doFilter(request, response, (cachedRequest, cachedResponse) ->
-                logging.doFilter(cachedRequest, cachedResponse, (requestInChain, responseInChain) -> {
+        logging.doFilter(request, response, (requestInLogging, responseInLogging) ->
+                new CachedBodyFilter().doFilter(requestInLogging, responseInLogging, (requestInChain, responseInChain) -> {
                     CachedBodyHttpServletRequest cached = (CachedBodyHttpServletRequest) requestInChain;
                     assertThat(new String(cached.body(), StandardCharsets.UTF_8))
                             .contains("secret-value", "complete business body");
@@ -106,6 +106,30 @@ class RequestLoggingFilterTest {
             assertThat(record.bodyPreview()).hasSizeLessThanOrEqualTo(72);
             assertThat(record.bodyPreview()).contains(RequestBodySnapshotter.REDACTED_VALUE);
             assertThat(record.bodyPreview()).doesNotContain("secret-value");
+        });
+    }
+
+    @Test
+    void oversizedRequestStillProducesCorrelatedStatusLogWithoutBodyPreview() throws Exception {
+        AtomicReference<RequestLogRecord> observed = new AtomicReference<>();
+        RequestBodySnapshotter snapshotter = new RequestBodySnapshotter(
+                new ObjectMapper(), true, 72, Set.of("password")
+        );
+        RequestLoggingFilter logging = new RequestLoggingFilter(observed::set, snapshotter);
+        MockHttpServletRequest request = jsonRequest("{\"password\":\"sensitive\"}");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        new RequestCorrelationFilter().doFilter(request, response, (correlated, correlatedResponse) ->
+                logging.doFilter(correlated, correlatedResponse, (logged, loggedResponse) ->
+                        new CachedBodyFilter(8).doFilter(logged, loggedResponse, (body, bodyResponse) -> {
+                            throw new AssertionError("oversized request reached downstream chain");
+                        })));
+
+        assertThat(response.getStatus()).isEqualTo(413);
+        assertThat(observed).hasValueSatisfying(record -> {
+            assertThat(record.status()).isEqualTo(413);
+            assertThat(record.requestId()).isEqualTo(response.getHeader("X-Request-Id"));
+            assertThat(record.bodyPreview()).isNull();
         });
     }
 

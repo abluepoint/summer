@@ -70,6 +70,12 @@ class SummerMvcAutoConfigurationTest {
                     "summerCachedBodyFilter",
                     FilterRegistrationBean.class
             );
+            FilterRegistrationBean<?> logging = context.getBean(
+                    "summerRequestLoggingFilter",
+                    FilterRegistrationBean.class
+            );
+            assertThat(correlation.getOrder()).isLessThan(logging.getOrder());
+            assertThat(logging.getOrder()).isLessThan(cachedBody.getOrder());
             assertThat(correlation.getOrder()).isLessThan(cachedBody.getOrder());
         });
     }
@@ -86,6 +92,18 @@ class SummerMvcAutoConfigurationTest {
     }
 
     @Test
+    void bindsOneGlobalRequestBodyLimit() {
+        contextRunner.withPropertyValues("summer.mvc.request-body.max-bytes=4096")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(SummerMvcProperties.class)
+                            .getRequestBody().getMaxBytes()).isEqualTo(4096);
+                });
+        contextRunner.withPropertyValues("summer.mvc.request-body.max-bytes=0")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
     void registersRequestLoggingFilterWithARequestLogSink() {
         contextRunner.run(context -> {
             assertThat(context).hasNotFailed();
@@ -96,7 +114,7 @@ class SummerMvcAutoConfigurationTest {
                     FilterRegistrationBean.class
             );
             assertThat(logging.getFilter()).isInstanceOf(RequestLoggingFilter.class);
-            assertThat(logging.getOrder()).isEqualTo(org.springframework.core.Ordered.HIGHEST_PRECEDENCE + 22);
+            assertThat(logging.getOrder()).isEqualTo(org.springframework.core.Ordered.HIGHEST_PRECEDENCE + 21);
         });
     }
 

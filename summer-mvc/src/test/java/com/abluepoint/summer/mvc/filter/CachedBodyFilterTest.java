@@ -1,14 +1,17 @@
 package com.abluepoint.summer.mvc.filter;
 
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -65,6 +69,88 @@ class CachedBodyFilterTest {
 
         assertThat(loggedBody).hasValue(body + "|" + body);
         assertThat(response).isEqualTo(body);
+    }
+
+    @Test
+    void rejectsOversizedBodyWithStableHttpResponseBeforeController() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldlessBodyController())
+                .addFilters(new RequestCorrelationFilter(), new CachedBodyFilter(8))
+                .build();
+
+        var response = mockMvc.perform(post("/fieldless-body")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("123456789"))
+                .andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(413);
+        assertThat(response.getContentAsString()).contains("SUMMER_REQUEST_BODY_TOO_LARGE");
+        assertThat(response.getContentAsString()).contains(response.getHeader("X-Request-Id"));
+    }
+
+    @Test
+    void rejectsUnknownLengthAtHttpSeamWithoutDispatchingPartialBody() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldlessBodyController())
+                .addFilters(new RequestCorrelationFilter(), new CachedBodyFilter(8))
+                .build();
+        RequestBuilder unknownLength = context -> {
+            MockHttpServletRequest request = new MockHttpServletRequest(context) {
+                @Override
+                public long getContentLengthLong() {
+                    return -1;
+                }
+            };
+            request.setMethod("POST");
+            request.setRequestURI("/fieldless-body");
+            request.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            request.setContent("123456789".getBytes(StandardCharsets.UTF_8));
+            return request;
+        };
+
+        var response = mockMvc.perform(unknownLength).andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(413);
+        assertThat(response.getContentAsString()).contains("SUMMER_REQUEST_BODY_TOO_LARGE");
+        assertThat(response.getContentAsString()).contains(response.getHeader("X-Request-Id"));
+    }
+
+    @Test
+    void interruptedHttpStreamNeverDispatchesPartialBody() {
+        AtomicBoolean dispatched = new AtomicBoolean();
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/fieldless-body") {
+            @Override
+            public long getContentLengthLong() {
+                return -1;
+            }
+
+            @Override
+            public ServletInputStream getInputStream() {
+                return new ServletInputStream() {
+                    @Override
+                    public int read() throws IOException {
+                        throw new IOException("interrupted request stream");
+                    }
+
+                    @Override
+                    public boolean isFinished() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isReady() {
+                        return true;
+                    }
+
+                    @Override
+                    public void setReadListener(ReadListener listener) {
+                    }
+                };
+            }
+        };
+        request.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        FilterChain chain = (servletRequest, servletResponse) -> dispatched.set(true);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> new CachedBodyFilter(8).doFilter(request, new MockHttpServletResponse(), chain)
+        ).isInstanceOf(IOException.class).hasMessage("interrupted request stream");
+        assertThat(dispatched).isFalse();
     }
 
     private ServletRequest filteredRequest(MockHttpServletRequest request) throws Exception {

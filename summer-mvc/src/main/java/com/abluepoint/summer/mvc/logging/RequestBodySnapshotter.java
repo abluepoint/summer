@@ -49,7 +49,11 @@ public final class RequestBodySnapshotter {
     }
 
     public String snapshot(HttpServletRequest request) {
-        if (!enabled || !(request instanceof CachedBodyHttpServletRequest cachedRequest)) {
+        if (!enabled) {
+            return null;
+        }
+        CachedBodyHttpServletRequest cachedRequest = cachedRequest(request);
+        if (cachedRequest == null) {
             return null;
         }
         byte[] body = cachedRequest.body();
@@ -65,6 +69,14 @@ public final class RequestBodySnapshotter {
             return truncate(new String(body, charset(request)));
         }
         return truncate(UNAVAILABLE_VALUE);
+    }
+
+    private static CachedBodyHttpServletRequest cachedRequest(HttpServletRequest request) {
+        if (request instanceof CachedBodyHttpServletRequest cached) {
+            return cached;
+        }
+        Object managedBody = request.getAttribute(CachedBodyHttpServletRequest.class.getName());
+        return managedBody instanceof CachedBodyHttpServletRequest cached ? cached : null;
     }
 
     private String snapshotJson(byte[] body) {
