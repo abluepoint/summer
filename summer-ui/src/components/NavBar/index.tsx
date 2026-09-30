@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext } from 'react';
 import {
   Tooltip,
   Input,
@@ -21,10 +21,9 @@ import {
   IconExperiment,
   IconDashboard,
   IconInteraction,
-  IconTag,
   IconLoading,
 } from '@arco-design/web-react/icon';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { GlobalState } from '@/store';
 import { GlobalContext } from '@/context';
 import useLocale from '@/utils/useLocale';
@@ -34,22 +33,20 @@ import IconButton from './IconButton';
 import Settings from '../Settings';
 import styles from './style/index.module.less';
 import defaultLocale from '@/locale';
-import useStorage from '@/utils/useStorage';
-import { generatePermission } from '@/routes';
+import { signOut } from '@/auth/oidc';
 
 function Navbar({ show }: { show: boolean }) {
   const t = useLocale();
   const { userInfo, userLoading } = useSelector((state: GlobalState) => state);
-  const dispatch = useDispatch();
-
-  const [_, setUserStatus] = useStorage('userStatus');
-  const [role, setRole] = useStorage('userRole', 'admin');
 
   const { setLang, lang, theme, setTheme } = useContext(GlobalContext);
 
-  function logout() {
-    setUserStatus('logout');
-    window.location.href = '/login';
+  async function logout() {
+    try {
+      await signOut();
+    } catch {
+      window.location.replace('/login?logoutError');
+    }
   }
 
   function onMenuItemClick(key) {
@@ -59,18 +56,6 @@ function Navbar({ show }: { show: boolean }) {
       Message.info(`You clicked ${key}`);
     }
   }
-
-  useEffect(() => {
-    dispatch({
-      type: 'update-userInfo',
-      payload: {
-        userInfo: {
-          ...userInfo,
-          permissions: generatePermission(role),
-        },
-      },
-    });
-  }, [role]);
 
   if (!show) {
     return (
@@ -84,31 +69,12 @@ function Navbar({ show }: { show: boolean }) {
     );
   }
 
-  const handleChangeRole = () => {
-    const newRole = role === 'admin' ? 'user' : 'admin';
-    setRole(newRole);
-  };
-
   const droplist = (
     <Menu onClickMenuItem={onMenuItemClick}>
-      <Menu.SubMenu
-        key="role"
-        title={
-          <>
-            <IconUser className={styles['dropdown-icon']} />
-            <span className={styles['user-role']}>
-              {role === 'admin'
-                ? t['menu.user.role.admin']
-                : t['menu.user.role.user']}
-            </span>
-          </>
-        }
-      >
-        <Menu.Item onClick={handleChangeRole} key="switch role">
-          <IconTag className={styles['dropdown-icon']} />
-          {t['menu.user.switchRoles']}
-        </Menu.Item>
-      </Menu.SubMenu>
+      <Menu.Item key="identity" disabled>
+        <IconUser className={styles['dropdown-icon']} />
+        {userInfo?.name}
+      </Menu.Item>
       <Menu.Item key="setting">
         <IconSettings className={styles['dropdown-icon']} />
         {t['menu.user.setting']}
@@ -202,8 +168,10 @@ function Navbar({ show }: { show: boolean }) {
               <Avatar size={32} style={{ cursor: 'pointer' }}>
                 {userLoading ? (
                   <IconLoading />
-                ) : (
+                ) : userInfo.avatar ? (
                   <img alt="avatar" src={userInfo.avatar} />
+                ) : (
+                  <IconUser />
                 )}
               </Avatar>
             </Dropdown>

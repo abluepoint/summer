@@ -118,3 +118,27 @@
     color: var(--color-text-3) !important;
   }
 }
+
+@media (max-width: 767px) {
+  .logo-text {
+    color: var(--color-text-1);
+  }
+
+  .container {
+    display: block;
+
+    .banner {
+      display: none;
+    }
+
+    .content {
+      min-height: 100vh;
+      padding: 80px 24px 48px;
+      box-sizing: border-box;
+    }
+  }
+
+  .login-form-wrapper {
+    width: min(320px, 100%);
+  }
+}

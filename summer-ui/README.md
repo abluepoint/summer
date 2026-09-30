@@ -20,6 +20,7 @@ yarn dev
 yarn typecheck
 yarn lint
 yarn lint:style
+yarn test
 yarn build
 ```
 
@@ -30,10 +31,11 @@ Summer UI 由 Node/Vite 独立构建。Gradle 不调用前端包管理器，也�
 
 - `Customer` 位于首个业务导航组，当前保留 `/customer/drawer`、
   `/customer/modal` 和 `/customer/page` 三个后续实现接缝。
-- `/oauth2/callback` 作为认证任务的保留接缝，不在示例导航中展示。
+- `/oauth2/callback` 完成 OIDC PKCE 回调，不在示例导航中展示。
 - 官方示例路由仍使用其原始 URL，菜单统一放在 `Arco Pro 示例` 下，便于
   对照上游页面和开发 Mock。
 - 默认语言为简体中文，导航栏保留 `zh-CN` 和 `en-US` 切换。
 
-本票只建立前端基线和路由骨架，不实现 Customer 数据交互或 OIDC 协议。
+浏览器真实登录、同源代理、令牌存储、验收和回滚说明见
+[`AUTH.md`](./AUTH.md)。Customer 数据交互仍由后续票实现。
 官方示例可以使用上游开发 Mock；Summer 业务和安全路由没有 Mock 回退。

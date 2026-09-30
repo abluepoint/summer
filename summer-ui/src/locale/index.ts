@@ -70,8 +70,12 @@ const i18n = {
     'customer.baseline.status': 'Status',
     'customer.baseline.statusValue': 'Baseline scaffold',
     'oauth2.callback.title': 'OAuth callback',
-    'oauth2.callback.description':
-      'The OIDC callback seam is reserved for the authentication ticket.',
+    'oauth2.callback.processing': 'Completing sign in…',
+    'oauth2.callback.failed':
+      'Sign in could not be verified. Please start again.',
+    'oauth2.callback.backToLogin': 'Back to sign in',
+    'auth.startFailed':
+      'Authentication could not be started. Please reload the page.',
   },
   'zh-CN': {
     'menu.welcome': '欢迎',
@@ -144,7 +148,10 @@ const i18n = {
     'customer.baseline.status': '状态',
     'customer.baseline.statusValue': '基线脚手架',
     'oauth2.callback.title': 'OAuth 回调',
-    'oauth2.callback.description': 'OIDC 回调接缝由后续认证任务实现。',
+    'oauth2.callback.processing': '正在完成登录…',
+    'oauth2.callback.failed': '无法验证登录，请重新开始。',
+    'oauth2.callback.backToLogin': '返回登录',
+    'auth.startFailed': '无法发起登录，请刷新页面重试。',
   },
 };
 
