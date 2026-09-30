@@ -7,8 +7,6 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
@@ -61,21 +59,33 @@ public final class RequestBodySnapshotter {
         if (contentType != null && contentType.toLowerCase(Locale.ROOT).contains("json")) {
             return snapshotJson(body);
         }
-        if (contentType == null || contentType.toLowerCase(Locale.ROOT).startsWith("text/")) {
-            return truncate(new String(body, charset(request)));
-        }
         return truncate(UNAVAILABLE_VALUE);
     }
 
     private String snapshotJson(byte[] body) {
         try {
             JsonNode node = objectMapper.readTree(body);
+            if (node == null || (!node.isObject() && !isObjectArray(node))) {
+                return truncate(UNAVAILABLE_VALUE);
+            }
             redact(node);
             return truncate(objectMapper.writeValueAsString(node));
         } catch (RuntimeException exception) {
             // A malformed or unsupported body must never be copied to logs.
             return truncate(UNAVAILABLE_VALUE);
         }
+    }
+
+    private static boolean isObjectArray(JsonNode node) {
+        if (!node.isArray()) {
+            return false;
+        }
+        for (JsonNode element : node) {
+            if (!element.isObject()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void redact(JsonNode node) {
@@ -107,11 +117,6 @@ public final class RequestBodySnapshotter {
             return "…";
         }
         return value.substring(0, maxPreviewLength - 1) + "…";
-    }
-
-    private Charset charset(HttpServletRequest request) {
-        String encoding = request.getCharacterEncoding();
-        return encoding == null ? StandardCharsets.UTF_8 : Charset.forName(encoding);
     }
 
     private static Set<String> normalizeRedactedFields(Set<String> fields) {
