@@ -7,6 +7,7 @@ import {
   Empty,
   Input,
   Message,
+  Modal,
   Pagination,
   Select,
   Space,
@@ -18,17 +19,21 @@ import {
 import { useHistory, useLocation } from 'react-router-dom';
 import useLocale from '@/utils/useLocale';
 import clipboard from '@/utils/clipboard';
+import { getAuthenticatedUser } from '@/auth/oidc';
 import {
   Customer,
   CustomerPage,
   SummerApiError,
+  deleteCustomer,
   getCustomer,
   listCustomers,
 } from './api';
 import {
   detailPath,
   detailUsername,
+  canConfirmDeletion,
   listSearch,
+  pageAfterDeletion,
   readListState,
 } from './contract.mjs';
 
@@ -98,6 +103,25 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   const [error, setError] = useState<SummerApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  const [canWrite, setCanWrite] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [typedUsername, setTypedUsername] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<SummerApiError | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    getAuthenticatedUser()
+      .then((user) => {
+        if (live) setCanWrite(Boolean(user?.scopes.includes('customer.write')));
+      })
+      .catch(() => {
+        if (live) setCanWrite(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [location.pathname, revision]);
 
   useEffect(() => {
     const update = () => setCompact(window.innerWidth <= 768);
@@ -132,7 +156,22 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       .then((result) => {
         if (!live) return;
         if (requestedDetail) setCustomer(result as Customer);
-        else setPage(result as CustomerPage);
+        else {
+          const nextPage = result as CustomerPage;
+          const validPage = pageAfterDeletion(
+            requestedState.page,
+            requestedState.size,
+            nextPage.totalElements
+          );
+          if (validPage !== requestedState.page) {
+            history.replace({
+              pathname: `/customer/${mode}`,
+              search: listSearch({ ...requestedState, page: validPage }),
+            });
+            return;
+          }
+          setPage(nextPage);
+        }
       })
       .catch((failure) => {
         if (!live) return;
@@ -155,7 +194,64 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
     return () => {
       live = false;
     };
-  }, [mode, location.pathname, location.search, revision]);
+  }, [mode, location.pathname, location.search, revision, history]);
+
+  function beginDelete(username: string) {
+    setDeleteTarget(username);
+    setTypedUsername('');
+    setDeleteError(null);
+  }
+
+  function closeDelete() {
+    if (deleteBusy) return;
+    setDeleteTarget(null);
+    setTypedUsername('');
+    setDeleteError(null);
+  }
+
+  async function confirmDelete() {
+    if (
+      !deleteTarget ||
+      !canConfirmDeletion(typedUsername, deleteTarget) ||
+      deleteBusy
+    )
+      return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteCustomer(deleteTarget);
+      Message.success(t['customer.delete.success']);
+      setDeleteTarget(null);
+      setTypedUsername('');
+      setCustomer(null);
+      if (isDetailRoute) {
+        history.replace(`/customer/${mode}${location.search}`);
+      } else {
+        const nextPage = pageAfterDeletion(
+          state.page,
+          state.size,
+          Math.max(0, (page?.totalElements || 0) - 1)
+        );
+        if (nextPage !== state.page) changeState({ page: nextPage });
+        else setRevision((value) => value + 1);
+      }
+    } catch (failure) {
+      setDeleteError(
+        failure instanceof SummerApiError
+          ? failure
+          : new SummerApiError({
+              status: 0,
+              code: '',
+              message: '',
+              violations: [],
+              requestId: '',
+              timestamp: '',
+            })
+      );
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
 
   function changeState(changes: Partial<typeof state>) {
     history.push({
@@ -197,6 +293,23 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
         </Tag>
       ),
     },
+    ...(canWrite
+      ? [
+          {
+            title: t['customer.actions'],
+            dataIndex: 'username',
+            render: (username: string) => (
+              <Button
+                status="danger"
+                type="text"
+                onClick={() => beginDelete(username)}
+              >
+                {t['customer.delete']}
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -217,23 +330,34 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
         />
       )}
       {!loading && !error && detail && customer && (
-        <Descriptions
-          column={1}
-          border
-          data={[
-            { label: t['customer.username'], value: customer.username },
-            { label: t['customer.email'], value: customer.email },
-            { label: t['customer.name'], value: customer.displayName },
-            {
-              label: t['customer.active'],
-              value: (
-                <Tag color={customer.active ? 'green' : 'gray'}>
-                  {customer.active ? t['customer.yes'] : t['customer.no']}
-                </Tag>
-              ),
-            },
-          ]}
-        />
+        <>
+          <Descriptions
+            column={1}
+            border
+            data={[
+              { label: t['customer.username'], value: customer.username },
+              { label: t['customer.email'], value: customer.email },
+              { label: t['customer.name'], value: customer.displayName },
+              {
+                label: t['customer.active'],
+                value: (
+                  <Tag color={customer.active ? 'green' : 'gray'}>
+                    {customer.active ? t['customer.yes'] : t['customer.no']}
+                  </Tag>
+                ),
+              },
+            ]}
+          />
+          {canWrite && (
+            <Button
+              style={{ marginTop: 16 }}
+              status="danger"
+              onClick={() => beginDelete(customer.username)}
+            >
+              {t['customer.delete']}
+            </Button>
+          )}
+        </>
       )}
       {!isDetailRoute && !error && (
         <>
@@ -319,6 +443,22 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
                           </Tag>
                         ),
                       },
+                      ...(canWrite
+                        ? [
+                            {
+                              label: t['customer.actions'],
+                              value: (
+                                <Button
+                                  status="danger"
+                                  type="text"
+                                  onClick={() => beginDelete(item.username)}
+                                >
+                                  {t['customer.delete']}
+                                </Button>
+                              ),
+                            },
+                          ]
+                        : []),
                     ]}
                   />
                 ))}
@@ -333,7 +473,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
               data={page?.items || []}
               loading={loading}
               pagination={false}
-              scroll={{ x: 720 }}
+              scroll={{ x: 820 }}
             />
           )}
           {page && (
@@ -352,6 +492,106 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
           )}
         </>
       )}
+      <Modal
+        visible={deleteTarget !== null}
+        title={t['customer.delete.title']}
+        onCancel={closeDelete}
+        maskClosable={false}
+        style={{
+          width: compact ? 'calc(100vw - 32px)' : 520,
+          maxWidth: 'calc(100vw - 32px)',
+        }}
+        footer={
+          <Space>
+            <Button onClick={closeDelete} disabled={deleteBusy}>
+              {t['customer.delete.cancel']}
+            </Button>
+            <Button
+              status="danger"
+              type="primary"
+              loading={deleteBusy}
+              disabled={
+                !canWrite ||
+                !canConfirmDeletion(typedUsername, deleteTarget) ||
+                [401, 403, 404].includes(deleteError?.status || 0)
+              }
+              onClick={confirmDelete}
+            >
+              {t['customer.delete.confirm']}
+            </Button>
+          </Space>
+        }
+      >
+        <Alert
+          type="warning"
+          content={
+            <span style={{ whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
+              {t['customer.delete.warning']}
+            </span>
+          }
+        />
+        <Typography.Paragraph style={{ marginTop: 16, marginBottom: 4 }}>
+          {t['customer.delete.instruction']}
+        </Typography.Paragraph>
+        <Typography.Text
+          bold
+          style={{
+            display: 'block',
+            marginBottom: 12,
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {deleteTarget}
+        </Typography.Text>
+        <Input
+          autoFocus
+          value={typedUsername}
+          onChange={(value) => setTypedUsername(value)}
+          placeholder={t['customer.delete.placeholder']}
+          disabled={deleteBusy}
+        />
+        {deleteError && (
+          <Alert
+            style={{ marginTop: 16 }}
+            type="error"
+            content={
+              <Space direction="vertical">
+                <Typography.Text>
+                  {deleteError.status === 403
+                    ? t['customer.delete.forbidden']
+                    : deleteError.status === 404
+                    ? t['customer.delete.missing']
+                    : deleteError.status === 401
+                    ? t['customer.error.401']
+                    : t['customer.delete.failed']}
+                </Typography.Text>
+                {deleteError.message && (
+                  <Typography.Text style={{ overflowWrap: 'anywhere' }}>
+                    {deleteError.message}
+                  </Typography.Text>
+                )}
+                {deleteError.requestId && (
+                  <Space>
+                    <Typography.Text>
+                      requestId: {deleteError.requestId}
+                    </Typography.Text>
+                    <Button
+                      size="mini"
+                      onClick={() =>
+                        clipboard(deleteError.requestId).catch(() =>
+                          Message.error(t['customer.error.copyFailed'])
+                        )
+                      }
+                    >
+                      {t['customer.error.copyId']}
+                    </Button>
+                  </Space>
+                )}
+              </Space>
+            }
+          />
+        )}
+      </Modal>
     </Card>
   );
 }

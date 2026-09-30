@@ -250,20 +250,35 @@ class SummerEndToEndTest {
                         .content("{\"username\":\"delete\",\"email\":\"" + email + "\",\"displayName\":\"Delete Me\"}"))
                 .andExpect(status().isOk());
 
+        String readToken = accessToken("customer.read");
+        mockMvc.perform(delete("/api/customers/{username}", "delete")
+                        .header("Authorization", "Bearer " + readToken))
+                .andExpect(status().isForbidden());
+
         mockMvc.perform(delete("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + writeToken))
                 .andExpect(status().isNoContent())
                 .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEmpty());
 
-        String readToken = accessToken("customer.read");
         mockMvc.perform(get("/api/customers/{username}", email.substring(0,email.indexOf('@')))
                         .header("Authorization", "Bearer " + readToken))
                 .andExpect(status().isNotFound());
 
         mockMvc.perform(delete("/api/customers/{username}", email.substring(0,email.indexOf('@')))
-                        .header("Authorization", "Bearer " + writeToken))
+                .header("Authorization", "Bearer " + writeToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+
+        mockMvc.perform(post("/api/customers")
+                        .header("Authorization", "Bearer " + writeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"delete\",\"email\":\"" + email + "\",\"displayName\":\"Recreated\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("delete"));
+        mockMvc.perform(get("/api/customers/{username}", "delete")
+                        .header("Authorization", "Bearer " + readToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.displayName").value("Recreated"));
     }
 
     @Test

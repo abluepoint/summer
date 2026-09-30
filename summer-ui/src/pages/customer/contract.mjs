@@ -49,6 +49,16 @@ export function detailUsername(pathname, mode) {
   }
 }
 
+export function canConfirmDeletion(typed, username) {
+  return (
+    typeof username === 'string' && username.length > 0 && typed === username
+  );
+}
+
+export function pageAfterDeletion(page, size, totalElements) {
+  return Math.max(0, Math.min(page, Math.ceil(totalElements / size) - 1));
+}
+
 export function readFailure(body, status, headerRequestId = '') {
   const error = body?.error && typeof body.error === 'object' ? body.error : {};
   return {
