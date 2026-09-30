@@ -64,6 +64,12 @@ try {
       false
     );
     assert.equal(storage.local.userStatus, undefined);
+    let rpLogoutRequests = 0;
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/connect/logout') {
+        rpLogoutRequests++;
+      }
+    });
     await page.locator('.arco-avatar').click();
     await page
       .getByText(process.env.SUMMER_E2E_USERNAME || 'summer-user', {
@@ -72,6 +78,23 @@ try {
       .waitFor();
     await page.getByText('退出登录', { exact: true }).click();
     await page.waitForURL(`${base}/login?logout`, { timeout: 20000 });
+    assert.equal(
+      rpLogoutRequests,
+      1,
+      'logout must call the OIDC end-session endpoint'
+    );
+    const afterLogout = await page.evaluate(() => ({ ...sessionStorage }));
+    assert.equal(
+      Object.keys(afterLogout).some(
+        (key) =>
+          key.startsWith('oidc.') ||
+          key.startsWith('summer.auth.') ||
+          key === 'summer.pkce.customer-draft'
+      ),
+      false,
+      'logout must clear local transaction and recovery state'
+    );
+    await atLogin(page, '/customer/drawer');
     await context.close();
   }
   {

@@ -1,5 +1,43 @@
 export const DEFAULT_ROUTE = '/customer/drawer';
 export const DRAFT_KEY = 'summer.pkce.customer-draft';
+export const LOGIN_START_KEY = 'summer.auth.login-started';
+export const UNAUTHORIZED_RESTART_KEY = 'summer.auth.unauthorized-restarted';
+
+export function claimLoginStart(storage) {
+  if (storage.getItem(LOGIN_START_KEY)) return false;
+  storage.setItem(LOGIN_START_KEY, '1');
+  return true;
+}
+
+export function completeLoginStart(storage) {
+  storage.removeItem(LOGIN_START_KEY);
+}
+
+export function claimUnauthorizedRestart(storage) {
+  if (storage.getItem(UNAUTHORIZED_RESTART_KEY)) return false;
+  storage.setItem(UNAUTHORIZED_RESTART_KEY, '1');
+  return true;
+}
+
+export function completeAuthenticatedRequest(storage) {
+  storage.removeItem(UNAUTHORIZED_RESTART_KEY);
+}
+
+export function clearRecoveryState(storage) {
+  storage.removeItem(LOGIN_START_KEY);
+  storage.removeItem(UNAUTHORIZED_RESTART_KEY);
+}
+
+export function isBusinessApi(url) {
+  return typeof url === 'string' && /^\/api(?:\/|\?|$)/.test(url);
+}
+
+export function classifyBusinessFailure(status, hasResponse) {
+  if (!hasResponse) return 'network';
+  if (status === 401) return 'unauthorized';
+  if (status === 403) return 'forbidden';
+  return 'other';
+}
 
 export function safeReturnTo(value) {
   if (

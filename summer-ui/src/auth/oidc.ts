@@ -11,10 +11,20 @@ import {
   safeReturnTo,
   saveCustomerDraft,
   consumeCustomerDraft,
+  LOGIN_START_KEY,
+  UNAUTHORIZED_RESTART_KEY,
+  claimLoginStart,
+  completeLoginStart,
+  claimUnauthorizedRestart,
+  clearRecoveryState,
 } from './recovery.mjs';
 
 const storage = window.sessionStorage;
 const STATE_PREFIX = 'oidc.';
+const AUTH_NOTICE_KEY = 'summer.auth.notice';
+let clearAuthenticatedUi: (() => void) | undefined;
+let customerDraftProvider: (() => object) | undefined;
+let redirecting = false;
 const setting = (value: unknown, fallback: string) =>
   typeof value === 'string' && value ? value : fallback;
 
@@ -48,6 +58,35 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   return user && !user.expired ? user : null;
 }
 
+export function onAuthenticatedUiClear(handler: () => void) {
+  clearAuthenticatedUi = handler;
+}
+
+export function isAuthRedirecting() {
+  return redirecting;
+}
+
+export function registerCustomerDraftProvider(provider: () => object) {
+  customerDraftProvider = provider;
+  return () => {
+    if (customerDraftProvider === provider) customerDraftProvider = undefined;
+  };
+}
+
+function preserveCustomerDraft() {
+  if (!customerDraftProvider) return;
+  try {
+    saveCustomerDraft(storage, customerDraftProvider());
+  } catch {
+    // A form snapshot must not prevent authentication recovery.
+  }
+}
+
+export async function authenticationStatus() {
+  const user = await oidcManager.getUser();
+  return user ? (user.expired ? 'expired' : 'ready') : 'missing';
+}
+
 export async function startLogin(
   returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`
 ) {
@@ -62,12 +101,15 @@ export async function startLogin(
 
 export async function completeLoginCallback(url = window.location.href) {
   const user = await oidcManager.signinRedirectCallback(url);
+  completeLoginStart(storage);
   const state = user.state as { returnTo?: string } | undefined;
   return { user, returnTo: safeReturnTo(state?.returnTo || DEFAULT_ROUTE) };
 }
 
 export function clearTemporaryAuthState() {
   storage.removeItem(DRAFT_KEY);
+  storage.removeItem(AUTH_NOTICE_KEY);
+  clearRecoveryState(storage);
   for (let index = storage.length - 1; index >= 0; index--) {
     const key = storage.key(index);
     if (key?.startsWith(STATE_PREFIX)) storage.removeItem(key);
@@ -75,10 +117,53 @@ export function clearTemporaryAuthState() {
 }
 
 export async function signOut() {
-  const user = await oidcManager.getUser();
-  await oidcManager.removeUser();
-  clearTemporaryAuthState();
+  const user = await oidcManager.getUser().catch(() => null);
+  redirecting = true;
+  clearAuthenticatedUi?.();
+  try {
+    await oidcManager.removeUser();
+  } finally {
+    clearTemporaryAuthState();
+  }
   await oidcManager.signoutRedirect({ id_token_hint: user?.id_token });
+}
+
+export function consumeAuthNotice() {
+  const notice = storage.getItem(AUTH_NOTICE_KEY);
+  storage.removeItem(AUTH_NOTICE_KEY);
+  return notice;
+}
+
+export async function startLoginForUnavailable(reason: 'missing' | 'expired') {
+  if (redirecting || !claimLoginStart(storage)) return false;
+  redirecting = true;
+  preserveCustomerDraft();
+  storage.setItem(AUTH_NOTICE_KEY, reason);
+  try {
+    await startLogin();
+    return true;
+  } catch (error) {
+    storage.removeItem(LOGIN_START_KEY);
+    redirecting = false;
+    throw error;
+  }
+}
+
+export async function restartLoginAfterUnauthorized() {
+  if (redirecting || !claimUnauthorizedRestart(storage)) return false;
+  redirecting = true;
+  preserveCustomerDraft();
+  storage.setItem(AUTH_NOTICE_KEY, 'unauthorized');
+  clearAuthenticatedUi?.();
+  try {
+    await oidcManager.removeUser();
+    await startLogin();
+    return true;
+  } catch (error) {
+    storage.removeItem(UNAUTHORIZED_RESTART_KEY);
+    redirecting = false;
+    throw error;
+  }
 }
 
 export async function getAccessTokenFromMemory() {

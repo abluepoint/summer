@@ -6,6 +6,15 @@ import {
   safeReturnTo,
   saveCustomerDraft,
   consumeCustomerDraft,
+  LOGIN_START_KEY,
+  UNAUTHORIZED_RESTART_KEY,
+  claimLoginStart,
+  completeLoginStart,
+  claimUnauthorizedRestart,
+  completeAuthenticatedRequest,
+  clearRecoveryState,
+  isBusinessApi,
+  classifyBusinessFailure,
 } from '../src/auth/recovery.mjs';
 
 function memoryStorage() {
@@ -72,4 +81,37 @@ test('invalid interrupted draft is discarded', () => {
   storage.setItem(DRAFT_KEY, '{');
   assert.equal(consumeCustomerDraft(storage), undefined);
   assert.equal(storage.getItem(DRAFT_KEY), null);
+});
+
+test('missing or expired token starts one login until callback completes', () => {
+  const storage = memoryStorage();
+  assert.equal(claimLoginStart(storage), true);
+  assert.equal(storage.getItem(LOGIN_START_KEY), '1');
+  assert.equal(claimLoginStart(storage), false);
+  completeLoginStart(storage);
+  assert.equal(claimLoginStart(storage), true);
+});
+
+test('401 restart is single-use until a successful business response', () => {
+  const storage = memoryStorage();
+  assert.equal(claimUnauthorizedRestart(storage), true);
+  assert.equal(claimUnauthorizedRestart(storage), false);
+  assert.equal(storage.getItem(UNAUTHORIZED_RESTART_KEY), '1');
+  completeLoginStart(storage);
+  assert.equal(claimUnauthorizedRestart(storage), false);
+  completeAuthenticatedRequest(storage);
+  assert.equal(claimUnauthorizedRestart(storage), true);
+  clearRecoveryState(storage);
+  assert.equal(storage.getItem(UNAUTHORIZED_RESTART_KEY), null);
+});
+
+test('business API failures distinguish 401, 403, and network errors', () => {
+  assert.equal(isBusinessApi('/api/customers'), true);
+  assert.equal(isBusinessApi('/api/customers?size=20'), true);
+  assert.equal(isBusinessApi('/oauth2/token'), false);
+  assert.equal(isBusinessApi('/apiary'), false);
+  assert.equal(classifyBusinessFailure(401, true), 'unauthorized');
+  assert.equal(classifyBusinessFailure(403, true), 'forbidden');
+  assert.equal(classifyBusinessFailure(undefined, false), 'network');
+  assert.equal(classifyBusinessFailure(409, true), 'other');
 });

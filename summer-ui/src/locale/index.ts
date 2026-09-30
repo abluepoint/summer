@@ -76,6 +76,15 @@ const i18n = {
     'oauth2.callback.backToLogin': 'Back to sign in',
     'auth.startFailed':
       'Authentication could not be started. Please reload the page.',
+    'auth.missing': 'No active token was found. Sign in to continue.',
+    'auth.expired': 'Your token expired. Sign in to continue.',
+    'auth.reauthenticated':
+      'Sign in completed. Review and resubmit any unsaved change.',
+    'auth.restartLimit':
+      'Authentication is still unavailable. Sign in manually; no request was sent again.',
+    'auth.forbidden': 'You do not have permission for this action.',
+    'auth.networkFailure':
+      'Network error. Check your connection and try again.',
   },
   'zh-CN': {
     'menu.welcome': '欢迎',
@@ -152,6 +161,12 @@ const i18n = {
     'oauth2.callback.failed': '无法验证登录，请重新开始。',
     'oauth2.callback.backToLogin': '返回登录',
     'auth.startFailed': '无法发起登录，请刷新页面重试。',
+    'auth.missing': '未找到有效令牌，请登录后继续。',
+    'auth.expired': '令牌已过期，请登录后继续。',
+    'auth.reauthenticated': '已重新登录。请检查未保存的修改并手动重新提交。',
+    'auth.restartLimit': '认证仍不可用。请手动登录；请求不会自动重发。',
+    'auth.forbidden': '您没有执行此操作的权限。',
+    'auth.networkFailure': '网络请求失败，请检查连接后重试。',
   },
 };
 
