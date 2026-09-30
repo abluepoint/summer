@@ -95,6 +95,7 @@ test('edit recovery persists only target, fields and original values', () => {
     editUsername: 'alice',
     originalEmail: 'old@example.test',
     originalDisplayName: 'Old',
+    mode: 'modal',
     access_token: 'sensitive',
     password: 'sensitive',
   });
@@ -107,8 +108,12 @@ test('edit recovery persists only target, fields and original values', () => {
       'originalDisplayName',
       'originalEmail',
       'username',
+      'mode',
     ].sort()
   );
+  assert.equal(readCustomerDraft(storage).mode, 'modal');
+  saveCustomerDraft(storage, { editUsername: 'alice', mode: 'invalid' });
+  assert.deepEqual(readCustomerDraft(storage), { editUsername: 'alice' });
 });
 
 test('missing or expired token starts one login until callback completes', () => {

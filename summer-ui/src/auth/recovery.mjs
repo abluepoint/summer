@@ -75,9 +75,11 @@ export function saveCustomerDraft(storage, draft) {
     'editUsername',
     'originalEmail',
     'originalDisplayName',
+    'mode',
   ]) {
     if (
-      typeof draft?.[key] === 'string' ||
+      (key === 'mode' && ['drawer', 'modal'].includes(draft?.[key])) ||
+      (key !== 'mode' && typeof draft?.[key] === 'string') ||
       (key === 'active' && typeof draft?.[key] === 'boolean')
     ) {
       allowed[key] = draft[key];

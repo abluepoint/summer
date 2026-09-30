@@ -33,7 +33,8 @@ user survives. Only OIDC transaction state and an allowlisted
 Customer draft use `sessionStorage`; access and ID Tokens stay in
 `oidc-client-ts`'s in-memory user store. Create recovery stores the three form
 fields. Edit recovery also stores the target username and original email/name
-so the restored form can calculate a minimal PATCH. The draft remains until
+and the Drawer/Modal mode so the restored form can calculate a minimal PATCH
+and reopen the same form. The draft remains until
 the user saves or discards it. Callback failure and logout clear transaction
 and draft state. Reloading a protected route starts a new PKCE flow; no write
 request is replayed. UserInfo is not requested.
@@ -58,7 +59,8 @@ passed, lint exited with 0 errors and 40 existing example-page warnings, and
 the production build passed. The backend PKCE integration class passed 2/2.
 The browser suite passed the successful login/logout path and three invalid
 callback variants against Summer Sample's H2-backed local process. PostgreSQL
-and the later Customer UI flows remain separate acceptance gates.
+and the later Customer UI flows are covered by the #93 deployment acceptance
+record in `docs/guides/summer4-deployment-93.md`.
 
 The #85 implementation can be reverted as one commit. Stop the UI and backend
 first, revert that commit, reinstall with the prior `yarn.lock`, and restart.

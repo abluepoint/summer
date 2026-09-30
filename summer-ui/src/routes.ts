@@ -181,6 +181,12 @@ export const routes: IRoute[] = [
     ],
   },
   {
+    name: 'customer.detail',
+    key: 'customer/detail',
+    ignore: true,
+    breadcrumb: false,
+  },
+  {
     name: 'menu.oauth2Callback',
     key: 'oauth2/callback',
     ignore: true,

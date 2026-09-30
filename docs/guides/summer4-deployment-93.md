@@ -48,15 +48,48 @@ HTTP origin，然后运行 `caddy run --config summer-ui/deploy/Caddyfile`。Cad
 | #69 AC61–63；ADR 0014/0015 | Vite 同源代理、Caddy 可运行配置、deep link 与 callback 优先级、外部 issuer 矩阵、独立构建检查 |
 | #69 AC08/AC13；`CONTEXT.md` Customer username；ADR 0016 | `CustomerParameterConfiguration` 与共享 `CustomerForm` 均使用 `^[a-z0-9](?:[a-z0-9._-]{1,62}[a-z0-9])$`；MockMvc 和前端单测覆盖大小写、点、首尾符号及 3/64/65 长度边界 |
 | #69 AC07/AC11 输入保真 | 新建表单不裁剪 displayName；email 与 displayName 原样校验、提交和存储 |
+| #69 AC03/AC55 | Sample 种子用户名为 `summer.demo`；三个 Customer 模式从各自列表进入 `/customer/detail/:username`，保留查询参数和返回来源；Drawer 显示六维取舍与模式入口，Modal/Page 保留各自说明 |
+| #69 AC41–45；ADR 0023 | 401 后仅保存白名单内的表单草稿与 Modal/Drawer 模式，重新登录后恢复编辑且不自动重放写请求；短会话重新登录和内存 Token 边界由真实浏览器验证 |
 | #70 TS-QA | 后端、前端、模块边界、真实 PostgreSQL 浏览器和静态代理各自报告，不互相替代 |
 
-## 当前阶段证据与待合并项
+## 三种交互模式对比
 
-在 #91 页面模式并入前，#93 的前后端 username 合同红灯已复现，修正后
-MockMvc 专项 1/1、前端单测 17/17 通过。Vite 与 Caddy 路由测试各 12/12 请求
-通过；前端 typecheck、stylelint、production build 通过，lint 为 0 错误、
-40 条既有官方示例警告。Caddy 配置在 `caddy:2` 中通过解析和启动。上述路由
-测试使用假后端，完整真实 PostgreSQL 浏览器 E2E 待 #91 并入后另行记录。
+| 模式 | 操作效率 | 列表上下文 | 表单容量 | 390px 窄屏 | 键盘与焦点 | 导航与分享 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Drawer | 同页打开，适合短表单 | 关闭后保留筛选与分页 | 侧边宽度有限 | 抽屉铺满可用宽度 | 自动聚焦；脏草稿离开确认 | 列表 URL 保留状态，详情使用统一 username 深链接 |
+| Modal | 同页居中处理，适合短任务 | 遮罩下仍能辨认列表 | 空间最有限 | 宽度随视口收缩 | Tab 焦点锁定；Esc/遮罩与脏草稿确认 | 列表 URL 保留状态，详情使用统一 username 深链接 |
+| Page | 独立页面，适合更长表单 | 离开列表但返回时恢复完整 URL | 可用空间最大 | 表单卡片收缩，无页面横向溢出 | 键盘提交、首错聚焦与导航拦截 | 创建/编辑路由可直达和刷新；`from` 保留来源 |
+
+三个模式共用 `CustomerForm`、Customer API、username 校验和错误映射；选择取决于
+表单长度、列表参照需求与是否需要直接分享编辑入口。以上是实现行为与浏览器
+验收观察，非用户绩效量化结论。
+
+## 验收证据
+
+2026-09-30 在包含 #91 的 `summer4` 基线 `ce9547f` 上验证：
+
+| 门禁 | 结果 |
+| --- | --- |
+| `./gradlew check :summer-sample:bootJar --rerun-tasks` | 142 tests，0 failure/error/skipped；执行 `verifyModuleBoundaries`、`ModulithArchitectureTest`、`summer-security-autoconfigure:test`；Gradle 未调用 npm/Yarn，JAR 不含前端 dist |
+| `yarn test`、`typecheck`、`lint`、`lint:style`、`build` | 19 tests，均通过；lint 0 error，40 条官方示例基线 warning |
+| `yarn test:proxy`、`test:proxy:production` | Vite 与 Caddy 各 12/12 条真实 HTTP 分流通过，包括 callback、POST login、SPA deep link |
+| `yarn test:mock-boundary` | 官方示例 Mock 开关有效；Summer API 始终走后端 |
+| `test:e2e:auth`、`recovery`、`customer`、`delete`、`customer-create`、`customer-edit`、`customer-modal`、`customer-page`、`quality` | 真实 PostgreSQL + Spring + Mock 关闭的本地同源 Vite，九套浏览器脚本通过；含 OIDC PKCE、失败分类、无写请求重放、三种 Customer 模式、桌面/390px、控制台与网络、同源及 Token 存储检查 |
+| `test:e2e:session-expiry` | 独立的 15 秒服务端 session 配置；等待服务端超时粒度后，新登录流程和原路径恢复通过 |
+
+真实浏览器脚本在本地独立的 `127.0.0.1:5193` 与 `127.0.0.1:8093` 进程运行，
+数据库是临时 PostgreSQL。受控 400/401/403/409/500 和网络故障由浏览器拦截，
+正常 CRUD 与种子数据读取落在真实后端。`caddy:2` 容器测试使用构建后的 dist
+及假后端，仅证明代理配置的路径分流。测试脚本创建的 Customer 已清理。
+
+## 审阅与发布边界
+
+以 `ce9547f` 为固定审阅点，按仓库规矩、`CONTEXT.md`、ADR 0014/0015/0016/0023
+检查了模块界线、公开 username 合同、OIDC 单 origin、会话与草稿存储边界；
+再按 Issue #93 和 #69/#70 验收项核对路由、三模式、构建与部署测试。
+`git diff --check` 无空白错误；标准轴和需求轴均未发现阻断项。
+此次只提供部署配置与本地验收证据，未执行公开域名部署。实际发布时仍须验证
+目标环境 DNS/TLS、反向代理、外部 issuer/redirect 和持久数据库迁移。
 
 ## 回滚
 

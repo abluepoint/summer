@@ -4,6 +4,7 @@ import {
   readListState,
   listSearch,
   detailPath,
+  detailSource,
   detailUsername,
   readEnvelope,
   readFailure,
@@ -56,11 +57,21 @@ test('deletion needs exact username and falls back only when the page is gone', 
 test('Customer detail links use username and preserve list state', () => {
   assert.equal(
     detailPath('drawer', 'alice_1', '?page=2'),
-    '/customer/drawer/alice_1?page=2'
+    '/customer/detail/alice_1?page=2'
   );
-  assert.equal(detailUsername('/customer/drawer/alice_1', 'drawer'), 'alice_1');
+  assert.equal(detailUsername('/customer/detail/alice_1', 'drawer'), 'alice_1');
+  assert.equal(detailUsername('/customer/detail/summer.demo', 'page'), 'summer.demo');
+  assert.equal(detailPath('page', 'summer.demo'), '/customer/detail/summer.demo');
   assert.equal(detailUsername('/customer/drawer', 'drawer'), null);
-  assert.equal(detailUsername('/customer/drawer/not%2Fvalid', 'drawer'), null);
+  assert.equal(detailUsername('/customer/detail/not%2Fvalid', 'drawer'), null);
+  assert.equal(detailUsername('/customer/detail/Abc', 'drawer'), null);
+  assert.equal(detailUsername('/customer/detail/abc-', 'drawer'), null);
+  assert.deepEqual(detailSource('/customer/modal?page=2#list'), {
+    mode: 'modal',
+    url: '/customer/modal?page=2#list',
+  });
+  assert.equal(detailSource('//outside.example/customer/modal'), null);
+  assert.equal(detailSource('/customer/modal/other'), null);
 });
 
 test('business envelopes return data and retain request metadata on failure', () => {

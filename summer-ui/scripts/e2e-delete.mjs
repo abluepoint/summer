@@ -32,7 +32,7 @@ try {
   await page.locator('input[autocomplete="current-password"]').fill(password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.waitForURL(`${base}/customer/page`);
-  await page.getByRole('button', { name: 'demo', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'summer.demo', exact: true }).waitFor();
   assert.ok(bearer?.startsWith('Bearer '));
 
   const headers = { Authorization: bearer };
@@ -44,7 +44,7 @@ try {
   assert.equal(created.status(), 200);
 
   try {
-    await page.goto(`${base}/customer/page/${username}`);
+    await page.goto(`${base}/customer/detail/${username}`);
     await page.getByText(email).waitFor();
     await page.getByRole('button', { name: '删除', exact: true }).click();
     const modal = page.getByRole('dialog');
@@ -160,7 +160,7 @@ try {
     });
     assert.equal(reused.status(), 200);
 
-    await page.goto(`${base}/customer/page/${username}`);
+    await page.goto(`${base}/customer/detail/${username}`);
     await page.getByText('Reused username').waitFor();
     await page.getByRole('button', { name: '删除', exact: true }).click();
     await modal.getByPlaceholder('准确的用户名').fill(username);
@@ -189,7 +189,7 @@ try {
     await confirm.click();
     await rejected;
     await callback;
-    await page.waitForURL(`${base}/customer/page/${username}`);
+    await page.waitForURL(`${base}/customer/detail/${username}`);
     await page.getByText('Reused username').waitFor();
     assert.equal(unauthorizedDeletes, 1, '401 must not replay DELETE');
     assert.equal(

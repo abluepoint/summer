@@ -63,7 +63,7 @@ try {
   created = true;
   await page.getByPlaceholder('输入完整用户名').fill(username);
   await page.getByRole('button', { name: '查询' }).click();
-  await page.waitForURL(`${base}/customer/drawer/${username}${search}`);
+  await page.waitForURL(`${base}/customer/detail/${username}${search}`);
   await page.getByText('Edit original').waitFor();
 
   await edit().click();
@@ -82,7 +82,7 @@ try {
   await prompt.dismiss();
   await page.waitForTimeout(200);
   stage = 'dirty navigation path';
-  assert.equal(new URL(page.url()).pathname, `/customer/drawer/${username}`);
+  assert.equal(new URL(page.url()).pathname, `/customer/detail/${username}`);
   stage = 'dirty navigation draft';
   assert.equal(
     await field('邮箱').inputValue(),
@@ -209,7 +209,7 @@ try {
   stage = 'recovery authorize';
   await authorize;
   stage = 'recovery callback';
-  await page.waitForURL(`${base}/customer/drawer/${username}${search}`, {
+  await page.waitForURL(`${base}/customer/detail/${username}${search}`, {
     waitUntil: 'domcontentloaded',
   });
   stage = 'recovery draft';

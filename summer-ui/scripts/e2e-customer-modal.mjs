@@ -152,7 +152,7 @@ try {
   stage = 'real edit';
   await page.getByPlaceholder('输入完整用户名').fill(username);
   await page.getByRole('button', { name: '查询' }).click();
-  await page.waitForURL(`${base}/customer/modal/${username}${search}`);
+  await page.waitForURL(`${base}/customer/detail/${username}${search}`);
   await page.getByRole('button', { name: '编辑', exact: true }).click();
   assert.equal(await field('用户名').getAttribute('readonly'), '');
   assert.equal(await save().isDisabled(), true);
@@ -211,7 +211,7 @@ try {
   });
   const before401 = patches.length;
   await save().click();
-  await page.waitForURL(`${base}/customer/modal/${username}${search}`);
+  await page.waitForURL(`${base}/customer/detail/${username}${search}`);
   await field('名称').waitFor();
   assert.equal(await field('名称').inputValue(), 'After login');
   assert.equal(patches.length, before401 + 1, '401 must not replay PATCH');
@@ -227,7 +227,7 @@ try {
   console.log('Modal create/edit browser acceptance passed');
 } catch (error) {
   console.error(
-    `Modal browser acceptance failed at ${stage}: ${error.message}`
+    `Modal browser acceptance failed at ${stage}: ${error.name}`
   );
   throw error;
 } finally {

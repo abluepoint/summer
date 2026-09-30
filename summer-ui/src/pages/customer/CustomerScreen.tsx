@@ -104,7 +104,7 @@ function ErrorNotice({
   );
 }
 
-export default function CustomerScreen({ mode }: { mode: Mode }) {
+export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; sourceUrl?: string }) {
   const t = useLocale();
   const history = useHistory();
   const location = useLocation();
@@ -176,11 +176,12 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
     if (!editOriginal) return undefined;
     return registerCustomerDraftProvider(() => ({
       ...editDraft,
+      mode,
       editUsername: editOriginal.username,
       originalEmail: editOriginal.email,
       originalDisplayName: editOriginal.displayName,
     }));
-  }, [editOriginal, editDraft]);
+  }, [editOriginal, editDraft, mode]);
 
   useEffect(() => {
     if (!editOriginal || !isEditDirty(editOriginal, editDraft))
@@ -402,7 +403,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       setCustomer(null);
       if (editOriginal?.username === deleteTarget) closeEdit();
       if (isDetailRoute) {
-        history.replace(`/customer/${mode}${location.search}`);
+        history.replace(sourceUrl || `/customer/${mode}${location.search}`);
       } else {
         const nextPage = pageAfterDeletion(
           state.page,
@@ -487,10 +488,16 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
   function openUsername() {
     const value = lookup.trim();
     try {
-      history.push(detailPath(mode, value, location.search));
+      openDetail(value);
     } catch {
       setLookupError(true);
     }
+  }
+
+  function openDetail(username: string) {
+    history.push(detailPath(mode, username, location.search), {
+      from: `${location.pathname}${location.search}${location.hash}`,
+    });
   }
 
   function openPageCreate() {
@@ -509,7 +516,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       render: (value: string) => (
         <Button
           type="text"
-          onClick={() => history.push(detailPath(mode, value, location.search))}
+          onClick={() => openDetail(value)}
         >
           {value}
         </Button>
@@ -530,6 +537,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       ? [
           {
             title: t['customer.actions'],
+            key: 'actions',
             dataIndex: 'username',
             render: (username: string, record: Customer) => (
               <Space>
@@ -556,6 +564,25 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
 
   return (
     <Card title={detail ? t['customer.detail'] : t['customer.list']}>
+      {mode === 'drawer' && !isDetailRoute && (
+        <Alert
+          type="info"
+          style={{ marginBottom: 16 }}
+          content={
+            <Space direction="vertical">
+              <Typography.Text>{t['customer.drawer.guide']}</Typography.Text>
+              <Space wrap>
+                <Button size="mini" onClick={() => history.push(`/customer/modal${location.search}`)}>
+                  {t['menu.customer.modal']}
+                </Button>
+                <Button size="mini" onClick={() => history.push(`/customer/page${location.search}`)}>
+                  {t['menu.customer.page']}
+                </Button>
+              </Space>
+            </Space>
+          }
+        />
+      )}
       {mode === 'modal' && (
         <Alert
           type="info"
@@ -620,7 +647,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
       {isDetailRoute && (
         <Button
           style={{ marginBottom: 16 }}
-          onClick={() => history.push(`/customer/${mode}${location.search}`)}
+          onClick={() => history.push(sourceUrl || `/customer/${mode}${location.search}`)}
         >
           {t['customer.back']}
         </Button>
@@ -806,11 +833,7 @@ export default function CustomerScreen({ mode }: { mode: Mode }) {
                         value: (
                           <Button
                             type="text"
-                            onClick={() =>
-                              history.push(
-                                detailPath(mode, item.username, location.search)
-                              )
-                            }
+                            onClick={() => openDetail(item.username)}
                           >
                             {item.username}
                           </Button>

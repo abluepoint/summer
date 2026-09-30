@@ -31,12 +31,12 @@ try {
   await page.waitForURL(
     `${base}/customer/page?page=0&size=20&sort=username&direction=asc`
   );
-  await page.getByRole('button', { name: 'demo', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'summer.demo', exact: true }).waitFor();
   if (process.env.SUMMER_E2E_SCREENSHOTS === '1')
     await page.screenshot({ path: '.e2e-list.png', fullPage: true });
-  await page.getByRole('button', { name: 'demo', exact: true }).click();
+  await page.getByRole('button', { name: 'summer.demo', exact: true }).click();
   await page.waitForURL(
-    `${base}/customer/page/demo?page=0&size=20&sort=username&direction=asc`
+    `${base}/customer/detail/summer.demo?page=0&size=20&sort=username&direction=asc`
   );
   await page.getByText('demo@summer.local').waitFor();
   if (process.env.SUMMER_E2E_SCREENSHOTS === '1')
@@ -62,7 +62,7 @@ try {
   await page.getByPlaceholder('输入完整用户名').fill('missing');
   await page.getByRole('button', { name: '查询' }).click();
   await page.waitForURL(
-    `${base}/customer/page/missing?page=0&size=20&sort=username&direction=asc`
+    `${base}/customer/detail/missing?page=0&size=20&sort=username&direction=asc`
   );
   await page.getByText('客户不存在。').waitFor();
   await page.getByText(/requestId:/).waitFor();
@@ -89,8 +89,8 @@ try {
   await page.getByText('暂无数据').waitFor();
   for (const mode of ['drawer', 'modal']) {
     await page.goto(`${base}/customer/${mode}`);
-    await page.getByRole('button', { name: 'demo', exact: true }).click();
-    await page.waitForURL(`${base}/customer/${mode}/demo`);
+    await page.getByRole('button', { name: 'summer.demo', exact: true }).click();
+    await page.waitForURL(`${base}/customer/detail/summer.demo`);
     await page.getByText('demo@summer.local').waitFor();
   }
 
@@ -134,7 +134,7 @@ try {
   );
   await page.getByRole('button', { name: '重试' }).click();
   await page.getByText('客户列表').waitFor();
-  await page.getByRole('button', { name: 'demo', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'summer.demo', exact: true }).waitFor();
   assert.equal(unauthorizedCount, 1, 'one 401 should restart PKCE only once');
   assert.deepEqual(
     unexpected,
