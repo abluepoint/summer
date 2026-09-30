@@ -143,6 +143,9 @@ try {
   await drawer().waitFor({ state: 'hidden' });
   stage = 'list payload';
   assert.deepEqual(patchBodies.at(-1), { displayName: 'Edited from list' });
+  const editedFromList = await page.request.get(customerUrl, { headers: headers() });
+  assert.equal(editedFromList.status(), 200);
+  assert.equal((await editedFromList.json()).data.displayName, 'Edited from list');
   assert.equal(
     new URL(page.url()).search,
     search,
@@ -153,8 +156,10 @@ try {
   stage = 'list detail content';
   await page.getByText('Edited from list').waitFor();
 
+  stage = 'missing target edit';
   await edit().click();
   await field('名称').fill('Missing target draft');
+  stage = 'missing target route';
   await page.route(
     customerUrl,
     (route) =>
@@ -167,7 +172,9 @@ try {
         : route.continue(),
     { times: 1 }
   );
+  stage = 'missing target save';
   await save().click();
+  stage = 'missing target alert';
   await drawer()
     .getByText('此客户已不存在。草稿会保留至您放弃本次编辑。')
     .waitFor();
@@ -176,6 +183,7 @@ try {
   await page.getByRole('button', { name: '放弃', exact: true }).click();
   await drawer().waitFor({ state: 'hidden' });
 
+  stage = 'recovery edit';
   await edit().click();
   await field('名称').fill('Recovered edit');
   const beforeUnauthorized = patchBodies.length;
@@ -196,11 +204,15 @@ try {
   const authorize = page.waitForRequest(
     (request) => new URL(request.url()).pathname === '/oauth2/authorize'
   );
+  stage = 'recovery save';
   await save().click();
+  stage = 'recovery authorize';
   await authorize;
+  stage = 'recovery callback';
   await page.waitForURL(`${base}/customer/drawer/${username}${search}`, {
     waitUntil: 'domcontentloaded',
   });
+  stage = 'recovery draft';
   await field('名称').waitFor();
   assert.equal(await field('名称').inputValue(), 'Recovered edit');
   assert.equal(unauthorizedPatches, 1, 'PATCH must not replay after sign in');
@@ -211,21 +223,25 @@ try {
   );
   assert.deepEqual(patchBodies.at(-1), { displayName: 'Recovered edit' });
   await save().click();
+  stage = 'recovery final save';
   await drawer().waitFor({ state: 'hidden' });
   response = await page.request.get(customerUrl, { headers: headers() });
   assert.equal((await response.json()).data.displayName, 'Recovered edit');
 
+  stage = 'deactivate';
   await page.getByRole('button', { name: '停用', exact: true }).click();
   await page.getByRole('button', { name: '停用', exact: true }).last().click();
   await page.getByRole('button', { name: '启用', exact: true }).waitFor();
   assert.deepEqual(patchBodies.at(-1), { active: false });
   response = await page.request.get(customerUrl, { headers: headers() });
   assert.equal((await response.json()).data.active, false);
+  stage = 'activate';
   await page.getByRole('button', { name: '启用', exact: true }).click();
   await page.getByRole('button', { name: '启用', exact: true }).last().click();
   await page.getByRole('button', { name: '停用', exact: true }).waitFor();
   assert.deepEqual(patchBodies.at(-1), { active: true });
 
+  stage = 'narrow edit';
   await page.setViewportSize({ width: 390, height: 844 });
   await edit().click();
   await page.waitForTimeout(550);
