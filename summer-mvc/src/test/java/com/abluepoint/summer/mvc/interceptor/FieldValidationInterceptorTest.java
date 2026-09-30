@@ -114,6 +114,61 @@ class FieldValidationInterceptorTest {
     }
 
     @Test
+    void ordersParameterFieldListValuesByIndexInsteadOfParameterOrder() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle",
+                        new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("items[1].quantity", "5");
+        request.addParameter("items[1].sku", "B-2");
+        request.addParameter("items[0].quantity", "2");
+        request.addParameter("items[0].sku", "A-1");
+
+        interceptor.preHandle(
+                request,
+                new MockHttpServletResponse(),
+                new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
+        );
+
+        assertThat(FieldValues.from(request).asMap().get("items")).isEqualTo(List.of(
+                Map.of("sku", "A-1", "quantity", 2),
+                Map.of("sku", "B-2", "quantity", 5)
+        ));
+    }
+
+    @Test
+    void rejectsLegacyCollectionCountParameters() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle",
+                        new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("items.count", "1");
+        request.addParameter("items[0].sku", "A-1");
+        request.addParameter("items[0].quantity", "2");
+
+        assertThatThrownBy(() -> interceptor.preHandle(
+                request,
+                new MockHttpServletResponse(),
+                new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
+        )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
+                assertThat(exception.violations()).contains(
+                        new FieldValidationException.Violation("items.count", "is not allowed")
+                ));
+    }
+
+    @Test
     void rejectsFieldListsFromPathVariables() throws Exception {
         FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
                 new StyleRegistry(Map.of(

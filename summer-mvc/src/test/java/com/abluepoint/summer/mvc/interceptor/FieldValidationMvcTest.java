@@ -204,6 +204,110 @@ class FieldValidationMvcTest {
     }
 
     @Test
+    void exportsFormFieldListsInIndexOrderWithTypedValues() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle",
+                        new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldController())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/form-items")
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("items[1].quantity", "5")
+                        .param("items[1].sku", "B-2")
+                        .param("items[0].quantity", "2")
+                        .param("items[0].sku", "A-1"))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(200);
+        assertThat(result.getResponse().getContentAsString()).isEqualTo(
+                "[{sku=A-1, quantity=2}, {sku=B-2, quantity=5}]"
+        );
+    }
+
+    @Test
+    void rejectsFormFieldListGapsWithTheUnifiedBadRequestContract() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle",
+                        new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        ApiExceptionHandler exceptionHandler = new ApiExceptionHandler(
+                (errorCode, arguments, locale) -> errorCode.defaultMessage(),
+                new DefaultErrorStatusResolver(),
+                () -> "request-form-list-gap"
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldController())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .setControllerAdvice(exceptionHandler)
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/form-items")
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("items[0].sku", "A-1")
+                        .param("items[0].quantity", "2")
+                        .param("items[2].sku", "C-3")
+                        .param("items[2].quantity", "4"))
+                .andReturn();
+
+        JsonNode response = new ObjectMapper().readTree(result.getResponse().getContentAsString());
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(response.get("error").get("code").asString()).isEqualTo("SUMMER_INVALID_ARGUMENT");
+        assertThat(response.get("error").get("violations").toString()).isEqualTo(
+                "[{\"field\":\"items\",\"message\":\"indexes must start at 0 and be contiguous\"}]"
+        );
+    }
+
+    @Test
+    void rejectsFormFieldListCountMarkersAsUnknownFields() throws Exception {
+        FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
+                new StyleRegistry(Map.of(
+                        "integerStyle",
+                        new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("-?\\d+")),
+                        "textStyle",
+                        new PatternStyle(String.class, "text", Map.of(), Pattern.compile(".*\\S.*"))
+                )),
+                100
+        );
+        ApiExceptionHandler exceptionHandler = new ApiExceptionHandler(
+                (errorCode, arguments, locale) -> errorCode.defaultMessage(),
+                new DefaultErrorStatusResolver(),
+                () -> "request-form-list-count"
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldController())
+                .addInterceptors(interceptor)
+                .setCustomArgumentResolvers(new FieldValuesArgumentResolver())
+                .setControllerAdvice(exceptionHandler)
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/form-items")
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("items.count", "1")
+                        .param("items[0].sku", "A-1")
+                        .param("items[0].quantity", "2"))
+                .andReturn();
+
+        JsonNode response = new ObjectMapper().readTree(result.getResponse().getContentAsString());
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(response.get("error").get("violations").toString()).contains(
+                "{\"field\":\"items.count\",\"message\":\"is not allowed\"}"
+        );
+    }
+
+    @Test
     void rejectsFieldListsFromPathVariables() throws Exception {
         FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
                 new StyleRegistry(Map.of(
@@ -922,6 +1026,18 @@ class FieldValidationMvcTest {
         @Field(param = "age", required = true, style = "integerStyle")
         Integer formField(FieldValues values) {
             return values.get("age", Integer.class);
+        }
+
+        @PostMapping("/form-items")
+        @FieldList(
+                param = "items",
+                items = {
+                        @Field(param = "sku", name = "sku", required = true, style = "textStyle"),
+                        @Field(param = "quantity", name = "quantity", required = true, style = "integerStyle")
+                }
+        )
+        String formItems(FieldValues values) {
+            return values.get("items", List.class).toString();
         }
 
         @GetMapping("/customers/{customerId}")

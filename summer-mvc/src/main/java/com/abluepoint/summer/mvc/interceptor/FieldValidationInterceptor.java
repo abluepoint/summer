@@ -206,8 +206,17 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         for (String parameter : request.getParameterMap().keySet()) {
             Matcher matcher = itemPattern.matcher(parameter);
             if (matcher.matches()) {
-                indexes.put(Integer.parseInt(matcher.group(1)), Boolean.TRUE);
+                try {
+                    indexes.put(Integer.parseInt(matcher.group(1)), Boolean.TRUE);
+                } catch (NumberFormatException exception) {
+                    violations.add(new FieldValidationException.Violation(
+                            parameter, "index must be a valid non-negative integer"
+                    ));
+                }
             }
+        }
+        if (!violations.isEmpty()) {
+            return;
         }
         if (indexes.isEmpty()) {
             violations.add(new FieldValidationException.Violation(
