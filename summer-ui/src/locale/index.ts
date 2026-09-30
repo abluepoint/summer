@@ -117,6 +117,9 @@ const i18n = {
     'customer.create.discardMessage': 'The entered fields will be lost.',
     'customer.create.discard': 'Discard',
     'customer.create.continue': 'Continue editing',
+    'customer.create.leave': 'Leave and discard the unsaved Customer?',
+    'customer.modal.guide':
+      'Compare operation speed, list context, form capacity, narrow-screen fit, keyboard and focus behavior, and navigation and sharing with the other modes.',
     'customer.edit': 'Edit',
     'customer.edit.title': 'Edit Customer',
     'customer.edit.submit': 'Save changes',
@@ -281,6 +284,9 @@ const i18n = {
     'customer.create.discardMessage': '已填写的内容将会丢失。',
     'customer.create.discard': '放弃',
     'customer.create.continue': '继续编辑',
+    'customer.create.leave': '离开并放弃未保存的客户？',
+    'customer.modal.guide':
+      '可从操作效率、列表上下文保留、表单容量、窄屏适配、键盘与焦点、导航与分享六方面对比交互模式。',
     'customer.edit': '编辑',
     'customer.edit.title': '编辑客户',
     'customer.edit.submit': '保存修改',
@@ -289,7 +295,7 @@ const i18n = {
     'customer.edit.discardTitle': '放弃未保存的修改？',
     'customer.edit.discardMessage': '此客户的未保存修改将会丢失。',
     'customer.edit.leave': '离开并放弃未保存的客户修改？',
-    'customer.edit.missing': '此客户已不存在。草稿会保留至您关闭抽屉。',
+    'customer.edit.missing': '此客户已不存在。草稿会保留至您关闭表单。',
     'customer.activate': '启用',
     'customer.activate.title': '启用客户？',
     'customer.activate.message': '此客户将恢复为启用状态。',
