@@ -3,6 +3,7 @@ package com.abluepoint.summer.sample;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -31,6 +32,50 @@ class PublicClientPkceIntegrationTest {
 
     @Autowired
     OAuth2AuthorizationService authorizationService;
+
+    @Value("${summer.security.authorization-server.user.password}")
+    String loginPassword;
+
+    @Test
+    void keepsTwoIndependentBrowserLoginSessionsAuthenticated() throws Exception {
+        java.net.URI authorizationUri = UriComponentsBuilder.fromPath("/oauth2/authorize")
+                .queryParam("response_type", "code")
+                .queryParam("client_id", "summer-ui")
+                .queryParam("redirect_uri", "http://127.0.0.1:5173/oauth2/callback")
+                .queryParam("scope", "openid profile")
+                .queryParam("state", "parallel-session")
+                .queryParam("nonce", "parallel-session")
+                .queryParam("code_challenge", "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+                .queryParam("code_challenge_method", "S256")
+                .build().encode().toUri();
+
+        MockHttpSession first = beginAndLogin(authorizationUri);
+        MockHttpSession second = beginAndLogin(authorizationUri);
+        assertThat(first.getId()).isNotEqualTo(second.getId());
+        assertThat(first.isInvalid()).isFalse();
+        assertThat(second.isInvalid()).isFalse();
+
+        for (MockHttpSession session : new MockHttpSession[] {first, second}) {
+            mockMvc.perform(get(authorizationUri).session(session).header("Accept", "text/html"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith(
+                            "http://127.0.0.1:5173/oauth2/callback?code=")));
+        }
+    }
+
+    private MockHttpSession beginAndLogin(java.net.URI authorizationUri) throws Exception {
+        MvcResult authorization = mockMvc.perform(get(authorizationUri).header("Accept", "text/html"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/login")))
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) authorization.getRequest().getSession(false);
+        mockMvc.perform(post("/login").session(session)
+                        .param("username", "summer-user")
+                        .param("password", loginPassword)
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        return session;
+    }
 
     @Test
     void completesAuthorizationCodePkceAndKeepsProtocolResponsesRaw() throws Exception {

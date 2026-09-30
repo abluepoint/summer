@@ -30,6 +30,40 @@ async function submitLogin(page) {
 
 try {
   {
+    const firstContext = await browser.newContext();
+    const secondContext = await browser.newContext();
+    try {
+      const first = await firstContext.newPage();
+      const second = await secondContext.newPage();
+      for (const page of [first, second]) {
+        await atLogin(page, '/customer/drawer');
+        await submitLogin(page);
+        await page.waitForURL(`${base}/customer/drawer`, { timeout: 20000 });
+        await page.getByText('客户列表').waitFor();
+      }
+      const firstSession = (await firstContext.cookies()).find(
+        (cookie) => cookie.name === 'JSESSIONID'
+      );
+      const secondSession = (await secondContext.cookies()).find(
+        (cookie) => cookie.name === 'JSESSIONID'
+      );
+      assert.ok(firstSession && secondSession);
+      assert.equal(
+        firstSession.value === secondSession.value,
+        false,
+        'browser contexts must have separate login sessions'
+      );
+      for (const page of [first, second]) {
+        await page.reload();
+        await page.waitForURL(`${base}/customer/drawer`, { timeout: 20000 });
+        await page.getByText('客户列表').waitFor();
+      }
+    } finally {
+      await firstContext.close();
+      await secondContext.close();
+    }
+  }
+  {
     const context = await browser.newContext();
     const page = await context.newPage();
     await atLogin(page, '/customer/page?from=auth-e2e');
@@ -101,6 +135,41 @@ try {
     const context = await browser.newContext();
     const page = await context.newPage();
     await atLogin(page, '/customer/drawer');
+    await submitLogin(page);
+    await page.waitForURL(`${base}/customer/drawer`, { timeout: 20000 });
+    await page.getByText('客户列表').waitFor();
+    await page.evaluate(async () => {
+      const { oidcManager } = await import('/src/auth/oidc.ts');
+      oidcManager.signoutRedirect = async () => {
+        throw new Error('simulated end-session navigation failure');
+      };
+      sessionStorage.setItem('summer.auth.notice', 'expired');
+      sessionStorage.setItem('summer.pkce.customer-draft', 'temporary');
+    });
+    await page.locator('.arco-avatar').click();
+    await page.getByText('退出登录', { exact: true }).click();
+    await page.waitForURL(`${base}/login?logoutError`, { timeout: 20000 });
+    await page.getByText('服务器会话可能仍然有效', { exact: false }).waitFor();
+    const cleared = await page.evaluate(async () => {
+      const { oidcManager } = await import('/src/auth/oidc.ts');
+      return {
+        userMissing: (await oidcManager.getUser()) === null,
+        temporaryKeys: Object.keys(sessionStorage).filter(
+          (key) =>
+            key.startsWith('oidc.') ||
+            key.startsWith('summer.auth.') ||
+            key === 'summer.pkce.customer-draft'
+        ),
+      };
+    });
+    assert.equal(cleared.userMissing, true);
+    assert.deepEqual(cleared.temporaryKeys, []);
+    await context.close();
+  }
+  {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await atLogin(page, '/customer/drawer');
     await page.evaluate(() => {
       for (const key of Object.keys(sessionStorage))
         if (key.startsWith('oidc.')) sessionStorage.removeItem(key);
@@ -131,7 +200,7 @@ try {
     await context.close();
   }
   console.log(
-    'Browser OIDC PKCE success and state, nonce, verifier rejection passed'
+    'Browser OIDC PKCE, concurrent sessions, logout cleanup, and state/nonce/verifier rejection passed'
   );
 } finally {
   await browser.close();
