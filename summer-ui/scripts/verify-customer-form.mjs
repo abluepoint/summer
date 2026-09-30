@@ -33,7 +33,7 @@ test('create fields follow the current backend username, email and name rules', 
       email: 'a@b.test',
       displayName: 'A',
     }),
-    { username: 'username' }
+    {}
   );
   assert.deepEqual(
     validateCustomerDraft({
@@ -49,7 +49,7 @@ test('create fields follow the current backend username, email and name rules', 
       email: 'a@b.test',
       displayName: 'A',
     }),
-    {}
+    { username: 'username' }
   );
   assert.deepEqual(
     customerPayload({
@@ -60,9 +60,41 @@ test('create fields follow the current backend username, email and name rules', 
     {
       username: 'abc',
       email: ' a@b.test ',
-      displayName: 'A',
+      displayName: ' A ',
     }
   );
+});
+
+test('username boundaries match the Summer Customer contract', () => {
+  const valid = ['abc', 'a.b', 'a_b', 'a-b', 'a..b', `a${'b'.repeat(62)}c`];
+  const invalid = [
+    'ab',
+    `a${'b'.repeat(63)}c`,
+    'Abc',
+    'aBc',
+    '.ab',
+    '_ab',
+    '-ab',
+    'ab.',
+    'ab_',
+    'ab-',
+    'a b',
+    'a@b',
+  ];
+  for (const username of valid)
+    assert.equal(
+      validateCustomerDraft({ username, email: 'a@b.test', displayName: 'A' })
+        .username,
+      undefined,
+      username
+    );
+  for (const username of invalid)
+    assert.equal(
+      validateCustomerDraft({ username, email: 'a@b.test', displayName: 'A' })
+        .username,
+      'username',
+      username
+    );
 });
 
 test('edit sends only changed mutable fields and never username or active', () => {

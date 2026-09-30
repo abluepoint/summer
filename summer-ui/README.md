@@ -22,6 +22,8 @@ yarn lint
 yarn lint:style
 yarn test
 yarn build
+yarn test:proxy
+yarn test:proxy:production
 ```
 
 Summer UI 由 Node/Vite 独立构建。Gradle 不调用前端包管理器，也不把
@@ -30,12 +32,13 @@ Summer UI 由 Node/Vite 独立构建。Gradle 不调用前端包管理器，也�
 ## 导航基线
 
 - `Customer` 位于首个业务导航组，当前保留 `/customer/drawer`、
-  `/customer/modal` 和 `/customer/page` 三个后续实现接缝。
+  `/customer/modal` 和 `/customer/page` 三种交互模式。
 - `/oauth2/callback` 完成 OIDC PKCE 回调，不在示例导航中展示。
 - 官方示例路由仍使用其原始 URL，菜单统一放在 `Arco Pro 示例` 下，便于
   对照上游页面和开发 Mock。
 - 默认语言为简体中文，导航栏保留 `zh-CN` 和 `en-US` 切换。
 
 浏览器真实登录、同源代理、令牌存储、验收和回滚说明见
-[`AUTH.md`](./AUTH.md)。Customer 数据交互仍由后续票实现。
+[`AUTH.md`](./AUTH.md)。部署路由、外部 issuer 和完整验收见
+[`docs/guides/summer4-deployment-93.md`](../docs/guides/summer4-deployment-93.md)。
 官方示例可以使用上游开发 Mock；Summer 业务和安全路由没有 Mock 回退。
