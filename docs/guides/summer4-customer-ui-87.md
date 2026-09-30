@@ -1,5 +1,33 @@
 # Issue #87 Customer 列表与详情交付记录
 
+## 2026-09-30 验收补正（基线 `0d343d1`）
+
+复核 #69 AC04/AC24 时，`/customer/list` 落入 wildcard 403；Customer 组件的
+`getAuthenticatedUser()` 与列表或详情 GET 各自异步执行，已登录但缺少
+`customer.read` 的 token 仍会发出读取请求。修正后的 `layout.tsx` 在 Customer
+页面挂载前检查实际 token scope，缺少 read 时直接显示权限提示；无 token 时沿用
+PKCE 单次恢复。`/customer/list` 在路由表中显式 replace 到
+`/customer/drawer`，保留 query/hash。后端 `customer.read` 与
+`customer.write` 的独立授权仍为最终裁决。
+
+`yarn test:e2e:customer-scope` 在独立 PostgreSQL 16、当前 Sample bootJar、
+Mock 关闭的 Vite 同源环境验证：write-only scope 进入 Drawer、Modal、Page、
+详情、页面编辑、页面创建均显示 403 提示，Customer GET 计数为 0，未重新发起
+OIDC 授权；别名保留 query/hash，后退回到原页面；read-only scope 可读取真实
+Customer 列表，创建入口不显示。测试只替换浏览器内存中的 scope 视图，读取请求
+和登录仍连接真实后端，不把它当作后端 write-only 授权证明。原有
+`test:e2e:auth` 与 `test:e2e:customer` 在同一环境通过，分别验证 PKCE 安全
+分支、真实列表/详情及受控 401/403/500。
+
+本次 `yarn test` 为 19 tests、0 failed/skipped；`yarn typecheck`、
+`yarn lint:style`、`yarn build` 通过；`yarn lint` 为 0 errors、40 条既有示例
+warnings。`./gradlew check :summer-sample:bootJar` 成功，Gradle 部分任务来自
+缓存；本次没有后端源码修改。以 `0d343d1` 为固定点做双轴审阅：标准轴核对
+`AGENTS.md`、`CONTEXT.md`、ADR 0014/0015/0023 和既有代码风格；规格轴逐项核对
+#87 及 #69 AC04/AC22–24/AC43–44。两轴均无未解决发现；无新增自定义共享
+业务组件、协议端点改造或 token 持久化。回滚此补正只需回退本次 Customer
+路由门禁、别名和浏览器测试；下方历史交付记录保持可追溯。
+
 后续 #93 将公开详情深链接统一为 `/customer/detail/:username`，Sample 种子用户名
 改为 `summer.demo`；以下表格保留 #87 交付时的历史验收记录。
 

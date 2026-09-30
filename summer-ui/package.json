@@ -11,6 +11,7 @@
     "test:e2e:auth": "node scripts/e2e-auth.mjs",
     "test:e2e:recovery": "node scripts/e2e-auth-recovery.mjs",
     "test:e2e:customer": "node scripts/e2e-customer.mjs",
+    "test:e2e:customer-scope": "node scripts/e2e-customer-scope.mjs",
     "test:e2e:delete": "node scripts/e2e-delete.mjs",
     "test:e2e:customer-create": "node scripts/e2e-customer-create.mjs",
     "test:e2e:customer-edit": "node scripts/e2e-customer-edit.mjs",

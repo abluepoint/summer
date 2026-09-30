@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Switch, Route, Redirect, useHistory } from 'react-router-dom';
-import { Layout, Menu, Breadcrumb, Spin } from '@arco-design/web-react';
+import { Alert, Layout, Menu, Breadcrumb, Spin } from '@arco-design/web-react';
 import cs from 'classnames';
 import {
   IconDashboard,
@@ -26,12 +26,58 @@ import getUrlParams from './utils/getUrlParams';
 import lazyload from './utils/lazyload';
 import { GlobalState } from './store';
 import styles from './style/layout.module.less';
+import {
+  authenticationStatus,
+  getAuthenticatedUser,
+  isAuthRedirecting,
+  startLoginForUnavailable,
+} from './auth/oidc';
 
 const MenuItem = Menu.Item;
 const SubMenu = Menu.SubMenu;
 
 const Sider = Layout.Sider;
 const Content = Layout.Content;
+
+function CustomerReadRoute({ children }: { children: React.ReactNode }) {
+  const locale = useLocale();
+  const [access, setAccess] = useState<
+    'checking' | 'allowed' | 'forbidden' | 'failed' | 'limited'
+  >('checking');
+
+  useEffect(() => {
+    let live = true;
+    getAuthenticatedUser()
+      .then(async (user) => {
+        if (!live) return;
+        if (user) {
+          setAccess(
+            user.scopes.includes('customer.read') ? 'allowed' : 'forbidden'
+          );
+          return;
+        }
+        const reason = await authenticationStatus();
+        const started = await startLoginForUnavailable(
+          reason === 'expired' ? 'expired' : 'missing'
+        );
+        if (live && !started && !isAuthRedirecting()) setAccess('limited');
+      })
+      .catch(() => {
+        if (live) setAccess('failed');
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (access === 'forbidden')
+    return <Alert type="error" content={locale['customer.error.403']} />;
+  if (access === 'failed')
+    return <Alert type="error" content={locale['auth.startFailed']} />;
+  if (access === 'limited')
+    return <Alert type="error" content={locale['auth.restartLimit']} />;
+  return access === 'allowed' ? <>{children}</> : <Spin />;
+}
 
 function getIconFromKey(key) {
   switch (key) {
@@ -266,12 +312,30 @@ function PageLayout() {
               )}
               <Content>
                 <Switch>
+                  <Route
+                    exact
+                    path="/customer/list"
+                    render={({ location }) => (
+                      <Redirect
+                        to={`/customer/drawer${location.search}${location.hash}`}
+                      />
+                    )}
+                  />
                   {flattenRoutes.map((route, index) => {
+                    const Component = route.component;
                     return (
                       <Route
                         key={index}
                         path={`/${route.key}`}
-                        component={route.component}
+                        render={(props) =>
+                          route.key.startsWith('customer/') ? (
+                            <CustomerReadRoute>
+                              <Component {...props} />
+                            </CustomerReadRoute>
+                          ) : (
+                            <Component {...props} />
+                          )
+                        }
                       />
                     );
                   })}
