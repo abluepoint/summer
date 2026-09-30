@@ -14,11 +14,13 @@ const browser = await chromium.launch({
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
 });
 
-async function signedInPage() {
+async function signedInPage(route = '/customer/page?recovery=ready') {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.goto(`${base}/customer/page?recovery=ready`);
-  await page.locator('input[autocomplete="username"]').fill('summer-user');
+  await page.goto(`${base}${route}`);
+  await page
+    .locator('input[autocomplete="username"]')
+    .fill(process.env.SUMMER_E2E_USERNAME || 'summer-user');
   await page.locator('input[autocomplete="current-password"]').fill(password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.getByRole('button', { name: 'demo', exact: true }).waitFor();
@@ -64,6 +66,83 @@ try {
     await page.getByText('网络请求失败，请检查连接后重试。').waitFor();
     assert.equal(authorizationRequests, 0, '403 and network failure keep auth');
     await context.close();
+  }
+
+  {
+    const route = '/customer/drawer?page=0&size=20&sort=username&direction=asc';
+    const { context, page } = await signedInPage(route);
+    const username = `c${Date.now().toString(36)}`;
+    let posts = 0;
+    let writeAuthorization;
+    page.on('request', (request) => {
+      if (
+        request.method() === 'POST' &&
+        new URL(request.url()).pathname === '/api/customers'
+      ) {
+        posts++;
+        if (posts === 2) writeAuthorization = request.headers().authorization;
+      }
+    });
+    const drawer = page.locator('.arco-drawer');
+    const field = (name) => drawer.getByRole('textbox', { name });
+    try {
+      await page.getByRole('button', { name: '新增客户' }).click();
+      await field('用户名').fill(username);
+      await field('邮箱').fill(`${username}@example.test`);
+      await field('名称').fill('Draft before 401');
+      await page.route(
+        '**/api/customers',
+        (requestRoute) => requestRoute.fulfill(failure(401, 'draft-401')),
+        { times: 1 }
+      );
+      const authorize = page.waitForRequest(
+        (request) => new URL(request.url()).pathname === '/oauth2/authorize'
+      );
+      const restoredRead = page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/customers?') &&
+          response.status() === 200
+      );
+      await drawer.getByRole('button', { name: '创建', exact: true }).click();
+      await authorize;
+      await restoredRead;
+      await field('用户名').waitFor();
+      assert.equal(await field('用户名').inputValue(), username);
+      assert.equal(
+        await field('邮箱').inputValue(),
+        `${username}@example.test`
+      );
+      assert.equal(await field('名称').inputValue(), 'Draft before 401');
+      assert.equal(
+        new URL(page.url()).pathname + new URL(page.url()).search,
+        route
+      );
+      await page.waitForTimeout(500);
+      assert.equal(posts, 1, 'restored draft must not replay the failed POST');
+      await field('名称').fill('Draft edited after 401');
+      await drawer.getByRole('button', { name: '创建', exact: true }).click();
+      await drawer.waitFor({ state: 'hidden' });
+      assert.equal(posts, 2, 'manual retry sends exactly one new POST');
+      assert.ok(writeAuthorization, 'manual retry must carry authorization');
+      const saved = await page.request.get(
+        `${base}/api/customers/${username}`,
+        { headers: { Authorization: writeAuthorization } }
+      );
+      assert.equal(saved.status(), 200);
+      assert.equal(
+        (await saved.json()).data.displayName,
+        'Draft edited after 401'
+      );
+    } finally {
+      if (posts === 2 && writeAuthorization) {
+        const removed = await page.request.delete(
+          `${base}/api/customers/${username}`,
+          { headers: { Authorization: writeAuthorization } }
+        );
+        assert.equal(removed.status(), 204, 'test Customer must be removed');
+      }
+      await context.close();
+    }
   }
 
   {
@@ -189,7 +268,7 @@ try {
   }
 
   console.log(
-    'Browser 403, network, missing/expired token, write non-replay, view restore, and 401 limit passed'
+    'Browser 403, network, missing/expired token, draft edit and manual retry without replay, view restore, and 401 limit passed'
   );
 } finally {
   await browser.close();
