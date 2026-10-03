@@ -2,8 +2,6 @@ package com.abluepoint.summer.sample.customer;
 
 import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import com.abluepoint.summer.sample.SampleDataProperties;
-import com.abluepoint.summer.sample.shared.CustomerSummaryView;
-import com.abluepoint.summer.sample.shared.CustomerView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

@@ -36,6 +36,7 @@ summer:
     authorization-server:
       enabled: true
       issuer: ${SUMMER_SAMPLE_ISSUER:http://127.0.0.1:8080}
+      login-page: ${SUMMER_SAMPLE_UI_LOGIN_PAGE:http://127.0.0.1:5173/login}
       user:
         username: ${SUMMER_SAMPLE_USER:summer-user}
         password: ${SUMMER_SAMPLE_USER_PASSWORD:summer-user-demo-only}
@@ -54,6 +55,12 @@ summer:
             - profile
             - customer.read
             - customer.write
+            - capabilities.platform.read
+            - capabilities.enterprise.read
+            - enterprise.members.read
+            - enterprise.members.write
+            - capabilities.platform.read
+            - capabilities.enterprise.read
     resource-server:
       enabled: true
       protected-paths:

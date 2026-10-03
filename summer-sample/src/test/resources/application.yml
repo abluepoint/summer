@@ -16,6 +16,7 @@ summer:
     authorization-server:
       enabled: true
       issuer: http://127.0.0.1:8080
+      login-page: http://127.0.0.1:5173/login
       user:
         username: summer-user
         password: summer-user-demo-only

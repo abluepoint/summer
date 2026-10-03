@@ -88,6 +88,13 @@ class PublicClientPkceIntegrationTest {
     }
 
     @Test
+    void redirectsAbsoluteLoginPageToSummerUi() throws Exception {
+        mockMvc.perform(get("/login").header("Accept", "text/html"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "http://127.0.0.1:5173/login"));
+    }
+
+    @Test
     void registersPublicSummerUiPolicy() {
         RegisteredClient client = clients.findByClientId("summer-ui");
         assertThat(client).isNotNull();

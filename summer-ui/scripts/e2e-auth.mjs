@@ -30,6 +30,25 @@ async function submitLogin(page) {
 
 try {
   {
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      await atLogin(page, '/login');
+      await submitLogin(page);
+      await page.waitForURL(`${base}/dashboard/workplace`, { timeout: 20000 });
+      await page
+        .getByText('欢迎回来，summer-user', { exact: true })
+        .waitFor();
+      assert.equal(
+        await page.getByText('未找到有效令牌，请登录后继续。', { exact: true }).count(),
+        0,
+        'initial route login must not show the missing-token notice after success'
+      );
+    } finally {
+      await context.close();
+    }
+  }
+  {
     const firstContext = await browser.newContext();
     const secondContext = await browser.newContext();
     try {
@@ -138,13 +157,15 @@ try {
     await submitLogin(page);
     await page.waitForURL(`${base}/customer/drawer`, { timeout: 20000 });
     await page.getByText('客户列表').waitFor();
+    await page.evaluate(() => {
+      sessionStorage.setItem('summer.auth.notice', 'expired');
+      sessionStorage.setItem('summer.pkce.customer-draft', 'temporary');
+    });
     await page.evaluate(async () => {
       const { oidcManager } = await import('/src/auth/oidc.ts');
       oidcManager.signoutRedirect = async () => {
         throw new Error('simulated end-session navigation failure');
       };
-      sessionStorage.setItem('summer.auth.notice', 'expired');
-      sessionStorage.setItem('summer.pkce.customer-draft', 'temporary');
     });
     await page.locator('.arco-avatar').click();
     await page.getByText('退出登录', { exact: true }).click();

@@ -1,4 +1,4 @@
-export const DEFAULT_ROUTE = '/customer/drawer';
+export const DEFAULT_ROUTE = '/dashboard/workplace';
 export const DRAFT_KEY = 'summer.pkce.customer-draft';
 export const LOGIN_START_KEY = 'summer.auth.login-started';
 export const UNAUTHORIZED_RESTART_KEY = 'summer.auth.unauthorized-restarted';

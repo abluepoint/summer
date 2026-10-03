@@ -2,7 +2,6 @@ package com.abluepoint.summer.sample.customer;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.sample.shared.CustomerView;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;

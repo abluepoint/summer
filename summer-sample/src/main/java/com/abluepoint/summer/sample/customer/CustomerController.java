@@ -4,7 +4,6 @@ import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.validate.FieldValues;
-import com.abluepoint.summer.sample.shared.CustomerView;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

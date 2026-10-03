@@ -82,7 +82,7 @@ Expand Summer Sample Customer into a complete CRUD reference. Use Repository per
 - JSON Parameter contracts require request-body caching. An application configuration that enables JSON Field support while disabling caching fails during startup with a clear configuration message.
 - The existing ObjectMapper managed by Spring is reused; the framework does not construct a private mapper.
 - JSON Field validation and DTO Jakarta Bean Validation coexist. Field/Style owns the transport-field whitelist, reusable Style validation, conversion and aggregate Field violations. Bean Validation owns DTO and cross-field object constraints.
-- Controllers may receive both a validated RequestBody DTO and FieldValues. Controllers translate them into ordinary application commands; Services do not depend on MVC types.
+- Controllers may receive a validated RequestBody DTO or FieldValues and pass ordinary Java values into Services; Services do not depend on MVC types or duplicate one-use command wrappers.
 - Malformed JSON is mapped to HTTP 400 for both Field-enabled and ordinary DTO endpoints. Field, Bean Validation and unreadable-body failures use the unified invalid-argument response contract.
 - Existing query/form Parameter contract behavior, annotation defaults and supported controller signatures remain compatible.
 - Existing interceptor construction remains source-compatible while automatic configuration injects the application ObjectMapper through the extended construction path.

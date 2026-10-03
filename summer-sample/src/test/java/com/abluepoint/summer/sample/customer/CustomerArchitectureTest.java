@@ -39,9 +39,15 @@ class CustomerArchitectureTest {
                 .getAnnotation(Transactional.class).readOnly()).isTrue();
         assertThat(CustomerService.class.getDeclaredMethod("list", CustomerListQuery.class)
                 .getAnnotation(Transactional.class).readOnly()).isTrue();
-        assertThat(CustomerService.class.getDeclaredMethod("create", CreateCustomerCommand.class)
+        assertThat(CustomerService.class.getDeclaredMethod("create", String.class, String.class)
                 .getAnnotation(Transactional.class).readOnly()).isFalse();
-        assertThat(CustomerService.class.getDeclaredMethod("update", String.class, UpdateCustomerCommand.class)
+        assertThat(CustomerService.class.getDeclaredMethod(
+                "update",
+                String.class,
+                boolean.class,
+                String.class,
+                Boolean.class
+        )
                 .getAnnotation(Transactional.class).readOnly()).isFalse();
         assertThat(CustomerService.class.getDeclaredMethod("delete", String.class)
                 .getAnnotation(Transactional.class).readOnly()).isFalse();

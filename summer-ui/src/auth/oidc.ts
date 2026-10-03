@@ -51,7 +51,17 @@ export const oidcSettings: UserManagerSettings = {
   loadUserInfo: false,
 };
 
-export const oidcManager = new UserManager(oidcSettings);
+type SummerAuthWindow = Window & {
+  __summerOidcManager?: UserManager;
+};
+
+// Vite's module graph can evaluate this module more than once during dev/HMR.
+// Keep the manager on the window so every import shares one authenticated
+// session and one redirect navigator for the current browser context.
+const authWindow = window as SummerAuthWindow;
+export const oidcManager =
+  authWindow.__summerOidcManager ??
+  (authWindow.__summerOidcManager = new UserManager(oidcSettings));
 
 export async function getAuthenticatedUser(): Promise<User | null> {
   const user = await oidcManager.getUser();
@@ -125,7 +135,19 @@ export async function signOut() {
   } finally {
     clearTemporaryAuthState();
   }
-  await oidcManager.signoutRedirect({ id_token_hint: user?.id_token });
+  let timeoutId: ReturnType<typeof window.setTimeout> | undefined;
+  try {
+    await Promise.race([
+      oidcManager.signoutRedirect({ id_token_hint: user?.id_token }),
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error('OIDC end-session navigation timed out'));
+        }, 8000);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
 }
 
 export function consumeAuthNotice() {
@@ -134,11 +156,19 @@ export function consumeAuthNotice() {
   return notice;
 }
 
-export async function startLoginForUnavailable(reason: 'missing' | 'expired') {
+export type LoginUnavailableOptions = {
+  notify?: boolean;
+};
+
+export async function startLoginForUnavailable(
+  reason: 'missing' | 'expired',
+  options: LoginUnavailableOptions = {}
+) {
   if (redirecting || !claimLoginStart(storage)) return false;
   redirecting = true;
   preserveCustomerDraft();
-  storage.setItem(AUTH_NOTICE_KEY, reason);
+  if (options.notify === false) storage.removeItem(AUTH_NOTICE_KEY);
+  else storage.setItem(AUTH_NOTICE_KEY, reason);
   try {
     await startLogin();
     return true;

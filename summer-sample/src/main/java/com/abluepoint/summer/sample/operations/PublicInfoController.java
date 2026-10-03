@@ -8,7 +8,7 @@ import java.util.Map;
 @RestController
 class PublicInfoController {
 
-    @GetMapping("/public/info")
+    @GetMapping({"/public/info", "/"})
     Map<String, String> info() {
         return Map.of("application", "summer-sample", "status", "ready");
     }

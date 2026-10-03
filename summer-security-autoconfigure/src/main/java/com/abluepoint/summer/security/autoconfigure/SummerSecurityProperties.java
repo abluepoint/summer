@@ -31,6 +31,7 @@ public class SummerSecurityProperties {
     public static class AuthorizationServer {
         private boolean enabled;
         private String issuer = "http://127.0.0.1:8080";
+        private String loginPage = "/login";
         private final User user = new User();
         private List<Client> clients = new ArrayList<>();
 
@@ -48,6 +49,14 @@ public class SummerSecurityProperties {
 
         public void setIssuer(String issuer) {
             this.issuer = issuer;
+        }
+
+        public String getLoginPage() {
+            return loginPage;
+        }
+
+        public void setLoginPage(String loginPage) {
+            this.loginPage = loginPage;
         }
 
         public User getUser() {

@@ -58,7 +58,8 @@ function CustomerReadRoute({ children }: { children: React.ReactNode }) {
         }
         const reason = await authenticationStatus();
         const started = await startLoginForUnavailable(
-          reason === 'expired' ? 'expired' : 'missing'
+          reason === 'expired' ? 'expired' : 'missing',
+          { notify: false }
         );
         if (live && !started && !isAuthRedirecting()) setAccess('limited');
       })
@@ -340,7 +341,7 @@ function PageLayout() {
                     );
                   })}
                   <Route exact path="/">
-                    <Redirect to={`/${defaultRoute}`} />
+                    <Redirect to="/dashboard/workplace" />
                   </Route>
                   <Route
                     path="*"

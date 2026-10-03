@@ -1,0 +1,6 @@
+package com.abluepoint.summer.sample.auditledger;
+import java.time.Instant;
+record AuditQuery(String initiator,String actor,String effectiveSubject,String agentInstanceId,String toolId,String decision,String resultStatus,String invocationId,String eventType,Instant from,Instant to){
+ boolean matches(AuditEventView v){return (initiator==null||initiator.equals(v.initiator()))&&(actor==null||actor.equals(v.actor()))&&(effectiveSubject==null||effectiveSubject.equals(v.effectiveSubject()))&&(agentInstanceId==null||agentInstanceId.equals(v.agentInstanceId()))&&(toolId==null||toolId.equals(v.toolId()))&&(decision==null||decision.equals(v.decision()))&&(invocationId==null||invocationId.equals(v.invocationId()))&&(eventType==null||eventType.equals(v.eventType()))&&(from==null||!v.occurredAt().isBefore(from))&&(to==null||!v.occurredAt().isAfter(to));}
+ boolean matches(McpInvocationView v){return (initiator==null||initiator.equals(v.initiator()))&&(actor==null||actor.equals(v.actor()))&&(effectiveSubject==null||effectiveSubject.equals(v.effectiveSubject()))&&(agentInstanceId==null||agentInstanceId.equals(v.agentInstanceId()))&&(toolId==null||toolId.equals(v.toolId()))&&(decision==null||decision.equals(v.decision()))&&(invocationId==null||invocationId.equals(v.invocationId()))&&(resultStatus==null||resultStatus.equals(v.resultStatus()));}
+}

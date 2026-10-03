@@ -16,7 +16,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -48,11 +52,14 @@ import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -201,8 +208,12 @@ public class SummerSecurityAutoConfiguration {
     @Bean
     @Order(1)
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
-    SecurityFilterChain summerAuthorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain summerAuthorizationServerSecurityFilterChain(
+            HttpSecurity http,
+            SummerSecurityProperties properties
+    ) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
+        String loginPage = properties.getAuthorizationServer().getLoginPage();
         MediaTypeRequestMatcher htmlMatcher = new MediaTypeRequestMatcher(MediaType.TEXT_HTML);
         htmlMatcher.setIgnoredMediaTypes(Set.of(MediaType.ALL));
         OidcLogoutAuthenticationSuccessHandler logoutSuccessHandler = new OidcLogoutAuthenticationSuccessHandler();
@@ -222,7 +233,7 @@ public class SummerSecurityAutoConfiguration {
                         .logoutEndpoint(logout -> logout.logoutResponseHandler(logoutSuccessHandler))))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
-                        new LoginUrlAuthenticationEntryPoint("/login"),
+                        new LoginUrlAuthenticationEntryPoint(loginPage),
                         htmlMatcher
                 ))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
@@ -243,8 +254,15 @@ public class SummerSecurityAutoConfiguration {
             throw new IllegalStateException("At least one summer.security.resource-server.protected-paths entry is required");
         }
         http.securityMatcher(protectedPaths)
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        // Logout remains idempotent when a Product Session has expired.
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/session").permitAll()
+                        .anyRequest().authenticated())
+                // Keep the resource server bearer-token path compatible with the
+                // local form-login session used by the sample console. A bearer
+                // token remains supported, while a successful /login can also
+                // establish the normal servlet SecurityContext session.
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .csrf(csrf -> csrf.disable())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -257,11 +275,39 @@ public class SummerSecurityAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
+    WebMvcConfigurer summerLoginPageRedirectConfiguration(SummerSecurityProperties properties) {
+        String loginPage = properties.getAuthorizationServer().getLoginPage();
+        if (!isAbsoluteUrl(loginPage)) {
+            return new WebMvcConfigurer() {
+            };
+        }
+        String loginPath = loginPagePath(loginPage);
+        return new WebMvcConfigurer() {
+            @Override
+            public void addViewControllers(ViewControllerRegistry registry) {
+                registry.addRedirectViewController(loginPath, loginPage);
+            }
+        };
+    }
+
+    @Bean
     @Order(3)
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
-    SecurityFilterChain summerLoginSecurityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain summerLoginSecurityFilterChain(
+            HttpSecurity http,
+            SummerSecurityProperties properties,
+            ObjectProvider<AuthenticationSuccessHandler> successHandlers
+    ) throws Exception {
+        String loginPage = properties.getAuthorizationServer().getLoginPage();
+        AuthenticationSuccessHandler successHandler = successHandlers.orderedStream()
+                .findFirst()
+                .orElseGet(() -> savedRequestAwareSuccessHandler(loginPage));
         http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
-                .formLogin(Customizer.withDefaults())
+                .formLogin(form -> form
+                        .loginPage(loginPagePath(loginPage))
+                        .loginProcessingUrl("/login")
+                        .successHandler(successHandler))
                 .sessionManagement(session -> session
                         .sessionFixation(fixation -> fixation.changeSessionId())
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
@@ -271,6 +317,51 @@ public class SummerSecurityAutoConfiguration {
                         .deleteCookies("JSESSIONID")
                         .logoutSuccessUrl("/login?logout"));
         return http.build();
+    }
+
+    private static SavedRequestAwareAuthenticationSuccessHandler savedRequestAwareSuccessHandler(String loginPage) {
+        SavedRequestAwareAuthenticationSuccessHandler handler =
+                new SavedRequestAwareAuthenticationSuccessHandler();
+        handler.setDefaultTargetUrl(defaultWorkspaceUrl(loginPage));
+        return handler;
+    }
+
+    private static String defaultWorkspaceUrl(String loginPage) {
+        if (!isAbsoluteUrl(loginPage)) {
+            return "/dashboard/workplace";
+        }
+        try {
+            return URI.create(loginPage).resolve("/dashboard/workplace").toString();
+        } catch (IllegalArgumentException ignored) {
+            return "/dashboard/workplace";
+        }
+    }
+
+    private static boolean isAbsoluteUrl(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            return URI.create(value).isAbsolute();
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static String loginPagePath(String loginPage) {
+        if (loginPage == null || loginPage.isBlank()) {
+            return "/login";
+        }
+        try {
+            URI uri = URI.create(loginPage);
+            if (uri.isAbsolute()) {
+                String path = uri.getPath();
+                return path == null || path.isBlank() ? "/" : path;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Keep the original value for Spring Security to validate and report.
+        }
+        return loginPage.startsWith("/") ? loginPage : "/" + loginPage;
     }
 
     private static RegisteredClient registeredClient(

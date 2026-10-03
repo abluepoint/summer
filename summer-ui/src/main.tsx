@@ -48,7 +48,8 @@ function AuthenticatedLayout() {
           return authenticationStatus()
             .then((reason) =>
               startLoginForUnavailable(
-                reason === 'expired' ? 'expired' : 'missing'
+                reason === 'expired' ? 'expired' : 'missing',
+                { notify: false }
               )
             )
             .then((started) => {

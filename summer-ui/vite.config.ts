@@ -6,11 +6,18 @@ import setting from './src/settings.json';
 
 var backendOrigin =
   process.env.SUMMER_BACKEND_ORIGIN || 'http://127.0.0.1:8080';
+var summerUiPort = Number(process.env.SUMMER_UI_PORT || 5173);
+
+if (!Number.isInteger(summerUiPort) || summerUiPort < 1 || summerUiPort > 65535) {
+  throw new Error('SUMMER_UI_PORT must be an integer between 1 and 65535');
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
     host: '127.0.0.1',
+    port: summerUiPort,
+    strictPort: true,
     proxy: {
       '/api': backendOrigin,
       '/oauth2': {

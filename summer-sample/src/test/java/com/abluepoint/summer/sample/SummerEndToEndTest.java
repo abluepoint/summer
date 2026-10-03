@@ -4,16 +4,20 @@ import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.util.Map;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -37,6 +41,41 @@ class SummerEndToEndTest {
 
     @Autowired
     SampleDataProperties dataProperties;
+
+    @Autowired
+    ApplicationContext applicationContext;
+
+    @Value("${summer.security.authorization-server.user.username}")
+    String localUser;
+
+    @Value("${summer.security.authorization-server.user.password}")
+    String localPassword;
+
+    @Test
+    void localConsoleLoginSessionCanReadEnterpriseApis() throws Exception {
+        assertThat(applicationContext.getBeansOfType(org.springframework.security.web.authentication.AuthenticationSuccessHandler.class))
+                .containsOnlyKeys("localConsoleAuthenticationSuccessHandler");
+        MvcResult login = mockMvc.perform(post("/login")
+                        .param("username", localUser)
+                .param("password", localPassword)
+                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "http://127.0.0.1:5173/dashboard/workplace"))
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(get("/api/v1/session").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enterpriseMemberships[0].enterpriseId").value("ent-acme"));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/applications").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+        mockMvc.perform(get("/api/v1/platform/enterprise-reviews").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
 
     @Test
     void issuesTokenAndUsesItForAProtectedCustomerRead() throws Exception {
@@ -451,6 +490,15 @@ class SummerEndToEndTest {
     @Test
     void leavesPublicApplicationEndpointAccessibleWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/public/info"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.application").value("summer-sample"))
+                .andExpect(jsonPath("$.data.status").value("ready"));
+    }
+
+    @Test
+    void leavesLoginSuccessLandingEndpointAccessible() throws Exception {
+        mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.application").value("summer-sample"))
