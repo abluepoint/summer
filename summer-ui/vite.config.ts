@@ -20,6 +20,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': backendOrigin,
+      '/public': backendOrigin,
       '/oauth2': {
         target: backendOrigin,
         bypass: (request) => {

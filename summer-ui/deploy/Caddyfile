@@ -6,7 +6,7 @@
         method POST
         path /login
     }
-    @backend path /api /api/* /internal /internal/* /oauth2 /oauth2/* /.well-known /.well-known/* /connect /connect/* /csrf
+    @backend path /api /api/* /public /public/* /internal /internal/* /oauth2 /oauth2/* /.well-known /.well-known/* /connect /connect/* /csrf
 
     route {
         handle @callback {

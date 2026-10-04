@@ -72,13 +72,14 @@ try {
     ['GET', '/connect/logout'],
     ['GET', '/csrf'],
     ['GET', '/internal/v1/diagnostics/redis'],
+    ['GET', '/public/dictionaries/customer-segment'],
   ]) {
     const response = await fetch(`${origin}${path}`, { method });
     assert.equal(response.status, 200, `${method} ${path}`);
     assert.deepEqual(await response.json(), { method, url: path });
   }
-  assert.equal(backendRequests.length, 8);
-  console.log('Production Caddy SPA and backend route split passed (13 requests)');
+  assert.equal(backendRequests.length, 9);
+  console.log('Production Caddy SPA and backend route split passed (14 requests)');
 } finally {
   if (containerId) execFileSync('docker', ['stop', containerId], { stdio: 'ignore' });
   await new Promise((resolve) => backend.close(resolve));

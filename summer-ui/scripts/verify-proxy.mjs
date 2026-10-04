@@ -85,13 +85,14 @@ try {
     ['GET', '/connect/logout'],
     ['GET', '/csrf'],
     ['GET', '/internal/v1/diagnostics/redis'],
+    ['GET', '/public/dictionaries/customer-segment'],
   ]) {
     const { response, body } = await request(path, { method });
     assert.equal(response.status, 200, `${method} ${path}`);
     assert.deepEqual(JSON.parse(body), { method, url: path });
   }
-  assert.equal(backendRequests.length, 8);
-  console.log('Vite SPA and backend route split passed (13 requests, Mock disabled)');
+  assert.equal(backendRequests.length, 9);
+  console.log('Vite SPA and backend route split passed (14 requests, Mock disabled)');
 } finally {
   vite.kill('SIGTERM');
   await new Promise((resolve) => {

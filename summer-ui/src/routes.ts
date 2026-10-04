@@ -163,9 +163,26 @@ const officialExampleRoutes: IRoute[] = [
  */
 export const routes: IRoute[] = [
   {
+    name: 'menu.interfaceResources',
+    key: 'interface-resources',
+    requiredPermissions: [
+      { resource: 'menu.interfaceResources', actions: ['read'] },
+    ],
+  },
+  {
     name: 'menu.audit',
     key: 'audit',
     requiredPermissions: [{ resource: 'menu.audit', actions: ['read'] }],
+  },
+  {
+    name: 'menu.dictionary',
+    key: 'dictionary',
+    children: [
+      {
+        name: 'menu.dictionary.form',
+        key: 'dictionary/form',
+      },
+    ],
   },
   {
     name: 'menu.diagnostics',
