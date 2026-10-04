@@ -1,0 +1,77 @@
+{
+  "ticket": "T36",
+  "releaseChecks": [
+    {
+      "id": "migration",
+      "owner": "release",
+      "evidence": "Flyway validate, schema history, expand/contract compatibility"
+    },
+    {
+      "id": "configuration",
+      "owner": "release",
+      "evidence": "runtime profile, secret references, and fail-closed defaults"
+    },
+    {
+      "id": "keys",
+      "owner": "security",
+      "evidence": "key source, active/grace versions, and public JWK continuity"
+    },
+    {
+      "id": "authorization",
+      "owner": "security",
+      "evidence": "capability, tenant boundary, audit subject, and error envelope"
+    },
+    {
+      "id": "tasks",
+      "owner": "operations",
+      "evidence": "Quartz cluster lock, idempotency, retry, and execution history"
+    },
+    {
+      "id": "cache",
+      "owner": "operations",
+      "evidence": "Caffeine/Redis version invalidation and node convergence"
+    },
+    {
+      "id": "events",
+      "owner": "operations",
+      "evidence": "outbox/Redis Stream delivery, duplicate handling, and dead letter state"
+    },
+    {
+      "id": "realtime",
+      "owner": "operations",
+      "evidence": "WebSocket handshake, SSE replay, heartbeat, and tenant isolation"
+    },
+    {
+      "id": "plugins",
+      "owner": "platform",
+      "evidence": "trusted digest, compatibility, lifecycle, and rollback diagnostics"
+    },
+    {
+      "id": "ui",
+      "owner": "release",
+      "evidence": "Summer UI route, real API, permission, error, and recovery flow"
+    }
+  ],
+  "compatibilityWindow": {
+    "migration": "expand-contract",
+    "sessionStore": "shared-redis",
+    "cache": "versioned-key-and-invalidation-event",
+    "events": "idempotent-consumer-with-replay",
+    "realtime": "last-event-id-or-message-cursor",
+    "keyRotation": "active-and-grace-public-keys"
+  },
+  "microserviceBoundary": {
+    "current": "modular-monolith",
+    "splitTriggers": [
+      "independent scaling",
+      "independent release cadence",
+      "data ownership boundary",
+      "fault isolation requirement"
+    ],
+    "nonGoals": [
+      "production Kubernetes manifests",
+      "premature process split",
+      "cross-service distributed transactions"
+    ]
+  }
+}
