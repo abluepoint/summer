@@ -17,6 +17,17 @@ export type SecurityKeyRotation = {
   version: number;
   retentionDays: number;
 };
+export type SecurityKeyRotationSchedule = {
+  status: string;
+  periodDays: number;
+  retentionDays: number;
+  nextRotationAt: string;
+  lastAttemptAt?: string;
+  lastSuccessAt?: string;
+  failureCount: number;
+  lastError?: string;
+};
+export type SecurityKeyState = { items: SecurityKey[]; rotation: SecurityKeyRotationSchedule };
 
 function isSecurityKey(value: unknown): value is SecurityKey {
   if (!value || typeof value !== 'object') return false;
@@ -51,7 +62,7 @@ function responseRequestId(headers: unknown): string {
   return String(value['x-request-id'] || value.get?.('x-request-id') || '');
 }
 
-export async function listSecurityKeys(): Promise<SecurityKey[]> {
+export async function listSecurityKeyState(): Promise<SecurityKeyState> {
   let requestId = '';
   try {
     const response = await axios.get('/api/security/keys');
@@ -65,7 +76,14 @@ export async function listSecurityKeys(): Promise<SecurityKey[]> {
     ) {
       invalidResponse(response.status, requestId);
     }
-    return data.items;
+    const rotation = (data as Record<string, unknown>).rotation;
+    const schedule = rotation && typeof rotation === 'object'
+      ? rotation as Record<string, unknown>
+      : { status: 'UNKNOWN', periodDays: 90, retentionDays: 30, nextRotationAt: '', failureCount: 0 };
+    if (typeof schedule.status !== 'string' || typeof schedule.periodDays !== 'number'
+      || typeof schedule.retentionDays !== 'number' || typeof schedule.nextRotationAt !== 'string'
+      || typeof schedule.failureCount !== 'number') invalidResponse(response.status, requestId);
+    return { items: data.items, rotation: schedule as unknown as SecurityKeyRotationSchedule };
   } catch (error) {
     if (error instanceof SummerApiError) throw error;
     if (axios.isAxiosError(error)) {
@@ -90,6 +108,10 @@ export async function listSecurityKeys(): Promise<SecurityKey[]> {
     }
     throw error;
   }
+}
+
+export async function listSecurityKeys(): Promise<SecurityKey[]> {
+  return (await listSecurityKeyState()).items;
 }
 
 export async function rotateSecurityKey(

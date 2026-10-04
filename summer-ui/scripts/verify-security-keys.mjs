@@ -27,7 +27,7 @@ new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(
   apiModule,
   apiModule.exports
 );
-const { listSecurityKeys, rotateSecurityKey } = apiModule.exports;
+const { listSecurityKeys, listSecurityKeyState, rotateSecurityKey } = apiModule.exports;
 afterEach(() => {
   axios.defaults.adapter = originalAdapter;
 });
@@ -57,6 +57,14 @@ test('returns signing-key metadata and accepts an explicitly empty collection', 
   assert.deepEqual(await listSecurityKeys(), items);
   respond({ success: true, data: { items: [] } });
   assert.deepEqual(await listSecurityKeys(), []);
+});
+
+test('returns the automatic rotation schedule without private key material', async () => {
+  respond({ success: true, data: { items: [], rotation: {
+    status: 'SCHEDULED', periodDays: 90, retentionDays: 30,
+    nextRotationAt: '2026-12-01T00:00:00Z', failureCount: 0,
+  } } });
+  assert.equal((await listSecurityKeyState()).rotation.periodDays, 90);
 });
 
 test('a business failure cannot become an empty successful list', async () => {

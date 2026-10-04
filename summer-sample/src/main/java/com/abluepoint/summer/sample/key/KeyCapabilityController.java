@@ -22,11 +22,13 @@ import java.util.Map;
 @ConditionalOnBean(MysqlSummerKeyStore.class)
 class KeyCapabilityController {
     private final MysqlSummerKeyStore store;
+    private final AutomaticKeyRotationService automaticRotation;
     private final RequestIdAccessor requestId;
     private final SecurityAuditLogger auditLogger;
 
-    KeyCapabilityController(MysqlSummerKeyStore store, RequestIdAccessor requestId, SecurityAuditLogger auditLogger) {
-        this.store = store; this.requestId = requestId; this.auditLogger = auditLogger;
+    KeyCapabilityController(MysqlSummerKeyStore store, AutomaticKeyRotationService automaticRotation,
+                            RequestIdAccessor requestId, SecurityAuditLogger auditLogger) {
+        this.store = store; this.automaticRotation = automaticRotation; this.requestId = requestId; this.auditLogger = auditLogger;
     }
 
     @GetMapping("/api/security/keys")
@@ -38,7 +40,7 @@ class KeyCapabilityController {
                 Map.of("requestId", requestId.currentRequestId(), "count", items.size()));
         return ResponseEntity.ok().eTag("\"" + store.currentVersion() + "\"")
                 .header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.success(Map.of("items", items), requestId.currentRequestId()));
+                .body(ApiResponse.success(Map.of("items", items, "rotation", automaticRotation.status()), requestId.currentRequestId()));
     }
 
     @PostMapping("/api/security/keys:rotate")

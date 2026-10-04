@@ -12,12 +12,13 @@ import {
   Typography,
 } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { listSecurityKeys, rotateSecurityKey, SecurityKey } from './api';
+import { listSecurityKeyState, rotateSecurityKey, SecurityKey, SecurityKeyRotationSchedule } from './api';
 import { SummerApiError } from '../customer/api';
 
 export default function SecurityKeysPage() {
   const t = useLocale();
   const [items, setItems] = useState<SecurityKey[]>([]);
+  const [rotation, setRotation] = useState<SecurityKeyRotationSchedule>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<SummerApiError>();
   const [retentionDays, setRetentionDays] = useState(30);
@@ -26,8 +27,8 @@ export default function SecurityKeysPage() {
   const load = () => {
     setLoading(true);
     setError(undefined);
-    return listSecurityKeys()
-      .then(setItems)
+    return listSecurityKeyState()
+      .then((state) => { setItems(state.items); setRotation(state.rotation); })
       .catch((failure) => {
         setError(
           failure instanceof SummerApiError
@@ -96,6 +97,11 @@ export default function SecurityKeysPage() {
     );
   return (
     <Card title={t['securityKeys.title']}>
+      {rotation && <Alert
+        type={rotation.status === 'FAILED' ? 'error' : 'info'}
+        content={`${t['securityKeys.automaticStatus']}: ${rotation.status} · ${t['securityKeys.nextRotation']}: ${rotation.nextRotationAt || '—'}${rotation.failureCount ? ` · ${t['securityKeys.failures']}: ${rotation.failureCount}` : ''}`}
+        style={{ marginBottom: 16 }}
+      />}
       <Space style={{ marginBottom: 16 }}>
         <Typography.Text>{t['securityKeys.retention']}</Typography.Text>
         <InputNumber

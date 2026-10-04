@@ -26,19 +26,32 @@ import org.springframework.transaction.annotation.Transactional;
 
 class MysqlSummerKeyStore implements SummerKeyStore {
     private final KeyMaterialRepository repository;
+    private final KeyRotationStateRepository rotationStates;
     private final byte[] masterKey;
+    private final int rotationPeriodDays;
+    private final int rotationRetentionDays;
     private volatile JWKSet current;
     private final ConcurrentMap<String, Rotation> completedRotations = new ConcurrentHashMap<>();
 
     MysqlSummerKeyStore(KeyMaterialRepository repository, String masterKey) {
+        this(repository, null, masterKey, 90, 30);
+    }
+
+    MysqlSummerKeyStore(KeyMaterialRepository repository, KeyRotationStateRepository rotationStates,
+                        String masterKey, int rotationPeriodDays, int rotationRetentionDays) {
         this.repository = repository;
+        this.rotationStates = rotationStates;
+        this.rotationPeriodDays = checkedPeriod(rotationPeriodDays);
+        this.rotationRetentionDays = checkedRetention(rotationRetentionDays);
         if (masterKey == null || masterKey.isBlank()) throw new IllegalStateException("SUMMER_SECURITY_MASTER_KEY is required");
         this.masterKey = digest(masterKey);
         this.current = loadOrCreate();
+        ensureRotationState();
     }
 
     @Override
     public List<JWK> get(JWKSelector selector, SecurityContext context) throws KeySourceException {
+        refreshCurrent();
         List<JWK> selected = selector.select(current);
         JWKMatcher matcher = selector.getMatcher();
         boolean hasKeyId = matcher.getKeyIDs() != null && !matcher.getKeyIDs().isEmpty();
@@ -63,6 +76,10 @@ class MysqlSummerKeyStore implements SummerKeyStore {
 
     JWKSet current() { return current; }
 
+    KeyRotationStateEntity rotationState() {
+        return rotationStates == null ? null : ensureRotationState();
+    }
+
     List<Map<String, Object>> metadata() {
         Instant now = Instant.now();
         return repository.findAll().stream()
@@ -84,6 +101,13 @@ class MysqlSummerKeyStore implements SummerKeyStore {
 
     int currentVersion() {
         return repository.findAll().stream().mapToInt(KeyMaterialEntity::version).max().orElse(0);
+    }
+
+    private KeyRotationStateEntity ensureRotationState() {
+        if (rotationStates == null) return null;
+        return rotationStates.findById(1).orElseGet(() -> rotationStates.saveAndFlush(
+                new KeyRotationStateEntity(rotationPeriodDays, rotationRetentionDays,
+                        Instant.now().plus(rotationPeriodDays, ChronoUnit.DAYS))));
     }
 
     private String activeKid() {
@@ -146,10 +170,38 @@ class MysqlSummerKeyStore implements SummerKeyStore {
             current = nextSet;
             Rotation result = new Rotation(next.kid(), next.version(), retentionDays);
             if (idempotencyKey != null && !idempotencyKey.isBlank()) completedRotations.putIfAbsent(idempotencyKey, result);
+            markManualRotation();
             return result;
         } catch (Exception exception) {
             throw new IllegalStateException("SUMMER_KEY_ROTATION_FAILED", exception);
         }
+    }
+
+    private void markManualRotation() {
+        if (rotationStates == null) return;
+        KeyRotationStateEntity state = ensureRotationState();
+        Instant now = Instant.now();
+        state.success(now, now.plus(rotationPeriodDays, ChronoUnit.DAYS));
+        state.schedule(rotationPeriodDays, rotationRetentionDays, now.plus(rotationPeriodDays, ChronoUnit.DAYS));
+        rotationStates.save(state);
+    }
+
+    private synchronized void refreshCurrent() {
+        try {
+            current = toJwkSet(repository.findAll());
+        } catch (Exception exception) {
+            throw new IllegalStateException("SUMMER_KEY_READ_FAILED", exception);
+        }
+    }
+
+    private static int checkedPeriod(int value) {
+        if (value < 1 || value > 3650) throw new IllegalArgumentException("key rotation period must be between 1 and 3650 days");
+        return value;
+    }
+
+    private static int checkedRetention(int value) {
+        if (value < 1 || value > 365) throw new IllegalArgumentException("key rotation retention must be between 1 and 365 days");
+        return value;
     }
 
     private JWKSet toJwkSet(List<KeyMaterialEntity> materials) throws Exception {
