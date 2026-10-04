@@ -29,7 +29,9 @@ class ResilientReadServiceTest {
         })).isEqualTo("v1");
         String fallback = service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException("down"); });
         assertThat(fallback).isEqualTo("v1");
-        assertThat(service.snapshot().getFirst().fallbacks()).isEqualTo(1);
+        assertThat(service.snapshot().stream()
+                .filter(view -> view.name().equals(ResilientReadService.PARAMETERS))
+                .findFirst().orElseThrow().fallbacks()).isEqualTo(1);
     }
 
     @Test
