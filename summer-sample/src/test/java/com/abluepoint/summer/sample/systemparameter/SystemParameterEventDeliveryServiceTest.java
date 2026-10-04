@@ -5,6 +5,8 @@ import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;
@@ -22,7 +24,8 @@ class SystemParameterEventDeliveryServiceTest {
         var stream = mock(StreamOperations.class);
         when(redis.opsForStream()).thenReturn(stream);
         when(stream.add(any(MapRecord.class))).thenReturn(RecordId.of("1-0"));
-        var service = new SystemParameterEventDeliveryService(repository, redis);
+        var cache = new VersionedTwoLevelCache(redis, new ObjectMapper(), java.time.Duration.ofMinutes(1), "test-node");
+        var service = new SystemParameterEventDeliveryService(repository, redis, cache);
         var event = new SystemParameterEventOutboxEntity("event-publish", "ent-acme", "orders.page-size",
                 "SYSTEM_PARAMETER_CHANGED", 4, "request-4", "{\"parameterKey\":\"orders.page-size\"}", Instant.now());
 
@@ -41,7 +44,8 @@ class SystemParameterEventDeliveryServiceTest {
         var stream = mock(StreamOperations.class);
         when(redis.opsForStream()).thenReturn(stream);
         when(stream.add(any(MapRecord.class))).thenThrow(new IllegalStateException("redis unavailable"));
-        var service = new SystemParameterEventDeliveryService(repository, redis);
+        var cache = new VersionedTwoLevelCache(redis, new ObjectMapper(), java.time.Duration.ofMinutes(1), "test-node");
+        var service = new SystemParameterEventDeliveryService(repository, redis, cache);
         var event = new SystemParameterEventOutboxEntity("event-fail", "ent-acme", "orders.page-size",
                 "SYSTEM_PARAMETER_CHANGED", 4, "request-5", "{}", Instant.now());
 

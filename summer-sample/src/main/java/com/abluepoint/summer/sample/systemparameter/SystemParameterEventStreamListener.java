@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.VersionedTwoLevelCacheProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.MapRecord;
@@ -15,14 +17,20 @@ import java.util.Map;
 @Component
 @ConditionalOnProperty(name = "summer.sample.parameter-events.scheduling-enabled", havingValue = "true")
 class SystemParameterEventStreamListener {
-    private static final String GROUP = "summer-system-parameter-consumers";
-    private static final String CONSUMER = "summer-sample";
+    private static final String GROUP_PREFIX = "summer-system-parameter-consumers-";
     private final StringRedisTemplate redis;
     private final SystemParameterEventConsumer consumer;
+    private final VersionedTwoLevelCache cache;
+    private final String group;
+    private final String consumerName;
 
-    SystemParameterEventStreamListener(StringRedisTemplate redis, SystemParameterEventConsumer consumer) {
+    SystemParameterEventStreamListener(StringRedisTemplate redis, SystemParameterEventConsumer consumer,
+                                       VersionedTwoLevelCache cache, VersionedTwoLevelCacheProperties properties) {
         this.redis = redis;
         this.consumer = consumer;
+        this.cache = cache;
+        this.consumerName = safeName(properties.getNodeId());
+        this.group = GROUP_PREFIX + consumerName;
     }
 
     @Scheduled(fixedDelayString = "${summer.sample.parameter-events.poll-interval-ms:5000}")
@@ -31,16 +39,18 @@ class SystemParameterEventStreamListener {
         try {
             ensureGroup();
             List<?> records = redis.opsForStream().read(
-                    Consumer.from(GROUP, CONSUMER),
+                    Consumer.from(group, consumerName),
                     StreamOffset.create(SystemParameterEventDeliveryService.STREAM, ReadOffset.lastConsumed()));
             for (Object value : records) {
                 MapRecord<?, ?, ?> record = (MapRecord<?, ?, ?>) value;
-                SystemParameterEventConsumeResult result = consumer.consume(toEvent(record), ignored -> {
-                    // The sample has no local parameter cache yet; the receipt still makes delivery idempotent.
-                });
+                SystemParameterEventBody event = toEvent(record);
+                // Receipts are shared for delivery idempotency, while each node has its own
+                // stream group. Evict before the receipt check so every node invalidates its L1.
+                cache.evictLocal(event.tenantId(), "system-parameter");
+                SystemParameterEventConsumeResult result = consumer.consume(event, ignored -> { });
                 if (result == SystemParameterEventConsumeResult.PROCESSED
                         || result == SystemParameterEventConsumeResult.DUPLICATE) {
-                    redis.opsForStream().acknowledge(SystemParameterEventDeliveryService.STREAM, GROUP, record.getId());
+                    redis.opsForStream().acknowledge(SystemParameterEventDeliveryService.STREAM, group, record.getId());
                 }
             }
         } catch (RuntimeException ignored) {
@@ -51,7 +61,7 @@ class SystemParameterEventStreamListener {
     private void ensureGroup() {
         try {
             redis.opsForStream().createGroup(SystemParameterEventDeliveryService.STREAM,
-                    ReadOffset.latest(), GROUP);
+                    ReadOffset.latest(), group);
         } catch (RuntimeException ignored) {
             // BUSYGROUP means another scheduler instance already created it.
         }
@@ -65,4 +75,9 @@ class SystemParameterEventStreamListener {
     }
 
     private static String string(Object value) { return value == null ? null : value.toString(); }
+
+    private static String safeName(String value) {
+        if (value == null || value.isBlank()) return "summer-sample";
+        return value.replaceAll("[^A-Za-z0-9_-]", "-");
+    }
 }

@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -15,11 +16,14 @@ class DictionaryService {
     private final DictionaryTypeRepository types;
     private final DictionaryItemRepository items;
     private final DictionaryAuditService audit;
+    private final VersionedTwoLevelCache cache;
 
-    DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit) {
+    DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
+                      VersionedTwoLevelCache cache) {
         this.types = types;
         this.items = items;
         this.audit = audit;
+        this.cache = cache;
     }
 
     @Transactional(readOnly = true)
@@ -37,6 +41,7 @@ class DictionaryService {
                 bool(request.published()), bool(request.publicReadable()), bool(request.enabled(), true));
         try {
             DictionaryTypeView result = view(types.saveAndFlush(type));
+            cache.invalidate("ent-acme", "dictionary");
             audit.recordSuccess(code, "DICTIONARY_CREATED", requestId, authentication);
             return result;
         } catch (DataIntegrityViolationException exception) {
@@ -51,6 +56,7 @@ class DictionaryService {
         type.change(request.name().trim(), bool(request.published(), type.published()),
                 bool(request.publicReadable(), type.publicReadable()), bool(request.enabled(), type.enabled()));
         DictionaryTypeView result = view(types.saveAndFlush(type));
+        cache.invalidate("ent-acme", "dictionary");
         audit.recordSuccess(code, "DICTIONARY_UPDATED", requestId, authentication);
         return result;
     }
@@ -68,6 +74,7 @@ class DictionaryService {
         } catch (DataIntegrityViolationException exception) {
             throw new SummerException(DictionaryErrorCode.CONFLICT, exception);
         }
+        cache.invalidate("ent-acme", "dictionary");
         audit.recordSuccess(code, "DICTIONARY_ITEM_CREATED", requestId, authentication);
         return result;
     }
@@ -82,18 +89,21 @@ class DictionaryService {
                 .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
         item.change(request.label().trim(), request.sortOrder(), bool(request.enabled(), item.enabled()));
         DictionaryItemView result = view(items.saveAndFlush(item));
+        cache.invalidate("ent-acme", "dictionary");
         audit.recordSuccess(code, "DICTIONARY_ITEM_UPDATED", requestId, authentication);
         return result;
     }
 
     @Transactional(readOnly = true)
     PublicDictionaryView publicRead(String code) {
-        DictionaryTypeEntity type = types.findByCode(code)
-                .filter(value -> value.enabled() && value.published() && value.publicReadable())
-                .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
-        List<DictionaryItemView> values = items.findAllByDictionaryCodeOrderBySortOrderAscValueAsc(type.code()).stream()
-                .filter(DictionaryItemEntity::enabled).map(DictionaryService::view).toList();
-        return new PublicDictionaryView(type.code(), values);
+        return cache.get("ent-acme", "dictionary", code, PublicDictionaryView.class, () -> {
+            DictionaryTypeEntity type = types.findByCode(code)
+                    .filter(value -> value.enabled() && value.published() && value.publicReadable())
+                    .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+            List<DictionaryItemView> values = items.findAllByDictionaryCodeOrderBySortOrderAscValueAsc(type.code()).stream()
+                    .filter(DictionaryItemEntity::enabled).map(DictionaryService::view).toList();
+            return new PublicDictionaryView(type.code(), values);
+        });
     }
 
     private DictionaryTypeEntity requireType(String code) {

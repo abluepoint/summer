@@ -20,6 +20,9 @@ server:
 
 summer:
   sample:
+    cache:
+      ttl: 5m
+      node-id: test-node
     parameter-events:
       scheduling-enabled: false
     data:

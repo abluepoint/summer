@@ -40,6 +40,9 @@ summer:
     enabled: true
     wrap-responses: true
   sample:
+    cache:
+      ttl: ${SUMMER_SAMPLE_CACHE_TTL:5m}
+      node-id: ${SUMMER_SAMPLE_CACHE_NODE_ID:${HOSTNAME:summer-sample}}
     data:
       sql-resource: classpath:sql/customer-queries.sql
     parameter-events:

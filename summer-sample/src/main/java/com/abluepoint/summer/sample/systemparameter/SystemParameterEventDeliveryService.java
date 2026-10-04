@@ -5,6 +5,7 @@ import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -18,10 +19,13 @@ class SystemParameterEventDeliveryService {
     private static final int MAX_ATTEMPTS = 3;
     private final SystemParameterEventOutboxRepository repository;
     private final StringRedisTemplate redis;
+    private final VersionedTwoLevelCache cache;
 
-    SystemParameterEventDeliveryService(SystemParameterEventOutboxRepository repository, StringRedisTemplate redis) {
+    SystemParameterEventDeliveryService(SystemParameterEventOutboxRepository repository, StringRedisTemplate redis,
+                                        VersionedTwoLevelCache cache) {
         this.repository = repository;
         this.redis = redis;
+        this.cache = cache;
     }
 
     @Transactional
@@ -47,6 +51,7 @@ class SystemParameterEventDeliveryService {
             MapRecord<String, String, String> record = StreamRecords.newRecord()
                     .ofMap(values).withStreamKey(STREAM);
             redis.opsForStream().add(record);
+            cache.invalidate(event.tenantId(), "system-parameter");
             event.markPublished(now);
         } catch (RuntimeException exception) {
             if (event.attempts() + 1 >= MAX_ATTEMPTS) event.markDeadLetter("redis_delivery_failed");

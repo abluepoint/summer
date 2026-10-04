@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":summer-data-jpa"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("com.github.ben-manes.caffeine:caffeine")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.flywaydb:flyway-core")
     runtimeOnly("com.mysql:mysql-connector-j")

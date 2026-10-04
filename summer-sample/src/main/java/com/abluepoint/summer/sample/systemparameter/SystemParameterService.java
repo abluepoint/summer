@@ -1,6 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
 import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -27,13 +28,16 @@ class SystemParameterService {
     private final ObjectMapper objectMapper;
     private final CustomerAuditService audit;
     private final SystemParameterEventService events;
+    private final VersionedTwoLevelCache cache;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
-                           CustomerAuditService audit, SystemParameterEventService events) {
+                           CustomerAuditService audit, SystemParameterEventService events,
+                           VersionedTwoLevelCache cache) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.audit = audit;
         this.events = events;
+        this.cache = cache;
     }
 
     @Transactional
@@ -51,6 +55,7 @@ class SystemParameterService {
                     request.min(), request.max(), blankToNull(request.pattern()),
                     Boolean.TRUE.equals(request.publicValue()), blankToNull(request.description())));
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
+            cache.evictLocal(TENANT_ID, "system-parameter");
             audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_CREATED", requestId, authentication);
             return view(saved);
         } catch (DataIntegrityViolationException exception) {
@@ -76,8 +81,9 @@ class SystemParameterService {
 
     @Transactional(readOnly = true)
     SystemParameterView find(String key) {
-        return view(repository.findByKey(key).filter(value -> TENANT_ID.equals(value.tenantId()))
-                .orElseThrow(() -> new SystemParameterNotFoundException(key)));
+        return cache.get(TENANT_ID, "system-parameter", key, SystemParameterView.class,
+                () -> repository.findByKey(key).filter(value -> TENANT_ID.equals(value.tenantId()))
+                        .map(this::view).orElseThrow(() -> new SystemParameterNotFoundException(key)));
     }
 
     @Transactional
@@ -104,6 +110,7 @@ class SystemParameterService {
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
+            cache.evictLocal(TENANT_ID, "system-parameter");
             audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_UPDATED", requestId, authentication);
             return view(saved);
         } catch (ObjectOptimisticLockingFailureException exception) {
@@ -122,6 +129,7 @@ class SystemParameterService {
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
+            cache.evictLocal(TENANT_ID, "system-parameter");
             audit.recordResourceSuccess("system-parameter:" + saved.key(),
                     status == SystemParameterStatus.ACTIVE ? "SYSTEM_PARAMETER_ENABLED" : "SYSTEM_PARAMETER_DISABLED",
                     requestId, authentication);
