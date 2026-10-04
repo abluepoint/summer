@@ -7,6 +7,7 @@
 - `POST /api/dictionaries/{code}/rollback` selects a previous `targetVersion` and requires the current `expectedVersion`.
 - Every transition writes `summer_dictionary_version`, `summer_dictionary_outbox` and `summer_audit_event`, then invalidates the versioned tenant cache. `idempotencyKey` makes retries safe.
 - `GET /public/dictionaries/{code}` returns the selected snapshot and its version. Draft rows and disabled items are excluded after a snapshot is published.
+- `GET /api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events` is an authenticated raw SSE stream. It emits `DICTIONARY_PUBLISHED`, `DICTIONARY_DISABLED` and `DICTIONARY_ROLLED_BACK` metadata only, supports `Last-Event-ID`, bounded replay, heartbeat and resync, and never includes dictionary items.
 
 ## UI
 
@@ -16,5 +17,7 @@
 
 - `DictionaryVersionHttpTest`: publish, draft isolation, disable, rollback, stale version, invalid target, permission rejection, audit/outbox counts and idempotent replay; 3/3 passed.
 - `DictionaryHttpTest`: existing dictionary CRUD/public filtering contract passed when run in isolation; one run was unable to write its generated XML result because another parallel Gradle run held the same output file.
+- `DictionaryNotificationSseHttpTest`: notification persistence, raw SSE headers, resumable cursor validation, active tenant boundary and read capability rejection passed 3/3.
+- `summer-ui/scripts/verify-dictionary-notifications.mjs`: EventSource reconnect/error state, tenant-scoped endpoint and selected-value preservation contract passed; `npm run typecheck` and `npm run build` passed.
 - `summer-ui`: `npm test` (all checks, 19 Node tests), `npm run typecheck` and `npm run build` passed.
 - Full project tests remain the parent session's responsibility because parallel worktree tests include unrelated in-progress sources.

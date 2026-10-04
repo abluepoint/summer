@@ -25,12 +25,13 @@ class DictionaryVersionService {
     private final DataScopeService dataScopes;
     private final ObjectMapper objectMapper;
     private final ResilientReadService resilientReads;
+    private final DictionaryNotificationService notifications;
 
     DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              DataScopeService dataScopes, ObjectMapper objectMapper,
-                             ResilientReadService resilientReads) {
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications) {
         this.types = types;
         this.items = items;
         this.versions = versions;
@@ -40,6 +41,7 @@ class DictionaryVersionService {
         this.dataScopes = dataScopes;
         this.objectMapper = objectMapper;
         this.resilientReads = resilientReads;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -159,6 +161,7 @@ class DictionaryVersionService {
             String payload = objectMapper.writeValueAsString(new DictionaryEvent(eventId, TENANT_ID, code, eventType, version, requestId));
             outbox.saveAndFlush(new DictionaryOutboxEntity(eventId, TENANT_ID, code, eventType, version, requestId, idempotencyKey, payload));
             cache.invalidate(TENANT_ID, "dictionary");
+            notifications.record(code, eventType, version, requestId);
             audit.recordSuccess(code, eventType, requestId, authentication);
         } catch (JacksonException exception) {
             throw new IllegalStateException("Dictionary event cannot be serialized", exception);
