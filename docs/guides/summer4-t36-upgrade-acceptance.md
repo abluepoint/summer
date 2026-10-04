@@ -112,5 +112,5 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 - `node summer-ui/scripts/verify-t36-upgrade.mjs`、`scripts/t36-upgrade-gate.sh contract`：通过。
 - `scripts/t36-upgrade-gate.sh migrations`：通过，26 个版本号唯一。经确认目标 schema 不存在且没有可回读的 Flyway history 后，将三组未应用重复版本永久改为 `V6_1`、`V23_1`、`V26_1`；同时修正 MySQL 9.7 不接受的多列 `ALTER TABLE ... IF NOT EXISTS` 语法和 `TEXT` 默认值定义。
 - 隔离 MySQL 演练：在临时 `summer_t36_source` schema 顺序执行 26 个迁移，得到 52 张表；插入合成 Customer 行后使用 `mysqldump --single-transaction --routines --events --triggers --no-tablespaces --set-gtid-purged=OFF` 恢复到 `summer_t36_restore`，恢复后仍为 52 张表且合成行可读，随后删除两个隔离 schema。首次不关闭 GTID 的恢复按预期被 MySQL 拒绝，未触碰既有业务 schema。
-- T32 回归：业务字典发布/禁用/回滚的 404 保持业务错误，不再被 resilience fallback 改写为 503；字典 HTTP 与 SSE 测试共 6 tests 通过。`ResilienceDiagnosticsHttpTest` 2 tests 通过；现有 `ResilientReadServiceTest.retries_and_uses_a_bounded_fallback_for_read_failures` 仍因 `snapshot().getFirst()` 对排序后 operation 的旧断言失败，未修改该并行测试。
+- T32 回归：业务字典发布/禁用/回滚的 404 保持业务错误，不再被 resilience fallback 改写为 503；字典 HTTP 与 SSE 测试共 6 tests 通过。`ResilienceDiagnosticsHttpTest` 2 tests、`ResilientReadServiceTest` 2 tests 通过；后者将 fallback 断言改为按 operation 名称选择，避免依赖排序位置。
 - `preflight`、`backup`、`restore`、`rolling` 的真实双节点 HTTP 流程仍需目标环境执行；本轮已完成隔离 MySQL 迁移及备份恢复演练，未使用或输出任何凭据。
