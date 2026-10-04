@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.statistics;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -21,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
-final class StatisticsService {
+class StatisticsService {
     private static final String STATISTICS_READ = "enterprise.statistics.read";
     private static final Duration DEFAULT_WINDOW = Duration.ofDays(30);
     private static final Duration MAX_WINDOW = Duration.ofDays(366);
@@ -30,7 +31,7 @@ final class StatisticsService {
     private final AuthorizationService authorization;
     private final RequestMappingHandlerMapping mappings;
 
-    StatisticsService(JdbcTemplate jdbc, AuthorizationService authorization, RequestMappingHandlerMapping mappings) {
+    StatisticsService(JdbcTemplate jdbc, AuthorizationService authorization, @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mappings) {
         this.jdbc = jdbc;
         this.authorization = authorization;
         this.mappings = mappings;
