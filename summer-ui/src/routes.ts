@@ -1,9 +1,12 @@
 import auth, { AuthParams } from '@/utils/authentication';
 import { useEffect, useMemo, useState } from 'react';
+import { createMenuManifest } from '@/menu/manifest';
 
 export type IRoute = AuthParams & {
   name: string;
   key: string;
+  iconKey?: string;
+  capabilityCode?: string;
   // 当前页是否展示面包屑
   breadcrumb?: boolean;
   children?: IRoute[];
@@ -195,6 +198,11 @@ export const routes: IRoute[] = [
     requiredPermissions: [{ resource: 'menu.roles', actions: ['read'] }],
   },
   {
+    name: 'menu.menuManifest',
+    key: 'menu-manifest',
+    requiredPermissions: [{ resource: 'menu.menuManifest', actions: ['read'] }],
+  },
+  {
     name: 'menu.dictionary',
     key: 'dictionary',
     children: [
@@ -260,6 +268,8 @@ export const routes: IRoute[] = [
     children: officialExampleRoutes,
   },
 ];
+
+export const menuManifest = createMenuManifest(routes);
 
 export const getName = (path: string, routes) => {
   return routes.find((item) => {

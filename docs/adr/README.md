@@ -29,6 +29,7 @@
 | [0021](0021-manage-request-body-caching-automatically.md) | MVC 自动管理必要的请求体缓存 | 已移除 cache-request-body 及其专属启动检查，字段校验与 HTTP 日志适配共享完整 MVC 请求体；部分替代 0010、0013 |
 | [0022](0022-define-styles-without-builtin-names.md) | Style 由应用定义，不设框架内置名称 | 框架提供规则构建 API，应用以 Java 公共配置定义具名 Bean；链式定义写法已确认，部分替代 0017，尚未实现 |
 | [0023](0023-consolidate-identity-frontend-in-summer-ui.md) | 身份管理前端统一到 Summer UI | 替代 AICT 规格中的独立 `aict-identity` / Vben 前端选择；服务端安全边界另行明确 |
+| [0026](0026-use-versioned-route-menu-manifest.md) | 前端路由发布版本化菜单 manifest | 服务端只保存元数据、Capability 绑定和租户覆盖，不保存前端组件引用 |
 
 ## 来源与适用范围
 

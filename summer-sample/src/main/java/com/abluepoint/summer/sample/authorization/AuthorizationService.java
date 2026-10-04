@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.*;
 
 @Service
-final class AuthorizationService {
+public final class AuthorizationService {
     private static final String ENTERPRISE = "ent-acme";
     private final Map<String, CapabilityRecord> capabilities = new LinkedHashMap<>();
     private final Map<String, RoleRecord> roles = new LinkedHashMap<>();
@@ -24,7 +24,7 @@ final class AuthorizationService {
     private final AuthorizationCapabilityRepository capabilityRepository;
     private final AuthorizationRoleRepository roleRepository;
 
-    AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository) {
+    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository) {
         this.bindingRepository = bindingRepository;
         this.capabilityRepository = capabilityRepository;
         this.roleRepository = roleRepository;
@@ -38,6 +38,9 @@ final class AuthorizationService {
         seed("cap-enterprise-capabilities-write", "enterprise.capabilities.write", "capabilities", "write", "HIGH");
         seed("cap-enterprise-bundles-read", "enterprise.bundles.read", "capability-bundles", "read", "LOW");
         seed("cap-enterprise-bundles-write", "enterprise.bundles.write", "capability-bundles", "write", "HIGH");
+        seed("cap-enterprise-menu-read", "enterprise.menu.read", "menu-manifest", "read", "LOW");
+        seed("cap-enterprise-menu-write", "enterprise.menu.write", "menu-manifest", "write", "HIGH");
+        seed("cap-platform-menu-write", "platform.menu.write", "menu-manifest", "write", "HIGH", "PLATFORM");
     }
 
     @PostConstruct
@@ -177,7 +180,7 @@ final class AuthorizationService {
     }
 
     /** Evaluates an HTTP permission only when this subject has a managed assignment. */
-    synchronized Decision decision(Authentication authentication, String enterpriseId, String permissionCode, String requestId) {
+    public synchronized Decision decision(Authentication authentication, String enterpriseId, String permissionCode, String requestId) {
         if (!(authentication instanceof JwtAuthenticationToken jwt) || enterpriseId == null || permissionCode == null) {
             return new Decision(false, "DEFAULT_DENY");
         }
@@ -197,6 +200,24 @@ final class AuthorizationService {
         record(enterpriseId, "user:" + assignment.username, allowed ? "AUTHORIZATION_ALLOWED" : "AUTHORIZATION_DENIED", requestId, authentication,
                 Map.of("permissionCode", permissionCode, "decision", allowed ? "ALLOW" : "DENY", "reasonCode", reason));
         return new Decision(allowed, reason);
+    }
+
+    public void requireEnterpriseMenu(String enterpriseId, Authentication authentication, String capability) {
+        require(enterpriseId, authentication, capability);
+    }
+
+    public void requireEnterpriseMembership(String enterpriseId, Authentication authentication) {
+        if (!(authentication instanceof JwtAuthenticationToken jwt) || !ENTERPRISE.equals(enterpriseId) || !active(jwt, enterpriseId)) {
+            throw new AccessDeniedException("Enterprise membership required");
+        }
+    }
+
+    public void requirePlatformMenu(Authentication authentication) {
+        if (!(authentication instanceof JwtAuthenticationToken jwt)
+                || !hasPlatform(jwt, "platform.menu.write")
+                || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.menu.write".equals(x.getAuthority()))) {
+            throw new AccessDeniedException("Platform menu capability denied");
+        }
     }
 
     private List<String> resolveCapabilities(String e, List<String> ids, String bundleId) { if (bundleId != null) { BundleRecord b = bundle(e, bundleId); if (!"ACTIVE".equals(b.status)) throw new AuthorizationValidationException("Bundle is disabled"); return List.copyOf(b.capabilityIds); } if (ids == null) return List.of(); LinkedHashSet<String> out = new LinkedHashSet<>(); for (String id : ids) { if (id == null || id.isBlank()) throw new AuthorizationValidationException("Capability is required"); CapabilityRecord c; try { c = capability(e, id); } catch (AuthorizationConflictException unknown) { c = new CapabilityRecord("cap-resource-" + Integer.toUnsignedString(id.hashCode()), e, "ENTERPRISE", id.trim(), id.trim(), "invoke", "NORMAL", "ACTIVE", 1); capabilities.putIfAbsent(c.id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); } if (!"ACTIVE".equals(c.status)) throw new AuthorizationValidationException("Capability is disabled"); out.add(c.id); } return List.copyOf(out); }
@@ -240,6 +261,6 @@ final class AuthorizationService {
     private static final class BundleRecord { final String id, enterpriseId; String name, code, status, changeSummary; List<String> capabilityIds; long version; final List<BundleVersionView> history = new ArrayList<>(); BundleRecord(String i,String e,String n,String c,String s,List<String> ids,long v,String summary){id=i;enterpriseId=e;name=n;code=c;status=s;capabilityIds=ids;version=v;changeSummary=summary;} }
     private record Receipt(String fingerprint, Object result) {}
     private UserRoleAssignmentView userAssignmentView(UserAssignmentRecord value) { return new UserRoleAssignmentView(value.username, value.enterpriseId, List.copyOf(value.roleIds), List.copyOf(value.deniedCodes), value.version); }
-    record Decision(boolean allowed, String reasonCode) {}
+    public record Decision(boolean allowed, String reasonCode) {}
     private static final class UserAssignmentRecord { final String username, enterpriseId; final List<String> roleIds, deniedCodes; long version; UserAssignmentRecord(String u, String e, List<String> r, List<String> d, long v) { username=u; enterpriseId=e; roleIds=List.copyOf(r); deniedCodes=List.copyOf(d); version=v; } }
 }

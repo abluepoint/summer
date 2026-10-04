@@ -40,6 +40,9 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         if (requestedEnterprise != null && !hasActiveMembership(jwt, requestedEnterprise)) {
             throw new AccessDeniedException("Inactive enterprise membership");
         }
+        if ("GET".equalsIgnoreCase(request.getMethod()) && request.getRequestURI().endsWith("/menu-manifest")) {
+            return true;
+        }
         String enterpriseId = requestedEnterprise == null ? activeEnterprise(jwt) : requestedEnterprise;
         if (enterpriseId == null) return true;
         String permissionCode = permissionCode(request, method);
