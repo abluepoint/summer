@@ -15,4 +15,8 @@ class OrganizationMembershipEntity extends BaseLongEntity {
     @Column(nullable = false) boolean primaryOrganization;
     protected OrganizationMembershipEntity() {}
     OrganizationMembershipEntity(String enterpriseId, String memberId, String organizationId, boolean primaryOrganization) { this.enterpriseId = enterpriseId; this.memberId = memberId; this.organizationId = organizationId; this.primaryOrganization = primaryOrganization; }
+    String enterpriseId() { return enterpriseId; }
+    String memberId() { return memberId; }
+    String organizationId() { return organizationId; }
+    boolean primaryOrganization() { return primaryOrganization; }
 }

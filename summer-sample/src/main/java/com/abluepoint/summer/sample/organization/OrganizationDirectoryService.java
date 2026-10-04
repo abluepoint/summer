@@ -52,6 +52,7 @@ final class OrganizationDirectoryService {
         persistSeed("org-operations", "org-acme", "DEPARTMENT", "Operations", "OPS", null, "Business operations", 20, "ACTIVE");
         unitRepository.findAll().forEach(value -> units.put(value.unitId(), new UnitRecord(value.enterpriseId(), value.unitId(), value.parentId(), value.unitType(), value.name(), value.code(), value.leaderMemberId(), value.description(), value.sortOrder(), value.status())));
         assignments.put(assignmentKey("member-alice", "org-engineering"), new Assignment(ENTERPRISE, "org-engineering", "member-alice", true));
+        membershipRepository.findAll().forEach(value -> assignments.put(assignmentKey(value.memberId(), value.organizationId()), new Assignment(value.enterpriseId(), value.organizationId(), value.memberId(), value.primaryOrganization())));
     }
 
     synchronized OrganizationTree tree(String enterpriseId, Authentication authentication) {
