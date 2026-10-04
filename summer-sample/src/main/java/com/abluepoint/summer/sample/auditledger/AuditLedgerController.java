@@ -106,6 +106,65 @@ class AuditLedgerController {
         }
     }
 
+    @GetMapping("/api/v1/enterprises/{enterpriseId}/audit-events:query")
+    @RawResponse
+    ResponseEntity<ApiResponse<AuditEventPage>> query(
+            @PathVariable String enterpriseId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String initiator,
+            @RequestParam(required = false) String actor,
+            @RequestParam(required = false) String effectiveSubject,
+            @RequestParam(required = false) String agentInstanceId,
+            @RequestParam(required = false) String toolId,
+            @RequestParam(required = false) String decision,
+            @RequestParam(required = false) String resultStatus,
+            @RequestParam(required = false) String invocationId,
+            @RequestParam(required = false) String eventType,
+            @RequestParam(required = false) String requestId,
+            @RequestParam(required = false) String traceId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            Authentication auth) {
+        try {
+            AuditQuery query = new AuditQuery(initiator, actor, effectiveSubject, agentInstanceId, toolId,
+                    decision, resultStatus, invocationId, eventType, parseInstant(from), parseInstant(to), requestId, traceId);
+            return response(HttpStatus.OK, service.queryEvents(enterpriseId, query, page, size, auth));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
+    @GetMapping(value = "/api/v1/enterprises/{enterpriseId}/audit-events:export", produces = "text/csv")
+    @RawResponse
+    ResponseEntity<?> export(
+            @PathVariable String enterpriseId,
+            @RequestParam(required = false) String initiator,
+            @RequestParam(required = false) String actor,
+            @RequestParam(required = false) String effectiveSubject,
+            @RequestParam(required = false) String agentInstanceId,
+            @RequestParam(required = false) String toolId,
+            @RequestParam(required = false) String decision,
+            @RequestParam(required = false) String resultStatus,
+            @RequestParam(required = false) String invocationId,
+            @RequestParam(required = false) String eventType,
+            @RequestParam(required = false) String requestId,
+            @RequestParam(required = false) String traceId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            Authentication auth) {
+        try {
+            AuditQuery query = new AuditQuery(initiator, actor, effectiveSubject, agentInstanceId, toolId,
+                    decision, resultStatus, invocationId, eventType, parseInstant(from), parseInstant(to), requestId, traceId);
+            return ResponseEntity.ok().header("X-Request-Id", rid())
+                    .header("Content-Disposition", "attachment; filename=audit-events.csv")
+                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .body(service.exportEvents(enterpriseId, query, auth));
+        } catch (Exception e) {
+            return error(e);
+        }
+    }
+
     @GetMapping("/api/v1/enterprises/{enterpriseId}/audit-events/{eventId}")
     @RawResponse
     ResponseEntity<ApiResponse<AuditEventView>> event(
@@ -166,6 +225,15 @@ class AuditLedgerController {
 
     private String rid() {
         return requestId.currentRequestId();
+    }
+
+    private Instant parseInstant(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Instant.parse(value);
+        } catch (RuntimeException exception) {
+            throw new AuditLedgerValidationException("Invalid audit time range");
+        }
     }
 
     private <T> ResponseEntity<ApiResponse<T>> response(HttpStatus status, T value) {

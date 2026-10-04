@@ -54,7 +54,28 @@ public class CustomerAuditService {
 
     @Transactional(readOnly = true)
     CustomerAuditPage search(CustomerAuditQuery query, Pageable pageable) {
-        Specification<CustomerAuditEventEntity> spec = (root, ignored, criteria) -> {
+        Page<CustomerAuditEventEntity> page = repository.findAll(specification(query), pageable);
+        return new CustomerAuditPage(page.getContent().stream().map(this::view).toList(),
+                page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    String export(CustomerAuditQuery query) {
+        Page<CustomerAuditEventEntity> page = repository.findAll(specification(query),
+                org.springframework.data.domain.PageRequest.of(0, 1000,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "occurredAt")));
+        StringBuilder csv = new StringBuilder("eventId,tenantId,organizationId,principal,resource,action,result,requestId,occurredAt\n");
+        for (CustomerAuditEventEntity event : page.getContent()) {
+            csv.append(String.join(",", csvValue(event.eventId()), csvValue(event.tenantId()),
+                    csvValue(event.organizationId()), csvValue(event.principal()), csvValue(event.resource()),
+                    csvValue(event.action()), csvValue(event.result()), csvValue(event.requestId()),
+                    csvValue(event.occurredAt()))).append('\n');
+        }
+        return csv.toString();
+    }
+
+    private Specification<CustomerAuditEventEntity> specification(CustomerAuditQuery query) {
+        return (root, ignored, criteria) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(criteria.equal(root.get("tenantId"), TENANT_ID));
             if (present(query.principal())) predicates.add(criteria.equal(root.get("principal"), query.principal()));
@@ -66,9 +87,6 @@ public class CustomerAuditService {
             if (query.to() != null) predicates.add(criteria.lessThanOrEqualTo(root.get("occurredAt"), query.to()));
             return criteria.and(predicates.toArray(Predicate[]::new));
         };
-        Page<CustomerAuditEventEntity> page = repository.findAll(spec, pageable);
-        return new CustomerAuditPage(page.getContent().stream().map(this::view).toList(),
-                page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
     }
 
     @Transactional(readOnly = true)
@@ -112,6 +130,11 @@ public class CustomerAuditService {
     }
 
     private static boolean present(String value) { return value != null && !value.isBlank(); }
+
+    private static String csvValue(Object value) {
+        if (value == null) return "";
+        return '"' + String.valueOf(value).replace("\"", "\"\"").replace("\r", " ").replace("\n", " ") + '"';
+    }
 }
 
 record CustomerAuditQuery(String principal, String resource, String action, String result,

@@ -14,7 +14,7 @@ import {
   Typography,
 } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { AuditApiError, AuditEvent, AuditPage, getAuditEvent, listAuditEvents } from './api';
+import { AuditApiError, AuditEvent, AuditPage, exportAuditEvents, getAuditEvent, listAuditEvents } from './api';
 
 const FormItem = Form.Item;
 
@@ -27,6 +27,7 @@ export default function AuditPageScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [detail, setDetail] = useState<AuditEvent | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -50,13 +51,28 @@ export default function AuditPageScreen() {
       .finally(() => setDetailLoading(false));
   }
 
+  function exportCsv() {
+    setExporting(true);
+    exportAuditEvents(filters)
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'audit-events.csv';
+        anchor.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch((failure) => setError(failure instanceof AuditApiError ? failure : new AuditApiError(0, '', '', '')))
+      .finally(() => setExporting(false));
+  }
+
   if (loading && !page) return <Spin />;
   if (error && !page) {
     return <Alert type="error" title={error.status === 403 ? t['audit.forbidden'] : t['audit.error']} content={error.message || t['audit.error']} />;
   }
 
   return (
-    <Card title={t['audit.title']} extra={<Button size="small" loading={loading} onClick={load}>{t['audit.refresh']}</Button>}>
+    <Card title={t['audit.title']} extra={<Space><Button size="small" loading={loading} onClick={load}>{t['audit.refresh']}</Button><Button size="small" loading={exporting} onClick={exportCsv}>{t['audit.export']}</Button></Space>}>
       <Form layout="inline" style={{ marginBottom: 20 }}>
         <FormItem field="principal" label={t['audit.principal']}>
           <Input value={filters.principal} onChange={(value) => setFilters({ ...filters, principal: value })} />

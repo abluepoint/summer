@@ -72,3 +72,25 @@ export function listAuditEvents(params: {
 export function getAuditEvent(eventId: string) {
   return request<AuditEvent>(() => axios.get(`/api/audit-events/${encodeURIComponent(eventId)}`));
 }
+
+export async function exportAuditEvents(params: {
+  principal?: string;
+  resource?: string;
+  action?: string;
+  result?: string;
+  requestId?: string;
+}) {
+  try {
+    const response = await axios.get('/api/audit-events/export', { params, responseType: 'blob' });
+    return response.data as Blob;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    const status = error.response?.status || 0;
+    const failure = readFailure(
+      error.response?.data,
+      status,
+      String(error.response?.headers?.['x-request-id'] || '')
+    );
+    throw new AuditApiError(failure.status, failure.code, failure.message, failure.requestId);
+  }
+}

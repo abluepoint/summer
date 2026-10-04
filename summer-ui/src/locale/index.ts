@@ -773,3 +773,5 @@ const i18n = {
 };
 
 export default i18n;
+    'audit.export': 'Export CSV',
+    'audit.export': '导出 CSV',

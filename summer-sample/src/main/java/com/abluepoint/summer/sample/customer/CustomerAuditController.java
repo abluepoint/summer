@@ -68,6 +68,33 @@ class CustomerAuditController {
         }
     }
 
+    @GetMapping(value = "/export", produces = "text/csv")
+    @RawResponse
+    ResponseEntity<?> export(
+            @RequestParam(required = false) String principal,
+            @RequestParam(required = false) String resource,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) String requestId,
+            @RequestParam(required = false) String tenantId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        if (tenantId != null && !CustomerAuditService.TENANT_ID.equals(tenantId))
+            return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", "Audit tenant access denied");
+        try {
+            Instant fromTime = from == null || from.isBlank() ? null : Instant.parse(from);
+            Instant toTime = to == null || to.isBlank() ? null : Instant.parse(to);
+            String csv = service.export(new CustomerAuditQuery(principal, resource, action, result,
+                    requestId, fromTime, toTime));
+            return ResponseEntity.ok().header("X-Request-Id", requestId())
+                    .header("Content-Disposition", "attachment; filename=audit-events.csv")
+                    .contentType(org.springframework.http.MediaType.parseMediaType("text/csv"))
+                    .body(csv);
+        } catch (RuntimeException exception) {
+            return failure(HttpStatus.BAD_REQUEST, "SUMMER_INVALID_ARGUMENT", "Invalid audit query");
+        }
+    }
+
     private <T> ResponseEntity<ApiResponse<T>> body(HttpStatus status, T value) {
         return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
                 .body(ApiResponse.success(value, requestId.currentRequestId()));
@@ -77,4 +104,6 @@ class CustomerAuditController {
         return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
                 .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
     }
+
+    private String requestId() { return this.requestId.currentRequestId(); }
 }

@@ -71,6 +71,13 @@ record AuditEventView(
         String previousDigest,
         String eventDigest) {}
 
+record AuditEventPage(
+        List<AuditEventView> items,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages) {}
+
 record McpInvocationView(
         String invocationId,
         String enterpriseId,

@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -73,6 +74,18 @@ class AuditLedgerControllerTest {
         mockMvc.perform(get("/api/v1/enterprises/ent-other/mcp-invocations")
                         .with(admin()))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events:query")
+                        .queryParam("page", "0")
+                        .queryParam("size", "10")
+                        .with(admin()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/enterprises/ent-other/audit-events:query")
+                        .queryParam("page", "0")
+                        .queryParam("size", "10")
+                        .with(adminForOther()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
     @Test
@@ -155,6 +168,39 @@ class AuditLedgerControllerTest {
                 .andExpect(jsonPath("$.data[0].detail.permitId").value("permit-i"));
     }
 
+    @Test
+    void pagedComplianceQueryKeepsCorrelationFiltersTenantBoundaryAndRedactsNestedSecrets() throws Exception {
+        append("evt-page-1", "MCP_AUTHORIZATION_DECISION", "inv-page-1", "attempt-page", "{\"decision\":\"ALLOW\",\"agentInstanceId\":\"instance-page\",\"requestId\":\"req-page\",\"safe\":\"kept\",\"nested\":{\"accessToken\":\"must-hide\"}}");
+        append("evt-page-2", "MCP_EXECUTION_COMPLETED", "inv-page-2", "attempt-page", "{\"resultStatus\":\"SUCCEEDED\",\"requestId\":\"other\"}");
+
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events:query")
+                        .queryParam("requestId", "req-evt-page-1")
+                        .queryParam("agentInstanceId", "instance-page")
+                        .queryParam("page", "0")
+                        .queryParam("size", "1")
+                        .with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.items[0].requestId").value("req-evt-page-1"))
+                .andExpect(jsonPath("$.data.items[0].detail.safe").value("kept"))
+                .andExpect(jsonPath("$.data.items[0].detail.nested.accessToken").doesNotExist());
+    }
+
+    @Test
+    void complianceExportIsTenantBoundCsvAndNeverIncludesCredentialFields() throws Exception {
+        append("evt-export", "AUTHORIZATION_REVOKED", "inv-export", "attempt-export", "{\"clientSecret\":\"secret-value\",\"reason\":\"revoked\"}");
+
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events:export")
+                        .queryParam("invocationId", "inv-export")
+                        .with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andExpect(content().string(containsString("eventId,eventType,enterpriseId")))
+                .andExpect(content().string(containsString("evt-export")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("secret-value"))));
+    }
+
     private void append(String eventId, String eventType, String invocationId, String attemptId, String detail) throws Exception {
         append(eventId, eventType, invocationId, attemptId, detail, "ent-acme");
     }
@@ -194,4 +240,12 @@ class AuditLedgerControllerTest {
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.audit.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));
     }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor adminForOther() {
+        return jwt().jwt(token -> token.subject("audit-admin-other")
+                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-other", "status", "ACTIVE")))
+                        .claim("enterprise_capabilities", Map.of("ent-other", List.of("enterprise.audit.read"))))
+                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));
+    }
+
 }
