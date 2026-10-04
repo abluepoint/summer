@@ -5,6 +5,7 @@ import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import com.nimbusds.jose.jwk.JWK;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -17,6 +18,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/security/keys")
+@ConditionalOnBean(MysqlSummerKeyStore.class)
 class KeyCapabilityController {
     private final MysqlSummerKeyStore store;
     private final RequestIdAccessor requestId;
