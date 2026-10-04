@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS summer_auth_user (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(128) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(32) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    CONSTRAINT uk_summer_auth_user_username UNIQUE (username)
+);

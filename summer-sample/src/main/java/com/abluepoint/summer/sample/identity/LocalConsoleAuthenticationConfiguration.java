@@ -61,8 +61,12 @@ class LocalConsoleAuthenticationConfiguration {
 
             Map<String, Object> claims = new LinkedHashMap<>();
             claims.put("enterprise_memberships", List.of(membership));
-            claims.put("enterprise_capabilities", Map.of(ENTERPRISE_ID, capabilities()));
-            claims.put("platform_capabilities", platformCapabilities());
+            boolean admin = authentication.getAuthorities().stream()
+                    .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+            List<String> enterpriseCapabilities = admin ? capabilities() : List.of();
+            List<String> platformCapabilities = admin ? platformCapabilities() : List.of();
+            claims.put("enterprise_capabilities", Map.of(ENTERPRISE_ID, enterpriseCapabilities));
+            claims.put("platform_capabilities", platformCapabilities);
             Jwt jwt = Jwt.withTokenValue("local-console-session")
                     .header("alg", "none")
                     .subject(authentication.getName())
@@ -74,8 +78,8 @@ class LocalConsoleAuthenticationConfiguration {
                     .build();
 
             List<GrantedAuthority> authorities = new ArrayList<>();
-            capabilities().forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
-            platformCapabilities().forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
+            enterpriseCapabilities.forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
+            platformCapabilities.forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
             authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
             authorities.add(FactorGrantedAuthority.fromFactor("PASSWORD"));
             JwtAuthenticationToken localJwt = new JwtAuthenticationToken(jwt, authorities, authentication.getName());
