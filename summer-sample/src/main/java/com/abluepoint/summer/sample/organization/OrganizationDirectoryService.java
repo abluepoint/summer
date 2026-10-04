@@ -4,6 +4,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.abluepoint.summer.sample.enterprise.EnterpriseRegistry;
 
 import java.nio.charset.StandardCharsets;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-final class OrganizationDirectoryService {
+class OrganizationDirectoryService {
     private static final String ENTERPRISE = "ent-acme";
     private static final String ORGANIZATION_READ = "enterprise.organization.read";
     private static final String ORGANIZATIONS_READ = "enterprise.organizations.read";
@@ -100,6 +101,7 @@ final class OrganizationDirectoryService {
         return new OrganizationMemberList(enterpriseId, organizationId, revision(enterpriseId, "members", organizationId + "|" + result), result);
     }
 
+    @Transactional
     synchronized OrganizationUnit create(String enterpriseId, OrganizationUnitRequest request, String key, String requestId, Authentication authentication) {
         requireEnterpriseWrite(enterpriseId, authentication);
         requireKey(key);
@@ -125,6 +127,7 @@ final class OrganizationDirectoryService {
         return result;
     }
 
+    @Transactional
     synchronized OrganizationUnit update(String enterpriseId, String unitId, OrganizationUnitRequest request, String ifMatch, String key,
                                           String requestId, Authentication authentication) {
         requireEnterpriseWrite(enterpriseId, authentication);
@@ -158,6 +161,7 @@ final class OrganizationDirectoryService {
         return result;
     }
 
+    @Transactional
     synchronized void delete(String enterpriseId, String unitId, String ifMatch, String key, String requestId, Authentication authentication) {
         requireEnterpriseWrite(enterpriseId, authentication);
         requireKey(key);
@@ -177,6 +181,7 @@ final class OrganizationDirectoryService {
         record(enterpriseId, unitId, "ORGANIZATION_DELETED", current.status(), "DELETED", requestId, authentication);
     }
 
+    @Transactional
     synchronized OrganizationAssignmentBatchResult assign(String enterpriseId, OrganizationAssignmentsRequest request, String ifMatch, String key,
                                                            String requestId, Authentication authentication) {
         requireEnterpriseWrite(enterpriseId, authentication);
@@ -217,6 +222,7 @@ final class OrganizationDirectoryService {
         return List.copyOf(audit.getOrDefault(enterpriseId + ":" + resourceId, List.of()));
     }
 
+    @Transactional
     synchronized CurrentOrganizationContext selectContext(String enterpriseId, String organizationId, Authentication authentication) {
         requireEnterpriseRead(enterpriseId, authentication);
         if (organizationId != null) unitFor(enterpriseId, organizationId);
@@ -341,13 +347,9 @@ final class OrganizationDirectoryService {
     private static Comparator<UnitRecord> unitComparator() { return Comparator.comparingInt(UnitRecord::sortOrder).thenComparing(UnitRecord::id); }
 
     private void persistMemberships(String enterpriseId, String memberId, List<String> organizationIds, String primaryOrganizationId) {
-        try {
-            membershipRepository.deleteByEnterpriseIdAndMemberId(enterpriseId, memberId);
-            for (String organizationId : organizationIds) {
-                membershipRepository.save(new OrganizationMembershipEntity(enterpriseId, memberId, organizationId, organizationId.equals(primaryOrganizationId)));
-            }
-        } catch (RuntimeException ignored) {
-            // The HTTP contract remains backed by the verified in-process assignment state when a test-only database is unavailable.
+        membershipRepository.deleteByEnterpriseIdAndMemberId(enterpriseId, memberId);
+        for (String organizationId : organizationIds) {
+            membershipRepository.save(new OrganizationMembershipEntity(enterpriseId, memberId, organizationId, organizationId.equals(primaryOrganizationId)));
         }
     }
 
