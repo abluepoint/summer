@@ -73,6 +73,10 @@ summer:
       enabled: true
       protected-paths:
         - /api/**
+    storage:
+      oauth-client: memory
+      authorization: memory
+      consent: memory
 management:
   endpoints:
     web:

@@ -97,6 +97,10 @@ summer:
       enabled: true
       protected-paths:
         - /api/**
+    storage:
+      oauth-client: jdbc
+      authorization: jdbc
+      consent: jdbc
 
 management:
   endpoints:

@@ -166,6 +166,12 @@ const officialExampleRoutes: IRoute[] = [
  */
 export const routes: IRoute[] = [
   {
+    name: 'menu.oauthClients',
+    key: 'oauth-clients',
+    requiredPermissions: [{ resource: 'menu.oauthClients', actions: ['read'] }],
+    capabilityCode: 'security.oauth-client.read',
+  },
+  {
     name: 'menu.securityKeys',
     key: 'security-keys',
     requiredPermissions: [{ resource: 'menu.securityKeys', actions: ['read'] }],
