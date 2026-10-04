@@ -222,6 +222,12 @@ export const routes: IRoute[] = [
     capabilityCode: 'enterprise.tasks.read',
   },
   {
+    name: 'menu.messages',
+    key: 'messages',
+    requiredPermissions: [{ resource: 'enterprise.messages', actions: ['read'] }],
+    capabilityCode: 'enterprise.messages.read',
+  },
+  {
     name: 'menu.dataScopes',
     key: 'data-scopes',
     requiredPermissions: [{ resource: 'menu.dataScopes', actions: ['read'] }],
