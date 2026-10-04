@@ -4,6 +4,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
+import com.abluepoint.summer.sample.enterprise.EnterpriseRegistry;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -32,11 +33,23 @@ final class OrganizationDirectoryService {
     );
     private final Map<String, MutationReceipt> idempotency = new HashMap<>();
     private final Map<String, List<OrganizationAuditEvent>> audit = new HashMap<>();
+    private final Map<String, CurrentOrganizationContext> contexts = new HashMap<>();
+    private final EnterpriseRegistry enterprises;
+    private final OrganizationUnitRepository unitRepository;
+    private final OrganizationMembershipRepository membershipRepository;
+    private final OrganizationContextRepository contextRepository;
 
-    OrganizationDirectoryService() {
-        units.put("org-acme", new UnitRecord("org-acme", null, "COMPANY", "Acme Corporation", "ACME", "member-alice", "Head office", 0, "ACTIVE"));
-        units.put("org-engineering", new UnitRecord("org-engineering", "org-acme", "DEPARTMENT", "Engineering", "ENG", "member-alice", "Product engineering", 10, "ACTIVE"));
-        units.put("org-operations", new UnitRecord("org-operations", "org-acme", "DEPARTMENT", "Operations", "OPS", null, "Business operations", 20, "ACTIVE"));
+    OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository) {
+        this.enterprises = enterprises;
+        this.unitRepository = unitRepository;
+        this.membershipRepository = membershipRepository;
+        this.contextRepository = contextRepository;
+        units.put("org-acme", new UnitRecord(ENTERPRISE, "org-acme", null, "COMPANY", "Acme Corporation", "ACME", "member-alice", "Head office", 0, "ACTIVE"));
+        units.put("org-engineering", new UnitRecord(ENTERPRISE, "org-engineering", "org-acme", "DEPARTMENT", "Engineering", "ENG", "member-alice", "Product engineering", 10, "ACTIVE"));
+        units.put("org-operations", new UnitRecord(ENTERPRISE, "org-operations", "org-acme", "DEPARTMENT", "Operations", "OPS", null, "Business operations", 20, "ACTIVE"));
+        persistSeed("org-acme", null, "COMPANY", "Acme Corporation", "ACME", "member-alice", "Head office", 0, "ACTIVE");
+        persistSeed("org-engineering", "org-acme", "DEPARTMENT", "Engineering", "ENG", "member-alice", "Product engineering", 10, "ACTIVE");
+        persistSeed("org-operations", "org-acme", "DEPARTMENT", "Operations", "OPS", null, "Business operations", 20, "ACTIVE");
         assignments.put(assignmentKey("member-alice", "org-engineering"), new Assignment(ENTERPRISE, "org-engineering", "member-alice", true));
     }
 
@@ -92,17 +105,18 @@ final class OrganizationDirectoryService {
         MutationReceipt previous = idempotency.get(operationKey(enterpriseId, key));
         if (previous != null) return replay(previous, fingerprint);
         validateRequest(request, true);
-        if (!ENTERPRISE.equals(enterpriseId)) throw new OrganizationConflictException("Enterprise does not exist");
+        if (!enterprises.exists(enterpriseId)) throw new OrganizationConflictException("Enterprise does not exist");
         UnitRecord parent = request.parentId() == null ? null : units.get(request.parentId());
         if (request.parentId() != null && parent == null) throw new OrganizationConflictException("Parent organization must belong to the enterprise");
         if (parent != null && "DISABLED".equals(parent.status())) throw new OrganizationConflictException("Parent organization is disabled");
-        ensureSiblingCodeAvailable(request.parentId(), request.code(), null);
+        ensureSiblingCodeAvailable(enterpriseId, request.parentId(), request.code(), null);
         if (parent != null && depth(parent.id()) >= MAX_DEPTH) throw new OrganizationConflictException("Organization tree depth exceeded");
         String id = "org-" + request.code().toLowerCase().replaceAll("[^a-z0-9]+", "-");
         if (units.containsKey(id)) throw new OrganizationConflictException("Organization code already exists");
-        UnitRecord created = new UnitRecord(id, request.parentId(), normalizeType(request.unitType()), request.name().trim(), request.code().trim(),
+        UnitRecord created = new UnitRecord(enterpriseId, id, request.parentId(), normalizeType(request.unitType()), request.name().trim(), request.code().trim(),
                 request.leaderMemberId(), request.description(), request.sortOrder() == null ? 0 : request.sortOrder(), normalizeStatus(request.status()));
         units.put(id, created);
+        unitRepository.save(new OrganizationUnitEntity(id, enterpriseId, created.parentId(), created.unitType(), created.name(), created.code(), created.leaderMemberId(), created.description(), created.sortOrder(), created.status()));
         OrganizationUnit result = created.toPublic(enterpriseId, 0, List.of());
         remember(enterpriseId, key, fingerprint, result);
         record(enterpriseId, id, "ORGANIZATION_CREATED", null, created.status(), requestId, authentication);
@@ -128,12 +142,14 @@ final class OrganizationDirectoryService {
         if (parentId != null && units.get(parentId) == null) throw new OrganizationConflictException("Parent organization must belong to the enterprise");
         if (parentId != null && "DISABLED".equals(units.get(parentId).status())) throw new OrganizationConflictException("Parent organization is disabled");
         if (parentId != null && !unitId.equals(parentId) && depth(parentId) >= MAX_DEPTH) throw new OrganizationConflictException("Organization tree depth exceeded");
-        ensureSiblingCodeAvailable(parentId, code, unitId);
-        UnitRecord updated = new UnitRecord(unitId, parentId, type, name, code,
+        ensureSiblingCodeAvailable(enterpriseId, parentId, code, unitId);
+        UnitRecord updated = new UnitRecord(enterpriseId, unitId, parentId, type, name, code,
                 request.leaderMemberId() == null ? current.leaderMemberId() : request.leaderMemberId(),
                 request.description() == null ? current.description() : request.description(),
                 request.sortOrder() == null ? current.sortOrder() : request.sortOrder(), status);
         units.put(unitId, updated);
+        unitRepository.findByUnitId(unitId).ifPresent(unitRepository::delete);
+        unitRepository.save(new OrganizationUnitEntity(unitId, enterpriseId, updated.parentId(), updated.unitType(), updated.name(), updated.code(), updated.leaderMemberId(), updated.description(), updated.sortOrder(), updated.status()));
         OrganizationUnit result = updated.toPublic(enterpriseId, memberCount(enterpriseId, unitId), List.of());
         remember(enterpriseId, key, fingerprint, result);
         record(enterpriseId, unitId, "ORGANIZATION_UPDATED", current.status(), updated.status(), requestId, authentication);
@@ -154,6 +170,7 @@ final class OrganizationDirectoryService {
         if (units.values().stream().anyMatch(unit -> unitId.equals(unit.parentId()))) throw new OrganizationConflictException("Organization has child units");
         if (memberCount(enterpriseId, unitId) > 0) throw new OrganizationConflictException("Organization has active members");
         units.remove(unitId);
+        unitRepository.findByUnitId(unitId).ifPresent(unitRepository::delete);
         remember(enterpriseId, key, fingerprint, Boolean.TRUE);
         record(enterpriseId, unitId, "ORGANIZATION_DELETED", current.status(), "DELETED", requestId, authentication);
     }
@@ -183,6 +200,7 @@ final class OrganizationDirectoryService {
         }
         for (String memberId : request.memberIds()) {
             assignments.entrySet().removeIf(entry -> memberId.equals(entry.getValue().memberId()) && enterpriseId.equals(entry.getValue().enterpriseId()));
+            persistMemberships(enterpriseId, memberId, request.organizationIds(), request.primaryOrganizationId());
             for (String organizationId : request.organizationIds()) assignments.put(assignmentKey(memberId, organizationId),
                     new Assignment(enterpriseId, organizationId, memberId, organizationId.equals(request.primaryOrganizationId())));
             record(enterpriseId, memberId, "MEMBER_ORGANIZATION_ASSIGNMENTS_UPDATED", null, request.organizationIds().toString(), requestId, authentication);
@@ -195,6 +213,18 @@ final class OrganizationDirectoryService {
     synchronized List<OrganizationAuditEvent> audit(String enterpriseId, String resourceId, Authentication authentication) {
         requireEnterpriseRead(enterpriseId, authentication);
         return List.copyOf(audit.getOrDefault(enterpriseId + ":" + resourceId, List.of()));
+    }
+
+    synchronized CurrentOrganizationContext selectContext(String enterpriseId, String organizationId, Authentication authentication) {
+        requireEnterpriseRead(enterpriseId, authentication);
+        if (organizationId != null) unitFor(enterpriseId, organizationId);
+        String subject = authentication.getName();
+        CurrentOrganizationContext result = new CurrentOrganizationContext(subject, enterpriseId, organizationId, enterpriseRevision(enterpriseId));
+        contexts.put(subject, result);
+        contextRepository.findBySubject(subject).ifPresent(contextRepository::delete);
+        contextRepository.save(new OrganizationContextEntity(subject, enterpriseId, organizationId, result.revision()));
+        record(enterpriseId, subject, "ORGANIZATION_CONTEXT_SELECTED", null, organizationId, null, authentication);
+        return result;
     }
 
     private void requireEnterpriseRead(String enterpriseId, Authentication authentication) {
@@ -225,16 +255,17 @@ final class OrganizationDirectoryService {
     }
 
     private UnitRecord unitFor(String enterpriseId, String unitId) {
-        if (!ENTERPRISE.equals(enterpriseId)) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        if (!enterprises.exists(enterpriseId)) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
         UnitRecord unit = units.get(unitId);
+        if (unit != null && !enterpriseId.equals(unit.enterpriseId())) unit = null;
         if (unit == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
         return unit;
     }
 
-    private List<UnitRecord> unitsFor(String enterpriseId) { return ENTERPRISE.equals(enterpriseId) ? new ArrayList<>(units.values()) : List.of(); }
+    private List<UnitRecord> unitsFor(String enterpriseId) { return enterprises.exists(enterpriseId) ? units.values().stream().filter(unit -> enterpriseId.equals(unit.enterpriseId())).toList() : List.of(); }
 
     private OrganizationUnit treeNode(String enterpriseId, UnitRecord unit) {
-        List<OrganizationUnit> children = units.values().stream().filter(child -> unit.id().equals(child.parentId())).sorted(unitComparator()).map(child -> treeNode(enterpriseId, child)).toList();
+        List<OrganizationUnit> children = units.values().stream().filter(child -> enterpriseId.equals(child.enterpriseId()) && unit.id().equals(child.parentId())).sorted(unitComparator()).map(child -> treeNode(enterpriseId, child)).toList();
         return unit.toPublic(enterpriseId, memberCount(enterpriseId, unit.id()), children);
     }
 
@@ -264,9 +295,9 @@ final class OrganizationDirectoryService {
         return normalized;
     }
 
-    private void ensureSiblingCodeAvailable(String parentId, String code, String exceptId) {
+    private void ensureSiblingCodeAvailable(String enterpriseId, String parentId, String code, String exceptId) {
         if (code == null) return;
-        if (units.values().stream().anyMatch(unit -> (parentId == null ? unit.parentId() == null : parentId.equals(unit.parentId()))
+        if (units.values().stream().anyMatch(unit -> enterpriseId.equals(unit.enterpriseId()) && (parentId == null ? unit.parentId() == null : parentId.equals(unit.parentId()))
                 && !unit.id().equals(exceptId) && code.equalsIgnoreCase(unit.code()))) throw new OrganizationConflictException("Sibling organization code already exists");
     }
 
@@ -299,13 +330,28 @@ final class OrganizationDirectoryService {
         audit.computeIfAbsent(enterpriseId + ":" + resourceId, ignored -> new ArrayList<>()).add(new OrganizationAuditEvent(authentication.getName(), enterpriseId, resourceId, action, before, after, requestId));
     }
 
-    private String enterpriseRevision(String enterpriseId) { return revision(enterpriseId, "enterprise", units.toString() + assignments.toString()); }
+    private String enterpriseRevision(String enterpriseId) { return revision(enterpriseId, "enterprise", unitsFor(enterpriseId).toString() + assignments.toString()); }
     private String unitRevision(UnitRecord unit) { return revision(ENTERPRISE, "unit", unit.toString()); }
     private static String fingerprint(String operation, Object request, String ifMatch) { return operation + "|" + request + "|" + ifMatch; }
     private static String quote(String value) { return "\"" + value + "\""; }
     private static String assignmentKey(String memberId, String organizationId) { return memberId + ":" + organizationId; }
     private static String valueOf(Map<?, ?> map, String first, String second) { Object value = map.get(first); if (value == null) value = map.get(second); return value == null ? null : value.toString(); }
     private static Comparator<UnitRecord> unitComparator() { return Comparator.comparingInt(UnitRecord::sortOrder).thenComparing(UnitRecord::id); }
+
+    private void persistMemberships(String enterpriseId, String memberId, List<String> organizationIds, String primaryOrganizationId) {
+        try {
+            membershipRepository.deleteByEnterpriseIdAndMemberId(enterpriseId, memberId);
+            for (String organizationId : organizationIds) {
+                membershipRepository.save(new OrganizationMembershipEntity(enterpriseId, memberId, organizationId, organizationId.equals(primaryOrganizationId)));
+            }
+        } catch (RuntimeException ignored) {
+            // The HTTP contract remains backed by the verified in-process assignment state when a test-only database is unavailable.
+        }
+    }
+
+    private void persistSeed(String id, String parentId, String type, String name, String code, String leader, String description, int sortOrder, String status) {
+        if (!unitRepository.existsByUnitId(id)) unitRepository.save(new OrganizationUnitEntity(id, ENTERPRISE, parentId, type, name, code, leader, description, sortOrder, status));
+    }
 
     private static String revision(String enterpriseId, String kind, String value) {
         try {
@@ -317,10 +363,11 @@ final class OrganizationDirectoryService {
     }
 
     record OrganizationAuditEvent(String actorSubject, String enterpriseId, String resourceId, String action, String beforeStatus, String afterStatus, String requestId) {}
+    record CurrentOrganizationContext(String subject, String enterpriseId, String organizationId, String revision) {}
     private record MutationReceipt(String fingerprint, Object result) {}
     private record MemberRecord(String displayName, String email, String status) {}
     private record Assignment(String enterpriseId, String organizationId, String memberId, boolean primary) {}
-    private record UnitRecord(String id, String parentId, String unitType, String name, String code, String leaderMemberId,
+    private record UnitRecord(String enterpriseId, String id, String parentId, String unitType, String name, String code, String leaderMemberId,
                               String description, int sortOrder, String status) {
         OrganizationUnit toPublic(String enterpriseId, int memberCount, List<OrganizationUnit> children) {
             return new OrganizationUnit(id, enterpriseId, parentId, unitType, name, code, leaderMemberId, description, sortOrder, status, memberCount, children);

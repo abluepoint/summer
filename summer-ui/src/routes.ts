@@ -185,6 +185,11 @@ export const routes: IRoute[] = [
     requiredPermissions: [{ resource: 'menu.systemParameters', actions: ['read'] }],
   },
   {
+    name: 'menu.organization',
+    key: 'organization',
+    requiredPermissions: [{ resource: 'menu.organization', actions: ['read'] }],
+  },
+  {
     name: 'menu.dictionary',
     key: 'dictionary',
     children: [

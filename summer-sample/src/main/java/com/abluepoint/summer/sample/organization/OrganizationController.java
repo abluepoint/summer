@@ -84,6 +84,19 @@ class OrganizationController {
                 .body(ApiResponse.success(service.audit(enterpriseId, unitId, authentication), requestId.currentRequestId()));
     }
 
+    @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/context", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
+    @RawResponse
+    ResponseEntity<ApiResponse<OrganizationDirectoryService.CurrentOrganizationContext>> context(
+            @PathVariable String enterpriseId, @RequestBody OrganizationContextRequest body, Authentication authentication) {
+        try {
+            return ResponseEntity.ok().header("X-Request-Id", requestId.currentRequestId())
+                    .body(ApiResponse.success(service.selectContext(enterpriseId, body.organizationId(), authentication), requestId.currentRequestId()));
+        } catch (ResponseStatusException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", "Organization was not found");
+        }
+    }
+
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/org-units", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")
     @RawResponse
@@ -170,4 +183,6 @@ class OrganizationController {
     }
 
     private static String quote(String value) { return "\"" + value + "\""; }
+
+    record OrganizationContextRequest(String organizationId) {}
 }
