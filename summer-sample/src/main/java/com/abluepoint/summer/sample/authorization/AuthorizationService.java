@@ -21,9 +21,13 @@ final class AuthorizationService {
     private final Map<String, Receipt> receipts = new HashMap<>();
     private final Map<String, List<Map<String, Object>>> audit = new HashMap<>();
     private final AuthorizationUserBindingRepository bindingRepository;
+    private final AuthorizationCapabilityRepository capabilityRepository;
+    private final AuthorizationRoleRepository roleRepository;
 
-    AuthorizationService(AuthorizationUserBindingRepository bindingRepository) {
+    AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository) {
         this.bindingRepository = bindingRepository;
+        this.capabilityRepository = capabilityRepository;
+        this.roleRepository = roleRepository;
         seed("cap-platform-enterprise-review-read", "platform.enterprise-review.read", "enterprise-review", "read", "MEDIUM", "PLATFORM");
         seed("cap-platform-enterprise-review-approve", "platform.enterprise-review.approve", "enterprise-review", "approve", "HIGH", "PLATFORM");
         seed("cap-enterprise-members-read", "enterprise.members.read", "members", "read", "LOW");
@@ -38,6 +42,8 @@ final class AuthorizationService {
 
     @PostConstruct
     void loadUserAssignments() {
+        capabilityRepository.findAllByOrderByCapabilityIdAsc().forEach(entity -> capabilities.put(entity.capabilityId(), new CapabilityRecord(entity.capabilityId(), entity.enterpriseId(), entity.scope(), entity.code(), entity.resource(), entity.action(), entity.riskLevel(), entity.status(), entity.version())));
+        roleRepository.findAllByOrderByEnterpriseIdAscCodeAsc().forEach(entity -> roles.put(entity.roleId(), new RoleRecord(entity.roleId(), entity.enterpriseId(), entity.name(), entity.code(), entity.builtIn(), entity.status(), split(entity.capabilityIds()), entity.version(), entity.bundleId())));
         bindingRepository.findAllByOrderByEnterpriseIdAscUsernameAsc().forEach(entity ->
                 userAssignments.put(entity.enterpriseId() + ":" + entity.username(),
                         new UserAssignmentRecord(entity.username(), entity.enterpriseId(), split(entity.roleIds()),
@@ -72,7 +78,7 @@ final class AuthorizationService {
         String id = "cap-" + UUID.randomUUID().toString().substring(0, 8);
         CapabilityRecord c = new CapabilityRecord(id, "PLATFORM".equals(scope) ? null : e, scope, req.code().trim(), req.resource().trim(), req.action().trim(), req.riskLevel() == null ? "LOW" : req.riskLevel().toUpperCase(Locale.ROOT), "ACTIVE", 1);
         if (capabilities.values().stream().anyMatch(x -> x.code.equals(c.code))) throw new AuthorizationConflictException("Capability code already exists");
-        capabilities.put(id, c); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_CREATED", rid, a); return out;
+        capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_CREATED", rid, a); return out;
     }
 
     synchronized CapabilityView createPlatformCapability(CapabilityCreateRequest req, String key, String rid, Authentication a) {
@@ -81,13 +87,13 @@ final class AuthorizationService {
         requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op("platform", key)); if (prior != null) return replay(prior, fp);
         if (req == null || blank(req.code()) || blank(req.resource()) || blank(req.action())) throw new AuthorizationValidationException("code, resource and action are required");
         String id = "cap-" + UUID.randomUUID().toString().substring(0, 8); CapabilityRecord c = new CapabilityRecord(id, null, "PLATFORM", req.code().trim(), req.resource().trim(), req.action().trim(), req.riskLevel() == null ? "LOW" : req.riskLevel().toUpperCase(Locale.ROOT), "ACTIVE", 1);
-        if (capabilities.values().stream().anyMatch(x -> x.code.equals(c.code))) throw new AuthorizationConflictException("Capability code already exists"); capabilities.put(id, c); CapabilityView out = capabilityView(c); remember("platform", key, fp, out); record("platform", id, "CAPABILITY_CREATED", rid, a); return out;
+        if (capabilities.values().stream().anyMatch(x -> x.code.equals(c.code))) throw new AuthorizationConflictException("Capability code already exists"); capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember("platform", key, fp, out); record("platform", id, "CAPABILITY_CREATED", rid, a); return out;
     }
 
     synchronized CapabilityView setCapabilityStatus(String e, String id, String status, String ifm, String key, String rid, Authentication a) {
         require(e, a, "enterprise.capabilities.write"); requireKey(key); String fp = fingerprint(id, status, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
         CapabilityRecord c = capability(e, id); etag(c.version, ifm); if (status == null || !Set.of("ACTIVE", "DISABLED").contains(status)) throw new AuthorizationValidationException("Invalid capability status"); c.status = status; c.version++;
-        CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_" + status, rid, a); return out;
+        capabilityRepository.findById(c.id).ifPresent(entity -> { entity.updateStatus(status, c.version); capabilityRepository.save(entity); }); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_" + status, rid, a); return out;
     }
 
     synchronized List<RoleView> roles(String e, Authentication a) { require(e, a, "enterprise.roles.read"); return roles.values().stream().filter(x -> e.equals(x.enterpriseId)).map(this::roleView).toList(); }
@@ -96,7 +102,7 @@ final class AuthorizationService {
         require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
         validateRole(req == null ? null : req.name(), req == null ? null : req.code()); if (req == null) throw new AuthorizationValidationException("Role is required"); List<String> ids = resolveCapabilities(e, req.capabilityIds(), req.bundleId());
         if (roles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw new AuthorizationConflictException("Role code already exists");
-        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); roles.put(r.id, r); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); return out;
+        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); roles.put(r.id, r); persistRole(r); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); return out;
     }
 
     synchronized RoleView updateRole(String e, String id, RoleUpdateRequest req, String ifm, String key, String rid, Authentication a) {
@@ -105,11 +111,12 @@ final class AuthorizationService {
         if (req != null && req.name() != null) { if (blank(req.name())) throw new AuthorizationValidationException("name is required"); r.name = req.name().trim(); }
         if (req != null && req.code() != null) { if (blank(req.code())) throw new AuthorizationValidationException("code is required"); r.code = req.code().trim(); }
         if (req != null && req.status() != null) r.status = req.status(); if (req != null && (req.capabilityIds() != null || req.bundleId() != null)) r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), req.bundleId()); if (req != null && req.bundleId() != null) r.bundleId = req.bundleId(); r.version++;
+        persistRole(r);
         RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_UPDATED", rid, a); return out;
     }
 
     synchronized RoleView setRoleCapabilities(String e, String id, RoleCapabilitiesRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = role(e, id); etag(r.version, ifm); if (req == null) throw new AuthorizationValidationException("Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; r.version++; RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); return out;
+        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = role(e, id); etag(r.version, ifm); if (req == null) throw new AuthorizationValidationException("Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; r.version++; persistRole(r); RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); return out;
     }
 
     synchronized List<BundleView> bundles(String e, Authentication a) { require(e, a, "enterprise.bundles.read"); return bundles.values().stream().filter(x -> e.equals(x.enterpriseId)).map(this::bundleView).toList(); }
@@ -192,7 +199,7 @@ final class AuthorizationService {
         return new Decision(allowed, reason);
     }
 
-    private List<String> resolveCapabilities(String e, List<String> ids, String bundleId) { if (bundleId != null) { BundleRecord b = bundle(e, bundleId); if (!"ACTIVE".equals(b.status)) throw new AuthorizationValidationException("Bundle is disabled"); return List.copyOf(b.capabilityIds); } if (ids == null) return List.of(); LinkedHashSet<String> out = new LinkedHashSet<>(); for (String id : ids) { if (id == null || id.isBlank()) throw new AuthorizationValidationException("Capability is required"); CapabilityRecord c; try { c = capability(e, id); } catch (AuthorizationConflictException unknown) { c = new CapabilityRecord("cap-resource-" + Integer.toUnsignedString(id.hashCode()), e, "ENTERPRISE", id.trim(), id.trim(), "invoke", "NORMAL", "ACTIVE", 1); capabilities.putIfAbsent(c.id, c); } if (!"ACTIVE".equals(c.status)) throw new AuthorizationValidationException("Capability is disabled"); out.add(c.id); } return List.copyOf(out); }
+    private List<String> resolveCapabilities(String e, List<String> ids, String bundleId) { if (bundleId != null) { BundleRecord b = bundle(e, bundleId); if (!"ACTIVE".equals(b.status)) throw new AuthorizationValidationException("Bundle is disabled"); return List.copyOf(b.capabilityIds); } if (ids == null) return List.of(); LinkedHashSet<String> out = new LinkedHashSet<>(); for (String id : ids) { if (id == null || id.isBlank()) throw new AuthorizationValidationException("Capability is required"); CapabilityRecord c; try { c = capability(e, id); } catch (AuthorizationConflictException unknown) { c = new CapabilityRecord("cap-resource-" + Integer.toUnsignedString(id.hashCode()), e, "ENTERPRISE", id.trim(), id.trim(), "invoke", "NORMAL", "ACTIVE", 1); capabilities.putIfAbsent(c.id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); } if (!"ACTIVE".equals(c.status)) throw new AuthorizationValidationException("Capability is disabled"); out.add(c.id); } return List.copyOf(out); }
     private CapabilityRecord capability(String e, String id) { CapabilityRecord c = capabilities.get(id); if (c == null) c = capabilities.values().stream().filter(x -> x.code.equals(id)).findFirst().orElse(null); if (c == null || (c.enterpriseId != null && !e.equals(c.enterpriseId))) throw new AuthorizationConflictException("Capability not found"); return c; }
     private RoleRecord role(String e, String id) { RoleRecord r = roles.get(id); if (r == null || !e.equals(r.enterpriseId)) throw new AuthorizationConflictException("Role not found"); return r; }
     private BundleRecord bundle(String e, String id) { BundleRecord b = bundles.get(id); if (b == null || !e.equals(b.enterpriseId)) throw new AuthorizationConflictException("Bundle not found"); return b; }
@@ -220,6 +227,13 @@ final class AuthorizationService {
     private CapabilityView capabilityView(CapabilityRecord c) { return new CapabilityView(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version); }
     private RoleView roleView(RoleRecord r) { List<String> ids = r.capabilityIds; if (r.bundleId != null) { BundleRecord b = bundles.get(r.bundleId); if (b != null && r.enterpriseId.equals(b.enterpriseId) && "ACTIVE".equals(b.status)) ids = b.capabilityIds; } return new RoleView(r.id, r.enterpriseId, r.name, r.code, r.builtIn, r.status, List.copyOf(ids), r.version, r.bundleId); }
     private BundleView bundleView(BundleRecord b) { return new BundleView(b.id, b.enterpriseId, b.name, b.code, b.status, List.copyOf(b.capabilityIds), b.version, b.changeSummary); }
+    private void persistRole(RoleRecord r) {
+        AuthorizationRoleEntity entity = roleRepository.findById(r.id).orElseGet(() -> new AuthorizationRoleEntity(r.id, r.enterpriseId, r.name, r.code, r.builtIn, r.status, join(r.capabilityIds), capabilityCodes(r.capabilityIds), r.bundleId, r.version));
+        entity.update(r.name, r.code, r.status, join(r.capabilityIds), capabilityCodes(r.capabilityIds), r.bundleId, r.version);
+        roleRepository.save(entity);
+    }
+    private String capabilityCodes(List<String> ids) { return ids.stream().map(capabilities::get).filter(Objects::nonNull).map(c -> c.code).collect(java.util.stream.Collectors.joining("\n")); }
+
     private static long revision(List<?> x) { return x.hashCode() & 0x7fffffffL; }
     private static final class CapabilityRecord { final String id, enterpriseId, scope, code, resource, action, risk; String status; long version; CapabilityRecord(String i, String e, String s, String c, String r, String a, String k, String st, long v) { id=i; enterpriseId=e; scope=s; code=c; resource=r; action=a; risk=k; status=st; version=v; } }
     private static final class RoleRecord { final String id, enterpriseId; String name, code, status, bundleId; final boolean builtIn; List<String> capabilityIds; long version; RoleRecord(String i,String e,String n,String c,boolean b,String s,List<String> ids,long v,String bid){id=i;enterpriseId=e;name=n;code=c;builtIn=b;status=s;capabilityIds=ids;version=v;bundleId=bid;} }
