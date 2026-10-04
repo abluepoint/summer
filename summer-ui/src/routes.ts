@@ -198,6 +198,12 @@ export const routes: IRoute[] = [
     requiredPermissions: [{ resource: 'menu.roles', actions: ['read'] }],
   },
   {
+    name: 'menu.tasks',
+    key: 'tasks',
+    requiredPermissions: [{ resource: 'enterprise.tasks', actions: ['read'] }],
+    capabilityCode: 'enterprise.tasks.read',
+  },
+  {
     name: 'menu.dataScopes',
     key: 'data-scopes',
     requiredPermissions: [{ resource: 'menu.dataScopes', actions: ['read'] }],

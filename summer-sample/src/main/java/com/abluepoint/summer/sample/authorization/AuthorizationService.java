@@ -41,6 +41,8 @@ public final class AuthorizationService {
         seed("cap-enterprise-menu-read", "enterprise.menu.read", "menu-manifest", "read", "LOW");
         seed("cap-enterprise-menu-write", "enterprise.menu.write", "menu-manifest", "write", "HIGH");
         seed("cap-platform-menu-write", "platform.menu.write", "menu-manifest", "write", "HIGH", "PLATFORM");
+        seed("cap-enterprise-tasks-read", "enterprise.tasks.read", "tasks", "read", "LOW");
+        seed("cap-enterprise-tasks-write", "enterprise.tasks.write", "tasks", "write", "HIGH");
     }
 
     @PostConstruct
