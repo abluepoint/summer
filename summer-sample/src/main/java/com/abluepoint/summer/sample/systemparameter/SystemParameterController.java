@@ -21,10 +21,12 @@ import java.util.Map;
 @RequestMapping("/api/system-parameters")
 class SystemParameterController {
     private final SystemParameterService service;
+    private final SystemParameterQueryService queryService;
     private final RequestIdAccessor requestId;
 
-    SystemParameterController(SystemParameterService service, RequestIdAccessor requestId) {
+    SystemParameterController(SystemParameterService service, SystemParameterQueryService queryService, RequestIdAccessor requestId) {
         this.service = service;
+        this.queryService = queryService;
         this.requestId = requestId;
     }
 
@@ -33,18 +35,38 @@ class SystemParameterController {
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
     @Field(param = "page", required = false, style = "systemParameterPageStyle")
     @Field(param = "size", required = false, style = "systemParameterPageSizeStyle")
+    @Field(param = "key", required = false, style = "systemParameterKeyStyle")
     @Field(param = "type", required = false, style = "systemParameterTypeStyle")
     @Field(param = "status", required = false, style = "systemParameterStatusStyle")
+    @Field(param = "public", required = false, style = "booleanStyle")
+    @Field(param = "sort", required = false, style = "systemParameterSortStyle")
+    @Field(param = "direction", required = false, style = "systemParameterSortDirectionStyle")
+    @Field(param = "projection", required = false, style = "systemParameterProjectionStyle")
+    @Field(param = "tenantId", required = false, style = "systemParameterTenantStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> list(
-            FieldValues values,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            FieldValues values) {
         try {
             int page = values.get("page", Integer.class) == null ? 0 : values.get("page", Integer.class);
             int size = values.get("size", Integer.class) == null ? 20 : values.get("size", Integer.class);
-            SystemParameterType parameterType = type == null || type.isBlank() ? null : SystemParameterType.valueOf(type);
-            SystemParameterStatus parameterStatus = status == null || status.isBlank() ? null : SystemParameterStatus.valueOf(status);
-            return body(HttpStatus.OK, page(service.list(page, size, parameterType, parameterStatus)));
+            String tenantId = values.get("tenantId", String.class);
+            if (tenantId != null && !SystemParameterService.TENANT_ID.equals(tenantId)) {
+                return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", "System parameter tenant access denied", List.of());
+            }
+            String type = values.get("type", String.class);
+            String status = values.get("status", String.class);
+            String sort = values.get("sort", String.class);
+            String direction = values.get("direction", String.class);
+            String projection = values.get("projection", String.class);
+            SystemParameterListQuery query = new SystemParameterListQuery(
+                    page, size, values.get("key", String.class),
+                    type == null ? null : SystemParameterType.valueOf(type),
+                    status == null ? null : SystemParameterStatus.valueOf(status),
+                    values.get("public", Boolean.class),
+                    sort == null ? SystemParameterListQuery.SortField.KEY : sortField(sort),
+                    "desc".equals(direction) ? SystemParameterListQuery.SortDirection.DESC : SystemParameterListQuery.SortDirection.ASC,
+                    "summary".equals(projection) ? SystemParameterListQuery.Projection.SUMMARY : SystemParameterListQuery.Projection.DETAIL,
+                    SystemParameterService.TENANT_ID);
+            return body(HttpStatus.OK, page(queryService.list(query)));
         } catch (IllegalArgumentException exception) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", "Invalid system parameter query", List.of());
         }
@@ -151,13 +173,39 @@ class SystemParameterController {
         return violations.stream().map(value -> new ApiError.FieldViolation(value.field(), value.message())).toList();
     }
 
-    private static Map<String, Object> page(SystemParameterPage page) {
+    private static Map<String, Object> page(SystemParameterQueryPage page) {
         return Map.of(
-                "items", page.items().stream().map(SystemParameterController::parameter).toList(),
+                "items", page.items().stream().map(SystemParameterController::item).toList(),
                 "page", page.page(),
                 "size", page.size(),
                 "totalElements", page.totalElements(),
-                "totalPages", page.totalPages());
+                "totalPages", page.totalPages(),
+                "projection", page.projection());
+    }
+
+    private static Map<String, Object> item(Object value) {
+        if (value instanceof SystemParameterSummaryView summary) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("id", summary.id());
+            result.put("key", summary.key());
+            result.put("type", summary.type());
+            result.put("status", summary.status());
+            result.put("public", summary.publicValue());
+            return result;
+        }
+        return parameter((SystemParameterView) value);
+    }
+
+    private static SystemParameterListQuery.SortField sortField(String value) {
+        return switch (value) {
+            case "key" -> SystemParameterListQuery.SortField.KEY;
+            case "type" -> SystemParameterListQuery.SortField.TYPE;
+            case "status" -> SystemParameterListQuery.SortField.STATUS;
+            case "createdAt" -> SystemParameterListQuery.SortField.CREATED_AT;
+            case "updatedAt" -> SystemParameterListQuery.SortField.UPDATED_AT;
+            case "version" -> SystemParameterListQuery.SortField.VERSION;
+            default -> throw new IllegalArgumentException("Invalid system parameter sort field");
+        };
     }
 
     private static Map<String, Object> parameter(SystemParameterView value) {

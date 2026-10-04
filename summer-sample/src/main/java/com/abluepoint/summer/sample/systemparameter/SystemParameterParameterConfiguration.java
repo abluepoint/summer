@@ -31,4 +31,24 @@ class SystemParameterParameterConfiguration {
     Style systemParameterStatusStyle() {
         return Styles.string().oneOf("ACTIVE", "INACTIVE").build();
     }
+
+    @Bean
+    Style systemParameterSortStyle() {
+        return Styles.string().oneOf("key", "type", "status", "createdAt", "updatedAt", "version").build();
+    }
+
+    @Bean
+    Style systemParameterSortDirectionStyle() {
+        return Styles.string().oneOf("asc", "desc").build();
+    }
+
+    @Bean
+    Style systemParameterProjectionStyle() {
+        return Styles.string().oneOf("summary", "detail").build();
+    }
+
+    @Bean
+    Style systemParameterTenantStyle() {
+        return Styles.string().matches(java.util.regex.Pattern.compile("[a-z][a-z0-9-]{2,79}"), "a valid tenant id").build();
+    }
 }

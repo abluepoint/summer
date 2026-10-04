@@ -4,9 +4,15 @@ import { readEnvelope, readFailure } from '../customer/contract.mjs';
 export type Parameter = {
   id: string; key: string; type: 'STRING' | 'INTEGER' | 'DECIMAL' | 'BOOLEAN'; value: unknown;
   required: boolean; min?: number; max?: number; pattern?: string; public: boolean;
-  description?: string; status: 'ACTIVE' | 'INACTIVE'; version: number;
+  description?: string; status: 'ACTIVE' | 'INACTIVE'; version?: number;
 };
-export type ParameterPage = { items: Parameter[]; page: number; size: number; totalElements: number; totalPages: number };
+export type ParameterSummary = Pick<Parameter, 'id' | 'key' | 'type' | 'status' | 'public'>;
+export type ParameterPage = { items: Array<Parameter | ParameterSummary>; page: number; size: number; totalElements: number; totalPages: number; projection: 'summary' | 'detail' };
+export type ParameterListQuery = {
+  page: number; size: number; key?: string; type?: Parameter['type']; status?: Parameter['status'];
+  public?: boolean; sort: 'key' | 'type' | 'status' | 'createdAt' | 'updatedAt' | 'version';
+  direction: 'asc' | 'desc'; projection: 'summary' | 'detail';
+};
 
 export class ParameterApiError extends Error {
   status: number; code: string; requestId: string;
@@ -25,7 +31,7 @@ async function request<T>(call: () => Promise<{ data: unknown; status: number }>
   }
 }
 
-export const listParameters = (params: { page: number; size: number; type?: string; status?: string }) =>
+export const listParameters = (params: ParameterListQuery) =>
   request<ParameterPage>(() => axios.get('/api/system-parameters', { params }));
 export const createParameter = (payload: Record<string, unknown>) =>
   request<Parameter>(() => axios.post('/api/system-parameters', payload));
