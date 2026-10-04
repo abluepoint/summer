@@ -72,9 +72,12 @@ class TaskSchedulerController {
     @PostMapping("/{taskId}:trigger")
     @RawResponse @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
     ResponseEntity<ApiResponse<Map<String, String>>> trigger(@PathVariable String enterpriseId, @PathVariable String taskId,
+                                                               @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                                                Authentication authentication) {
-        try { service.trigger(enterpriseId, taskId, rid(), authentication); return body(HttpStatus.ACCEPTED, Map.of("taskId", taskId, "status", "TRIGGERED")); }
+        try { service.trigger(enterpriseId, taskId, idempotencyKey, rid(), authentication); return body(HttpStatus.ACCEPTED, Map.of("taskId", taskId, "status", "TRIGGERED")); }
         catch (TaskNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", e.getMessage()); }
+        catch (TaskIdempotencyRequiredException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_IDEMPOTENCY_REQUIRED", e.getMessage()); }
+        catch (TaskIdempotencyConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", e.getMessage()); }
         catch (TaskConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_TASK_CONFLICT", e.getMessage()); }
     }
 

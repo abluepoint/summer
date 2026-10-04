@@ -9,7 +9,14 @@ import java.util.Map;
 final class TrustedTaskRegistry {
     private final Map<String, TrustedTaskHandler> handlers = Map.of(
             "system.noop", (parameters) -> { },
-            "system.parameter-events", (parameters) -> { }
+            "system.parameter-events", (parameters) -> { },
+            // Deterministic handlers used to exercise retry and timeout state transitions.
+            "system.fail", (parameters) -> { throw new IllegalStateException("task handler failed"); },
+            "system.sleep", (parameters) -> {
+                Object millis = parameters.get("millis");
+                try { Thread.sleep(millis instanceof Number n ? n.longValue() : 60_000L); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+            }
     );
 
     boolean supports(String taskType) { return taskType != null && handlers.containsKey(taskType); }

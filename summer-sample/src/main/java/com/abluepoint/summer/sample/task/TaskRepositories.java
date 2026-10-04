@@ -12,4 +12,11 @@ interface TaskDefinitionRepository extends JpaRepository<TaskDefinitionEntity, S
 interface TaskExecutionRepository extends JpaRepository<TaskExecutionEntity, String> {
     List<TaskExecutionEntity> findAllByEnterpriseIdAndTaskIdOrderByStartedAtDesc(String enterpriseId, String taskId);
     java.util.Optional<TaskExecutionEntity> findByTaskIdAndFireInstanceId(String taskId, String fireInstanceId);
+    java.util.Optional<TaskExecutionEntity> findByTaskIdAndIdempotencyKey(String taskId, String idempotencyKey);
+}
+interface TaskAttemptRepository extends JpaRepository<TaskAttemptEntity, String> {
+    List<TaskAttemptEntity> findAllByExecutionIdOrderByAttemptAsc(String executionId);
+}
+interface TaskTriggerReceiptRepository extends JpaRepository<TaskTriggerReceiptEntity, String> {
+    java.util.Optional<TaskTriggerReceiptEntity> findByEnterpriseIdAndIdempotencyKey(String enterpriseId, String idempotencyKey);
 }
