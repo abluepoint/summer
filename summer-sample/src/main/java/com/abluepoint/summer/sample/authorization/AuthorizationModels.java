@@ -14,6 +14,9 @@ record CapabilityView(String capabilityId, String enterpriseId, String scope, St
 record CapabilityCatalogView(String workspace, String enterpriseId, List<CapabilityView> capabilities, long version) {}
 record RoleView(String roleId, String enterpriseId, String name, String code, boolean builtIn, String status,
                 List<String> capabilityIds, long version, String bundleId) {}
+record UserRoleAssignmentRequest(List<String> roleIds, List<String> deniedCapabilityCodes) {}
+record UserRoleAssignmentView(String username, String enterpriseId, List<String> roleIds,
+                              List<String> deniedCapabilityCodes, long version) {}
 record BundleView(String bundleId, String enterpriseId, String name, String code, String status,
                   List<String> capabilityIds, long version, String changeSummary) {}
 record BundleVersionView(String bundleId, long version, List<String> capabilityIds, String changeSummary) {}

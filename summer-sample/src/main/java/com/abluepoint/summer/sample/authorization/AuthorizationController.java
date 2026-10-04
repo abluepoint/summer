@@ -49,6 +49,29 @@ class AuthorizationController {
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/capabilities", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<BundleView>> updateBundleCapabilities(@PathVariable String enterpriseId, @PathVariable String id, @RequestBody BundleUpdateRequest body, @RequestHeader("If-Match") String etag, @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication a) { try { BundleView v = service.updateBundle(enterpriseId, id, body, etag, key, rid(), a); return write(HttpStatus.OK, v, v.version()); } catch (Exception e) { return error(e); } }
     @GetMapping("/api/v1/enterprises/{enterpriseId}/authorization-audit/{id}") @RawResponse ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> audit(@PathVariable String enterpriseId, @PathVariable String id, Authentication a) { try { return write(HttpStatus.OK, service.audit(enterpriseId, id, a), null); } catch (Exception e) { return error(e); } }
 
+    @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/users/{username}/roles", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @RawResponse
+    ResponseEntity<ApiResponse<UserRoleAssignmentView>> assignUserRoles(
+            @PathVariable String enterpriseId,
+            @PathVariable String username,
+            @RequestBody UserRoleAssignmentRequest body,
+            @RequestHeader(value = "If-Match", required = false) String etag,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key,
+            Authentication authentication) {
+        try {
+            UserRoleAssignmentView view = service.assignUserRoles(enterpriseId, username, body, etag, key, rid(), authentication);
+            return write(HttpStatus.OK, view, view.version());
+        } catch (Exception exception) {
+            return error(exception);
+        }
+    }
+
+    @GetMapping("/api/v1/enterprises/{enterpriseId}/users/{username}/roles") @RawResponse
+    ResponseEntity<ApiResponse<UserRoleAssignmentView>> userRoles(@PathVariable String enterpriseId, @PathVariable String username, Authentication authentication) {
+        try { UserRoleAssignmentView view = service.userAssignment(enterpriseId, username, authentication); return write(HttpStatus.OK, view, view.version()); }
+        catch (Exception exception) { return error(exception); }
+    }
+
     private String rid() { return requestId.currentRequestId(); }
     private <T> ResponseEntity<ApiResponse<T>> read(T body, HttpServletRequest req) { String etag = "\"" + (body instanceof CapabilityCatalogView c ? c.version() : body.hashCode()) + "\""; if (etag.equals(req.getHeader(HttpHeaders.IF_NONE_MATCH))) return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).header("X-Request-Id", rid()).build(); return write(HttpStatus.OK, body, Long.parseLong(etag.substring(1, etag.length() - 1))); }
     private <T> ResponseEntity<ApiResponse<T>> write(HttpStatus status, T body, Long version) { ResponseEntity.BodyBuilder b = ResponseEntity.status(status).header("X-Request-Id", rid()); if (version != null) b.eTag("\"" + version + "\""); return b.body(ApiResponse.success(body, rid())); }

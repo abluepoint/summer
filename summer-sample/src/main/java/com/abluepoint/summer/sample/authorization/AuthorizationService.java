@@ -4,6 +4,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,10 +17,13 @@ final class AuthorizationService {
     private final Map<String, CapabilityRecord> capabilities = new LinkedHashMap<>();
     private final Map<String, RoleRecord> roles = new LinkedHashMap<>();
     private final Map<String, BundleRecord> bundles = new LinkedHashMap<>();
+    private final Map<String, UserAssignmentRecord> userAssignments = new LinkedHashMap<>();
     private final Map<String, Receipt> receipts = new HashMap<>();
     private final Map<String, List<Map<String, Object>>> audit = new HashMap<>();
+    private final AuthorizationUserBindingRepository bindingRepository;
 
-    AuthorizationService() {
+    AuthorizationService(AuthorizationUserBindingRepository bindingRepository) {
+        this.bindingRepository = bindingRepository;
         seed("cap-platform-enterprise-review-read", "platform.enterprise-review.read", "enterprise-review", "read", "MEDIUM", "PLATFORM");
         seed("cap-platform-enterprise-review-approve", "platform.enterprise-review.approve", "enterprise-review", "approve", "HIGH", "PLATFORM");
         seed("cap-enterprise-members-read", "enterprise.members.read", "members", "read", "LOW");
@@ -30,6 +34,14 @@ final class AuthorizationService {
         seed("cap-enterprise-capabilities-write", "enterprise.capabilities.write", "capabilities", "write", "HIGH");
         seed("cap-enterprise-bundles-read", "enterprise.bundles.read", "capability-bundles", "read", "LOW");
         seed("cap-enterprise-bundles-write", "enterprise.bundles.write", "capability-bundles", "write", "HIGH");
+    }
+
+    @PostConstruct
+    void loadUserAssignments() {
+        bindingRepository.findAllByOrderByEnterpriseIdAscUsernameAsc().forEach(entity ->
+                userAssignments.put(entity.enterpriseId() + ":" + entity.username(),
+                        new UserAssignmentRecord(entity.username(), entity.enterpriseId(), split(entity.roleIds()),
+                                split(entity.deniedCapabilityCodes()), entity.version())));
     }
 
     synchronized CapabilityCatalogView capabilities(String enterpriseId, Authentication auth) {
@@ -112,9 +124,75 @@ final class AuthorizationService {
     }
 
     synchronized List<BundleVersionView> bundleVersions(String e, String id, Authentication a) { require(e, a, "enterprise.bundles.read"); return List.copyOf(bundle(e, id).history); }
-    synchronized List<Map<String, Object>> audit(String e, String id, Authentication a) { require(e, a, "enterprise.roles.read"); return List.copyOf(audit.getOrDefault(e + ":" + id, List.of())); }
+    synchronized List<Map<String, Object>> audit(String e, String id, Authentication a) {
+        require(e, a, "enterprise.roles.read");
+        List<Map<String, Object>> values = new ArrayList<>(audit.getOrDefault(e + ":" + id, List.of()));
+        values.addAll(audit.getOrDefault(e + ":user:" + id, List.of()));
+        return List.copyOf(values);
+    }
 
-    private List<String> resolveCapabilities(String e, List<String> ids, String bundleId) { if (bundleId != null) { BundleRecord b = bundle(e, bundleId); if (!"ACTIVE".equals(b.status)) throw new AuthorizationValidationException("Bundle is disabled"); return List.copyOf(b.capabilityIds); } if (ids == null) return List.of(); LinkedHashSet<String> out = new LinkedHashSet<>(); for (String id : ids) { CapabilityRecord c = capability(e, id); if (c == null) throw new AuthorizationValidationException("Unknown capability"); if (!"ACTIVE".equals(c.status)) throw new AuthorizationValidationException("Capability is disabled"); out.add(c.id); } return List.copyOf(out); }
+    synchronized UserRoleAssignmentView assignUserRoles(String enterpriseId, String username,
+                                                         UserRoleAssignmentRequest request, String ifMatch,
+                                                         String key, String requestId, Authentication authentication) {
+        require(enterpriseId, authentication, "enterprise.roles.write");
+        requireKey(key);
+        if (username == null || username.isBlank()) throw new AuthorizationValidationException("username is required");
+        String assignmentKey = enterpriseId + ":" + username;
+        String fingerprint = fingerprint(username, request, ifMatch);
+        Receipt previous = receipts.get("user-assignment:" + assignmentKey + ":" + key);
+        if (previous != null) return replay(previous, fingerprint);
+        UserAssignmentRecord current = userAssignments.get(assignmentKey);
+        long version = current == null ? 1 : current.version;
+        if (current != null) etag(current.version, ifMatch);
+        else if (ifMatch != null && !ifMatch.equals("\"1\"")) throw new AuthorizationPreconditionException("The resource has changed");
+        if (request == null) throw new AuthorizationValidationException("Role assignment is required");
+        List<String> roleIds = request.roleIds() == null ? List.of() : request.roleIds().stream().map(String::trim).filter(s -> !s.isBlank()).distinct().toList();
+        for (String roleId : roleIds) role(enterpriseId, roleId);
+        List<String> denied = request.deniedCapabilityCodes() == null ? List.of() : request.deniedCapabilityCodes().stream().map(String::trim).filter(s -> !s.isBlank()).distinct().toList();
+        UserAssignmentRecord updated = new UserAssignmentRecord(username, enterpriseId, roleIds, denied, version);
+        if (current != null) updated.version = current.version + 1;
+        userAssignments.put(assignmentKey, updated);
+        AuthorizationUserBindingEntity entity = bindingRepository.findByEnterpriseIdAndUsername(enterpriseId, username)
+                .orElseGet(() -> new AuthorizationUserBindingEntity("binding-" + Integer.toUnsignedString(assignmentKey.hashCode()), enterpriseId, username, "", "", updated.version));
+        entity.update(join(updated.roleIds), join(updated.deniedCodes), updated.version);
+        bindingRepository.save(entity);
+        UserRoleAssignmentView view = userAssignmentView(updated);
+        receipts.put("user-assignment:" + assignmentKey + ":" + key, new Receipt(fingerprint, view));
+        record(enterpriseId, "user:" + username, "USER_ROLES_UPDATED", requestId, authentication);
+        return view;
+    }
+
+    synchronized UserRoleAssignmentView userAssignment(String enterpriseId, String username, Authentication authentication) {
+        require(enterpriseId, authentication, "enterprise.roles.read");
+        UserAssignmentRecord record = userAssignments.get(enterpriseId + ":" + username);
+        if (record == null) throw new AuthorizationConflictException("User assignment not found");
+        return userAssignmentView(record);
+    }
+
+    /** Evaluates an HTTP permission only when this subject has a managed assignment. */
+    synchronized Decision decision(Authentication authentication, String enterpriseId, String permissionCode, String requestId) {
+        if (!(authentication instanceof JwtAuthenticationToken jwt) || enterpriseId == null || permissionCode == null) {
+            return new Decision(false, "DEFAULT_DENY");
+        }
+        UserAssignmentRecord assignment = userAssignments.get(enterpriseId + ":" + authentication.getName());
+        if (assignment == null) return new Decision(true, "LEGACY_SCOPE");
+        if (assignment.deniedCodes.contains(permissionCode)) {
+            record(enterpriseId, "user:" + assignment.username, "AUTHORIZATION_DENIED", requestId, authentication,
+                    Map.of("permissionCode", permissionCode, "decision", "DENY", "reasonCode", "USER_EXPLICIT_DENY"));
+            return new Decision(false, "USER_EXPLICIT_DENY");
+        }
+        boolean allowed = assignment.roleIds.stream().map(roles::get).filter(Objects::nonNull)
+                .filter(role -> "ACTIVE".equals(role.status))
+                .flatMap(role -> role.capabilityIds.stream()).map(id -> capabilities.get(id))
+                .filter(Objects::nonNull).filter(capability -> "ACTIVE".equals(capability.status))
+                .anyMatch(capability -> permissionCode.equals(capability.code) || permissionCode.equals(capability.resource));
+        String reason = allowed ? "ROLE_ALLOW" : "DEFAULT_DENY";
+        record(enterpriseId, "user:" + assignment.username, allowed ? "AUTHORIZATION_ALLOWED" : "AUTHORIZATION_DENIED", requestId, authentication,
+                Map.of("permissionCode", permissionCode, "decision", allowed ? "ALLOW" : "DENY", "reasonCode", reason));
+        return new Decision(allowed, reason);
+    }
+
+    private List<String> resolveCapabilities(String e, List<String> ids, String bundleId) { if (bundleId != null) { BundleRecord b = bundle(e, bundleId); if (!"ACTIVE".equals(b.status)) throw new AuthorizationValidationException("Bundle is disabled"); return List.copyOf(b.capabilityIds); } if (ids == null) return List.of(); LinkedHashSet<String> out = new LinkedHashSet<>(); for (String id : ids) { if (id == null || id.isBlank()) throw new AuthorizationValidationException("Capability is required"); CapabilityRecord c; try { c = capability(e, id); } catch (AuthorizationConflictException unknown) { c = new CapabilityRecord("cap-resource-" + Integer.toUnsignedString(id.hashCode()), e, "ENTERPRISE", id.trim(), id.trim(), "invoke", "NORMAL", "ACTIVE", 1); capabilities.putIfAbsent(c.id, c); } if (!"ACTIVE".equals(c.status)) throw new AuthorizationValidationException("Capability is disabled"); out.add(c.id); } return List.copyOf(out); }
     private CapabilityRecord capability(String e, String id) { CapabilityRecord c = capabilities.get(id); if (c == null) c = capabilities.values().stream().filter(x -> x.code.equals(id)).findFirst().orElse(null); if (c == null || (c.enterpriseId != null && !e.equals(c.enterpriseId))) throw new AuthorizationConflictException("Capability not found"); return c; }
     private RoleRecord role(String e, String id) { RoleRecord r = roles.get(id); if (r == null || !e.equals(r.enterpriseId)) throw new AuthorizationConflictException("Role not found"); return r; }
     private BundleRecord bundle(String e, String id) { BundleRecord b = bundles.get(id); if (b == null || !e.equals(b.enterpriseId)) throw new AuthorizationConflictException("Bundle not found"); return b; }
@@ -129,11 +207,14 @@ final class AuthorizationService {
     private static void requireKey(String k) { if (k == null || k.isBlank()) throw new AuthorizationValidationException("Idempotency-Key is required"); }
     private static void etag(long v, String h) { if (h == null || !h.equals("\"" + v + "\"")) throw new AuthorizationPreconditionException("The resource has changed"); }
     private static boolean blank(String s) { return s == null || s.isBlank(); }
+    private static String join(List<String> values) { return String.join("\n", values); }
+    private static List<String> split(String value) { return value == null || value.isBlank() ? List.of() : Arrays.stream(value.split("\\n", -1)).filter(s -> !s.isBlank()).toList(); }
     private static String op(String e, String k) { return e + ":" + k; }
     private static String fingerprint(Object... v) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Arrays.deepToString(v).getBytes(StandardCharsets.UTF_8))); } catch (Exception x) { throw new IllegalStateException(x); } }
     @SuppressWarnings("unchecked") private <T> T replay(Receipt p, String fp) { if (!p.fingerprint.equals(fp)) throw new AuthorizationIdempotencyConflictException("Idempotency key reused"); return (T) p.result; }
     private void remember(String e, String k, String fp, Object result) { receipts.put(op(e, k), new Receipt(fp, result)); }
     private void record(String e, String id, String action, String rid, Authentication a) { audit.computeIfAbsent(e + ":" + id, x -> new ArrayList<>()).add(Map.of("action", action, "requestId", rid == null ? "" : rid, "principal", a == null ? "" : a.getName(), "at", Instant.now().toString())); }
+    private void record(String e, String id, String action, String rid, Authentication a, Map<String, Object> details) { Map<String, Object> event = new LinkedHashMap<>(details); event.put("action", action); event.put("requestId", rid == null ? "" : rid); event.put("principal", a == null ? "" : a.getName()); event.put("at", Instant.now().toString()); audit.computeIfAbsent(e + ":" + id, x -> new ArrayList<>()).add(Map.copyOf(event)); }
     private void seed(String id, String code, String resource, String action, String risk) { seed(id, code, resource, action, risk, "ENTERPRISE"); }
     private void seed(String id, String code, String resource, String action, String risk, String scope) { capabilities.put(id, new CapabilityRecord(id, null, scope, code, resource, action, risk, "ACTIVE", 1)); }
     private CapabilityView capabilityView(CapabilityRecord c) { return new CapabilityView(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version); }
@@ -144,4 +225,7 @@ final class AuthorizationService {
     private static final class RoleRecord { final String id, enterpriseId; String name, code, status, bundleId; final boolean builtIn; List<String> capabilityIds; long version; RoleRecord(String i,String e,String n,String c,boolean b,String s,List<String> ids,long v,String bid){id=i;enterpriseId=e;name=n;code=c;builtIn=b;status=s;capabilityIds=ids;version=v;bundleId=bid;} }
     private static final class BundleRecord { final String id, enterpriseId; String name, code, status, changeSummary; List<String> capabilityIds; long version; final List<BundleVersionView> history = new ArrayList<>(); BundleRecord(String i,String e,String n,String c,String s,List<String> ids,long v,String summary){id=i;enterpriseId=e;name=n;code=c;status=s;capabilityIds=ids;version=v;changeSummary=summary;} }
     private record Receipt(String fingerprint, Object result) {}
+    private UserRoleAssignmentView userAssignmentView(UserAssignmentRecord value) { return new UserRoleAssignmentView(value.username, value.enterpriseId, List.copyOf(value.roleIds), List.copyOf(value.deniedCodes), value.version); }
+    record Decision(boolean allowed, String reasonCode) {}
+    private static final class UserAssignmentRecord { final String username, enterpriseId; final List<String> roleIds, deniedCodes; long version; UserAssignmentRecord(String u, String e, List<String> r, List<String> d, long v) { username=u; enterpriseId=e; roleIds=List.copyOf(r); deniedCodes=List.copyOf(d); version=v; } }
 }
