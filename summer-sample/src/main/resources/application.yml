@@ -49,11 +49,13 @@ summer:
     enabled: true
     authorization-server:
       enabled: true
-      issuer: ${SUMMER_SAMPLE_ISSUER:http://127.0.0.1:8080}
+      # The browser-visible origin is Summer UI. Spring may still listen on
+      # 8080; Vite/Caddy proxy the protocol requests to this internal service.
+      issuer: ${SUMMER_SAMPLE_ISSUER:http://127.0.0.1:5173}
       login-page: ${SUMMER_SAMPLE_UI_LOGIN_PAGE:http://127.0.0.1:5173/login}
       user:
-        username: ${SUMMER_SAMPLE_USER:summer-user}
-        password: ${SUMMER_SAMPLE_USER_PASSWORD:summer-user-demo-only}
+        username: ${SUMMER_SAMPLE_BOOTSTRAP_USER:}
+        password: ${SUMMER_SAMPLE_BOOTSTRAP_PASSWORD:}
       clients:
         - id: ${SUMMER_SAMPLE_CLIENT_ID:summer-ui}
           public-client: true
@@ -69,12 +71,6 @@ summer:
             - profile
             - customer.read
             - customer.write
-            - capabilities.platform.read
-            - capabilities.enterprise.read
-            - enterprise.members.read
-            - enterprise.members.write
-            - capabilities.platform.read
-            - capabilities.enterprise.read
     resource-server:
       enabled: true
       protected-paths:
