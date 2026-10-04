@@ -20,10 +20,13 @@ class TaskExecutionService {
     private final TaskExecutionRepository executions;
     private final TaskAttemptRepository attempts;
     private final TrustedTaskRegistry registry;
+    private final TaskProgressEventService progress;
 
     TaskExecutionService(TaskDefinitionRepository definitions, TaskExecutionRepository executions,
-                         TaskAttemptRepository attempts, TrustedTaskRegistry registry) {
+                         TaskAttemptRepository attempts, TrustedTaskRegistry registry,
+                         TaskProgressEventService progress) {
         this.definitions = definitions; this.executions = executions; this.attempts = attempts; this.registry = registry;
+        this.progress = progress;
     }
 
     @Transactional
@@ -41,25 +44,34 @@ class TaskExecutionService {
 
         execution.claim(nodeId(), Instant.now().plusMillis(task.timeoutMs() + 5_000), recovering);
         executions.saveAndFlush(execution);
+        progress.started(execution);
         Map<String, Object> parameters = readParameters(task.parametersJson());
         parameters = withIdempotencyKey(parameters, key);
         for (int number = execution.attempt() + 1; number <= task.maxRetries() + 1; number++) {
             execution.attempt(number);
             TaskAttemptEntity attempt = new TaskAttemptEntity(UUID.randomUUID().toString(), execution.executionId(), number, nodeId());
             attempts.saveAndFlush(attempt);
+            progress.attempt(execution, number, task.maxRetries() + 1);
             try {
                 runWithTimeout(task, parameters);
                 attempt.success();
                 execution.success();
                 attempts.saveAndFlush(attempt);
                 executions.saveAndFlush(execution);
+                progress.succeeded(execution);
                 return;
             } catch (TaskTimedOutException timeout) {
                 attempt.failure("TASK_TIMEOUT", TaskExecutionStatus.FAILED);
-                if (number == task.maxRetries() + 1) execution.failure("TASK_TIMEOUT");
+                if (number == task.maxRetries() + 1) {
+                    execution.failure("TASK_TIMEOUT");
+                    progress.failed(execution, "TASK_TIMEOUT");
+                }
             } catch (RuntimeException failure) {
                 attempt.failure("TASK_HANDLER_FAILED", TaskExecutionStatus.FAILED);
-                if (number == task.maxRetries() + 1) execution.failure("TASK_HANDLER_FAILED");
+                if (number == task.maxRetries() + 1) {
+                    execution.failure("TASK_HANDLER_FAILED");
+                    progress.failed(execution, "TASK_HANDLER_FAILED");
+                }
             }
             attempts.saveAndFlush(attempt);
             executions.saveAndFlush(execution);

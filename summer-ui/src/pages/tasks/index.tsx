@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Form, Input, InputNumber, Message, Select, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { createTask, listExecutions, listTasks, listTrustedTaskTypes, setTaskStatus, Task, TaskApiError, TaskExecution, triggerTask, TrustedTaskType } from './api';
+import { createTask, listExecutions, listTasks, listTrustedTaskTypes, setTaskStatus, subscribeTaskProgress, Task, TaskApiError, TaskExecution, triggerTask, TrustedTaskType } from './api';
 
 const enterpriseId = 'ent-acme';
 const FormItem = Form.Item;
@@ -32,6 +32,23 @@ export default function TasksPage() {
   const trigger = (task: Task) => triggerTask(enterpriseId, task.taskId).then(() => { Message.success(t['tasks.triggered']); return listExecutions(enterpriseId, task.taskId); }).then((page) => { setSelected(task); setExecutions(page.items); }).catch(setError);
   const toggle = (task: Task) => setTaskStatus(enterpriseId, task, task.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE').then((updated) => setTasks((items) => items.map((item) => item.taskId === updated.taskId ? updated : item))).catch(setError);
   const inspect = (task: Task) => listExecutions(enterpriseId, task.taskId).then((page) => { setSelected(task); setExecutions(page.items); }).catch(setError);
+  useEffect(() => {
+    if (!selected) return;
+    return subscribeTaskProgress(enterpriseId, selected.taskId, (event) => {
+      if (event.type === 'resync' || !event.executionId) {
+        listExecutions(enterpriseId, selected.taskId).then((page) => setExecutions(page.items)).catch(setError);
+        return;
+      }
+      setExecutions((items) => items.map((item) => item.executionId === event.executionId ? {
+        ...item,
+        status: (event.status || item.status) as TaskExecution['status'],
+        attempt: event.attempt || item.attempt,
+        progress: event.progress ?? item.progress,
+        failureCode: event.failureCode || item.failureCode,
+        finishedAt: event.status === 'SUCCESS' || event.status === 'FAILED' ? new Date().toISOString() : item.finishedAt,
+      } : item));
+    }, () => setError({ status: 0, code: 'SUMMER_TASK_SSE_DISCONNECTED', message: t['tasks.streamDisconnected'], requestId: '' }));
+  }, [selected, t]);
   return <Card title={t['tasks.title']} extra={<Button onClick={load}>{t['tasks.refresh']}</Button>}>
     {error && <Alert type="error" content={`${error.message || t['tasks.error']} ${error.requestId ? `(${error.requestId})` : ''}`} style={{ marginBottom: 16 }} />}
     <Form form={form} layout="inline" initialValues={{ maxRetries: 0, timeoutMs: 30000 }}>
@@ -48,6 +65,6 @@ export default function TasksPage() {
       { title: t['tasks.status'], render: (_, task) => <Tag color={task.status === 'ACTIVE' ? 'green' : 'gray'}>{task.status}</Tag> },
       { title: t['tasks.actions'], render: (_, task) => <Space><Button size="small" onClick={() => toggle(task)}>{task.status === 'ACTIVE' ? t['tasks.pause'] : t['tasks.resume']}</Button><Button size="small" onClick={() => trigger(task)}>{t['tasks.trigger']}</Button><Button size="small" onClick={() => inspect(task)}>{t['tasks.history']}</Button></Space> },
     ]} />
-    {selected && <><Typography.Title heading={6} style={{ marginTop: 24 }}>{t['tasks.history']} · {selected.name}</Typography.Title><Table<TaskExecution> rowKey="executionId" data={executions} pagination={{ pageSize: 5 }} columns={[{ title: t['tasks.executionStatus'], dataIndex: 'status' }, { title: t['tasks.attempts'], dataIndex: 'attempt' }, { title: t['tasks.startedAt'], dataIndex: 'startedAt' }, { title: t['tasks.finishedAt'], dataIndex: 'finishedAt' }, { title: t['tasks.failure'], dataIndex: 'failureCode' }, { title: t['tasks.recovered'], render: (_, item) => item.recovered ? t['tasks.recoveredYes'] : '' }]} /></>}
+    {selected && <><Typography.Title heading={6} style={{ marginTop: 24 }}>{t['tasks.history']} · {selected.name}</Typography.Title><Table<TaskExecution> rowKey="executionId" data={executions} pagination={{ pageSize: 5 }} columns={[{ title: t['tasks.executionStatus'], dataIndex: 'status' }, { title: t['tasks.progress'], render: (_, item) => item.progress == null ? '' : `${item.progress}%` }, { title: t['tasks.attempts'], dataIndex: 'attempt' }, { title: t['tasks.startedAt'], dataIndex: 'startedAt' }, { title: t['tasks.finishedAt'], dataIndex: 'finishedAt' }, { title: t['tasks.failure'], dataIndex: 'failureCode' }, { title: t['tasks.recovered'], render: (_, item) => item.recovered ? t['tasks.recoveredYes'] : '' }]} /></>}
   </Card>;
 }

@@ -12,10 +12,15 @@ export type TaskExecution = {
   status: 'RUNNING' | 'SUCCESS' | 'FAILED'; attempt: number; startedAt: string;
   finishedAt?: string; failureCode?: string;
   idempotencyKey: string; recovered: boolean;
+  progress?: number;
   attempts: { attempt: number; status: string; startedAt: string; finishedAt?: string; failureCode?: string; nodeId?: string }[];
 };
 export type TrustedTaskType = { taskType: string; description: string };
 export type TaskApiError = { status: number; code: string; message: string; requestId: string };
+export type TaskProgressEvent = {
+  id: number; type: string; taskId?: string; executionId?: string; status?: string;
+  progress?: number; attempt?: number; failureCode?: string; reason?: string; message?: string;
+};
 
 async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
   try { return readEnvelope((await call()).data, 200) as T; }
@@ -32,3 +37,22 @@ export const updateTask = (enterpriseId: string, task: Task, payload: Partial<Pi
 export const setTaskStatus = (enterpriseId: string, task: Task, status: Task['status']) => request<Task>(() => axios.post(`${base(enterpriseId)}/${encodeURIComponent(task.taskId)}:${status === 'ACTIVE' ? 'resume' : 'pause'}`, null, { headers: { 'If-Match': `"${task.version}"` } }));
 export const triggerTask = (enterpriseId: string, taskId: string) => request<{ taskId: string; status: string }>(() => axios.post(`${base(enterpriseId)}/${encodeURIComponent(taskId)}:trigger`, null, { headers: { 'Idempotency-Key': `ui-task-trigger-${taskId}-${Date.now()}` } }));
 export const listExecutions = (enterpriseId: string, taskId: string) => request<{ items: TaskExecution[] }>(() => axios.get(`${base(enterpriseId)}/${encodeURIComponent(taskId)}/executions`));
+
+export function subscribeTaskProgress(enterpriseId: string, taskId: string,
+                                       onEvent: (event: TaskProgressEvent) => void,
+                                       onError: () => void): () => void {
+  const source = new EventSource(`${base(enterpriseId)}/${encodeURIComponent(taskId)}/events`);
+  const eventTypes = ['execution.started', 'execution.attempt', 'execution.succeeded', 'execution.failed', 'execution.log', 'resync'];
+  const handle = (event: Event) => {
+    const message = event as MessageEvent<string>;
+    try {
+      const data = JSON.parse(message.data) as Omit<TaskProgressEvent, 'id' | 'type'>;
+      onEvent({ ...data, id: Number(message.lastEventId || 0), type: message.type });
+    } catch {
+      onError();
+    }
+  };
+  eventTypes.forEach((type) => source.addEventListener(type, handle));
+  source.onerror = onError;
+  return () => source.close();
+}
