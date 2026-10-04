@@ -163,6 +163,11 @@ const officialExampleRoutes: IRoute[] = [
  */
 export const routes: IRoute[] = [
   {
+    name: 'menu.securityKeys',
+    key: 'security-keys',
+    requiredPermissions: [{ resource: 'menu.securityKeys', actions: ['read'] }],
+  },
+  {
     name: 'menu.interfaceResources',
     key: 'interface-resources',
     requiredPermissions: [
