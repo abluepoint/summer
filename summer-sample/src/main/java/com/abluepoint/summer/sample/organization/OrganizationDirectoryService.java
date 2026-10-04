@@ -154,6 +154,7 @@ class OrganizationDirectoryService {
                 request.sortOrder() == null ? current.sortOrder() : request.sortOrder(), status);
         units.put(unitId, updated);
         unitRepository.findByUnitId(unitId).ifPresent(unitRepository::delete);
+        unitRepository.flush();
         unitRepository.save(new OrganizationUnitEntity(unitId, enterpriseId, updated.parentId(), updated.unitType(), updated.name(), updated.code(), updated.leaderMemberId(), updated.description(), updated.sortOrder(), updated.status()));
         OrganizationUnit result = updated.toPublic(enterpriseId, memberCount(enterpriseId, unitId), List.of());
         remember(enterpriseId, key, fingerprint, result);
