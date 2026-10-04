@@ -1,6 +1,8 @@
 package com.abluepoint.summer.sample.menu;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
+import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,13 +16,18 @@ class MenuManifestService {
     private final MenuManifestRepository manifestRepository;
     private final MenuManifestOverrideRepository overrideRepository;
     private final AuthorizationService authorizationService;
+    private final AuthorizationChangeEventService changeEvents;
+    private final RequestIdAccessor requestId;
     private final Map<String, Receipt> receipts = new HashMap<>();
 
     MenuManifestService(MenuManifestRepository manifestRepository, MenuManifestOverrideRepository overrideRepository,
-                         AuthorizationService authorizationService) {
+                         AuthorizationService authorizationService, AuthorizationChangeEventService changeEvents,
+                         RequestIdAccessor requestId) {
         this.manifestRepository = manifestRepository;
         this.overrideRepository = overrideRepository;
         this.authorizationService = authorizationService;
+        this.changeEvents = changeEvents;
+        this.requestId = requestId;
     }
 
     @Transactional
@@ -47,6 +54,7 @@ class MenuManifestService {
         manifestRepository.saveAll(entities);
         MenuManifestView result = view(request.manifestVersion(), entities, Map.of(), null);
         receipts.put(key, new Receipt(fingerprint, result));
+        changeEvents.enqueue("ent-acme", "MENU_MANIFEST", "manifest", "MENU_MANIFEST_SYNCED", request.manifestVersion(), requestId.currentRequestId());
         return result;
     }
 
@@ -99,6 +107,7 @@ class MenuManifestService {
         MenuManifestItemView result = new MenuManifestItemView(item.menuId(), effective.parentMenuId, item.path(), item.titleKey(), item.iconKey(),
                 effective.sortOrder, effective.capabilityCode, effective.enabled, action(effective.capabilityCode), current.version());
         receipts.put("override:" + enterpriseId + ":" + menuId + ":" + key, new Receipt(fingerprint, result));
+        changeEvents.enqueue(enterpriseId, "MENU_MANIFEST", menuId, "MENU_OVERRIDE_UPDATED", current.version(), requestId.currentRequestId());
         return result;
     }
 

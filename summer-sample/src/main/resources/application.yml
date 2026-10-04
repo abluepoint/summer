@@ -61,6 +61,9 @@ summer:
     parameter-events:
       scheduling-enabled: true
       poll-interval-ms: 5000
+    authorization-events:
+      scheduling-enabled: true
+      poll-interval-ms: 5000
   data:
     jpa:
       enabled: true

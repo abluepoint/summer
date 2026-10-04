@@ -27,6 +27,8 @@ summer:
       node-id: test-node
     parameter-events:
       scheduling-enabled: false
+    authorization-events:
+      scheduling-enabled: false
     data:
       sql-resource: classpath:sql/customer-queries.sql
   security:

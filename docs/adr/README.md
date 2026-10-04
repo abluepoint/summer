@@ -30,6 +30,7 @@
 | [0022](0022-define-styles-without-builtin-names.md) | Style 由应用定义，不设框架内置名称 | 框架提供规则构建 API，应用以 Java 公共配置定义具名 Bean；链式定义写法已确认，部分替代 0017，尚未实现 |
 | [0023](0023-consolidate-identity-frontend-in-summer-ui.md) | 身份管理前端统一到 Summer UI | 替代 AICT 规格中的独立 `aict-identity` / Vben 前端选择；服务端安全边界另行明确 |
 | [0026](0026-use-versioned-route-menu-manifest.md) | 前端路由发布版本化菜单 manifest | 服务端只保存元数据、Capability 绑定和租户覆盖，不保存前端组件引用 |
+| [0027](0027-versioned-authorization-change-stream.md) | 权限变更使用 outbox 与 Redis Stream 版本化传播 | 节点独立消费组、共享 receipt 幂等、版本/重试/死信和持久化投影恢复 |
 
 ## 来源与适用范围
 

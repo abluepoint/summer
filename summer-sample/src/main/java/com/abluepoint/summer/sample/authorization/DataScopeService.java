@@ -24,13 +24,15 @@ public class DataScopeService {
     private final DataScopePolicyAuditRepository auditRepository;
     private final ObjectMapper mapper;
     private final CustomerAuditService audit;
+    private final AuthorizationChangeEventService changeEvents;
 
     DataScopeService(DataScopePolicyRepository repository, DataScopePolicyAuditRepository auditRepository,
-                     ObjectMapper mapper, CustomerAuditService audit) {
+                     ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents) {
         this.repository = repository;
         this.auditRepository = auditRepository;
         this.mapper = mapper;
         this.audit = audit;
+        this.changeEvents = changeEvents;
         repository.findByEnterpriseIdAndResource(ENTERPRISE, "system-parameters")
                 .orElseGet(() -> repository.save(new DataScopePolicyEntity(UUID.randomUUID().toString(), ENTERPRISE,
                         "system-parameters", "AND", "[{\"type\":\"TENANT\"}]")));
@@ -81,6 +83,7 @@ public class DataScopeService {
         auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterpriseId, resource,
                 entity.version(), checksum, "DATA_SCOPE_POLICY_UPDATED", principal(auth), requestId));
         audit.recordResourceSuccess("data-scope:" + enterpriseId + ":" + resource, "DATA_SCOPE_POLICY_UPDATED", null, auth);
+        changeEvents.enqueue(enterpriseId, "DATA_SCOPE", resource, "DATA_SCOPE_POLICY_UPDATED", entity.version(), requestId);
         return view(entity);
     }
 
