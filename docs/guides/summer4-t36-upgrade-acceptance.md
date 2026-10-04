@@ -30,7 +30,7 @@ T36_CURL_CONFIG=/path/to/protected-curl.conf \
 
 `preflight` 同时检查 `/actuator/health`、`/internal/v1/release/readiness` 和 `/internal/v1/diagnostics/runtime`。后两者返回统一响应并带 `X-Request-Id`；运行诊断只读取组件状态和指标数量，不保存正文。权限不足或依赖不可用必须失败关闭；不能用 HTTP 200 或静态文件存在替代健康结论。
 
-`migrations` 在连接数据库前检查 MySQL Flyway 文件名中的版本号唯一性；随后仍必须在目标数据库执行 Flyway validate/migrate 并回读 history。当前共享工作区存在前置并行改动留下的重复版本号时，该门禁应失败并阻止发布，不能通过改名或删除并行文件临时掩盖。
+`migrations` 在连接数据库前检查 MySQL Flyway 文件名中的版本号唯一性；随后仍必须在目标数据库执行 Flyway validate/migrate 并回读 history。若重复版本已经写入目标库 history，必须停止发布并按迁移回滚流程处理；若重复仅来自尚未应用的并行迁移，则必须先确认目标库没有对应 history，再以追加迁移的方式永久分配唯一版本号并重新执行门禁。
 
 ## 迁移、备份与恢复
 
@@ -110,5 +110,7 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 - `ReleaseGateControllerTest`：11 tests，failures=0，errors=0，skipped=0；合并运行共 13 tests 通过。
 - Summer UI `npm test`：19 tests，failures=0，errors=0，skipped=0；`npm run typecheck` 和 `npm run build` 通过。
 - `node summer-ui/scripts/verify-t36-upgrade.mjs`、`scripts/t36-upgrade-gate.sh contract`：通过。
-- `scripts/t36-upgrade-gate.sh migrations`：失败并阻断发布，检测到重复 Flyway 版本 `V6`、`V23`、`V26`。这些文件来自共享工作区的前置并行改动，本票没有改名、删除或覆盖它们。
-- `preflight`、`backup`、`restore`、`rolling`：未在本轮运行；它们需要目标环境的真实 MySQL/Redis、两个节点和受控认证配置，不能用本地 H2、静态脚本或缺省凭据冒充通过。
+- `scripts/t36-upgrade-gate.sh migrations`：通过，26 个版本号唯一。经确认目标 schema 不存在且没有可回读的 Flyway history 后，将三组未应用重复版本永久改为 `V6_1`、`V23_1`、`V26_1`；同时修正 MySQL 9.7 不接受的多列 `ALTER TABLE ... IF NOT EXISTS` 语法和 `TEXT` 默认值定义。
+- 隔离 MySQL 演练：在临时 `summer_t36_source` schema 顺序执行 26 个迁移，得到 52 张表；插入合成 Customer 行后使用 `mysqldump --single-transaction --routines --events --triggers --no-tablespaces --set-gtid-purged=OFF` 恢复到 `summer_t36_restore`，恢复后仍为 52 张表且合成行可读，随后删除两个隔离 schema。首次不关闭 GTID 的恢复按预期被 MySQL 拒绝，未触碰既有业务 schema。
+- T32 回归：业务字典发布/禁用/回滚的 404 保持业务错误，不再被 resilience fallback 改写为 503；字典 HTTP 与 SSE 测试共 6 tests 通过。`ResilienceDiagnosticsHttpTest` 2 tests 通过；现有 `ResilientReadServiceTest.retries_and_uses_a_bounded_fallback_for_read_failures` 仍因 `snapshot().getFirst()` 对排序后 operation 的旧断言失败，未修改该并行测试。
+- `preflight`、`backup`、`restore`、`rolling` 的真实双节点 HTTP 流程仍需目标环境执行；本轮已完成隔离 MySQL 迁移及备份恢复演练，未使用或输出任何凭据。

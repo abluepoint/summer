@@ -1,6 +1,7 @@
 ALTER TABLE summer_data_scope_policy
-    ADD COLUMN IF NOT EXISTS conditions_json TEXT NOT NULL DEFAULT 'null',
-    ADD COLUMN IF NOT EXISTS checksum VARCHAR(64) NOT NULL DEFAULT '';
+    ADD COLUMN conditions_json TEXT NOT NULL;
+ALTER TABLE summer_data_scope_policy
+    ADD COLUMN checksum VARCHAR(64) NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS summer_data_scope_policy_audit (
     audit_id VARCHAR(96) NOT NULL PRIMARY KEY,

@@ -80,6 +80,13 @@ public class ResilientReadService {
             stats.successes++;
             return remember(operation, cacheKey, value);
         } catch (RuntimeException failure) {
+            Throwable cause = unwrap(failure);
+            if (isBusinessFailure(cause)) {
+                // A withdrawal or authorization decision must invalidate old success data.
+                fallbackValues.remove(operation + ":" + cacheKey);
+                fallbackTimes.remove(operation + ":" + cacheKey);
+                throw (RuntimeException) cause;
+            }
             stats.failures++;
             if (isRejected(failure)) stats.rejected++;
             if (isTimeout(failure)) stats.timedOut++;
@@ -91,6 +98,21 @@ public class ResilientReadService {
             }
             throw new DependencyDegradedException("Dependency read is unavailable", failure);
         }
+    }
+
+    static boolean isBusinessFailure(Throwable failure) {
+        Throwable cause = unwrap(failure);
+        return cause instanceof org.springframework.security.access.AccessDeniedException
+                || (cause instanceof com.abluepoint.summer.common.error.SummerException business
+                && business.errorCode().category() != com.abluepoint.summer.common.error.ErrorCategory.INTERNAL_ERROR);
+    }
+
+    private static Throwable unwrap(Throwable failure) {
+        while ((failure instanceof java.util.concurrent.CompletionException
+                || failure instanceof java.util.concurrent.ExecutionException) && failure.getCause() != null) {
+            failure = failure.getCause();
+        }
+        return failure;
     }
 
     public List<ResilienceOperationView> snapshot() {

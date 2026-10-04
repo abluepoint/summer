@@ -21,6 +21,7 @@ import java.time.Duration;
 class ResilienceConfiguration {
     @Bean CircuitBreakerRegistry resilienceCircuitBreakers(ResilienceProperties p) {
         CircuitBreakerConfig c = CircuitBreakerConfig.custom()
+                .ignoreException(ResilientReadService::isBusinessFailure)
                 .failureRateThreshold(p.getCircuitFailureRate())
                 .slidingWindowSize(Math.max(2, p.getCircuitWindow()))
                 .minimumNumberOfCalls(Math.max(2, p.getCircuitWindow()))
@@ -31,6 +32,7 @@ class ResilienceConfiguration {
 
     @Bean RetryRegistry resilienceRetries(ResilienceProperties p) {
         RetryConfig c = RetryConfig.custom().maxAttempts(Math.max(1, p.getMaxAttempts()))
+                .retryOnException(failure -> !ResilientReadService.isBusinessFailure(failure))
                 .waitDuration(p.getRetryWait()).build();
         return RetryRegistry.of(c);
     }
