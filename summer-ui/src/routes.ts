@@ -177,6 +177,12 @@ export const routes: IRoute[] = [
     capabilityCode: 'security.oauth-client.read',
   },
   {
+    name: 'menu.plugins',
+    key: 'plugins',
+    requiredPermissions: [{ resource: 'menu.plugins', actions: ['read'] }],
+    capabilityCode: 'platform.plugins.read',
+  },
+  {
     name: 'menu.sessions',
     key: 'sessions',
     requiredPermissions: [{ resource: 'menu.sessions', actions: ['read'] }],
