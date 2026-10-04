@@ -5,6 +5,7 @@ export type Parameter = {
   id: string; key: string; type: 'STRING' | 'INTEGER' | 'DECIMAL' | 'BOOLEAN'; value: unknown;
   required: boolean; min?: number; max?: number; pattern?: string; public: boolean;
   description?: string; status: 'ACTIVE' | 'INACTIVE'; version?: number;
+  revision?: number; state?: 'DRAFT' | 'PUBLISHED' | 'ROLLED_BACK' | 'INACTIVE';
 };
 export type ParameterSummary = Pick<Parameter, 'id' | 'key' | 'type' | 'status' | 'public'>;
 export type ParameterPage = { items: Array<Parameter | ParameterSummary>; page: number; size: number; totalElements: number; totalPages: number; projection: 'summary' | 'detail' };
@@ -15,6 +16,8 @@ export type ParameterEvent = {
   event: { eventId: string; parameterKey: string; eventType: string; version: number; requestId?: string };
 };
 export type ParameterEventPage = { items: ParameterEvent[]; totalElements: number };
+export type ParameterVersion = { revision: number; state: 'DRAFT' | 'PUBLISHED' | 'ROLLED_BACK' | 'INACTIVE'; parameterKey: string; baseVersion: number; principal: string; createdAt: string; value: unknown; status: 'ACTIVE' | 'INACTIVE'; currentVersion: number };
+export type ParameterVersionPage = { items: ParameterVersion[]; currentVersion: number; currentState: ParameterVersion['state'] };
 export type ParameterListQuery = {
   page: number; size: number; key?: string; type?: Parameter['type']; status?: Parameter['status'];
   public?: boolean; sort: 'key' | 'type' | 'status' | 'createdAt' | 'updatedAt' | 'version';
@@ -50,3 +53,13 @@ export const listParameterEvents = (key?: string) =>
   request<ParameterEventPage>(() => axios.get('/api/system-parameter-events', { params: key ? { key } : undefined }));
 export const retryParameterEvent = (eventId: string) =>
   request<ParameterEvent>(() => axios.post(`/api/system-parameter-events/${encodeURIComponent(eventId)}/retry`));
+export const listParameterVersions = (key: string) =>
+  request<ParameterVersionPage>(() => axios.get(`/api/system-parameters/${encodeURIComponent(key)}/versions`));
+export const saveParameterDraft = (key: string, payload: Record<string, unknown>) =>
+  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/draft`, payload));
+export const publishParameterVersion = (key: string, payload: Record<string, unknown>) =>
+  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/publish`, payload));
+export const rollbackParameterVersion = (key: string, payload: Record<string, unknown>) =>
+  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/rollback`, payload));
+export const deactivateParameterVersion = (key: string, payload: Record<string, unknown>) =>
+  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/deactivate`, payload));

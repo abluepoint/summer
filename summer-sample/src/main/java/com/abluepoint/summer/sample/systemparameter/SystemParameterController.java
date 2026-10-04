@@ -21,11 +21,14 @@ import java.util.Map;
 @RequestMapping("/api/system-parameters")
 class SystemParameterController {
     private final SystemParameterService service;
+    private final SystemParameterReleaseService releases;
     private final SystemParameterQueryService queryService;
     private final RequestIdAccessor requestId;
 
-    SystemParameterController(SystemParameterService service, SystemParameterQueryService queryService, RequestIdAccessor requestId) {
+    SystemParameterController(SystemParameterService service, SystemParameterReleaseService releases,
+                              SystemParameterQueryService queryService, RequestIdAccessor requestId) {
         this.service = service;
+        this.releases = releases;
         this.queryService = queryService;
         this.requestId = requestId;
     }
@@ -142,6 +145,89 @@ class SystemParameterController {
         return status(key, SystemParameterStatus.INACTIVE, authentication);
     }
 
+    @PostMapping("/{key}/draft")
+    @RawResponse
+    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
+    ResponseEntity<ApiResponse<Map<String, Object>>> draft(@PathVariable String key,
+                                                            @RequestBody SystemParameterDraftRequest request,
+                                                            Authentication authentication) {
+        try {
+            return body(HttpStatus.CREATED, release(releases.draft(key, request, rid(), authentication)));
+        } catch (SystemParameterReleaseValidationException exception) {
+            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
+        } catch (SystemParameterVersionConflictException exception) {
+            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
+        } catch (SystemParameterNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
+        } catch (SystemParameterReleaseConflictException exception) {
+            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_RELEASE_CONFLICT", exception.getMessage(), List.of());
+        }
+    }
+
+    @GetMapping("/{key}/versions")
+    @RawResponse
+    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
+    ResponseEntity<ApiResponse<Map<String, Object>>> versions(@PathVariable String key, Authentication authentication) {
+        try {
+            return body(HttpStatus.OK, versionPage(releases.versions(key, authentication)));
+        } catch (SystemParameterNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
+        }
+    }
+
+    @PostMapping("/{key}/publish")
+    @RawResponse
+    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
+    ResponseEntity<ApiResponse<Map<String, Object>>> publish(@PathVariable String key,
+                                                               @RequestBody SystemParameterReleaseCommand command,
+                                                               Authentication authentication) {
+        try {
+            return body(HttpStatus.OK, release(releases.publish(key, command, rid(), authentication)));
+        } catch (SystemParameterReleaseValidationException exception) {
+            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
+        } catch (SystemParameterVersionConflictException | SystemParameterReleaseConflictException exception) {
+            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
+        } catch (SystemParameterReleaseNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
+        } catch (SystemParameterNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
+        }
+    }
+
+    @PostMapping("/{key}/rollback")
+    @RawResponse
+    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
+    ResponseEntity<ApiResponse<Map<String, Object>>> rollback(@PathVariable String key,
+                                                                @RequestBody SystemParameterReleaseCommand command,
+                                                                Authentication authentication) {
+        try {
+            return body(HttpStatus.OK, release(releases.rollback(key, command, rid(), authentication)));
+        } catch (SystemParameterReleaseValidationException exception) {
+            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
+        } catch (SystemParameterVersionConflictException | SystemParameterReleaseConflictException exception) {
+            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
+        } catch (SystemParameterReleaseNotFoundException | SystemParameterNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
+        }
+    }
+
+    @PostMapping("/{key}/deactivate")
+    @RawResponse
+    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
+    ResponseEntity<ApiResponse<Map<String, Object>>> deactivate(@PathVariable String key,
+                                                                  @RequestBody SystemParameterReleaseCommand command,
+                                                                  Authentication authentication) {
+        try {
+            return body(HttpStatus.OK, release(releases.deactivate(key, command, rid(), authentication)));
+        } catch (SystemParameterReleaseValidationException exception) {
+            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
+        } catch (SystemParameterVersionConflictException | SystemParameterReleaseConflictException exception) {
+            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
+        } catch (SystemParameterNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
+        }
+    }
+
     private ResponseEntity<ApiResponse<Map<String, Object>>> status(
             String key, SystemParameterStatus status, Authentication authentication) {
         try {
@@ -225,6 +311,28 @@ class SystemParameterController {
         result.put("tenantId", value.tenantId());
         result.put("createdAt", value.createdAt());
         result.put("updatedAt", value.updatedAt());
+        return result;
+    }
+
+    private static Map<String, Object> release(SystemParameterReleaseResult value) {
+        Map<String, Object> result = parameter(value.parameter());
+        result.put("revision", value.revision());
+        result.put("state", value.state());
+        return result;
+    }
+
+    private static Map<String, Object> versionPage(SystemParameterVersionPage value) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", value.items().stream().map(item -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("revision", item.revision()); row.put("state", item.state());
+            row.put("parameterKey", item.parameterKey()); row.put("baseVersion", item.baseVersion());
+            row.put("principal", item.principal()); row.put("createdAt", item.createdAt());
+            row.put("value", item.value()); row.put("status", item.status());
+            row.put("currentVersion", item.currentVersion()); return row;
+        }).toList());
+        result.put("currentVersion", value.currentVersion());
+        result.put("currentState", value.currentState());
         return result;
     }
 }

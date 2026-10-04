@@ -31,16 +31,19 @@ class SystemParameterService {
     private final SystemParameterEventService events;
     private final VersionedTwoLevelCache cache;
     private final DataScopeService dataScopes;
+    private final SystemParameterReleaseService releases;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
                            CustomerAuditService audit, SystemParameterEventService events,
-                           VersionedTwoLevelCache cache, DataScopeService dataScopes) {
+                           VersionedTwoLevelCache cache, DataScopeService dataScopes,
+                           SystemParameterReleaseService releases) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.audit = audit;
         this.events = events;
         this.cache = cache;
         this.dataScopes = dataScopes;
+        this.releases = releases;
     }
 
     @Transactional
@@ -58,6 +61,7 @@ class SystemParameterService {
                     request.key(), request.type(), valueJson, Boolean.TRUE.equals(request.required()),
                     request.min(), request.max(), blankToNull(request.pattern()),
                     Boolean.TRUE.equals(request.publicValue()), blankToNull(request.description()), request.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName()));
+            releases.recordInitial(saved, authentication);
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
             cache.evictLocal(TENANT_ID, "system-parameter");
             audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_CREATED", requestId, authentication);
