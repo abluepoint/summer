@@ -25,6 +25,8 @@ class DictionaryTypeEntity {
     private boolean publicReadable;
     @Column(nullable = false)
     private boolean enabled;
+    @Column(name = "published_version")
+    private Long publishedVersion;
 
     protected DictionaryTypeEntity() {}
 
@@ -45,10 +47,18 @@ class DictionaryTypeEntity {
     boolean published() { return published; }
     boolean publicReadable() { return publicReadable; }
     boolean enabled() { return enabled; }
+    Long publishedVersion() { return publishedVersion; }
     void change(String name, boolean published, boolean publicReadable, boolean enabled) {
         this.name = name;
         this.published = published;
         this.publicReadable = publicReadable;
         this.enabled = enabled;
     }
+
+    void publish(long version) {
+        this.published = true;
+        this.publishedVersion = version;
+    }
+
+    void disable() { this.published = false; }
 }

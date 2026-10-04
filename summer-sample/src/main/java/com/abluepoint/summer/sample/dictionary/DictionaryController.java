@@ -12,10 +12,12 @@ import java.util.List;
 @RestController
 class DictionaryController {
     private final DictionaryService service;
+    private final DictionaryVersionService versions;
     private final RequestIdAccessor requestId;
 
-    DictionaryController(DictionaryService service, RequestIdAccessor requestId) {
+    DictionaryController(DictionaryService service, DictionaryVersionService versions, RequestIdAccessor requestId) {
         this.service = service;
+        this.versions = versions;
         this.requestId = requestId;
     }
 
@@ -54,7 +56,34 @@ class DictionaryController {
         return service.updateItem(code, value, request, requestId.currentRequestId(), authentication);
     }
 
+    @PostMapping({"/api/dictionaries/{code}/publish", "/api/dictionaries/{code}/versions/publish"})
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.write')")
+    DictionaryTypeVersionView publish(@PathVariable String code, @RequestBody DictionaryVersionRequest request,
+                                      Authentication authentication) {
+        return versions.publish(code, request, requestId.currentRequestId(), authentication);
+    }
+
+    @PostMapping({"/api/dictionaries/{code}/disable", "/api/dictionaries/{code}/deactivate", "/api/dictionaries/{code}/versions/disable", "/api/dictionaries/{code}/versions/deactivate"})
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.write')")
+    DictionaryTypeVersionView disable(@PathVariable String code, @RequestBody DictionaryVersionRequest request,
+                                      Authentication authentication) {
+        return versions.disable(code, request, requestId.currentRequestId(), authentication);
+    }
+
+    @PostMapping({"/api/dictionaries/{code}/rollback", "/api/dictionaries/{code}/versions/rollback"})
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.write')")
+    DictionaryTypeVersionView rollback(@PathVariable String code, @RequestBody DictionaryVersionRequest request,
+                                       Authentication authentication) {
+        return versions.rollback(code, request, requestId.currentRequestId(), authentication);
+    }
+
+    @GetMapping("/api/dictionaries/{code}/versions")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    List<DictionaryVersionView> versions(@PathVariable String code, Authentication authentication) {
+        return versions.list(code, authentication);
+    }
+
     @GetMapping("/public/dictionaries/{code}")
     @PreAuthorize("permitAll()")
-    PublicDictionaryView publicRead(@PathVariable String code) { return service.publicRead(code); }
+    PublicDictionaryView publicRead(@PathVariable String code) { return versions.publicRead(code); }
 }

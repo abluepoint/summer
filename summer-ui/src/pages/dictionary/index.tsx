@@ -7,6 +7,7 @@ export default function DictionaryConsumerPage() {
   const t = useLocale();
   const [options, setOptions] = useState<DictionaryOption[]>([]);
   const [value, setValue] = useState('');
+  const [version, setVersion] = useState<number | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -16,6 +17,7 @@ export default function DictionaryConsumerPage() {
     getPublicDictionary('customer-segment')
       .then((dictionary) => {
         setOptions(dictionary.items);
+        setVersion(dictionary.version);
         setValue((current) =>
           dictionary.items.some((item) => item.value === current)
             ? current
@@ -36,6 +38,7 @@ export default function DictionaryConsumerPage() {
           <Form.Item label={t['dictionary.segment']} field="segment">
             <Select value={value} onChange={setValue} placeholder={t['dictionary.choose']} options={options.map((item) => ({ label: item.label, value: item.value }))} />
           </Form.Item>
+          {version !== undefined && <div data-testid="dictionary-version">{t['dictionary.version']}: {version}</div>}
         </Form>
       )}
     </Card>

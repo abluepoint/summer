@@ -13,9 +13,12 @@ const [api, page, routes, vite] = await Promise.all([
 
 assert.match(api, /\/public\/dictionaries/);
 assert.match(api, /readEnvelope/);
+assert.match(api, /version\?: number/);
 assert.match(page, /getPublicDictionary/);
 assert.match(page, /Select/);
 assert.match(page, /dictionary\.refresh/);
+assert.match(page, /setVersion/);
+assert.match(page, /some\(\(item\) => item\.value === current\)/);
 assert.match(routes, /dictionary\/form/);
 assert.match(vite, /['"]\/public['"]\s*:\s*backendOrigin/);
 assert.doesNotMatch(api, /localStorage|sessionStorage/);

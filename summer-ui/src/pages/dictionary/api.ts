@@ -11,6 +11,7 @@ export type DictionaryOption = {
 export type PublicDictionary = {
   code: string;
   items: DictionaryOption[];
+  version?: number;
 };
 
 export async function getPublicDictionary(code: string): Promise<PublicDictionary> {

@@ -122,7 +122,8 @@ class DictionaryService {
     private DictionaryTypeView view(DictionaryTypeEntity type) { return view(type, null); }
     private DictionaryTypeView view(DictionaryTypeEntity type, DataScopeService.ScopeFilter scope) {
         List<DictionaryItemEntity> values = scope == null ? items.findAllByDictionaryCodeOrderBySortOrderAscValueAsc(type.code()) : items.findScoped(type.code(), "ent-acme", scope.tenant(), scope.operatorAnd(), scope.subject(), scope.self(), scope.creator(), scope.owner(), scope.organization(), scope.organizationId());
-        return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(), values.stream().map(DictionaryService::view).toList());
+        long version = type.publishedVersion() == null ? 0 : type.publishedVersion();
+        return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(), values.stream().map(DictionaryService::view).toList(), version, type.publishedVersion());
     }
 
     private static DictionaryItemView view(DictionaryItemEntity item) {
