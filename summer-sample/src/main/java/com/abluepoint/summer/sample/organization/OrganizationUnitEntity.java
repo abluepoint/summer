@@ -24,4 +24,13 @@ class OrganizationUnitEntity extends BaseLongEntity {
         this.unitId = unitId; this.enterpriseId = enterpriseId; this.parentId = parentId; this.unitType = unitType; this.name = name; this.code = code; this.leaderMemberId = leaderMemberId; this.description = description; this.sortOrder = sortOrder; this.status = status;
     }
     String unitId() { return unitId; }
+    String enterpriseId() { return enterpriseId; }
+    String parentId() { return parentId; }
+    String unitType() { return unitType; }
+    String name() { return name; }
+    String code() { return code; }
+    String leaderMemberId() { return leaderMemberId; }
+    String description() { return description; }
+    int sortOrder() { return sortOrder; }
+    String status() { return status; }
 }

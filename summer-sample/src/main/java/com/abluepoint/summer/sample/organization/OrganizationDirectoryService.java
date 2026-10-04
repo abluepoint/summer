@@ -50,6 +50,7 @@ final class OrganizationDirectoryService {
         persistSeed("org-acme", null, "COMPANY", "Acme Corporation", "ACME", "member-alice", "Head office", 0, "ACTIVE");
         persistSeed("org-engineering", "org-acme", "DEPARTMENT", "Engineering", "ENG", "member-alice", "Product engineering", 10, "ACTIVE");
         persistSeed("org-operations", "org-acme", "DEPARTMENT", "Operations", "OPS", null, "Business operations", 20, "ACTIVE");
+        unitRepository.findAll().forEach(value -> units.put(value.unitId(), new UnitRecord(value.enterpriseId(), value.unitId(), value.parentId(), value.unitType(), value.name(), value.code(), value.leaderMemberId(), value.description(), value.sortOrder(), value.status())));
         assignments.put(assignmentKey("member-alice", "org-engineering"), new Assignment(ENTERPRISE, "org-engineering", "member-alice", true));
     }
 
