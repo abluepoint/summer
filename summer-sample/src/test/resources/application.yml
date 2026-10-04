@@ -1,4 +1,6 @@
 spring:
+  session:
+    store-type: none
   quartz:
     job-store-type: memory
   datasource:

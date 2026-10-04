@@ -1,6 +1,12 @@
 spring:
   application:
     name: summer-sample
+  session:
+    store-type: ${SUMMER_SAMPLE_SESSION_STORE_TYPE:redis}
+    redis:
+      namespace: ${SUMMER_SAMPLE_SESSION_NAMESPACE:summer:servlet-session}
+      flush-mode: on-save
+      save-mode: on_set_attribute
   data:
     redis:
       # The endpoint and timeout are runtime-overridable. Credentials are never
@@ -53,6 +59,12 @@ summer:
     enabled: true
     wrap-responses: true
   sample:
+    session-index:
+      enabled: ${SUMMER_SAMPLE_SESSION_INDEX_ENABLED:true}
+      timeout-ms: ${SUMMER_SAMPLE_SESSION_INDEX_TIMEOUT_MS:500}
+      retries: ${SUMMER_SAMPLE_SESSION_INDEX_RETRIES:2}
+      failure-threshold: ${SUMMER_SAMPLE_SESSION_INDEX_FAILURE_THRESHOLD:3}
+      open-duration-ms: ${SUMMER_SAMPLE_SESSION_INDEX_OPEN_DURATION_MS:5000}
     cache:
       ttl: ${SUMMER_SAMPLE_CACHE_TTL:5m}
       node-id: ${SUMMER_SAMPLE_CACHE_NODE_ID:${HOSTNAME:summer-sample}}
@@ -101,6 +113,7 @@ summer:
       oauth-client: jdbc
       authorization: jdbc
       consent: jdbc
+      session: redis
 
 management:
   endpoints:
