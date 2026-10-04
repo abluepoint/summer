@@ -8,7 +8,9 @@ dependencies {
     implementation(project(":summer-boot-starter"))
     implementation(project(":summer-data-jpa"))
     implementation("org.springframework.modulith:spring-modulith-starter-core")
-    runtimeOnly("com.h2database:h2")
+    implementation("org.flywaydb:flyway-core")
+    runtimeOnly("com.mysql:mysql-connector-j")
+    runtimeOnly("org.flywaydb:flyway-mysql")
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation(platform(project(":summer-dependencies")))
@@ -19,6 +21,7 @@ dependencies {
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-mysql")
     testImplementation("org.testcontainers:testcontainers-postgresql")
 }
 

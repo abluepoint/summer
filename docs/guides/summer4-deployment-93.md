@@ -27,6 +27,15 @@ Sample JAR 不包含 `summer-ui/dist`。前端使用官方 Arco Pro v2.8.1 模�
 `SPRING_DATASOURCE_USERNAME` 和安全注入的 `SPRING_DATASOURCE_PASSWORD` 提供。
 账号密码、Token 和密钥不要写入 Vite 变量或部署文件。
 
+Summer Sample 的持久化运行配置必须同时提供 `SPRING_DATASOURCE_URL`、
+`SPRING_DATASOURCE_USERNAME` 和 `SPRING_DATASOURCE_PASSWORD`；应用默认连接
+`jdbc:mysql://127.0.0.1:3306/summer`，运行账号使用受限的 `summer_app`，密码只从
+受控运行时 Secret 注入。`SPRING_FLYWAY_LOCATIONS` 可覆盖迁移位置，默认值为
+`classpath:db/migration/mysql`；`SPRING_FLYWAY_ENABLED` 仅用于受控测试或运维场景。
+运行 profile 不使用 Hibernate `create`/`create-drop`，结构由 Flyway 管理，Customer
+基线迁移会保留已有 `summer_customer` 行。root 账号只用于数据库初始化和授权，不能
+进入应用进程配置。
+
 生产示例为 `summer-ui/deploy/Caddyfile`。设置 `SUMMER_PUBLIC_HOST` 为公开域名，
 `SUMMER_UI_DIST` 为前端构建产物的绝对路径，`SUMMER_BACKEND_ORIGIN` 为后端内部
 HTTP origin，然后运行 `caddy run --config summer-ui/deploy/Caddyfile`。Caddy
