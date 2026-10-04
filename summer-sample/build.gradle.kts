@@ -7,6 +7,7 @@ dependencies {
     implementation(platform(project(":summer-dependencies")))
     implementation(project(":summer-boot-starter"))
     implementation(project(":summer-data-jpa"))
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.flywaydb:flyway-core")

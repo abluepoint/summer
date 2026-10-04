@@ -205,6 +205,13 @@ export const routes: IRoute[] = [
           { resource: 'menu.diagnostics.redis', actions: ['read'] },
         ],
       },
+      {
+        name: 'menu.diagnostics.runtime',
+        key: 'diagnostics/runtime',
+        requiredPermissions: [
+          { resource: 'menu.diagnostics.runtime', actions: ['read'] },
+        ],
+      },
     ],
   },
   {
