@@ -6,6 +6,7 @@ import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +24,7 @@ import java.util.UUID;
 
 @RestController
 @ConditionalOnBean({JdbcSummerOAuthClientStore.class, SummerConsentStore.class})
+@ConditionalOnProperty(prefix = "summer.security.storage", name = "consent", havingValue = "jdbc")
 class OAuthClientManagementController {
     private final JdbcSummerOAuthClientStore clients;
     private final SummerConsentStore consents;
