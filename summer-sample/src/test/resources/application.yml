@@ -24,6 +24,18 @@ server:
 
 summer:
   sample:
+    resilience:
+      enabled: true
+      timeout: 200ms
+      retry-wait: 5ms
+      max-attempts: 2
+      rate-limit-period: 1s
+      rate-limit: 50
+      circuit-open-wait: 1s
+      circuit-window: 4
+      circuit-failure-rate: 50
+      bulkhead: 4
+      fallback-ttl: 30s
     cache:
       ttl: 5m
       node-id: test-node

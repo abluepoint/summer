@@ -4,6 +4,7 @@ import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.resilience.ResilientReadService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.Authentication;
@@ -32,11 +33,12 @@ class SystemParameterService {
     private final VersionedTwoLevelCache cache;
     private final DataScopeService dataScopes;
     private final SystemParameterReleaseService releases;
+    private final ResilientReadService resilientReads;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
                            CustomerAuditService audit, SystemParameterEventService events,
                            VersionedTwoLevelCache cache, DataScopeService dataScopes,
-                           SystemParameterReleaseService releases) {
+                           SystemParameterReleaseService releases, ResilientReadService resilientReads) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.audit = audit;
@@ -44,6 +46,7 @@ class SystemParameterService {
         this.cache = cache;
         this.dataScopes = dataScopes;
         this.releases = releases;
+        this.resilientReads = resilientReads;
     }
 
     @Transactional
@@ -98,10 +101,11 @@ class SystemParameterService {
     SystemParameterView find(String key, Authentication authentication) {
         DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
         String cacheKey = key + ":" + (authentication == null ? "" : authentication.getName()) + ":" + scope.self() + scope.creator() + scope.owner() + scope.organizationId();
-        return cache.get(TENANT_ID, "system-parameter", cacheKey, SystemParameterView.class,
-                () -> repository.findByKey(key).filter(value -> TENANT_ID.equals(value.tenantId()))
-                        .filter(value -> scope.allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
-                        .map(this::view).orElseThrow(() -> new SystemParameterNotFoundException(key)));
+        return resilientReads.read(ResilientReadService.PARAMETERS, cacheKey, () ->
+                cache.get(TENANT_ID, "system-parameter", cacheKey, SystemParameterView.class,
+                        () -> repository.findByKey(key).filter(value -> TENANT_ID.equals(value.tenantId()))
+                                .filter(value -> scope.allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
+                                .map(this::view).orElseThrow(() -> new SystemParameterNotFoundException(key))));
     }
 
     @Transactional

@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.resilience.ResilientReadService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,13 @@ class DictionaryVersionService {
     private final VersionedTwoLevelCache cache;
     private final DataScopeService dataScopes;
     private final ObjectMapper objectMapper;
+    private final ResilientReadService resilientReads;
 
     DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
-                             DataScopeService dataScopes, ObjectMapper objectMapper) {
+                             DataScopeService dataScopes, ObjectMapper objectMapper,
+                             ResilientReadService resilientReads) {
         this.types = types;
         this.items = items;
         this.versions = versions;
@@ -36,6 +39,7 @@ class DictionaryVersionService {
         this.cache = cache;
         this.dataScopes = dataScopes;
         this.objectMapper = objectMapper;
+        this.resilientReads = resilientReads;
     }
 
     @Transactional
@@ -106,7 +110,7 @@ class DictionaryVersionService {
 
     @Transactional(readOnly = true)
     PublicDictionaryView publicRead(String code) {
-        return cache.get(TENANT_ID, "dictionary", code, PublicDictionaryView.class, () -> {
+        return resilientReads.read(ResilientReadService.DICTIONARIES, code, () -> cache.get(TENANT_ID, "dictionary", code, PublicDictionaryView.class, () -> {
             DictionaryTypeEntity type = types.findByCode(code)
                     .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
             if (!type.enabled() || !type.publicReadable() || !type.published()) {
@@ -128,7 +132,7 @@ class DictionaryVersionService {
             } catch (JacksonException exception) {
                 throw new IllegalStateException("Dictionary snapshot cannot be read", exception);
             }
-        });
+        }));
     }
 
     private DictionaryTypeEntity scopedType(String code, Authentication authentication) {

@@ -265,6 +265,13 @@ export const routes: IRoute[] = [
           { resource: 'menu.diagnostics.runtime', actions: ['read'] },
         ],
       },
+      {
+        name: 'menu.diagnostics.resilience',
+        key: 'diagnostics/resilience',
+        requiredPermissions: [
+          { resource: 'menu.diagnostics.resilience', actions: ['read'] },
+        ],
+      },
     ],
   },
   {

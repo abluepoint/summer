@@ -59,6 +59,18 @@ summer:
     enabled: true
     wrap-responses: true
   sample:
+    resilience:
+      enabled: ${SUMMER_SAMPLE_RESILIENCE_ENABLED:true}
+      timeout: ${SUMMER_SAMPLE_RESILIENCE_TIMEOUT:750ms}
+      retry-wait: ${SUMMER_SAMPLE_RESILIENCE_RETRY_WAIT:50ms}
+      max-attempts: ${SUMMER_SAMPLE_RESILIENCE_MAX_ATTEMPTS:2}
+      rate-limit-period: ${SUMMER_SAMPLE_RESILIENCE_RATE_PERIOD:1s}
+      rate-limit: ${SUMMER_SAMPLE_RESILIENCE_RATE_LIMIT:50}
+      circuit-open-wait: ${SUMMER_SAMPLE_RESILIENCE_CIRCUIT_OPEN_WAIT:5s}
+      circuit-window: ${SUMMER_SAMPLE_RESILIENCE_CIRCUIT_WINDOW:10}
+      circuit-failure-rate: ${SUMMER_SAMPLE_RESILIENCE_CIRCUIT_FAILURE_RATE:50}
+      bulkhead: ${SUMMER_SAMPLE_RESILIENCE_BULKHEAD:8}
+      fallback-ttl: ${SUMMER_SAMPLE_RESILIENCE_FALLBACK_TTL:30s}
     session-index:
       enabled: ${SUMMER_SAMPLE_SESSION_INDEX_ENABLED:true}
       timeout-ms: ${SUMMER_SAMPLE_SESSION_INDEX_TIMEOUT_MS:500}
