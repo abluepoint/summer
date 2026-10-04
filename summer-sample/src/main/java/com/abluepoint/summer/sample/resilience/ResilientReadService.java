@@ -50,6 +50,8 @@ public class ResilientReadService {
         this.limiters = limiters;
         this.bulkheads = bulkheads;
         this.timers = timers;
+        counters.put(PARAMETERS, new Counters());
+        counters.put(DICTIONARIES, new Counters());
     }
 
     public <T> T read(String operation, String cacheKey, Supplier<T> loader) {
