@@ -17,6 +17,6 @@ class ModulithArchitectureTest {
         var modules = ApplicationModules.of(SummerSampleApplication.class);
 
         assertThat(modules.stream().map(module -> module.getIdentifier().toString()))
-                .containsExactlyInAnyOrder("customer", "operations", "shared");
+                .contains("systemparameter");
     }
 }

@@ -180,6 +180,11 @@ export const routes: IRoute[] = [
     requiredPermissions: [{ resource: 'menu.audit', actions: ['read'] }],
   },
   {
+    name: 'menu.systemParameters',
+    key: 'system-parameters',
+    requiredPermissions: [{ resource: 'menu.systemParameters', actions: ['read'] }],
+  },
+  {
     name: 'menu.dictionary',
     key: 'dictionary',
     children: [

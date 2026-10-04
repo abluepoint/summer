@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-class CustomerAuditService {
+public class CustomerAuditService {
     static final String TENANT_ID = "ent-acme";
     private final CustomerAuditEventRepository repository;
     private final ObjectMapper objectMapper;
@@ -30,15 +30,26 @@ class CustomerAuditService {
     }
 
     @Transactional
-    void recordSuccess(String username, String action, String requestId, Authentication authentication) {
-        record(username, action, "SUCCESS", requestId, authentication, Map.of());
+    public void recordSuccess(String username, String action, String requestId, Authentication authentication) {
+        recordResource("customer:" + username, action, "SUCCESS", requestId, authentication, Map.of());
+    }
+
+    @Transactional
+    public void recordResourceSuccess(String resource, String action, String requestId,
+                                      Authentication authentication) {
+        recordResource(resource, action, "SUCCESS", requestId, authentication, Map.of());
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    void recordFailure(String username, String action, String requestId, Authentication authentication, String reason) {
+    public void recordFailure(String username, String action, String requestId, Authentication authentication, String reason) {
         // Reasons are intentionally bounded and contain no request body or database details.
-        record(username, action, "FAILURE", requestId, authentication,
+        recordResource("customer:" + username, action, "FAILURE", requestId, authentication,
                 Map.of("reason", reason == null ? "operation_failed" : reason));
+    }
+
+    @Transactional
+    public void recordDictionarySuccess(String code, String action, String requestId, Authentication authentication) {
+        recordResource("dictionary:" + code, action, "SUCCESS", requestId, authentication, Map.of());
     }
 
     @Transactional(readOnly = true)
@@ -66,11 +77,10 @@ class CustomerAuditService {
                 .map(this::view).orElseThrow(() -> new CustomerAuditNotFoundException("Audit event not found"));
     }
 
-    private void record(String username, String action, String result, String requestId,
-                        Authentication authentication, Map<String, Object> detail) {
+    private void recordResource(String resource, String action, String result, String requestId,
+                                Authentication authentication, Map<String, Object> detail) {
         String principal = authentication == null || authentication.getName() == null
                 ? "system" : authentication.getName();
-        String resource = "customer:" + username;
         repository.save(new CustomerAuditEventEntity(
                 UUID.randomUUID().toString(), TENANT_ID, null, principal, resource, action, result,
                 requestId, serialize(detail), Instant.now()));
