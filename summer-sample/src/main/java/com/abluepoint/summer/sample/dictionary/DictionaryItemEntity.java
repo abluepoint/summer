@@ -16,6 +16,10 @@ class DictionaryItemEntity {
     private String id;
     @Column(name = "dictionary_code", length = 80, nullable = false, updatable = false)
     private String dictionaryCode;
+    @Column(name="tenant_id", nullable=false, length=80) private String tenantId;
+    @Column(name="organization_id", length=64) private String organizationId;
+    @Column(name="created_by", length=128) private String createdBy;
+    @Column(name="owner_id", length=128) private String ownerId;
     @Column(name = "item_value", length = 80, nullable = false)
     private String value;
     @Column(length = 200, nullable = false)
@@ -27,8 +31,10 @@ class DictionaryItemEntity {
 
     protected DictionaryItemEntity() {}
 
-    DictionaryItemEntity(String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled) {
+    DictionaryItemEntity(String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled) { this(id, dictionaryCode, value, label, sortOrder, enabled, null, null, null); }
+    DictionaryItemEntity(String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled, String organizationId, String createdBy, String ownerId) {
         this.id = id;
+        this.tenantId = "ent-acme"; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.dictionaryCode = dictionaryCode;
         this.value = value;
         this.label = label;
@@ -37,6 +43,7 @@ class DictionaryItemEntity {
     }
 
     String id() { return id; }
+    String tenantId(){return tenantId;} String organizationId(){return organizationId;} String createdBy(){return createdBy;} String ownerId(){return ownerId;}
     String dictionaryCode() { return dictionaryCode; }
     String value() { return value; }
     String label() { return label; }

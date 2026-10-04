@@ -2,6 +2,8 @@ package com.abluepoint.summer.sample.systemparameter;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import com.abluepoint.summer.sample.authorization.DataScopeService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -11,24 +13,31 @@ import java.util.List;
 class SystemParameterQueryService {
     private final SystemParameterQuery query;
     private final ObjectMapper objectMapper;
+    private final DataScopeService dataScopes;
 
-    SystemParameterQueryService(SystemParameterQuery query, ObjectMapper objectMapper) {
+    SystemParameterQueryService(SystemParameterQuery query, ObjectMapper objectMapper, DataScopeService dataScopes) {
         this.query = query;
         this.objectMapper = objectMapper;
+        this.dataScopes = dataScopes;
     }
 
     @Transactional(readOnly = true)
-    SystemParameterQueryPage list(SystemParameterListQuery request) {
-        long total = query.count(request);
-        List<?> items = query.list(request).stream()
-                .map(value -> request.projection() == SystemParameterListQuery.Projection.SUMMARY
+    SystemParameterQueryPage list(SystemParameterListQuery request, Authentication authentication) {
+        DataScopeService.ScopeFilter scope = dataScopes.filter(request.tenantId(), "system-parameters", authentication);
+        request = request.withScope(scope);
+        final SystemParameterListQuery scopedRequest = request;
+        long total = query.count(scopedRequest);
+        List<?> items = query.list(scopedRequest).stream()
+                .map(value -> scopedRequest.projection() == SystemParameterListQuery.Projection.SUMMARY
                         ? summary((SystemParameterSummaryRow) value)
                         : detail((SystemParameterDetailRow) value))
                 .toList();
         int totalPages = total == 0 ? 0 : (int) ((total - 1) / request.size()) + 1;
-        return new SystemParameterQueryPage(items, request.page(), request.size(), total, totalPages,
-                request.projection().name().toLowerCase(java.util.Locale.ROOT));
+        return new SystemParameterQueryPage(items, scopedRequest.page(), scopedRequest.size(), total, totalPages,
+                scopedRequest.projection().name().toLowerCase(java.util.Locale.ROOT));
     }
+
+    SystemParameterQueryPage list(SystemParameterListQuery request) { return list(request, null); }
 
     private SystemParameterView detail(SystemParameterDetailRow row) {
         return new SystemParameterView(row.id(), row.parameterKey(), SystemParameterType.valueOf(row.valueType()),

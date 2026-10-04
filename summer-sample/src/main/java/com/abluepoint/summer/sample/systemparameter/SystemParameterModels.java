@@ -22,6 +22,9 @@ final class CreateSystemParameterRequest {
     private String pattern;
     private Boolean publicValue;
     private String description;
+    private String organizationId;
+    private String createdBy;
+    private String ownerId;
 
     public String key() { return key; }
     public SystemParameterType type() { return type; }
@@ -32,6 +35,9 @@ final class CreateSystemParameterRequest {
     public String pattern() { return pattern; }
     public Boolean publicValue() { return publicValue; }
     public String description() { return description; }
+    public String organizationId() { return organizationId; }
+    public String createdBy() { return createdBy; }
+    public String ownerId() { return ownerId; }
 
     public void setKey(String key) { this.key = key; }
     public void setType(SystemParameterType type) { this.type = type; }
@@ -43,6 +49,9 @@ final class CreateSystemParameterRequest {
     public void setPublicValue(Boolean publicValue) { this.publicValue = publicValue; }
     public void setPublic(Boolean publicValue) { this.publicValue = publicValue; }
     public void setDescription(String description) { this.description = description; }
+    public void setOrganizationId(String value) { this.organizationId = value; }
+    public void setCreatedBy(String value) { this.createdBy = value; }
+    public void setOwnerId(String value) { this.ownerId = value; }
 }
 
 final class UpdateSystemParameterRequest {

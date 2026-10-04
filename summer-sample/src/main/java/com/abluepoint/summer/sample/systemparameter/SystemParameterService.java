@@ -3,6 +3,7 @@ package com.abluepoint.summer.sample.systemparameter;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.sample.authorization.DataScopeService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.Authentication;
@@ -29,15 +30,17 @@ class SystemParameterService {
     private final CustomerAuditService audit;
     private final SystemParameterEventService events;
     private final VersionedTwoLevelCache cache;
+    private final DataScopeService dataScopes;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
                            CustomerAuditService audit, SystemParameterEventService events,
-                           VersionedTwoLevelCache cache) {
+                           VersionedTwoLevelCache cache, DataScopeService dataScopes) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.audit = audit;
         this.events = events;
         this.cache = cache;
+        this.dataScopes = dataScopes;
     }
 
     @Transactional
@@ -48,12 +51,13 @@ class SystemParameterService {
         if (repository.existsByKey(request.key())) {
             throw new SystemParameterConflictException("System parameter key is already in use");
         }
+        dataScopes.assertWrite(TENANT_ID, "system-parameters", authentication, request.organizationId());
         String valueJson = serialize(request.value());
         try {
             SystemParameterEntity saved = repository.saveAndFlush(new SystemParameterEntity(
                     request.key(), request.type(), valueJson, Boolean.TRUE.equals(request.required()),
                     request.min(), request.max(), blankToNull(request.pattern()),
-                    Boolean.TRUE.equals(request.publicValue()), blankToNull(request.description())));
+                    Boolean.TRUE.equals(request.publicValue()), blankToNull(request.description()), request.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName()));
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
             cache.evictLocal(TENANT_ID, "system-parameter");
             audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_CREATED", requestId, authentication);
@@ -64,8 +68,9 @@ class SystemParameterService {
     }
 
     @Transactional(readOnly = true)
-    SystemParameterPage list(int page, int size, SystemParameterType type, SystemParameterStatus status) {
-        List<SystemParameterView> filtered = repository.findAllByTenantIdOrderByKeyAsc(TENANT_ID).stream()
+    SystemParameterPage list(int page, int size, SystemParameterType type, SystemParameterStatus status, Authentication authentication) {
+        DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
+        List<SystemParameterView> filtered = repository.findScoped(TENANT_ID, scope.tenant(), scope.subject(), scope.self(), scope.creator(), scope.owner(), scope.organization(), scope.organizationId()).stream()
                 .filter(value -> type == null || value.type() == type)
                 .filter(value -> status == null || value.status() == status)
                 .map(this::view)
@@ -80,9 +85,18 @@ class SystemParameterService {
     }
 
     @Transactional(readOnly = true)
-    SystemParameterView find(String key) {
-        return cache.get(TENANT_ID, "system-parameter", key, SystemParameterView.class,
+    SystemParameterPage list(int page, int size, SystemParameterType type, SystemParameterStatus status) { return list(page, size, type, status, null); }
+
+    @Transactional(readOnly = true)
+    SystemParameterView find(String key) { return find(key, null); }
+
+    @Transactional(readOnly = true)
+    SystemParameterView find(String key, Authentication authentication) {
+        DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
+        String cacheKey = key + ":" + (authentication == null ? "" : authentication.getName()) + ":" + scope.self() + scope.creator() + scope.owner() + scope.organizationId();
+        return cache.get(TENANT_ID, "system-parameter", cacheKey, SystemParameterView.class,
                 () -> repository.findByKey(key).filter(value -> TENANT_ID.equals(value.tenantId()))
+                        .filter(value -> scope.allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
                         .map(this::view).orElseThrow(() -> new SystemParameterNotFoundException(key)));
     }
 
@@ -91,6 +105,7 @@ class SystemParameterService {
                                Authentication authentication) {
         SystemParameterEntity entity = repository.findByKey(key)
                 .filter(value -> TENANT_ID.equals(value.tenantId()))
+                .filter(value -> dataScopes.filter(TENANT_ID, "system-parameters", authentication).allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         if (request.version() == null || request.version() != entity.version()) {
             throw new SystemParameterVersionConflictException();
@@ -123,6 +138,7 @@ class SystemParameterService {
                                   Authentication authentication) {
         SystemParameterEntity entity = repository.findByKey(key)
                 .filter(value -> TENANT_ID.equals(value.tenantId()))
+                .filter(value -> dataScopes.filter(TENANT_ID, "system-parameters", authentication).allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         entity.update(entity.valueJson(), entity.required(), entity.min(), entity.max(), entity.pattern(),
                 entity.publicValue(), entity.description(), status);

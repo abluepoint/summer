@@ -21,7 +21,7 @@ class DictionaryController {
 
     @GetMapping("/api/dictionaries")
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
-    List<DictionaryTypeView> list() { return service.list(); }
+    List<DictionaryTypeView> list(Authentication authentication) { return service.list(authentication); }
 
     @PostMapping("/api/dictionaries")
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.write')")

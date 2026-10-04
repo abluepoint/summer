@@ -44,7 +44,7 @@ class SystemParameterController {
     @Field(param = "projection", required = false, style = "systemParameterProjectionStyle")
     @Field(param = "tenantId", required = false, style = "systemParameterTenantStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> list(
-            FieldValues values) {
+            FieldValues values, Authentication authentication) {
         try {
             int page = values.get("page", Integer.class) == null ? 0 : values.get("page", Integer.class);
             int size = values.get("size", Integer.class) == null ? 20 : values.get("size", Integer.class);
@@ -65,8 +65,8 @@ class SystemParameterController {
                     sort == null ? SystemParameterListQuery.SortField.KEY : sortField(sort),
                     "desc".equals(direction) ? SystemParameterListQuery.SortDirection.DESC : SystemParameterListQuery.SortDirection.ASC,
                     "summary".equals(projection) ? SystemParameterListQuery.Projection.SUMMARY : SystemParameterListQuery.Projection.DETAIL,
-                    SystemParameterService.TENANT_ID);
-            return body(HttpStatus.OK, page(queryService.list(query)));
+                    SystemParameterService.TENANT_ID, false, false, false, false, false, null, null);
+            return body(HttpStatus.OK, page(queryService.list(query, authentication)));
         } catch (IllegalArgumentException exception) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", "Invalid system parameter query", List.of());
         }
@@ -77,9 +77,9 @@ class SystemParameterController {
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> find(
-            @PathVariable String key) {
+            @PathVariable String key, Authentication authentication) {
         try {
-            return body(HttpStatus.OK, parameter(service.find(key)));
+            return body(HttpStatus.OK, parameter(service.find(key, authentication)));
         } catch (SystemParameterNotFoundException exception) {
             return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
         }

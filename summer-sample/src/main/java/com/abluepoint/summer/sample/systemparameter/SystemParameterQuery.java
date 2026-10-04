@@ -45,6 +45,7 @@ class SystemParameterQuery {
         parameters.put("sortByVersion", query.sort() == SystemParameterListQuery.SortField.VERSION);
         parameters.put("descending", query.direction() == SystemParameterListQuery.SortDirection.DESC);
         parameters.put("summaryProjection", query.projection() == SystemParameterListQuery.Projection.SUMMARY);
+        parameters.put("scopeSelf", query.scopeSelf()); parameters.put("scopeCreator", query.scopeCreator()); parameters.put("scopeOwner", query.scopeOwner()); parameters.put("scopeOrganization", query.scopeOrganization()); parameters.put("scopeAnd", query.scopeAnd());
         return parameters;
     }
 
@@ -59,6 +60,8 @@ class SystemParameterQuery {
     private Map<String, Object> countBindingParameters(SystemParameterListQuery query) {
         Map<String, Object> bindings = new LinkedHashMap<>();
         bindings.put("tenantId", query.tenantId());
+        if (query.scopeSelf() || query.scopeCreator() || query.scopeOwner()) bindings.put("scopeSubject", query.scopeSubject() == null ? "" : query.scopeSubject());
+        if (query.scopeOrganization()) bindings.put("scopeOrganizationId", query.scopeOrganizationId() == null ? "" : query.scopeOrganizationId());
         if (query.key() != null) bindings.put("keyPattern", "%" + query.key() + "%");
         if (query.type() != null) bindings.put("type", query.type().name());
         if (query.status() != null) bindings.put("status", query.status().name());
@@ -77,7 +80,8 @@ record SystemParameterListQuery(
         SortField sort,
         SortDirection direction,
         Projection projection,
-        String tenantId
+        String tenantId,
+        boolean scopeSelf, boolean scopeCreator, boolean scopeOwner, boolean scopeOrganization, boolean scopeAnd, String scopeSubject, String scopeOrganizationId
 ) {
     static final int DEFAULT_PAGE = 0;
     static final int DEFAULT_SIZE = 20;
@@ -88,6 +92,8 @@ record SystemParameterListQuery(
         if (key != null && key.isBlank()) throw new IllegalArgumentException("key must not be blank");
         if (tenantId == null || tenantId.isBlank()) throw new IllegalArgumentException("tenantId is required");
     }
+
+    SystemParameterListQuery withScope(com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope) { return new SystemParameterListQuery(page,size,key,type,status,publicValue,sort,direction,projection,tenantId,scope.self(),scope.creator(),scope.owner(),scope.organization(),scope.operatorAnd(),scope.subject(),scope.organizationId()); }
 
     long offset() {
         return Math.multiplyExact((long) page, size);

@@ -19,6 +19,9 @@ class SystemParameterEntity {
     private String id;
     @Column(name = "tenant_id", nullable = false, updatable = false, length = 80)
     private String tenantId;
+    @Column(name = "organization_id", length = 64) private String organizationId;
+    @Column(name = "created_by", length = 128) private String createdBy;
+    @Column(name = "owner_id", length = 128) private String ownerId;
     @Column(name = "parameter_key", nullable = false, unique = true, length = 120)
     private String key;
     @Enumerated(EnumType.STRING)
@@ -54,9 +57,10 @@ class SystemParameterEntity {
 
     SystemParameterEntity(String key, SystemParameterType type, String valueJson, boolean required,
                            BigDecimal min, BigDecimal max, String pattern, boolean publicValue,
-                           String description) {
+                           String description, String organizationId, String createdBy, String ownerId) {
         this.id = UuidV7.next();
         this.tenantId = "ent-acme";
+        this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.key = key;
         this.type = type;
         this.valueJson = valueJson;
@@ -86,6 +90,9 @@ class SystemParameterEntity {
 
     String id() { return id; }
     String tenantId() { return tenantId; }
+    String organizationId() { return organizationId; }
+    String createdBy() { return createdBy; }
+    String ownerId() { return ownerId; }
     String key() { return key; }
     SystemParameterType type() { return type; }
     String valueJson() { return valueJson; }

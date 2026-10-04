@@ -3,6 +3,7 @@ package com.abluepoint.summer.sample.dictionary;
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.authorization.DataScopeService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -17,28 +18,34 @@ class DictionaryService {
     private final DictionaryItemRepository items;
     private final DictionaryAuditService audit;
     private final VersionedTwoLevelCache cache;
+    private final DataScopeService dataScopes;
 
     DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
-                      VersionedTwoLevelCache cache) {
+                      VersionedTwoLevelCache cache, DataScopeService dataScopes) {
         this.types = types;
         this.items = items;
         this.audit = audit;
         this.cache = cache;
+        this.dataScopes = dataScopes;
     }
 
     @Transactional(readOnly = true)
-    List<DictionaryTypeView> list() {
-        return types.findAllByOrderByCodeAsc().stream().map(this::view).toList();
+    List<DictionaryTypeView> list(Authentication authentication) {
+        DataScopeService.ScopeFilter scope = dataScopes.filter("ent-acme", "dictionaries", authentication);
+        return types.findScoped("ent-acme", scope.tenant(), scope.operatorAnd(), scope.subject(), scope.self(), scope.creator(), scope.owner(), scope.organization(), scope.organizationId()).stream().map(type -> view(type, scope)).toList();
     }
+    @Transactional(readOnly = true)
+    List<DictionaryTypeView> list() { return list(null); }
 
     @Transactional
     DictionaryTypeView createType(DictionaryTypeRequest request, String requestId, Authentication authentication) {
+        dataScopes.assertWrite("ent-acme", "dictionaries", authentication, null);
         validateCode(request == null ? null : request.code());
         String code = request.code().trim();
         if (types.findByCode(code).isPresent()) throw new SummerException(DictionaryErrorCode.CONFLICT);
         if (blank(request.name())) throw invalid("name");
         DictionaryTypeEntity type = new DictionaryTypeEntity(UUID.randomUUID().toString(), code, request.name().trim(),
-                bool(request.published()), bool(request.publicReadable()), bool(request.enabled(), true));
+                bool(request.published()), bool(request.publicReadable()), bool(request.enabled(), true), null, authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName());
         try {
             DictionaryTypeView result = view(types.saveAndFlush(type));
             cache.invalidate("ent-acme", "dictionary");
@@ -51,7 +58,7 @@ class DictionaryService {
 
     @Transactional
     DictionaryTypeView updateType(String code, DictionaryTypeRequest request, String requestId, Authentication authentication) {
-        DictionaryTypeEntity type = requireType(code);
+        DictionaryTypeEntity type = scopedType(code, authentication);
         if (request == null || blank(request.name())) throw invalid("name");
         type.change(request.name().trim(), bool(request.published(), type.published()),
                 bool(request.publicReadable(), type.publicReadable()), bool(request.enabled(), type.enabled()));
@@ -63,11 +70,11 @@ class DictionaryService {
 
     @Transactional
     DictionaryItemView createItem(String code, DictionaryItemRequest request, String requestId, Authentication authentication) {
-        DictionaryTypeEntity type = requireType(code);
+        DictionaryTypeEntity type = scopedType(code, authentication);
         validateItem(request);
         if (items.findByDictionaryCodeAndValue(code, request.value().trim()).isPresent()) throw new SummerException(DictionaryErrorCode.CONFLICT);
         DictionaryItemEntity item = new DictionaryItemEntity(UUID.randomUUID().toString(), type.code(), request.value().trim(),
-                request.label().trim(), request.sortOrder(), bool(request.enabled(), true));
+                request.label().trim(), request.sortOrder(), bool(request.enabled(), true), type.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName());
         DictionaryItemView result;
         try {
             result = view(items.saveAndFlush(item));
@@ -81,7 +88,7 @@ class DictionaryService {
 
     @Transactional
     DictionaryItemView updateItem(String code, String value, DictionaryItemRequest request, String requestId, Authentication authentication) {
-        requireType(code);
+        scopedType(code, authentication);
         if (request == null || blank(request.label()) || request.sortOrder() == null || request.sortOrder() < 0) {
             throw invalid("item");
         }
@@ -106,13 +113,16 @@ class DictionaryService {
         });
     }
 
-    private DictionaryTypeEntity requireType(String code) {
-        return types.findByCode(code).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+    private DictionaryTypeEntity requireType(String code) { return types.findByCode(code).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND)); }
+    private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
+        DataScopeService.ScopeFilter scope = dataScopes.filter("ent-acme", "dictionaries", authentication);
+        return types.findScoped("ent-acme", scope.tenant(), scope.operatorAnd(), scope.subject(), scope.self(), scope.creator(), scope.owner(), scope.organization(), scope.organizationId()).stream().filter(value -> value.code().equals(code)).findFirst().orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
     }
 
-    private DictionaryTypeView view(DictionaryTypeEntity type) {
-        return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(),
-                items.findAllByDictionaryCodeOrderBySortOrderAscValueAsc(type.code()).stream().map(DictionaryService::view).toList());
+    private DictionaryTypeView view(DictionaryTypeEntity type) { return view(type, null); }
+    private DictionaryTypeView view(DictionaryTypeEntity type, DataScopeService.ScopeFilter scope) {
+        List<DictionaryItemEntity> values = scope == null ? items.findAllByDictionaryCodeOrderBySortOrderAscValueAsc(type.code()) : items.findScoped(type.code(), "ent-acme", scope.tenant(), scope.operatorAnd(), scope.subject(), scope.self(), scope.creator(), scope.owner(), scope.organization(), scope.organizationId());
+        return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(), values.stream().map(DictionaryService::view).toList());
     }
 
     private static DictionaryItemView view(DictionaryItemEntity item) {
