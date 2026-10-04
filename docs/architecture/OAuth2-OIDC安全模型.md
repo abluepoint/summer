@@ -20,6 +20,12 @@
 
 应用可以通过自己的 `RegisteredClientRepository`、`UserDetailsService`、JWK、授权服务设置和过滤链接管产品策略；自动配置只在应用没有提供这些 Bean 时创建通用内存实现。这样 Sample 可以保留演示用的内存用户/客户端，未来的 `summer-ui` public client 或其他产品可以拥有自己的注册策略，框架不会读取 Product Session、企业成员或 Customer 业务上下文。
 
+## 可替换存储契约
+
+认证存储的预重构边界由 `summer-security-autoconfigure.storage` 中的六个窄契约组成：`SummerIdentityStore`、`SummerOAuthClientStore`、`SummerAuthorizationStore`、`SummerConsentStore`、`SummerSessionStore` 和 `SummerKeyStore`。它们分别适配 Spring Security 的 `UserDetailsService`、OAuth 客户端/授权/同意服务、Servlet `SecurityContextRepository` 及 JWK 选择器；业务模块不直接依赖内存类。
+
+`summer.security.storage.identity`、`oauth-client`、`authorization`、`consent`、`session` 和 `keys` 的默认值都是 `memory`，用于保持当前 Sample 的演示行为。应用选择其他实现名（例如未来的 `mysql` 或 `redis`）时，必须提供相应 Spring Security 契约 Bean；缺少适配器或使用空实现名会在启动时失败。该选择只替换服务端存储适配器，不改变 OAuth/OIDC、PKCE、CSRF、退出或错误响应协议。浏览器 access token 和 ID Token 仍只在 Summer UI 内存中保存，私钥/JWK 适配器也不得通过业务响应或日志输出私钥材料。
+
 资源端点的读写授权由业务端点声明的 scope 独立完成。`SummerSecurityContext` 只读取 Spring 原生 `SecurityContextHolder`，提供主体、authority 和 `SCOPE_*` 查询，不维护自建 ThreadLocal、产品会话或通用上下文袋。
 
 ## Summer UI public client（目标）

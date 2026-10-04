@@ -4,6 +4,18 @@ import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
 import com.abluepoint.summer.security.web.JsonAccessDeniedHandler;
 import com.abluepoint.summer.security.web.JsonAuthenticationEntryPoint;
+import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerAuthorizationStore;
+import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerConsentStore;
+import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerIdentityStore;
+import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerKeyStore;
+import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerOAuthClientStore;
+import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerSessionStore;
+import com.abluepoint.summer.security.autoconfigure.storage.SummerAuthorizationStore;
+import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
+import com.abluepoint.summer.security.autoconfigure.storage.SummerIdentityStore;
+import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
+import com.abluepoint.summer.security.autoconfigure.storage.SummerOAuthClientStore;
+import com.abluepoint.summer.security.autoconfigure.storage.SummerSessionStore;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -37,6 +49,8 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
@@ -50,6 +64,7 @@ import org.springframework.security.oauth2.server.authorization.token.JwtEncodin
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -118,8 +133,9 @@ public class SummerSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
-    @ConditionalOnMissingBean
-    RegisteredClientRepository summerRegisteredClientRepository(
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "oauth-client", havingValue = "memory", matchIfMissing = true)
+    @ConditionalOnMissingBean(RegisteredClientRepository.class)
+    SummerOAuthClientStore summerRegisteredClientRepository(
             SummerSecurityProperties properties,
             PasswordEncoder passwordEncoder
     ) {
@@ -131,28 +147,38 @@ public class SummerSecurityAutoConfiguration {
         List<RegisteredClient> clients = configured.stream()
                 .map(client -> registeredClient(client, passwordEncoder))
                 .toList();
-        return new InMemoryRegisteredClientRepository(clients);
+        return new DefaultSummerOAuthClientStore(new InMemoryRegisteredClientRepository(clients));
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
-    @ConditionalOnMissingBean
-    OAuth2AuthorizationService summerAuthorizationService() {
-        return new InMemoryOAuth2AuthorizationService();
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "authorization", havingValue = "memory", matchIfMissing = true)
+    @ConditionalOnMissingBean(OAuth2AuthorizationService.class)
+    SummerAuthorizationStore summerAuthorizationService() {
+        return new DefaultSummerAuthorizationStore(new InMemoryOAuth2AuthorizationService());
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
-    @ConditionalOnMissingBean
-    UserDetailsService summerUserDetailsService(SummerSecurityProperties properties, PasswordEncoder passwordEncoder) {
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "consent", havingValue = "memory", matchIfMissing = true)
+    @ConditionalOnMissingBean(OAuth2AuthorizationConsentService.class)
+    SummerConsentStore summerAuthorizationConsentService() {
+        return new DefaultSummerConsentStore(new InMemoryOAuth2AuthorizationConsentService());
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "identity", havingValue = "memory", matchIfMissing = true)
+    @ConditionalOnMissingBean(UserDetailsService.class)
+    SummerIdentityStore summerUserDetailsService(SummerSecurityProperties properties, PasswordEncoder passwordEncoder) {
         SummerSecurityProperties.User configured = properties.getAuthorizationServer().getUser();
         if (configured.getUsername() == null || configured.getPassword() == null) {
-            return new InMemoryUserDetailsManager();
+            return new DefaultSummerIdentityStore(new InMemoryUserDetailsManager());
         }
-        return new InMemoryUserDetailsManager(User.withUsername(configured.getUsername())
+        return new DefaultSummerIdentityStore(new InMemoryUserDetailsManager(User.withUsername(configured.getUsername())
                 .password(passwordEncoder.encode(configured.getPassword()))
                 .roles("USER")
-                .build());
+                .build()));
     }
 
     @Bean
@@ -178,15 +204,39 @@ public class SummerSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
-    @ConditionalOnMissingBean
-    JWKSource<SecurityContext> summerJwkSource() {
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "keys", havingValue = "memory", matchIfMissing = true)
+    @ConditionalOnMissingBean(JWKSource.class)
+    SummerKeyStore summerJwkSource() {
         try {
             RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
             JWKSet jwkSet = new JWKSet(rsaKey);
-            return (selector, context) -> selector.select(jwkSet);
+            return new DefaultSummerKeyStore(jwkSet);
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to generate authorization server signing key", exception);
         }
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "session", havingValue = "memory", matchIfMissing = true)
+    @ConditionalOnMissingBean(SecurityContextRepository.class)
+    SummerSessionStore summerSessionStore() {
+        return new DefaultSummerSessionStore();
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
+    SecurityStorageSelectionValidator summerSecurityStorageSelectionValidator(
+            SummerSecurityProperties properties,
+            ObjectProvider<UserDetailsService> identityStores,
+            ObjectProvider<RegisteredClientRepository> oauthClientStores,
+            ObjectProvider<OAuth2AuthorizationService> authorizationStores,
+            ObjectProvider<OAuth2AuthorizationConsentService> consentStores,
+            ObjectProvider<SecurityContextRepository> sessionStores,
+            ObjectProvider<JWKSource<SecurityContext>> keyStores
+    ) {
+        return new SecurityStorageSelectionValidator(properties, identityStores, oauthClientStores,
+                authorizationStores, consentStores, sessionStores, keyStores);
     }
 
     @Bean
@@ -210,7 +260,8 @@ public class SummerSecurityAutoConfiguration {
     @ConditionalOnProperty(prefix = "summer.security.authorization-server", name = "enabled", havingValue = "true")
     SecurityFilterChain summerAuthorizationServerSecurityFilterChain(
             HttpSecurity http,
-            SummerSecurityProperties properties
+            SummerSecurityProperties properties,
+            SecurityContextRepository securityContextRepository
     ) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
         String loginPage = properties.getAuthorizationServer().getLoginPage();
@@ -236,6 +287,7 @@ public class SummerSecurityAutoConfiguration {
                         new LoginUrlAuthenticationEntryPoint(loginPage),
                         htmlMatcher
                 ))
+                .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
         return http.build();
     }
@@ -297,7 +349,8 @@ public class SummerSecurityAutoConfiguration {
     SecurityFilterChain summerLoginSecurityFilterChain(
             HttpSecurity http,
             SummerSecurityProperties properties,
-            ObjectProvider<AuthenticationSuccessHandler> successHandlers
+            ObjectProvider<AuthenticationSuccessHandler> successHandlers,
+            SecurityContextRepository securityContextRepository
     ) throws Exception {
         String loginPage = properties.getAuthorizationServer().getLoginPage();
         AuthenticationSuccessHandler successHandler = successHandlers.orderedStream()
@@ -311,6 +364,7 @@ public class SummerSecurityAutoConfiguration {
                 .sessionManagement(session -> session
                         .sessionFixation(fixation -> fixation.changeSessionId())
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .logout(logout -> logout
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)

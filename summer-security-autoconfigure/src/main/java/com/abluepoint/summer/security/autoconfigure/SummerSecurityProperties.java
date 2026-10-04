@@ -11,6 +11,7 @@ public class SummerSecurityProperties {
     private boolean enabled = true;
     private final AuthorizationServer authorizationServer = new AuthorizationServer();
     private final ResourceServer resourceServer = new ResourceServer();
+    private final Storage storage = new Storage();
 
     public boolean isEnabled() {
         return enabled;
@@ -26,6 +27,73 @@ public class SummerSecurityProperties {
 
     public ResourceServer getResourceServer() {
         return resourceServer;
+    }
+
+    public Storage getStorage() {
+        return storage;
+    }
+
+    /**
+     * Selects the backing implementation for each security store. The
+     * {@code memory} implementation is the development-safe default. Set a
+     * different implementation name when the application supplies the
+     * corresponding Spring Security contract bean.
+     */
+    public static class Storage {
+        private String identity = "memory";
+        private String oauthClient = "memory";
+        private String authorization = "memory";
+        private String consent = "memory";
+        private String session = "memory";
+        private String keys = "memory";
+
+        public String getIdentity() {
+            return identity;
+        }
+
+        public void setIdentity(String identity) {
+            this.identity = identity;
+        }
+
+        public String getOauthClient() {
+            return oauthClient;
+        }
+
+        public void setOauthClient(String oauthClient) {
+            this.oauthClient = oauthClient;
+        }
+
+        public String getAuthorization() {
+            return authorization;
+        }
+
+        public void setAuthorization(String authorization) {
+            this.authorization = authorization;
+        }
+
+        public String getConsent() {
+            return consent;
+        }
+
+        public void setConsent(String consent) {
+            this.consent = consent;
+        }
+
+        public String getSession() {
+            return session;
+        }
+
+        public void setSession(String session) {
+            this.session = session;
+        }
+
+        public String getKeys() {
+            return keys;
+        }
+
+        public void setKeys(String keys) {
+            this.keys = keys;
+        }
     }
 
     public static class AuthorizationServer {

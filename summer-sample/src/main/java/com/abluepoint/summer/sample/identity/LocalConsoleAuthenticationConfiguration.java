@@ -16,7 +16,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -39,11 +38,12 @@ import java.util.Map;
 class LocalConsoleAuthenticationConfiguration {
 
     private static final String ENTERPRISE_ID = "ent-acme";
-    private static final SecurityContextRepository CONTEXT_REPOSITORY =
-            new HttpSessionSecurityContextRepository();
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    AuthenticationSuccessHandler localConsoleAuthenticationSuccessHandler(SummerSecurityProperties properties) {
+    AuthenticationSuccessHandler localConsoleAuthenticationSuccessHandler(
+            SummerSecurityProperties properties,
+            SecurityContextRepository securityContextRepository
+    ) {
         SavedRequestAwareAuthenticationSuccessHandler savedRequestHandler =
                 new SavedRequestAwareAuthenticationSuccessHandler();
         savedRequestHandler.setDefaultTargetUrl(defaultWorkspaceUrl(
@@ -81,7 +81,7 @@ class LocalConsoleAuthenticationConfiguration {
             JwtAuthenticationToken localJwt = new JwtAuthenticationToken(jwt, authorities, authentication.getName());
             SecurityContext context = SecurityContextHolder.getContext();
             context.setAuthentication(localJwt);
-            CONTEXT_REPOSITORY.saveContext(context, request, response);
+            securityContextRepository.saveContext(context, request, response);
             savedRequestHandler.onAuthenticationSuccess(request, response, localJwt);
         };
     }
