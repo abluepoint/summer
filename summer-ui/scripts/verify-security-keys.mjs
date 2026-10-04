@@ -27,7 +27,7 @@ new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(
   apiModule,
   apiModule.exports
 );
-const { listSecurityKeys } = apiModule.exports;
+const { listSecurityKeys, rotateSecurityKey } = apiModule.exports;
 afterEach(() => {
   axios.defaults.adapter = originalAdapter;
 });
@@ -146,4 +146,29 @@ test('malformed success bodies are rejected instead of showing an empty key stor
       requestId: 'key-invalid-response',
     });
   }
+});
+
+test('rotation sends the version precondition and returns the new active key', async () => {
+  axios.defaults.adapter = async (config) => {
+    assert.equal(config.url, '/api/security/keys:rotate');
+    assert.equal(config.method, 'post');
+    assert.deepEqual(config.data, JSON.stringify({ retentionDays: 30 }));
+    assert.equal(config.headers['If-Match'], '"7"');
+    assert.ok(config.headers['Idempotency-Key']);
+    return {
+      data: {
+        success: true,
+        data: { activeKid: 'key-8', version: 8, retentionDays: 30 },
+      },
+      status: 200,
+      statusText: '',
+      headers: { etag: '"8"' },
+      config,
+    };
+  };
+  assert.deepEqual(await rotateSecurityKey(30, 7), {
+    activeKid: 'key-8',
+    version: 8,
+    retentionDays: 30,
+  });
 });

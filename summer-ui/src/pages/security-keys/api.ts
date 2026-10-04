@@ -9,6 +9,13 @@ export type SecurityKey = {
   status: string;
   version: number;
   health: string;
+  graceUntil?: string;
+};
+
+export type SecurityKeyRotation = {
+  activeKid: string;
+  version: number;
+  retentionDays: number;
 };
 
 function isSecurityKey(value: unknown): value is SecurityKey {
@@ -79,6 +86,52 @@ export async function listSecurityKeys(): Promise<SecurityKey[]> {
       throw new SummerApiError({
         ...failure,
         requestId: failure.requestId || requestId,
+      });
+    }
+    throw error;
+  }
+}
+
+export async function rotateSecurityKey(
+  retentionDays: number,
+  expectedVersion: number
+): Promise<SecurityKeyRotation> {
+  let requestId = '';
+  try {
+    const response = await axios.post(
+      '/api/security/keys:rotate',
+      { retentionDays },
+      {
+        headers: {
+          'If-Match': `"${expectedVersion}"`,
+          'Idempotency-Key': `key-rotation-${Date.now()}`,
+        },
+      }
+    );
+    requestId = responseRequestId(response.headers);
+    const data = readEnvelope(response.data, response.status);
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      typeof data.activeKid !== 'string' ||
+      typeof data.version !== 'number' ||
+      typeof data.retentionDays !== 'number'
+    ) {
+      invalidResponse(response.status, requestId);
+    }
+    return data as SecurityKeyRotation;
+  } catch (error) {
+    if (error instanceof SummerApiError) throw error;
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status || 0;
+      const failure = readFailure(
+        error.response?.data,
+        status,
+        responseRequestId(error.response?.headers)
+      );
+      throw new SummerApiError({
+        ...failure,
+        message: failure.message || (status ? `HTTP ${status}` : 'HTTP network'),
       });
     }
     throw error;

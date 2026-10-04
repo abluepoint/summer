@@ -1,0 +1,3 @@
+ALTER TABLE summer_security_keys
+    ADD COLUMN created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    ADD COLUMN grace_until TIMESTAMP(6) NULL;
