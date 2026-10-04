@@ -163,6 +163,19 @@ const officialExampleRoutes: IRoute[] = [
  */
 export const routes: IRoute[] = [
   {
+    name: 'menu.diagnostics',
+    key: 'diagnostics',
+    children: [
+      {
+        name: 'menu.diagnostics.redis',
+        key: 'diagnostics/redis',
+        requiredPermissions: [
+          { resource: 'menu.diagnostics.redis', actions: ['read'] },
+        ],
+      },
+    ],
+  },
+  {
     name: 'menu.customer',
     key: 'customer',
     children: [

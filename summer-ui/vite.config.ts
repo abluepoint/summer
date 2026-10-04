@@ -34,6 +34,7 @@ export default defineConfig({
       '/.well-known': backendOrigin,
       '/connect': backendOrigin,
       '/csrf': backendOrigin,
+      '/internal': backendOrigin,
       '/login': {
         target: backendOrigin,
         bypass: (request) => {

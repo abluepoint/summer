@@ -1,6 +1,16 @@
 spring:
   application:
     name: summer-sample
+  data:
+    redis:
+      # The endpoint and timeout are runtime-overridable. Credentials are never
+      # stored in this file; inject SUMMER_REDIS_USERNAME/PASSWORD at runtime.
+      host: ${SUMMER_REDIS_HOST:127.0.0.1}
+      port: ${SUMMER_REDIS_PORT:6379}
+      timeout: ${SUMMER_REDIS_TIMEOUT:2s}
+      connect-timeout: ${SUMMER_REDIS_CONNECT_TIMEOUT:2s}
+      username: ${SUMMER_REDIS_USERNAME:}
+      password: ${SUMMER_REDIS_PASSWORD:}
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
