@@ -36,7 +36,11 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         if (!(handler instanceof HandlerMethod method) || "OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof JwtAuthenticationToken jwt)) return true;
-        String enterpriseId = activeEnterprise(jwt);
+        String requestedEnterprise = enterpriseFromPath(request.getRequestURI());
+        if (requestedEnterprise != null && !hasActiveMembership(jwt, requestedEnterprise)) {
+            throw new AccessDeniedException("Inactive enterprise membership");
+        }
+        String enterpriseId = requestedEnterprise == null ? activeEnterprise(jwt) : requestedEnterprise;
         if (enterpriseId == null) return true;
         String permissionCode = permissionCode(request, method);
         AuthorizationService.Decision decision = authorizationService.decision(authentication, enterpriseId, permissionCode,
@@ -67,5 +71,28 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
             if (id != null && !String.valueOf(id).isBlank()) return String.valueOf(id);
         }
         return null;
+    }
+
+    private static boolean hasActiveMembership(JwtAuthenticationToken jwt, String enterpriseId) {
+        Object memberships = jwt.getToken().getClaims().get("enterprise_memberships");
+        if (!(memberships instanceof Collection<?> values)) return false;
+        for (Object value : values) {
+            if (!(value instanceof Map<?, ?> membership)) continue;
+            Object status = membership.get("status");
+            if (status == null) status = membership.get("membership_status");
+            Object id = membership.get("enterpriseId");
+            if (id == null) id = membership.get("enterprise_id");
+            if (enterpriseId.equals(String.valueOf(id)) && "ACTIVE".equalsIgnoreCase(String.valueOf(status))) return true;
+        }
+        return false;
+    }
+
+    private static String enterpriseFromPath(String path) {
+        String marker = "/api/v1/enterprises/";
+        if (!path.startsWith(marker)) return null;
+        String remainder = path.substring(marker.length());
+        int slash = remainder.indexOf('/');
+        String enterpriseId = slash < 0 ? remainder : remainder.substring(0, slash);
+        return enterpriseId.isBlank() ? null : enterpriseId;
     }
 }
