@@ -34,6 +34,11 @@ const officialExampleRoutes: IRoute[] = [
           { resource: 'menu.dashboard.monitor', actions: ['write'] },
         ],
       },
+      {
+        name: 'menu.statistics',
+        key: 'statistics',
+        capabilityCode: 'enterprise.statistics.read',
+      },
     ],
   },
   {
