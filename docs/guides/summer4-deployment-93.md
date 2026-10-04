@@ -28,7 +28,7 @@ Sample JAR 不包含 `summer-ui/dist`。前端使用官方 Arco Pro v2.8.1 模�
 账号密码、Token 和密钥不要写入 Vite 变量或部署文件。
 
 Summer Sample 的持久化运行配置必须同时提供 `SPRING_DATASOURCE_URL`、
-`SPRING_DATASOURCE_USERNAME` 和 `SPRING_DATASOURCE_PASSWORD`；应用默认连接
+`SPRING_DATASOURCE_USERNAME` 和 `SPRING_DATASOURCE_PASSWORD`；本地配置示例可使用
 `jdbc:mysql://127.0.0.1:3306/summer`，运行账号使用受限的 `summer_app`，密码只从
 受控运行时 Secret 注入。`SPRING_FLYWAY_LOCATIONS` 可覆盖迁移位置，默认值为
 `classpath:db/migration/mysql`；`SPRING_FLYWAY_ENABLED` 仅用于受控测试或运维场景。
