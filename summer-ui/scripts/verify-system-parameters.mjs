@@ -7,7 +7,10 @@ for (const [text, pattern, label] of [
   [api, "'/api/system-parameters'", 'real system parameter API'],
   [api, 'axios.patch', 'update request'],
   [api, 'axios.post', 'status request'],
+  [api, "'/api/system-parameter-events'", 'outbox delivery query'],
+  [api, 'retryParameterEvent', 'outbox retry request'],
   [page, 'ParameterApiError', 'error envelope handling'],
+  [page, 'deliveryTitle', 'outbox delivery table'],
   [routes, "key: 'system-parameters'", 'navigation route'],
 ]) {
   if (!text.includes(pattern)) throw new Error(`Missing ${label}`);

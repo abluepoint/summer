@@ -42,6 +42,9 @@ summer:
   sample:
     data:
       sql-resource: classpath:sql/customer-queries.sql
+    parameter-events:
+      scheduling-enabled: true
+      poll-interval-ms: 5000
   data:
     jpa:
       enabled: true

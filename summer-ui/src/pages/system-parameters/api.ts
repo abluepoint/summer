@@ -8,6 +8,13 @@ export type Parameter = {
 };
 export type ParameterSummary = Pick<Parameter, 'id' | 'key' | 'type' | 'status' | 'public'>;
 export type ParameterPage = { items: Array<Parameter | ParameterSummary>; page: number; size: number; totalElements: number; totalPages: number; projection: 'summary' | 'detail' };
+export type ParameterEvent = {
+  eventId: string; parameterKey: string; eventType: string; version: number; requestId?: string;
+  status: 'PENDING' | 'PUBLISHED' | 'DEAD_LETTER'; attempts: number; nextAttemptAt: string;
+  lastError?: string; createdAt: string; updatedAt: string;
+  event: { eventId: string; parameterKey: string; eventType: string; version: number; requestId?: string };
+};
+export type ParameterEventPage = { items: ParameterEvent[]; totalElements: number };
 export type ParameterListQuery = {
   page: number; size: number; key?: string; type?: Parameter['type']; status?: Parameter['status'];
   public?: boolean; sort: 'key' | 'type' | 'status' | 'createdAt' | 'updatedAt' | 'version';
@@ -39,3 +46,7 @@ export const updateParameter = (key: string, payload: Record<string, unknown>) =
   request<Parameter>(() => axios.patch(`/api/system-parameters/${encodeURIComponent(key)}`, payload));
 export const setParameterStatus = (key: string, status: 'ACTIVE' | 'INACTIVE') =>
   request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/${status === 'ACTIVE' ? 'enable' : 'disable'}`));
+export const listParameterEvents = (key?: string) =>
+  request<ParameterEventPage>(() => axios.get('/api/system-parameter-events', { params: key ? { key } : undefined }));
+export const retryParameterEvent = (eventId: string) =>
+  request<ParameterEvent>(() => axios.post(`/api/system-parameter-events/${encodeURIComponent(eventId)}/retry`));

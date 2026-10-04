@@ -20,6 +20,8 @@ server:
 
 summer:
   sample:
+    parameter-events:
+      scheduling-enabled: false
     data:
       sql-resource: classpath:sql/customer-queries.sql
   security:

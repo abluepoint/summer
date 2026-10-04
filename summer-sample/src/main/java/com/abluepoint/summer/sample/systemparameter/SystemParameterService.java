@@ -26,12 +26,14 @@ class SystemParameterService {
     private final SystemParameterRepository repository;
     private final ObjectMapper objectMapper;
     private final CustomerAuditService audit;
+    private final SystemParameterEventService events;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
-                           CustomerAuditService audit) {
+                           CustomerAuditService audit, SystemParameterEventService events) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.audit = audit;
+        this.events = events;
     }
 
     @Transactional
@@ -48,6 +50,7 @@ class SystemParameterService {
                     request.key(), request.type(), valueJson, Boolean.TRUE.equals(request.required()),
                     request.min(), request.max(), blankToNull(request.pattern()),
                     Boolean.TRUE.equals(request.publicValue()), blankToNull(request.description())));
+            events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
             audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_CREATED", requestId, authentication);
             return view(saved);
         } catch (DataIntegrityViolationException exception) {
@@ -100,6 +103,7 @@ class SystemParameterService {
         entity.update(serialize(value), required, min, max, pattern, publicValue, description, status);
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
+            events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
             audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_UPDATED", requestId, authentication);
             return view(saved);
         } catch (ObjectOptimisticLockingFailureException exception) {
@@ -117,6 +121,7 @@ class SystemParameterService {
                 entity.publicValue(), entity.description(), status);
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
+            events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
             audit.recordResourceSuccess("system-parameter:" + saved.key(),
                     status == SystemParameterStatus.ACTIVE ? "SYSTEM_PARAMETER_ENABLED" : "SYSTEM_PARAMETER_DISABLED",
                     requestId, authentication);
