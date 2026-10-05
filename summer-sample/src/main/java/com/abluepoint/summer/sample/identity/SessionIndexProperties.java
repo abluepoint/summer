@@ -6,10 +6,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "summer.sample.session-index")
 public class SessionIndexProperties {
     private boolean enabled;
+    private String namespace = "summer:auth";
     private long timeoutMs = 500;
     private int retries = 2;
     private int failureThreshold = 3;
     private long openDurationMs = 5_000;
+
+    public String getNamespace() { return namespace; }
+    public void setNamespace(String namespace) {
+        if (namespace == null || namespace.isBlank()) throw new IllegalArgumentException("Session index namespace must not be blank");
+        this.namespace = namespace;
+    }
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }

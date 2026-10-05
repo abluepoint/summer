@@ -21,26 +21,47 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.sample.session-index.enabled=true",
         "summer.security.storage.session=redis",
         "spring.session.store-type=redis",
-        "summer.sample.session-index.timeout-ms=100ms",
+        "spring.data.redis.host=${SUMMER_REDIS_HOST:127.0.0.1}",
+        "spring.data.redis.port=${SUMMER_REDIS_PORT:6379}",
+        "spring.data.redis.username=${SUMMER_REDIS_USERNAME:default}",
+        "spring.data.redis.password=${SUMMER_REDIS_PASSWORD:}",
+        "spring.data.redis.database=15",
+        "summer.sample.session-index.timeout-ms=2000",
         "summer.sample.session-index.retries=1",
         "summer.sample.session-index.failure-threshold=3",
-        "summer.sample.session-index.open-duration-ms=1s"
+        "summer.sample.session-index.open-duration-ms=1000"
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class SharedSessionHttpTest {
 
+    private static final String TEST_NAMESPACE = "summer:test:shared-session:" + java.util.UUID.randomUUID();
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void redisNamespace(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("spring.session.redis.namespace", () -> TEST_NAMESPACE + ":servlet");
+        registry.add("summer.sample.session-index.namespace", () -> TEST_NAMESPACE + ":index");
+    }
+
+    @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
+    @Autowired SessionIndexService sessionIndex;
     @Autowired
     MockMvc mockMvc;
 
+    @org.junit.jupiter.api.AfterEach
+    void removeTestSessions() {
+        java.util.Set<String> keys = redis.keys(TEST_NAMESPACE + ":*");
+        if (keys != null && !keys.isEmpty()) redis.delete(keys);
+    }
+
     @Test
     void indexesTheCurrentSessionWithoutExposingTheServletSessionId() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        var operator = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("operator")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"), new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.write"));
+        MockHttpSession session = authenticatedSession("operator",
+                "SCOPE_platform.capabilities.read", "SCOPE_platform.capabilities.write");
 
-        mockMvc.perform(get("/api/v1/session").with(operator).session(session))
+        mockMvc.perform(get("/api/v1/session").session(session))
                 .andExpect(status().isOk());
 
-        MvcResult result = mockMvc.perform(get("/api/v1/sessions").with(operator).session(session))
+        MvcResult result = mockMvc.perform(get("/api/v1/sessions").session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.availability").value("AVAILABLE"))
@@ -56,45 +77,45 @@ class SharedSessionHttpTest {
 
     @Test
     void revokingAListedSessionMakesTheSessionEndpointRejectIt() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        var operator = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("operator")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"), new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.write"));
-        mockMvc.perform(get("/api/v1/session").with(operator).session(session))
+        MockHttpSession session = authenticatedSession("operator",
+                "SCOPE_platform.capabilities.read", "SCOPE_platform.capabilities.write");
+        String originalSessionId = session.getId();
+        mockMvc.perform(get("/api/v1/session").session(session))
                 .andExpect(status().isOk());
-        MvcResult listed = mockMvc.perform(get("/api/v1/sessions").with(operator).session(session))
+        MvcResult listed = mockMvc.perform(get("/api/v1/sessions").session(session))
                 .andExpect(status().isOk()).andReturn();
         String reference = JsonPath.read(listed.getResponse().getContentAsString(), "$.data.items[0].sessionRef");
-
-        mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).with(operator).session(session))
+        org.assertj.core.api.Assertions.assertThat(reference).isEqualTo(SessionIndexService.reference(session.getId()));
+        mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REVOKED"));
-
-        mockMvc.perform(get("/api/v1/session").with(operator).session(session))
+        org.assertj.core.api.Assertions.assertThat(session.getId()).isEqualTo(originalSessionId);
+        org.assertj.core.api.Assertions.assertThat(sessionIndex.load(originalSessionId).status()).isEqualTo("REVOKED");
+        mockMvc.perform(get("/api/v1/session").session(session))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_SESSION_REVOKED"));
     }
 
     @Test
     void rejectsARevokeFromAUserWithoutSessionWriteCapability() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        var reader = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("reader")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"));
-        mockMvc.perform(get("/api/v1/session").with(reader).session(session))
+        MockHttpSession session = authenticatedSession("reader", "SCOPE_platform.capabilities.read");
+        mockMvc.perform(get("/api/v1/session").session(session))
                 .andExpect(status().isOk());
-        MvcResult listed = mockMvc.perform(get("/api/v1/sessions").with(reader).session(session))
+        MvcResult listed = mockMvc.perform(get("/api/v1/sessions").session(session))
                 .andExpect(status().isOk()).andReturn();
         String reference = JsonPath.read(listed.getResponse().getContentAsString(), "$.data.items[0].sessionRef");
 
-        mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).with(reader).session(session))
+        mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).session(session))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }
 
     @Test
     void preventsAWriterFromRevokingAnotherPrincipalsSession() throws Exception {
-        MockHttpSession ownerSession = new MockHttpSession();
-        var owner = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("owner"))
-                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"), new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.write"));
-        mockMvc.perform(get("/api/v1/session").with(owner).session(ownerSession)).andExpect(status().isOk());
-        MvcResult listed = mockMvc.perform(get("/api/v1/sessions").with(owner).session(ownerSession)).andExpect(status().isOk()).andReturn();
+        MockHttpSession ownerSession = authenticatedSession("owner",
+                "SCOPE_platform.capabilities.read", "SCOPE_platform.capabilities.write");
+        mockMvc.perform(get("/api/v1/session").session(ownerSession)).andExpect(status().isOk());
+        MvcResult listed = mockMvc.perform(get("/api/v1/sessions").session(ownerSession)).andExpect(status().isOk()).andReturn();
         String reference = JsonPath.read(listed.getResponse().getContentAsString(), "$.data.items[0].sessionRef");
 
         var other = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("other"))
@@ -111,5 +132,19 @@ class SharedSessionHttpTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_SESSION_REFERENCE_INVALID"))
                 .andExpect(jsonPath("$.error.message").value(containsString("session reference")));
+    }
+
+    private static MockHttpSession authenticatedSession(String principal, String... authorities) {
+        MockHttpSession session = new MockHttpSession(null, java.util.UUID.randomUUID().toString());
+        var jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("test-session-context")
+                .header("alg", "none").subject(principal).build();
+        var authentication = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(
+                jwt, java.util.Arrays.stream(authorities)
+                        .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new).toList());
+        var context = org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        // Model an existing servlet login, without injecting a fresh authentication on every request.
+        session.setAttribute(org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        return session;
     }
 }

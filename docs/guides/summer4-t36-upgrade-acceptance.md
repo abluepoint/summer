@@ -129,3 +129,23 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 - 临时应用进程和 UI 已停止，18081/18082/5173 回读无监听；隔离 schema 已删除并回读计数为 0，`summer:t36:*` 键回读为 0，临时浏览器标签和凭据文件已清理。会话索引、缓存、Stream 部分前缀在源码中固定，未建立全域 Redis 隔离；本轮不能宣称全域 Redis 无副作用，未删除不明归属键或全库清空。
 
 后续应先修复并验证默认配置的空库初始化和 Redis store 装配，再恢复 JDBC OAuth/shared-session 配置继续验收。内存覆盖只用于诊断，不作为发布配置或验收通过依据。
+
+
+### 2026-10-05 Redis 认证映射、同一会话撤销与失败关闭修复
+
+此前 4 项 503 的实际根因是测试 `application.yml` 遮蔽主配置，导致 `SUMMER_REDIS_*` 未映射到测试连接工厂；定点检查确认用户名/密码未设置，底层错误标识为 `NOAUTH`。测试现显式声明环境变量映射，凭据仅由本地 Kubernetes Secret 注入进程环境。测试使用真实 `127.0.0.1:6379` Redis、DB 15、随机独立 namespace，每项结束只清理该 namespace；索引 namespace 可配置，默认仍为 `summer:auth`。
+
+`RedisSummerSessionStore` 在共享记录缺失、失效、撤销或 Redis 不可用时不再恢复本机身份；保存先写共享索引，写失败清除本机上下文并传播失败。清空上下文会撤销现有共享记录，索引执行器随 Bean 销毁关闭。
+
+原测试反复注入 `jwt()` 会改变 MockHttpSession 标识，导致撤销后实际请求使用另一会话。用例现复用已认证的 servlet 会话，并断言列表引用、撤销记录和后续请求对应同一 session id；测试方法及权限、错误码断言保留。UUID 标识避免数字 mock id 与响应时间戳偶然重合。故障测试的 long 属性也修正为纯毫秒值。
+
+本轮定向执行（`--no-configuration-cache --no-build-cache --max-workers=1`）：
+
+| 测试类 | tests | failures | errors | skipped |
+| --- | ---: | ---: | ---: | ---: |
+| SharedSessionHttpTest（原始全部 5 项） | 5 | 0 | 0 | 0 |
+| RedisSummerSessionStoreTest | 6 | 0 | 0 | 0 |
+| SharedSessionRedisFailureHttpTest | 1 | 0 | 0 | 0 |
+| SessionControllerTest | 3 | 0 | 0 | 0 |
+
+范围限制：上述 HTTP 用例以已有本机 servlet 登录为夹具，证明索引管理/撤销行为；仓库单测证明失败关闭。资源服务器安全链尚未显式接入共享 SecurityContextRepository，跨节点 servlet session 恢复也尚未验证；不能据此宣布 API 全链路失败关闭、T25 或 T36 完成。双节点、JWT 独立性、浏览器与发布门禁仍待后续集成修复及实测。本轮未修改该安全链、业务数据库或原 18080 实例，未推送。

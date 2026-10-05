@@ -19,10 +19,9 @@ class SessionIndexConfiguration {
 }
 
 /**
- * Keeps the servlet session identifier in the browser while projecting the
- * security context to Redis. The local HttpSession remains a fallback when
- * Redis is unavailable; revocation and management operations remain fail
- * closed in SessionIndexService.
+ * Redis is authoritative for authentication. The servlet session identifier is
+ * supplied by the servlet/Spring Session layer; local contexts never override
+ * missing, expired, revoked or unavailable shared records.
  */
 final class RedisSummerSessionStore extends org.springframework.security.web.context.HttpSessionSecurityContextRepository
         implements SummerSessionStore {
@@ -33,19 +32,17 @@ final class RedisSummerSessionStore extends org.springframework.security.web.con
     @Override
     public org.springframework.security.core.context.SecurityContext loadContext(
             org.springframework.security.web.context.HttpRequestResponseHolder holder) {
-        org.springframework.security.core.context.SecurityContext local = super.loadContext(holder);
         jakarta.servlet.http.HttpServletRequest request = holder.getRequest();
         jakarta.servlet.http.HttpSession session = request.getSession(false);
-        if (session == null) return local;
+        if (session == null) return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
         try {
             SessionRecord shared = index.load(session.getId());
-            if (shared == null) return local;
-            if ("REVOKED".equals(shared.status()) || shared.expiresAt() != null && !shared.expiresAt().isAfter(java.time.Instant.now())) {
+            if (!active(shared)) {
                 return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
             }
             return context(shared);
         } catch (SessionIndexUnavailableException ignored) {
-            return local;
+            return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
         }
     }
 
@@ -65,18 +62,18 @@ final class RedisSummerSessionStore extends org.springframework.security.web.con
     public void saveContext(org.springframework.security.core.context.SecurityContext context,
                             jakarta.servlet.http.HttpServletRequest request,
                             jakarta.servlet.http.HttpServletResponse response) {
-        super.saveContext(context, request, response);
-        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        org.springframework.security.core.Authentication authentication = context.getAuthentication();
+        boolean authenticated = authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken);
+        jakarta.servlet.http.HttpSession session = request.getSession(authenticated);
         if (session == null) return;
         try {
-            if (context.getAuthentication() == null || !context.getAuthentication().isAuthenticated()) {
-                if (request.getRequestURI().contains("/logout")) index.revokeCurrent(request, context.getAuthentication());
-                return;
-            }
-            index.ensureCurrent(request, context.getAuthentication());
-        } catch (SessionIndexUnavailableException ignored) {
-            // Existing local sessions remain usable during a Redis outage;
-            // explicit revoke/list operations expose the unavailable state.
+            if (authenticated) index.ensureCurrent(request, authentication);
+            else index.revokeCurrent(request, authentication);
+            super.saveContext(context, request, response);
+        } catch (RuntimeException failure) {
+            session.removeAttribute(SPRING_SECURITY_CONTEXT_KEY);
+            throw failure;
         }
     }
 
@@ -85,12 +82,15 @@ final class RedisSummerSessionStore extends org.springframework.security.web.con
         jakarta.servlet.http.HttpSession session = request.getSession(false);
         if (session == null) return false;
         try {
-            SessionRecord shared = index.load(session.getId());
-            if (shared != null) return "ACTIVE".equals(shared.status());
+            return active(index.load(session.getId()));
         } catch (SessionIndexUnavailableException ignored) {
-            // Fall through to the local repository when the shared index is down.
+            return false;
         }
-        return super.containsContext(request);
+    }
+
+    private static boolean active(SessionRecord record) {
+        return record != null && "ACTIVE".equals(record.status()) && record.expiresAt() != null
+                && record.expiresAt().isAfter(java.time.Instant.now());
     }
 
     private static org.springframework.security.core.context.SecurityContext context(SessionRecord record) {

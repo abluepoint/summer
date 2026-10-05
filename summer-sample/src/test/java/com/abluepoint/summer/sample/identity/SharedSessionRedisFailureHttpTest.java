@@ -18,10 +18,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.data.redis.port=1",
         "spring.data.redis.connect-timeout=20ms",
         "spring.data.redis.timeout=20ms",
-        "summer.sample.session-index.timeout-ms=50ms",
+        "summer.sample.session-index.timeout-ms=50",
         "summer.sample.session-index.retries=0",
         "summer.sample.session-index.failure-threshold=1",
-        "summer.sample.session-index.open-duration-ms=1s"
+        "summer.sample.session-index.open-duration-ms=1000"
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class SharedSessionRedisFailureHttpTest {

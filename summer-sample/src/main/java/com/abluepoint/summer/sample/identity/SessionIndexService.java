@@ -37,8 +37,6 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 @ConditionalOnProperty(prefix = "summer.sample.session-index", name = "enabled", havingValue = "true")
 final class SessionIndexService {
-    private static final String KEY_PREFIX = "summer:auth:session:";
-    private static final String PRINCIPAL_PREFIX = "summer:auth:principal-sessions:";
     private static final String AVAILABLE = "AVAILABLE";
     private final StringRedisTemplate redis;
     private final ObjectMapper mapper;
@@ -115,7 +113,6 @@ final class SessionIndexService {
     }
 
     void revokeCurrent(HttpServletRequest request, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) return;
         HttpSession session = request.getSession(false);
         if (session == null) return;
         String ref = reference(session.getId());
@@ -152,6 +149,7 @@ final class SessionIndexService {
         return new SessionAuthenticationSnapshot(authentication.getName(), Map.of(), authorities(authentication), null, null);
     }
 
+    @jakarta.annotation.PreDestroy
     void close() { executor.shutdownNow(); }
 
     private <T> T execute(Callable<T> callback) {
@@ -181,7 +179,7 @@ final class SessionIndexService {
     }
 
     private SessionRecord read(String reference) {
-        String json = redis.opsForValue().get(KEY_PREFIX + reference);
+        String json = redis.opsForValue().get(properties.getNamespace() + ":session:" + reference);
         if (json == null) return null;
         try { return mapper.readValue(json, SessionRecord.class); }
         catch (JacksonException exception) { throw new IllegalStateException("Invalid shared session record"); }
@@ -189,7 +187,7 @@ final class SessionIndexService {
 
     private void write(SessionRecord record, Duration ttl) {
         try {
-            redis.opsForValue().set(KEY_PREFIX + record.sessionRef(), mapper.writeValueAsString(record), ttl);
+            redis.opsForValue().set(properties.getNamespace() + ":session:" + record.sessionRef(), mapper.writeValueAsString(record), ttl);
             redis.opsForSet().add(principalKey(record.principal()), record.sessionRef());
             redis.expire(principalKey(record.principal()), ttl);
         } catch (JacksonException exception) {
@@ -206,7 +204,7 @@ final class SessionIndexService {
     private static boolean expired(SessionRecord record) { return record.expiresAt() != null && !record.expiresAt().isAfter(Instant.now()); }
     private static List<String> authorities(Authentication authentication) { return authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).sorted().toList(); }
     private static String clientId(Authentication authentication) { return authentication instanceof JwtAuthenticationToken jwt && jwt.getToken().getClaimAsString("client_id") != null ? jwt.getToken().getClaimAsString("client_id") : "summer-ui"; }
-    private static String principalKey(String principal) { return PRINCIPAL_PREFIX + digest(principal); }
+    private String principalKey(String principal) { return properties.getNamespace() + ":principal-sessions:" + digest(principal); }
     static String reference(String sessionId) { return digest(sessionId); }
     private static String digest(String value) {
         try {
