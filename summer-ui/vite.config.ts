@@ -21,6 +21,10 @@ export default defineConfig({
     proxy: {
       '/api': backendOrigin,
       '/public': backendOrigin,
+      '/ws': {
+        target: backendOrigin,
+        ws: true,
+      },
       '/oauth2': {
         target: backendOrigin,
         bypass: (request) => {

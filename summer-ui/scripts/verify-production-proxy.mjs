@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { attachWebSocketEcho, verifyWebSocketProxy } from './websocket-proxy-probe.mjs';
 
 const ui = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const backendRequests = [];
@@ -12,6 +13,7 @@ const backend = createServer((request, response) => {
   response.setHeader('Content-Type', 'application/json');
   response.end(JSON.stringify({ method: request.method, url: request.url }));
 });
+const echo = attachWebSocketEcho(backend);
 backend.listen(0, '0.0.0.0');
 await once(backend, 'listening');
 const backendPort = backend.address().port;
@@ -79,8 +81,13 @@ try {
     assert.deepEqual(await response.json(), { method, url: path });
   }
   assert.equal(backendRequests.length, 9);
-  console.log('Production Caddy SPA and backend route split passed (14 requests)');
+  await verifyWebSocketProxy(origin, echo.upgrades);
+  console.log('Production Caddy proxy passed (14 HTTP requests, 1 WebSocket upgrade, 2 echoes)');
 } finally {
   if (containerId) execFileSync('docker', ['stop', containerId], { stdio: 'ignore' });
+  await echo.close();
+  backend.closeAllConnections();
   await new Promise((resolve) => backend.close(resolve));
+  if (containerId) assert.equal(execFileSync('docker', ['ps', '-aq', '--filter', `id=${containerId}`], { encoding: 'utf8' }).trim(), '', 'temporary Caddy container must be removed');
+  console.log(`Production proxy cleanup: container removed=${Boolean(containerId)}, backend listening=${backend.listening}`);
 }

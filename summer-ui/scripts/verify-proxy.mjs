@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { attachWebSocketEcho, verifyWebSocketProxy } from './websocket-proxy-probe.mjs';
 
 const ui = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -13,6 +14,7 @@ const backend = createServer((request, response) => {
   response.setHeader('Content-Type', 'application/json');
   response.end(JSON.stringify({ method: request.method, url: request.url }));
 });
+const echo = attachWebSocketEcho(backend);
 backend.listen(0, '127.0.0.1');
 await once(backend, 'listening');
 const backendPort = backend.address().port;
@@ -92,12 +94,16 @@ try {
     assert.deepEqual(JSON.parse(body), { method, url: path });
   }
   assert.equal(backendRequests.length, 9);
-  console.log('Vite SPA and backend route split passed (14 requests, Mock disabled)');
+  await verifyWebSocketProxy(origin, echo.upgrades);
+  console.log('Vite proxy passed (14 HTTP requests, 1 WebSocket upgrade, 2 echoes; Mock disabled)');
 } finally {
   vite.kill('SIGTERM');
   await new Promise((resolve) => {
-    if (vite.exitCode !== null) return resolve();
+    if (vite.exitCode !== null || vite.signalCode !== null) return resolve();
     vite.once('exit', resolve);
   });
+  await echo.close();
+  backend.closeAllConnections();
   await new Promise((resolve) => backend.close(resolve));
+  console.log(`Vite proxy cleanup: child exited=${vite.exitCode !== null || vite.signalCode !== null}, backend listening=${backend.listening}`);
 }
