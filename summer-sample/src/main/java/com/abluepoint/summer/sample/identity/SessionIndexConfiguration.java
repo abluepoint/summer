@@ -1,12 +1,10 @@
 package com.abluepoint.summer.sample.identity;
 
 import com.abluepoint.summer.security.autoconfigure.storage.SummerSessionStore;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
 @EnableConfigurationProperties(SessionIndexProperties.class)
@@ -15,7 +13,6 @@ class SessionIndexConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.storage", name = "session", havingValue = "redis")
-    @ConditionalOnBean(StringRedisTemplate.class)
     SummerSessionStore redisSummerSessionStore(SessionIndexService index) {
         return new RedisSummerSessionStore(index);
     }
