@@ -114,3 +114,18 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 - 隔离 MySQL 演练：在临时 `summer_t36_source` schema 顺序执行 26 个迁移，得到 52 张表；插入合成 Customer 行后使用 `mysqldump --single-transaction --routines --events --triggers --no-tablespaces --set-gtid-purged=OFF` 恢复到 `summer_t36_restore`，恢复后仍为 52 张表且合成行可读，随后删除两个隔离 schema。首次不关闭 GTID 的恢复按预期被 MySQL 拒绝，未触碰既有业务 schema。
 - T32 回归：业务字典发布/禁用/回滚的 404 保持业务错误，不再被 resilience fallback 改写为 503；字典 HTTP 与 SSE 测试共 6 tests 通过。`ResilienceDiagnosticsHttpTest` 2 tests、`ResilientReadServiceTest` 2 tests 通过；后者将 fallback 断言改为按 operation 名称选择，避免依赖排序位置。
 - `preflight`、`backup`、`restore`、`rolling` 的真实双节点 HTTP 流程仍需目标环境执行；本轮已完成隔离 MySQL 迁移及备份恢复演练，未使用或输出任何凭据。
+
+
+## 2026-10-05 本地双节点与浏览器实测（未通过）
+
+本轮使用本项目源码、本地 Kubernetes MySQL 9.7.1/Redis、隔离 schema `summer_t36_runtime`、临时节点端口 18081/18082，以及关闭 Mock 的 Summer UI 5173。原有 18080 实例未修改或停止。
+
+- 空 schema 默认启动失败：`AuthorizationService` 初始化读取 `summer_authorization_capability` 时表不存在，失败后 schema 表数为 0。尚未定位 Flyway 与业务初始化的依赖顺序；不能将这次尝试记为 Flyway 自动迁移通过。
+- 手工应用迁移后得到 52 张表；使用 Redis 安全上下文配置启动仍失败，`LocalConsoleAuthenticationConfiguration` 注入所需的 `SecurityContextRepository` Bean 不存在。源码中 Redis store 的 `@ConditionalOnBean(StringRedisTemplate.class)` 装配时序是待验证线索。
+- 为进一步隔离问题，临时关闭 Flyway、session index 并改用内存安全上下文后，两节点健康响应均为 HTTP 200 / UP，Quartz 均声明 JDBC clustered store。但这些覆盖不满足共享会话验收配置，也不证明任务只执行一次。
+- 保持 JDBC OAuth 时浏览器授权请求返回 HTTP 400；源码显示关闭 Flyway 同时关闭配置客户端的 seed runner。再临时使用内存 OAuth，浏览器提交登录后到达工作台路由，但页面显示“认证仍不可用。请手动登录；请求不会自动重发。”，未完成登录后的关键流程。
+- 两节点未认证 readiness/runtime diagnostics 均返回 HTTP 403。没有取得可用发布操作员认证，因此认证后的 `preflight`/`rolling` 门禁未完成；共享会话撤销、事件/缓存一致性、任务唯一执行和浏览器关键业务流程均未通过，禁止据此宣布 T36 全部验收完成。
+- 浏览器工具可显示页面，但只读 evaluate 环境不提供 `performance`/Web Storage；对应调用失败已回读，未据此推断应用缺陷。现有浏览器自动化脚本未返回通过结果，已终止，测试计数不计为通过。
+- 临时应用进程和 UI 已停止，18081/18082/5173 回读无监听；隔离 schema 已删除并回读计数为 0，`summer:t36:*` 键回读为 0，临时浏览器标签和凭据文件已清理。会话索引、缓存、Stream 部分前缀在源码中固定，未建立全域 Redis 隔离；本轮不能宣称全域 Redis 无副作用，未删除不明归属键或全库清空。
+
+后续应先修复并验证默认配置的空库初始化和 Redis store 装配，再恢复 JDBC OAuth/shared-session 配置继续验收。内存覆盖只用于诊断，不作为发布配置或验收通过依据。
