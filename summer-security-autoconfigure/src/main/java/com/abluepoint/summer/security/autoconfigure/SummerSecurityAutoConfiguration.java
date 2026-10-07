@@ -1,6 +1,7 @@
 package com.abluepoint.summer.security.autoconfigure;
 
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
+import com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository;
 import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
 import com.abluepoint.summer.security.web.JsonAccessDeniedHandler;
 import com.abluepoint.summer.security.web.JsonAuthenticationEntryPoint;
@@ -273,6 +274,7 @@ public class SummerSecurityAutoConfiguration {
         logoutSuccessHandler.setLogoutHandler((request, response, authentication) -> {
             OidcLogoutAuthenticationToken oidcLogout = (OidcLogoutAuthenticationToken) authentication;
             if (oidcLogout.isPrincipalAuthenticated()) {
+                securityContextRepository.saveContext(org.springframework.security.core.context.SecurityContextHolder.createEmptyContext(), request, response);
                 securityContextLogoutHandler.logout(request, response,
                         (Authentication) oidcLogout.getPrincipal());
             }
@@ -299,13 +301,21 @@ public class SummerSecurityAutoConfiguration {
             HttpSecurity http,
             SummerSecurityProperties properties,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
-            JsonAccessDeniedHandler accessDeniedHandler
+            JsonAccessDeniedHandler accessDeniedHandler,
+            ObjectProvider<SecurityContextRepository> sessionStores
     ) throws Exception {
+        var bearerConverter = new org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationConverter();
+        // The default WebAuthenticationDetails(request) reads HttpSession even for
+        // bearer credentials. Keep token validation independent of session storage.
+        bearerConverter.setAuthenticationDetailsSource(request ->
+                new org.springframework.security.web.authentication.WebAuthenticationDetails(request.getRemoteAddr(), null));
         String[] protectedPaths = properties.getResourceServer().getProtectedPaths().toArray(String[]::new);
         if (protectedPaths.length == 0) {
             throw new IllegalStateException("At least one summer.security.resource-server.protected-paths entry is required");
         }
         http.securityMatcher(protectedPaths)
+                .addFilterBefore(new com.abluepoint.summer.security.autoconfigure.storage.BearerSessionIsolationFilter(),
+                        org.springframework.security.web.context.SecurityContextHolderFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         // Logout remains idempotent when a Product Session has expired.
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/session").permitAll()
@@ -315,11 +325,20 @@ public class SummerSecurityAutoConfiguration {
                 // token remains supported, while a successful /login can also
                 // establish the normal servlet SecurityContext session.
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .csrf(csrf -> csrf.disable())
+                .securityContext(context -> context.securityContextRepository(
+                        new BearerOrSessionSecurityContextRepository(sessionStores.getIfAvailable(DefaultSummerSessionStore::new))))
+                .requestCache(cache -> cache.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
+                // Only ambient servlet credentials need CSRF protection. A newly
+                // created session cannot authenticate a request without a client session id.
+                .csrf(csrf -> csrf.requireCsrfProtectionMatcher(request ->
+                        org.springframework.security.web.csrf.CsrfFilter.DEFAULT_CSRF_MATCHER.matches(request)
+                                && request.getRequestedSessionId() != null
+                                && !BearerOrSessionSecurityContextRepository.hasBearerCredentials(request)))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationConverter(bearerConverter)
                         .jwt(Customizer.withDefaults())
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler));
@@ -366,6 +385,8 @@ public class SummerSecurityAutoConfiguration {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .logout(logout -> logout
+                        .addLogoutHandler((request, response, authentication) -> securityContextRepository.saveContext(
+                                org.springframework.security.core.context.SecurityContextHolder.createEmptyContext(), request, response))
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("JSESSIONID")

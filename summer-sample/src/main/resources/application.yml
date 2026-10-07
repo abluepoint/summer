@@ -2,11 +2,9 @@ spring:
   application:
     name: summer-sample
   session:
-    store-type: ${SUMMER_SAMPLE_SESSION_STORE_TYPE:redis}
-    redis:
-      namespace: ${SUMMER_SAMPLE_SESSION_NAMESPACE:summer:servlet-session}
-      flush-mode: on-save
-      save-mode: on_set_attribute
+    data:
+      redis:
+        namespace: ${SUMMER_SAMPLE_SESSION_NAMESPACE:summer:servlet-session}
   data:
     redis:
       # The endpoint and timeout are runtime-overridable. Credentials are never

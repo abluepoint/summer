@@ -69,7 +69,7 @@ final class SessionIndexService {
                     old != null && "REVOKED".equals(old.status()) ? "REVOKED" : "ACTIVE",
                     old == null ? now : old.createdAt(), now, expiresAt, auth.claims(), auth.authorities());
             if ("REVOKED".equals(record.status())) throw new SessionRevokedException();
-            write(record, ttl(expiresAt, now));
+            if (!writeActive(record, ttl(expiresAt, now), true)) throw new SessionRevokedException();
             return view(record, true);
         });
     }
@@ -107,7 +107,7 @@ final class SessionIndexService {
             }
             SessionRecord revoked = new SessionRecord(prior.sessionRef(), prior.principal(), prior.clientId(), "REVOKED",
                     prior.createdAt(), Instant.now(), prior.expiresAt(), prior.claims(), prior.authorities());
-            write(revoked, ttl(prior.expiresAt(), Instant.now()));
+            writeRevoked(revoked);
             return new SessionIndexOperation(reference, "REVOKED", "UNCHANGED");
         });
     }
@@ -119,9 +119,8 @@ final class SessionIndexService {
         execute(() -> {
             SessionRecord prior = read(ref);
             if (prior != null) {
-                write(new SessionRecord(prior.sessionRef(), prior.principal(), prior.clientId(), "REVOKED",
-                        prior.createdAt(), Instant.now(), prior.expiresAt(), prior.claims(), prior.authorities()),
-                        ttl(prior.expiresAt(), Instant.now()));
+                writeRevoked(new SessionRecord(prior.sessionRef(), prior.principal(), prior.clientId(), "REVOKED",
+                        prior.createdAt(), Instant.now(), prior.expiresAt(), prior.claims(), prior.authorities()));
             }
             return null;
         });
@@ -185,14 +184,59 @@ final class SessionIndexService {
         catch (JacksonException exception) { throw new IllegalStateException("Invalid shared session record"); }
     }
 
-    private void write(SessionRecord record, Duration ttl) {
+    // Each mutation is atomic with respect to revocation. No stale ACTIVE write can
+    // overwrite the tombstone, and reads cannot recreate a missing login record.
+    private static final org.springframework.data.redis.core.script.DefaultRedisScript<Long> ACTIVE =
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>("""
+                local old = redis.call('GET', KEYS[1])
+                if not old and ARGV[3] ~= 'create' then return 0 end
+                if old then
+                  local prior = cjson.decode(old)
+                  local next = cjson.decode(ARGV[1])
+                  if prior.status ~= 'ACTIVE' or prior.principal ~= next.principal then return 0 end
+                end
+                redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+                redis.call('SADD', KEYS[2], ARGV[4])
+                local priorTtl = redis.call('PTTL', KEYS[2])
+                if priorTtl < tonumber(ARGV[2]) then redis.call('PEXPIRE', KEYS[2], ARGV[2]) end
+                return 1
+                """, Long.class);
+    private static final org.springframework.data.redis.core.script.DefaultRedisScript<Long> REVOKE =
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>("""
+                local old = redis.call('GET', KEYS[1])
+                if not old then return 0 end
+                local record = cjson.decode(old)
+                record.status = 'REVOKED'
+                record.lastSeenAt = ARGV[1]
+                redis.call('SET', KEYS[1], cjson.encode(record), 'KEEPTTL')
+                return 1
+                """, Long.class);
+
+    SessionRecord touch(String sessionId, int interval) {
+        return execute(() -> {
+            SessionRecord prior = read(reference(sessionId));
+            if (prior == null || expired(prior) || !"ACTIVE".equals(prior.status())) return null;
+            Instant now = Instant.now();
+            Instant expiry = now.plusSeconds(interval > 0 ? interval : 1_800);
+            SessionRecord next = new SessionRecord(prior.sessionRef(), prior.principal(), prior.clientId(), prior.status(),
+                    prior.createdAt(), now, expiry, prior.claims(), prior.authorities());
+            return writeActive(next, ttl(expiry, now), false) ? next : null;
+        });
+    }
+
+    private boolean writeActive(SessionRecord record, Duration ttl, boolean create) {
         try {
-            redis.opsForValue().set(properties.getNamespace() + ":session:" + record.sessionRef(), mapper.writeValueAsString(record), ttl);
-            redis.opsForSet().add(principalKey(record.principal()), record.sessionRef());
-            redis.expire(principalKey(record.principal()), ttl);
+            Long result = redis.execute(ACTIVE, List.of(properties.getNamespace() + ":session:" + record.sessionRef(),
+                    principalKey(record.principal())), mapper.writeValueAsString(record), Long.toString(ttl.toMillis()),
+                    create ? "create" : "touch", record.sessionRef());
+            return Long.valueOf(1).equals(result);
         } catch (JacksonException exception) {
             throw new IllegalStateException("Unable to encode shared session record");
         }
+    }
+
+    private void writeRevoked(SessionRecord record) {
+        redis.execute(REVOKE, List.of(properties.getNamespace() + ":session:" + record.sessionRef()), record.lastSeenAt().toString());
     }
 
     private SessionIndexView view(SessionRecord record, boolean current) {

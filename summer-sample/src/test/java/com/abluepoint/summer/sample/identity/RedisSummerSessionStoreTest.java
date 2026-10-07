@@ -33,8 +33,9 @@ class RedisSummerSessionStoreTest {
 
     @Test void redisOutageCannotUseLocalAuthentication() {
         var request = localAuthenticatedRequest();
+        when(index.touch(anyString(), anyInt())).thenThrow(new SessionIndexUnavailableException());
+        assertThatThrownBy(() -> store.loadDeferredContext(request).get()).isInstanceOf(SessionIndexUnavailableException.class);
         when(index.load(anyString())).thenThrow(new SessionIndexUnavailableException());
-        assertThat(store.loadDeferredContext(request).get().getAuthentication()).isNull();
         assertThat(store.containsContext(request)).isFalse();
     }
 
@@ -42,16 +43,18 @@ class RedisSummerSessionStoreTest {
         var request = localAuthenticatedRequest();
         for (var record : List.of(record("REVOKED", Instant.now().plusSeconds(60)), record("ACTIVE", Instant.now().minusSeconds(1)))) {
             when(index.load(anyString())).thenReturn(record);
+            when(index.touch(anyString(), anyInt())).thenReturn(record);
             assertThat(store.loadDeferredContext(request).get().getAuthentication()).isNull();
             assertThat(store.containsContext(request)).isFalse();
         }
     }
 
-    @Test void activeSharedRecordRestoresAuthenticationWithoutLocalSecurityContext() {
-        var request = new MockHttpServletRequest();
-        request.setSession(new MockHttpSession());
-        when(index.load(request.getSession().getId())).thenReturn(record("ACTIVE", Instant.now().plusSeconds(60)));
-        assertThat(store.loadDeferredContext(request).get().getAuthentication().getName()).isEqualTo("shared-user");
+    @Test void activeSharedRecordAllowsTheCompleteStoredAuthentication() {
+        var request = localAuthenticatedRequest();
+        var active = record("ACTIVE", Instant.now().plusSeconds(60));
+        when(index.load(request.getSession().getId())).thenReturn(active);
+        when(index.touch(anyString(), anyInt())).thenReturn(active);
+        assertThat(store.loadDeferredContext(request).get().getAuthentication().getName()).isEqualTo("test-user");
         assertThat(store.containsContext(request)).isTrue();
     }
 

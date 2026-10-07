@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(SessionIndexProperties.class)
+@org.springframework.context.annotation.Import({SharedHttpSessionConfiguration.class, SessionFailureConfiguration.class})
 @ConditionalOnProperty(prefix = "summer.sample.session-index", name = "enabled", havingValue = "true")
 class SessionIndexConfiguration {
 
@@ -35,15 +36,13 @@ final class RedisSummerSessionStore extends org.springframework.security.web.con
         jakarta.servlet.http.HttpServletRequest request = holder.getRequest();
         jakarta.servlet.http.HttpSession session = request.getSession(false);
         if (session == null) return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
-        try {
-            SessionRecord shared = index.load(session.getId());
-            if (!active(shared)) {
-                return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
-            }
-            return context(shared);
-        } catch (SessionIndexUnavailableException ignored) {
-            return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
-        }
+        // Spring Session restores the complete authentication (including factor
+        // timestamps and original token claims). The index may deny it, never mint it.
+        org.springframework.security.core.context.SecurityContext stored = super.loadDeferredContext(request).get();
+        if (stored.getAuthentication() == null) return stored;
+        SessionRecord shared = index.touch(session.getId(), session.getMaxInactiveInterval());
+        if (!active(shared)) return org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        return stored;
     }
 
     @Override
@@ -93,19 +92,4 @@ final class RedisSummerSessionStore extends org.springframework.security.web.con
                 && record.expiresAt().isAfter(java.time.Instant.now());
     }
 
-    private static org.springframework.security.core.context.SecurityContext context(SessionRecord record) {
-        org.springframework.security.core.context.SecurityContext context = org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
-        java.util.List<org.springframework.security.core.GrantedAuthority> authorities = record.authorities().stream()
-                .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new).map(value -> (org.springframework.security.core.GrantedAuthority) value).toList();
-        if (record.claims().isEmpty()) {
-            context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(record.principal(), null, authorities));
-            return context;
-        }
-        org.springframework.security.oauth2.jwt.Jwt.Builder jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("shared-session-context")
-                .header("alg", "none").subject(record.principal()).claims(values -> values.putAll(record.claims()));
-        if (record.createdAt() != null) jwt.issuedAt(record.createdAt());
-        if (record.expiresAt() != null) jwt.expiresAt(record.expiresAt());
-        context.setAuthentication(new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt.build(), authorities, record.principal()));
-        return context;
-    }
 }

@@ -31,21 +31,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.sample.session-index.failure-threshold=3",
         "summer.sample.session-index.open-duration-ms=1000"
 })
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class SharedSessionHttpTest {
 
     private static final String TEST_NAMESPACE = "summer:test:shared-session:" + java.util.UUID.randomUUID();
 
     @org.springframework.test.context.DynamicPropertySource
     static void redisNamespace(org.springframework.test.context.DynamicPropertyRegistry registry) {
-        registry.add("spring.session.redis.namespace", () -> TEST_NAMESPACE + ":servlet");
+        registry.add("spring.session.data.redis.namespace", () -> TEST_NAMESPACE + ":servlet");
         registry.add("summer.sample.session-index.namespace", () -> TEST_NAMESPACE + ":index");
     }
 
     @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
     @Autowired SessionIndexService sessionIndex;
-    @Autowired
     MockMvc mockMvc;
+    @Autowired org.springframework.web.context.WebApplicationContext application;
+
+    @org.junit.jupiter.api.BeforeEach
+    void securityChain() {
+        // These five index/controller contracts use an existing servlet session.
+        // Real Spring Session filter + cross-container cookies are exercised by SharedSessionNodesHttpTest.
+        mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(application)
+                .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+    }
 
     @org.junit.jupiter.api.AfterEach
     void removeTestSessions() {
@@ -93,7 +100,7 @@ class SharedSessionHttpTest {
         org.assertj.core.api.Assertions.assertThat(sessionIndex.load(originalSessionId).status()).isEqualTo("REVOKED");
         mockMvc.perform(get("/api/v1/session").session(session))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_SESSION_REVOKED"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_UNAUTHORIZED"));
     }
 
     @Test
@@ -134,7 +141,7 @@ class SharedSessionHttpTest {
                 .andExpect(jsonPath("$.error.message").value(containsString("session reference")));
     }
 
-    private static MockHttpSession authenticatedSession(String principal, String... authorities) {
+    private MockHttpSession authenticatedSession(String principal, String... authorities) {
         MockHttpSession session = new MockHttpSession(null, java.util.UUID.randomUUID().toString());
         var jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("test-session-context")
                 .header("alg", "none").subject(principal).build();
@@ -145,6 +152,9 @@ class SharedSessionHttpTest {
         context.setAuthentication(authentication);
         // Model an existing servlet login, without injecting a fresh authentication on every request.
         session.setAttribute(org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        var request = new org.springframework.mock.web.MockHttpServletRequest();
+        request.setSession(session);
+        sessionIndex.ensureCurrent(request, authentication);
         return session;
     }
 }

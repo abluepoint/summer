@@ -37,7 +37,8 @@ final class SessionController {
     @RawResponse
     ResponseEntity<ApiResponse<SessionSnapshot>> session(Authentication authentication, HttpServletRequest request) {
         try {
-            if (sessionIndex != null) sessionIndex.ensureCurrent(request, authentication);
+            if (sessionIndex != null && !com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository.hasBearerCredentials(request))
+                sessionIndex.assertActive(request, authentication);
             SessionSnapshot snapshot = snapshotService.snapshot(authentication);
             String etag = quote(snapshot.revision());
             if (etag.equals(request.getHeader(HttpHeaders.IF_NONE_MATCH))) {
