@@ -1,7 +1,8 @@
 package com.abluepoint.summer.sample.plugin;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.systemparameter.PublishedParameterReader;
+import com.abluepoint.summer.sample.dictionary.PublishedDictionaryReader;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,8 +11,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 
@@ -22,17 +21,17 @@ public class PluginService {
     private final PluginRepository repository;
     private final PluginCatalog catalog;
     private final AuthorizationService authorization;
-    private final DataScopeService dataScopes;
+    private final PublishedParameterReader parameters;
+    private final PublishedDictionaryReader dictionaries;
     private final CustomerAuditService audit;
     private final JdbcTemplate jdbc;
-    private final ObjectMapper mapper;
     private final RequestIdAccessor requestId;
 
     PluginService(PluginRepository repository, PluginCatalog catalog, AuthorizationService authorization,
-                  DataScopeService dataScopes, CustomerAuditService audit, JdbcTemplate jdbc,
-                  ObjectMapper mapper, RequestIdAccessor requestId) {
+                  PublishedParameterReader parameters, PublishedDictionaryReader dictionaries, CustomerAuditService audit, JdbcTemplate jdbc,
+                  RequestIdAccessor requestId) {
         this.repository = repository; this.catalog = catalog; this.authorization = authorization;
-        this.dataScopes = dataScopes; this.audit = audit; this.jdbc = jdbc; this.mapper = mapper; this.requestId = requestId;
+        this.parameters = parameters; this.dictionaries = dictionaries; this.audit = audit; this.jdbc = jdbc; this.requestId = requestId;
     }
 
     @Transactional(readOnly = true)
@@ -116,50 +115,42 @@ public class PluginService {
     PluginPage enterpriseList(String enterpriseId, Authentication authentication) {
         requireEnterprise(enterpriseId, authentication, "enterprise.plugins.read");
         List<PluginView> values = repository.findAll().stream().filter(entity -> entity.status() == PluginStatus.ENABLED)
-                .sorted(Comparator.comparing(PluginEntity::pluginId)).map(this::view).toList();
+                .sorted(Comparator.comparing(PluginEntity::pluginId)).map(entity -> enterpriseView(entity, enterpriseId, authentication)).toList();
         return new PluginPage(values, values.stream().mapToLong(PluginView::revision).max().orElse(0));
     }
 
-    @Transactional
+    // Each controlled read owns its transaction; an absent optional value must not roll back the audit.
     PluginInsightsView customerInsights(String enterpriseId, Authentication authentication) {
         requireEnterprise(enterpriseId, authentication, "enterprise.plugins.customer-insights.read");
         requireEnterprise(enterpriseId, authentication, "customer.read");
         PluginEntity entity = repository.findById("customer-insights").orElseThrow(() -> new PluginNotFoundException("Plugin is not registered"));
         if (entity.status() != PluginStatus.ENABLED) throw new PluginCompatibilityException("Plugin is not enabled");
-        dataScopes.filter(enterpriseId, "system-parameters", authentication);
-        dataScopes.filter(enterpriseId, "dictionaries", authentication);
         long activeCustomers = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_customer where active = true", Long.class)).orElse(0L);
-        List<Map<String, Object>> configuration = readConfiguration(entity, enterpriseId);
-        PluginDictionaryView dictionary = readDictionary(enterpriseId);
+        List<Map<String, Object>> configuration = readConfiguration(entity, authentication);
+        PluginDictionaryView dictionary = new PluginDictionaryView("customer-segment", dictionaries.read("customer-segment", authentication));
         String rid = requestId.currentRequestId();
         audit.recordResourceSuccess("plugin:customer-insights", "PLUGIN_CUSTOMER_INSIGHTS_READ", rid, authentication);
         long auditRevision = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_audit_event where tenant_id = ? and resource = ?", Long.class, enterpriseId, "plugin:customer-insights")).orElse(0L);
         return new PluginInsightsView(entity.pluginId(), entity.version(), rid, activeCustomers, configuration, dictionary, auditRevision);
     }
 
-    private List<Map<String, Object>> readConfiguration(PluginEntity entity, String enterpriseId) {
+    private List<Map<String, Object>> readConfiguration(PluginEntity entity, Authentication authentication) {
         PluginDescriptor descriptor = Objects.requireNonNull(catalog.find(entity.pluginId()));
         List<Map<String, Object>> result = new ArrayList<>();
         for (PluginConfiguration declaration : descriptor.configuration()) {
-            List<Map<String, Object>> rows = jdbc.query("select parameter_key, value_type, value_json, public_flag, status from summer_system_parameter where tenant_id = ? and parameter_key = ?", (rs, row) -> {
-                Map<String, Object> value = new LinkedHashMap<>(); value.put("key", rs.getString("parameter_key")); value.put("type", rs.getString("value_type")); value.put("status", rs.getString("status"));
-                if (declaration.publicValue() && rs.getBoolean("public_flag")) value.put("value", parseJson(rs.getString("value_json")));
-                return value;
-            }, enterpriseId, declaration.key());
-            if (rows.isEmpty()) result.add(Map.of("key", declaration.key(), "type", declaration.type(), "configured", false));
-            else result.add(rows.get(0));
+            var published = declaration.publicValue() ? parameters.read(declaration.key(), authentication) : Optional.<PublishedParameterReader.Value>empty();
+            Map<String, Object> value = new LinkedHashMap<>();
+            value.put("key", declaration.key());
+            value.put("type", declaration.type());
+            value.put("configured", published.isPresent());
+            published.ifPresent(current -> {
+                value.put("value", current.value());
+                value.put("version", current.version());
+                value.put("status", "ACTIVE");
+            });
+            result.add(Collections.unmodifiableMap(value));
         }
         return List.copyOf(result);
-    }
-
-    private PluginDictionaryView readDictionary(String enterpriseId) {
-        List<Map<String, Object>> items = jdbc.query("select i.item_value, i.label, i.sort_order from summer_dictionary_item i join summer_dictionary_type t on t.code = i.dictionary_code and t.tenant_id = i.tenant_id where i.tenant_id = ? and i.dictionary_code = ? and i.enabled = true and t.enabled = true and t.published = true order by i.sort_order, i.item_value", (rs, row) -> Map.of("value", rs.getString("item_value"), "label", rs.getString("label"), "sortOrder", rs.getInt("sort_order")), enterpriseId, "customer-segment");
-        return new PluginDictionaryView("customer-segment", List.copyOf(items));
-    }
-
-    private Object parseJson(String value) {
-        if (value == null) return null;
-        try { return mapper.readValue(value, Object.class); } catch (JacksonException ignored) { return null; }
     }
 
     private PluginView enterpriseView(PluginEntity entity, String enterpriseId, Authentication authentication) {

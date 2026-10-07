@@ -14,7 +14,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties="spring.datasource.url=jdbc:h2:mem:plugin-lifecycle;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class PluginLifecycleHttpTest {
@@ -36,7 +36,7 @@ class PluginLifecycleHttpTest {
                 .andExpect(jsonPath("$.data.status").value("ENABLED"));
 
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/plugins")
-                        .with(enterprise("enterprise.plugins.read")))
+                        .with(enterprise("enterprise.plugins.read", "enterprise.plugins.customer-insights.read")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].pluginId").value("customer-insights"))
                 .andExpect(jsonPath("$.data.items[0].menus[0].capabilityCode").value("enterprise.plugins.customer-insights.read"));

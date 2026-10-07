@@ -1,11 +1,5 @@
 package com.abluepoint.summer.sample.resilience;
 
-import io.github.resilience4j.bulkhead.BulkheadRegistry;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
-import io.github.resilience4j.retry.RetryRegistry;
-import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
-import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -26,8 +20,8 @@ class ResilientReadServiceTest {
         assertThat(service.read(ResilientReadService.PARAMETERS, "key", () -> {
             if (attempts.incrementAndGet() < 2) throw new IllegalStateException("temporary");
             return "v1";
-        })).isEqualTo("v1");
-        String fallback = service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException("down"); });
+        }, () -> true)).isEqualTo("v1");
+        String fallback = service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException("down"); }, () -> true);
         assertThat(fallback).isEqualTo("v1");
         assertThat(service.snapshot().stream()
                 .filter(view -> view.name().equals(ResilientReadService.PARAMETERS))
@@ -40,14 +34,85 @@ class ResilientReadServiceTest {
         p.setRetryWait(Duration.ZERO);
         p.setFallbackTtl(Duration.ZERO);
         ResilientReadService service = service(p);
-        assertThat(service.read(ResilientReadService.DICTIONARIES, "code", () -> "v1")).isEqualTo("v1");
-        assertThatThrownBy(() -> service.read(ResilientReadService.DICTIONARIES, "code", () -> { throw new IllegalStateException("down"); }))
+        assertThat(service.read(ResilientReadService.DICTIONARIES, "code", () -> "v1", () -> true)).isEqualTo("v1");
+        assertThatThrownBy(() -> service.read(ResilientReadService.DICTIONARIES, "code", () -> { throw new IllegalStateException("down"); }, () -> true))
                 .isInstanceOf(DependencyDegradedException.class);
     }
 
+    @Test
+    void missingOrFailedProofAndUnknownOperationNeverUseFallback() {
+        var service = service(new ResilienceProperties());
+        service.read(ResilientReadService.PARAMETERS, "key", () -> "v1", () -> true);
+        assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException(); }))
+                .isInstanceOf(DependencyDegradedException.class);
+        assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException(); }, () -> { throw new IllegalStateException("policy offline"); }))
+                .isInstanceOf(DependencyDegradedException.class);
+        AtomicInteger writes = new AtomicInteger();
+        assertThatThrownBy(() -> service.read("write.operation", "key", writes::incrementAndGet, () -> true))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(writes).hasValue(0);
+    }
+
+    @Test
+    void authorizationFailureInvalidatesEvenVerifiedOldEntry() {
+        var service = service(new ResilienceProperties());
+        service.read(ResilientReadService.PARAMETERS, "key", () -> "v1", () -> true);
+        assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new org.springframework.security.access.AccessDeniedException("denied"); }, () -> true))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException(); }, () -> true))
+                .isInstanceOf(DependencyDegradedException.class);
+    }
+
+    @Test
+    void timeoutAndLateCompletionCannotLeakAcrossKeysOrReplaceFallback() throws Exception {
+        var p = new ResilienceProperties();
+        p.setTimeout(Duration.ofMillis(150));
+        var service = service(p);
+        service.read(ResilientReadService.PARAMETERS, "alice:v1", () -> "alice", () -> true);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var finished = new java.util.concurrent.CountDownLatch(1);
+        try {
+            assertThat(service.read(ResilientReadService.PARAMETERS, "alice:v1", () -> {
+                try { release.await(); return "late"; }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+                finally { finished.countDown(); }
+            }, () -> true)).isEqualTo("alice");
+            assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "bob:v1", () -> { throw new IllegalStateException(); }, () -> true))
+                    .isInstanceOf(DependencyDegradedException.class);
+        } finally { release.countDown(); }
+        assertThat(finished.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThat(service.<String>read(ResilientReadService.PARAMETERS, "alice:v1", () -> { throw new IllegalStateException(); }, () -> true)).isEqualTo("alice");
+        assertThat(service.read(ResilientReadService.PARAMETERS, "alice:v2", () -> "recovered", () -> true)).isEqualTo("recovered");
+        assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow().timedOut()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void concurrentBulkheadRejectionIsCountedAndDoesNotBlockOtherOperations() throws Exception {
+        var p = new ResilienceProperties();
+        p.setBulkhead(1);
+        p.setMaxAttempts(1);
+        p.setTimeout(Duration.ofSeconds(5));
+        var service = service(p);
+        service.read(ResilientReadService.PARAMETERS, "warm", () -> "safe", () -> true);
+        var started = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var occupied = java.util.concurrent.CompletableFuture.supplyAsync(() -> service.read(ResilientReadService.PARAMETERS, "busy", () -> {
+            started.countDown();
+            try { release.await(); return "done"; }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+        }, () -> true));
+        try {
+            assertThat(started.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(service.read(ResilientReadService.PARAMETERS, "warm", () -> "unexpected", () -> true)).isEqualTo("safe");
+            assertThat(service.read(ResilientReadService.DICTIONARIES, "independent", () -> "dictionary", () -> true)).isEqualTo("dictionary");
+            assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow().rejected()).isEqualTo(1);
+        } finally { release.countDown(); }
+        assertThat(occupied.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo("done");
+    }
+
     private static ResilientReadService service(ResilienceProperties p) {
-        return new ResilientReadService(p, CircuitBreakerRegistry.ofDefaults(), RetryRegistry.ofDefaults(),
-                RateLimiterRegistry.ofDefaults(), BulkheadRegistry.ofDefaults(),
-                TimeLimiterRegistry.of(TimeLimiterConfig.custom().timeoutDuration(p.getTimeout()).build()));
+        var configuration = new ResilienceConfiguration();
+        return new ResilientReadService(p, configuration.resilienceCircuitBreakers(p), configuration.resilienceRetries(p),
+                configuration.resilienceRateLimiters(p), configuration.resilienceBulkheads(p), configuration.resilienceTimeLimiters(p));
     }
 }

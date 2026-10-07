@@ -103,9 +103,7 @@ class DictionaryNotificationService {
     private void requireReadable(String enterpriseId, String dictionaryCode, Authentication authentication) {
         if (!TENANT_ID.equals(enterpriseId)) throw new AccessDeniedException("Enterprise context mismatch");
         DataScopeService.ScopeFilter scope = dataScopes.filter(enterpriseId, "dictionaries", authentication);
-        boolean visible = types.findScoped(enterpriseId, scope.tenant(), scope.operatorAnd(), scope.subject(), scope.self(),
-                        scope.creator(), scope.owner(), scope.organization(), scope.organizationId()).stream()
-                .anyMatch(type -> dictionaryCode.equals(type.code()));
+        boolean visible = types.findScoped(dictionaryCode, scope).isPresent();
         if (!visible) throw new DictionaryNotificationNotFoundException();
     }
 

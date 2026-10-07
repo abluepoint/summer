@@ -16,14 +16,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 @Service
 public class ResilientReadService {
@@ -37,8 +36,8 @@ public class ResilientReadService {
     private final BulkheadRegistry bulkheads;
     private final TimeLimiterRegistry timers;
     private final Executor executor = ForkJoinPool.commonPool();
-    private final ConcurrentMap<String, Object> fallbackValues = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Instant> fallbackTimes = new ConcurrentHashMap<>();
+    private record Entry(Object value, Instant storedAt) {}
+    private final ConcurrentMap<String, Entry> fallbackValues = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Counters> counters = new ConcurrentHashMap<>();
 
     public ResilientReadService(ResilienceProperties properties, CircuitBreakerRegistry breakers,
@@ -55,9 +54,18 @@ public class ResilientReadService {
     }
 
     public <T> T read(String operation, String cacheKey, Supplier<T> loader) {
-        if (!properties.isEnabled()) return remember(operation, cacheKey, loader.get());
+        return read(operation, cacheKey, loader, null);
+    }
+
+    /** Proof must re-read authoritative permissions and resource state outside any stale transaction. */
+    @SuppressWarnings("unchecked")
+    public <T> T read(String operation, String cacheKey, Supplier<T> loader, BooleanSupplier proof) {
+        if (!PARAMETERS.equals(operation) && !DICTIONARIES.equals(operation))
+            throw new IllegalArgumentException("Only parameter and dictionary reads support resilience");
+        boolean eligible = proof != null;
+        if (!properties.isEnabled()) return loader.get();
         Counters stats = counters.computeIfAbsent(operation, ignored -> new Counters());
-        stats.calls++;
+        stats.calls.incrementAndGet();
         try {
             CircuitBreaker breaker = breakers.circuitBreaker(operation);
             Retry retry = retries.retry(operation);
@@ -77,24 +85,33 @@ public class ResilientReadService {
             } catch (Exception failure) {
                 throw new java.util.concurrent.CompletionException(failure);
             }
-            stats.successes++;
-            return remember(operation, cacheKey, value);
+            stats.successes.incrementAndGet();
+            return eligible ? remember(operation, cacheKey, value) : value;
         } catch (RuntimeException failure) {
             Throwable cause = unwrap(failure);
             if (isBusinessFailure(cause)) {
                 // A withdrawal or authorization decision must invalidate old success data.
                 fallbackValues.remove(operation + ":" + cacheKey);
-                fallbackTimes.remove(operation + ":" + cacheKey);
                 throw (RuntimeException) cause;
             }
-            stats.failures++;
-            if (isRejected(failure)) stats.rejected++;
-            if (isTimeout(failure)) stats.timedOut++;
+            stats.failures.incrementAndGet();
+            if (isRejected(cause)) stats.rejected.incrementAndGet();
+            if (isTimeout(cause)) stats.timedOut.incrementAndGet();
             stats.lastFailureAt = Instant.now();
-            T fallback = fallback(operation, cacheKey);
+            Entry fallback = eligible ? fallback(operation, cacheKey) : null;
             if (fallback != null) {
-                stats.fallbacks++;
-                return fallback;
+                try {
+                    if (!proof.getAsBoolean() || !fallback.storedAt().plus(properties.getFallbackTtl()).isAfter(Instant.now())) fallback = null;
+                } catch (RuntimeException verificationFailure) {
+                    fallbackValues.remove(operation + ":" + cacheKey);
+                    if (isBusinessFailure(verificationFailure)) throw verificationFailure;
+                    throw new DependencyDegradedException("Fallback cannot be verified", verificationFailure);
+                }
+                if (fallback == null) fallbackValues.remove(operation + ":" + cacheKey);
+            }
+            if (fallback != null) {
+                stats.fallbacks.incrementAndGet();
+                return (T) fallback.value();
             }
             throw new DependencyDegradedException("Dependency read is unavailable", failure);
         }
@@ -124,7 +141,7 @@ public class ResilientReadService {
             Bulkhead bulkhead = bulkheads.bulkhead(name);
             result.add(new ResilienceOperationView(name, breaker.getState().name(), retry.getRetryConfig().getMaxAttempts(),
                     limiter.getRateLimiterConfig().getLimitForPeriod(), bulkhead.getBulkheadConfig().getMaxConcurrentCalls(),
-                    stats.calls, stats.successes, stats.failures, stats.fallbacks, stats.rejected, stats.timedOut,
+                    stats.calls.get(), stats.successes.get(), stats.failures.get(), stats.fallbacks.get(), stats.rejected.get(), stats.timedOut.get(),
                     stats.lastFailureAt));
         });
         return result.stream().sorted(Comparator.comparing(ResilienceOperationView::name)).toList();
@@ -133,22 +150,20 @@ public class ResilientReadService {
     private <T> T remember(String operation, String cacheKey, T value) {
         if (value != null) {
             String key = operation + ":" + cacheKey;
-            fallbackValues.put(key, value);
-            fallbackTimes.put(key, Instant.now());
+            fallbackValues.put(key, new Entry(value, Instant.now()));
         }
         return value;
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> T fallback(String operation, String cacheKey) {
+    private Entry fallback(String operation, String cacheKey) {
         String key = operation + ":" + cacheKey;
-        Instant stored = fallbackTimes.get(key);
-        if (stored == null || stored.plus(properties.getFallbackTtl()).isBefore(Instant.now())) {
-            fallbackValues.remove(key);
-            fallbackTimes.remove(key);
+        Entry entry = fallbackValues.get(key);
+        if (entry == null) return null;
+        if (!entry.storedAt().plus(properties.getFallbackTtl()).isAfter(Instant.now())) {
+            fallbackValues.remove(key, entry);
             return null;
         }
-        return (T) fallbackValues.get(key);
+        return entry;
     }
 
     private static boolean isRejected(Throwable failure) {
@@ -164,12 +179,12 @@ public class ResilientReadService {
     }
 
     private static final class Counters {
-        private long calls;
-        private long successes;
-        private long failures;
-        private long fallbacks;
-        private long rejected;
-        private long timedOut;
-        private Instant lastFailureAt;
+        private final java.util.concurrent.atomic.AtomicLong calls = new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong successes = new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong failures = new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong fallbacks = new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong rejected = new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong timedOut = new java.util.concurrent.atomic.AtomicLong();
+        private volatile Instant lastFailureAt;
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItem;
-import static org.springframework.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -54,7 +54,9 @@ class SystemParameterReleaseHttpTest {
         mockMvc.perform(post("/api/system-parameters/release.timeout/publish")
                         .header("X-Request-Id", "publish-1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"revision":1,"expectedVersion":0,"idempotencyKey":"publish-key"}""")
+                        .content("""
+                                {"revision":1,"expectedVersion":0,"idempotencyKey":"publish-key"}
+                                """)
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.value").value(30))
@@ -62,7 +64,9 @@ class SystemParameterReleaseHttpTest {
 
         mockMvc.perform(post("/api/system-parameters/release.timeout/publish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"revision":1,"expectedVersion":0,"idempotencyKey":"stale-publish"}""")
+                        .content("""
+                                {"revision":1,"expectedVersion":0,"idempotencyKey":"stale-publish"}
+                                """)
                         .with(writer()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_PARAMETER_VERSION_CONFLICT"));
@@ -70,7 +74,9 @@ class SystemParameterReleaseHttpTest {
         mockMvc.perform(post("/api/system-parameters/release.timeout/rollback")
                         .header("X-Request-Id", "rollback-1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"revision":0,"expectedVersion":1,"idempotencyKey":"rollback-key"}""")
+                        .content("""
+                                {"revision":0,"expectedVersion":1,"idempotencyKey":"rollback-key"}
+                                """)
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.value").value(25))
@@ -78,7 +84,9 @@ class SystemParameterReleaseHttpTest {
 
         mockMvc.perform(post("/api/system-parameters/release.timeout/deactivate")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"expectedVersion":2,"idempotencyKey":"deactivate-key"}""")
+                        .content("""
+                                {"expectedVersion":2,"idempotencyKey":"deactivate-key"}
+                                """)
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("INACTIVE"))
@@ -96,7 +104,9 @@ class SystemParameterReleaseHttpTest {
     void releaseRequiresWriteAuthorityAndRejectsInvalidRevision() throws Exception {
         mockMvc.perform(post("/api/system-parameters/release.timeout/publish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"revision":99,"expectedVersion":0,"idempotencyKey":"nope"}""")
+                        .content("""
+                                {"revision":99,"expectedVersion":0,"idempotencyKey":"nope"}
+                                """)
                         .with(reader()))
                 .andExpect(status().isForbidden());
     }

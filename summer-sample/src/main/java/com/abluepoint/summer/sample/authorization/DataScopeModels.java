@@ -75,3 +75,6 @@ record DataScopeAuditView(
         String principal,
         String requestId,
         Instant occurredAt) {}
+
+record DataScopeBindingView(String subjectType, String subjectId, String effect, String operator,
+                            List<DataScopeRule> rules, Object conditions, long version, String checksum) {}

@@ -81,25 +81,7 @@ where tenant_id = :tenantId
 <#if filterByPublic>
   and public_flag = :publicValue
 </#if>
-<#if scopeSelf || scopeCreator || scopeOwner || scopeOrganization>
-  and (
-  <#assign firstScope = true>
-  <#if scopeSelf>
-    created_by = :scopeSubject
-    <#assign firstScope = false>
-  </#if>
-  <#if scopeCreator>
-    <#if !firstScope><#if scopeAnd> and <#else> or </#if></#if>created_by = :scopeSubject
-    <#assign firstScope = false>
-  </#if>
-  <#if scopeOwner>
-    <#if !firstScope><#if scopeAnd> and <#else> or </#if></#if>owner_id = :scopeSubject
-    <#assign firstScope = false>
-  </#if>
-  <#if scopeOrganization>
-    <#if !firstScope><#if scopeAnd> and <#else> or </#if></#if>organization_id = :scopeOrganizationId
-  </#if>)
-</#if>
+  and (${dataScopePredicate})
 order by
 <#if sortByKey>
   parameter_key
@@ -140,22 +122,4 @@ where tenant_id = :tenantId
 <#if filterByPublic>
   and public_flag = :publicValue
 </#if>
-<#if scopeSelf || scopeCreator || scopeOwner || scopeOrganization>
-  and (
-  <#assign firstScope = true>
-  <#if scopeSelf>
-    created_by = :scopeSubject
-    <#assign firstScope = false>
-  </#if>
-  <#if scopeCreator>
-    <#if !firstScope><#if scopeAnd> and <#else> or </#if></#if>created_by = :scopeSubject
-    <#assign firstScope = false>
-  </#if>
-  <#if scopeOwner>
-    <#if !firstScope><#if scopeAnd> and <#else> or </#if></#if>owner_id = :scopeSubject
-    <#assign firstScope = false>
-  </#if>
-  <#if scopeOrganization>
-    <#if !firstScope><#if scopeAnd> and <#else> or </#if></#if>organization_id = :scopeOrganizationId
-  </#if>)
-</#if>
+  and (${dataScopePredicate})

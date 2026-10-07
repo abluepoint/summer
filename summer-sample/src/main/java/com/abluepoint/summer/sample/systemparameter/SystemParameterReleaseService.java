@@ -152,14 +152,8 @@ class SystemParameterReleaseService {
     }
 
     private SystemParameterEntity current(String key, Authentication authentication) {
-        SystemParameterEntity parameter = parameters.findByKey(key)
-                .filter(value -> SystemParameterService.TENANT_ID.equals(value.tenantId()))
+        return parameters.findScoped(key, dataScopes.filter(SystemParameterService.TENANT_ID, "system-parameters", authentication))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
-        if (!dataScopes.filter(SystemParameterService.TENANT_ID, "system-parameters", authentication)
-                .allows(parameter.organizationId(), parameter.createdBy(), parameter.ownerId(), parameter.createdBy())) {
-            throw new SystemParameterNotFoundException(key);
-        }
-        return parameter;
     }
 
     private SystemParameterVersionEntity version(String key, Long revision) {

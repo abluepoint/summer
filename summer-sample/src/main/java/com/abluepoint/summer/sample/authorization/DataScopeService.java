@@ -11,28 +11,34 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.*;
 
 @Service
 public class DataScopeService {
     static final String ENTERPRISE = "ent-acme";
-    private static final Set<String> ALLOWED_FIELDS = Set.of("TENANT", "ORGANIZATION", "DEPARTMENT", "ORGANIZATION_TREE", "SELF", "CREATOR", "OWNER");
-    private static final Set<String> ALLOWED_LOGICAL_OPERATORS = Set.of("AND", "OR");
-    private static final Set<String> ALLOWED_COMPARATORS = Set.of("EQ", "EQUALS", "=", "IN", "NE", "NOT_EQUALS", "!=", "NOT_IN", "CONTAINS", "MATCHES");
     private final DataScopePolicyRepository repository;
     private final DataScopePolicyAuditRepository auditRepository;
     private final ObjectMapper mapper;
     private final CustomerAuditService audit;
     private final AuthorizationChangeEventService changeEvents;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final DataScopeBindingRepository bindings;
+    private final AuthorizationUserBindingRepository users;
+    private final AuthorizationRoleRepository roles;
 
     DataScopeService(DataScopePolicyRepository repository, DataScopePolicyAuditRepository auditRepository,
-                     ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents) {
+                     ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents,
+                     org.springframework.jdbc.core.JdbcTemplate jdbc, DataScopeBindingRepository bindings,
+                     AuthorizationUserBindingRepository users, AuthorizationRoleRepository roles) {
         this.repository = repository;
         this.auditRepository = auditRepository;
         this.mapper = mapper;
         this.audit = audit;
         this.changeEvents = changeEvents;
+        this.jdbc = jdbc;
+        this.bindings = bindings;
+        this.users = users;
+        this.roles = roles;
         repository.findByEnterpriseIdAndResource(ENTERPRISE, "system-parameters")
                 .orElseGet(() -> repository.save(new DataScopePolicyEntity(UUID.randomUUID().toString(), ENTERPRISE,
                         "system-parameters", "AND", "[{\"type\":\"TENANT\"}]")));
@@ -65,16 +71,16 @@ public class DataScopeService {
         if (request == null) throw new IllegalArgumentException("policy request is required");
         if (request.sql() != null && !request.sql().isBlank()) throw new IllegalArgumentException("raw SQL is not accepted");
         String op = upper(request.operator() == null ? "AND" : request.operator());
-        if (!ALLOWED_LOGICAL_OPERATORS.contains(op)) throw new IllegalArgumentException("operator must be AND or OR");
-        List<DataScopeRule> rules = request.rules() == null ? List.of() : List.copyOf(request.rules());
+        if (!Set.of("AND", "OR").contains(op)) throw new IllegalArgumentException("operator must be AND or OR");
+        List<DataScopeRule> rules = request.rules() == null ? List.of() : new ArrayList<>(request.rules());
         if (rules.isEmpty() && request.conditions() == null && request.conditionTree() == null) {
             throw new IllegalArgumentException("rules or conditions are required");
         }
-        validateRules(rules);
+        if (request.conditions() != null && request.conditionTree() != null) throw new IllegalArgumentException("choose conditions or conditionTree, not both");
         Object conditions = request.conditions() != null ? request.conditions() : request.conditionTree();
-        validateConditionTree(conditions);
         String rulesJson = write(rules);
         String conditionsJson = write(conditions == null ? null : conditions);
+        compile(enterpriseId, op, rulesJson, conditionsJson, principal(auth), organizationId(auth));
         String checksum = checksum(op, rulesJson, conditionsJson);
         DataScopePolicyEntity entity = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
                 .orElseGet(() -> new DataScopePolicyEntity(UUID.randomUUID().toString(), enterpriseId, resource, op, rulesJson, conditionsJson, checksum));
@@ -102,71 +108,141 @@ public class DataScopeService {
                 .orElseThrow(() -> new NoSuchElementException("Data scope policy was not configured"));
         DataScopePreviewRequest input = request == null ? new DataScopePreviewRequest(null, null, null, null, List.of(), List.of(), List.of()) : request;
         String subject = blank(input.subject()) ? principal(auth) : input.subject();
-        Set<String> userDenies = upperSet(input.userDenies());
-        Set<String> roleAllows = upperSet(input.roleAllows());
-        List<String> matched = new ArrayList<>();
-        List<String> denied = new ArrayList<>();
-        for (String token : userDenies) {
-            if (matchesScopeToken(token, input, subject) || "*".equals(token) || resource.equalsIgnoreCase(token)) denied.add("USER_DENY:" + token);
+        String subjectOrganization = subject.equals(principal(auth)) ? organizationId(auth) : storedOrganization(enterpriseId, subject);
+        DataScopeExpression.Compiled policyExpression = compile(enterpriseId, policy.operator(), policy.rulesJson(),
+                policy.conditionsJson(), subject, subjectOrganization);
+        DataScopeExpression.Row row = new DataScopeExpression.Row(enterpriseId, input.organizationId(),
+                blank(input.creatorId()) ? subject : input.creatorId(), input.ownerId(),
+                blank(input.creatorId()) ? subject : input.creatorId());
+        boolean denied = policyExpression.denied().matches(row);
+        boolean allowed = policyExpression.expression().matches(row);
+        if ((input.userDenies() != null && !input.userDenies().isEmpty())
+                || (input.roleAllows() != null && !input.roleAllows().isEmpty())
+                || (input.organizationIds() != null && !input.organizationIds().isEmpty())) {
+            throw new IllegalArgumentException("Preview reads persisted bindings; hypothetical authorization inputs are not accepted");
         }
-        if (!denied.isEmpty()) {
-            return previewView(enterpriseId, resource, subject, false, "DENY", "USER_DENY",
-                    "An explicit user denial overrides role and policy allows.", matched, denied, policy);
-        }
-        boolean conditionMatch = policyConditionsMatch(policy.conditionsJson(), input, subject);
-        List<DataScopeRule> rules = readRules(policy.rulesJson());
-        boolean allow = false;
-        boolean deny = false;
-        for (DataScopeRule rule : rules) {
-            String token = field(rule);
-            if (!matchesScopeToken(token, input, subject)) continue;
-            if (!roleAllows.isEmpty() && !roleAllows.contains(token) && !"TENANT".equals(token)) continue;
-            if (!ruleConditionMatch(rule, input, subject)) continue;
-            String effect = upper(blank(rule.effect()) ? "ALLOW" : rule.effect());
-            matched.add(token);
-            if ("DENY".equals(effect)) deny = true; else allow = true;
-        }
-        if (conditionMatch) {
-            matched.add("CONDITION_TREE");
-            allow = true;
-        }
-        if (deny) {
-            return previewView(enterpriseId, resource, subject, false, "DENY", "POLICY_DENY",
-                    "A matching policy denial overrides allows.", matched, denied, policy);
-        }
-        String reason = allow ? "POLICY_ALLOW" : "DEFAULT_DENY";
-        return previewView(enterpriseId, resource, subject, allow, allow ? "ALLOW" : "DENY", reason,
-                allow ? "The effective scope matched the configured policy." : "No configured scope condition matched.",
-                matched, denied, policy);
-    }
-
-    private DataScopePreviewView previewView(String enterpriseId, String resource, String subject, boolean allowed,
-                                              String decision, String reason, String explanation, List<String> matched,
-                                              List<String> denied, DataScopePolicyEntity policy) {
+        Effective effectivePolicy = effective(policy, subject, subjectOrganization);
+        allowed = effectivePolicy.expression().matches(row);
+        boolean userDenied = effectivePolicy.userDenied().matches(row);
+        String reason = userDenied ? "USER_DENY" : denied ? "POLICY_DENY" : allowed ? "POLICY_ALLOW" : "DEFAULT_DENY";
         Map<String, Object> effective = new LinkedHashMap<>();
         effective.put("tenant", enterpriseId);
-        effective.put("organizationId", null);
-        effective.put("matched", List.copyOf(matched));
-        effective.put("denied", List.copyOf(denied));
-        return new DataScopePreviewView(enterpriseId, resource, subject, allowed, decision, reason, explanation,
-                List.copyOf(matched), List.copyOf(denied), policy.version(), policy.checksum(), effective);
+        effective.put("organizationId", subjectOrganization);
+        effective.put("bindings", effectivePolicy.sources());
+        return new DataScopePreviewView(enterpriseId, resource, subject, allowed, allowed ? "ALLOW" : "DENY", reason,
+                "The same validated condition expression is used by database queries and this row preview.",
+                allowed ? List.of("POLICY_ALLOW") : List.of(), denied || userDenied ? List.of(reason) : List.of(),
+                policy.version(), policy.checksum(), effective);
     }
 
     public ScopeFilter filter(String enterpriseId, String resource, Authentication auth) {
         if (!ENTERPRISE.equals(enterpriseId)) throw new AccessDeniedException("Enterprise context mismatch");
-        DataScopePolicyEntity entity = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
+        if (auth instanceof JwtAuthenticationToken jwt && jwt.getToken().hasClaim("enterprise_memberships") && !hasMembership(auth, enterpriseId))
+            throw new AccessDeniedException("Enterprise context mismatch");
+        DataScopePolicyEntity policy = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
                 .orElseThrow(() -> new AccessDeniedException("Sensitive resource has no data scope policy"));
-        List<DataScopeRule> rules = readRules(entity.rulesJson());
-        Set<String> types = rules.stream().map(this::field).filter(Objects::nonNull)
-                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-        collectConditionFields(readObject(entity.conditionsJson()), types);
-        if (types.isEmpty()) throw new AccessDeniedException("Sensitive resource has no data scope policy");
-        String subject = auth == null ? null : auth.getName();
-        String org = organizationId(auth);
-        return new ScopeFilter(types.contains("TENANT"), types.contains("SELF"), types.contains("CREATOR"), types.contains("OWNER"),
-                types.contains("ORGANIZATION") || types.contains("DEPARTMENT") || types.contains("ORGANIZATION_TREE"),
-                "AND".equals(entity.operator()), subject, org);
+        try {
+            Effective expression = effective(policy, principal(auth), organizationId(auth));
+            return new ScopeFilter(enterpriseId, expression.expression(), policy.checksum());
+        } catch (IllegalArgumentException invalid) {
+            throw new AccessDeniedException("Sensitive resource has an invalid data scope policy");
+        }
     }
+
+    @Transactional(readOnly = true)
+    List<DataScopeBindingView> bindings(String enterprise, String resource, Authentication auth) {
+        require(enterprise, "enterprise.data-scope.read", auth);
+        return bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(enterprise, resource)
+                .stream().map(this::bindingView).toList();
+    }
+
+    @Transactional
+    DataScopeBindingView bind(String enterprise, String resource, String kind, String subject,
+                              DataScopePolicyRequest request, String requestId, Authentication auth) {
+        require(enterprise, "enterprise.data-scope.write", auth);
+        if (!Set.of("USER", "ROLE").contains(kind) || blank(subject) || subject.length() > 128)
+            throw new IllegalArgumentException("Binding requires USER or ROLE and a subject identifier");
+        if (repository.findByEnterpriseIdAndResource(enterprise, resource).isEmpty())
+            throw new IllegalArgumentException("Configure the resource policy first");
+        if ("ROLE".equals(kind) && roles.findById(subject).filter(r -> enterprise.equals(r.enterpriseId())).isEmpty())
+            throw new IllegalArgumentException("Role does not belong to this enterprise");
+        if (request == null || request.sql() != null || (request.conditions() != null && request.conditionTree() != null))
+            throw new IllegalArgumentException("Invalid binding policy");
+        String operator = request.operator() == null ? "AND" : upper(request.operator());
+        String rules = write(request.rules() == null ? List.of() : request.rules());
+        String conditions = write(request.conditions() == null ? request.conditionTree() : request.conditions());
+        compile(enterprise, operator, rules, conditions, subject, storedOrganization(enterprise, subject));
+        DataScopeBindingEntity entity = bindings.findByEnterpriseIdAndResourceAndSubjectTypeAndSubjectId(enterprise, resource, kind, subject)
+                .orElseGet(DataScopeBindingEntity::new);
+        if (entity.id == null) entity.id = UUID.randomUUID().toString();
+        entity.enterpriseId = enterprise; entity.resource = resource; entity.subjectType = kind; entity.subjectId = subject;
+        entity.operator = operator; entity.rulesJson = rules; entity.conditionsJson = conditions;
+        entity.checksum = checksum(operator, rules, conditions); entity.updatedAt = java.time.Instant.now();
+        bindings.saveAndFlush(entity);
+        auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterprise, resource,
+                entity.version, entity.checksum, "DATA_SCOPE_BINDING_UPDATED", principal(auth), requestId));
+        audit.recordResourceSuccess("data-scope:" + enterprise + ":" + resource, "DATA_SCOPE_BINDING_UPDATED", requestId, auth);
+        changeEvents.enqueue(enterprise, "DATA_SCOPE", entity.id, "DATA_SCOPE_BINDING_UPDATED", entity.version, requestId);
+        return bindingView(entity);
+    }
+
+    private DataScopeBindingView bindingView(DataScopeBindingEntity b) {
+        return new DataScopeBindingView(b.subjectType, b.subjectId, "USER".equals(b.subjectType) ? "DENY" : "ALLOW",
+                b.operator, readRules(b.rulesJson), readObject(b.conditionsJson), b.version, b.checksum);
+    }
+
+    private record Effective(DataScopeExpression.Node expression, DataScopeExpression.Node userDenied, List<String> sources) {}
+    private Effective effective(DataScopePolicyEntity policy, String subject, String organization) {
+        DataScopeExpression.Compiled base = compile(policy.enterpriseId(), policy.operator(), policy.rulesJson(), policy.conditionsJson(), subject, organization);
+        List<DataScopeBindingEntity> all = bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(policy.enterpriseId(), policy.resource());
+        List<String> roleIds = subject == null ? List.of() : users.findByEnterpriseIdAndUsername(policy.enterpriseId(), subject)
+                .map(u -> Arrays.asList(u.roleIds().split("\\n"))).orElse(List.of());
+        Set<String> activeRoles = new HashSet<>();
+        for (String roleId : roleIds) roles.findById(roleId)
+                .filter(r -> policy.enterpriseId().equals(r.enterpriseId()) && "ACTIVE".equals(r.status()))
+                .ifPresent(r -> activeRoles.add(roleId));
+        List<DataScopeExpression.Node> allows = new ArrayList<>(), denies = new ArrayList<>();
+        List<String> sources = new ArrayList<>();
+        boolean managedRoles = all.stream().anyMatch(b -> "ROLE".equals(b.subjectType));
+        for (DataScopeBindingEntity binding : all) {
+            if (("ROLE".equals(binding.subjectType) && activeRoles.contains(binding.subjectId))
+                    || ("USER".equals(binding.subjectType) && binding.subjectId.equals(subject))) {
+                DataScopeExpression.Node node = compile(policy.enterpriseId(), binding.operator, binding.rulesJson, binding.conditionsJson, subject, organization).expression();
+                ("USER".equals(binding.subjectType) ? denies : allows).add(node);
+                sources.add(binding.subjectType + ":" + binding.subjectId + ":" + binding.version);
+            }
+        }
+        DataScopeExpression.Node userDenied = new DataScopeExpression.Junction(false, denies);
+        DataScopeExpression.Node grant = managedRoles ? new DataScopeExpression.Junction(false, allows) : new DataScopeExpression.Constant(true);
+        return new Effective(new DataScopeExpression.Junction(true, List.of(base.expression(), grant, new DataScopeExpression.Not(userDenied))), userDenied, sources);
+    }
+
+    private DataScopeExpression.Compiled compile(String enterpriseId, String operator, String rules, String conditions,
+                                                 String subject, String organization) {
+        return DataScopeExpression.compile(operator, readObject(rules), readObject(conditions),
+                new DataScopeExpression.Context(enterpriseId, subject, organization, roots -> descendants(enterpriseId, roots)));
+    }
+
+    private List<String> descendants(String enterpriseId, List<String> roots) {
+        if (roots.isEmpty()) return List.of();
+        // Only organization metadata is expanded in memory. Business rows are always filtered in SQL/JPA.
+        List<OrganizationLink> links = jdbc.query("select unit_id, parent_id from summer_organization_unit where enterprise_id = ? and status = 'ACTIVE'",
+                (rs, index) -> new OrganizationLink(rs.getString(1), rs.getString(2)), enterpriseId);
+        Set<String> result = new TreeSet<>(roots);
+        boolean changed;
+        do {
+            changed = false;
+            for (OrganizationLink link : links) if (link.parent() != null && result.contains(link.parent()) && result.add(link.id())) changed = true;
+        } while (changed);
+        return List.copyOf(result);
+    }
+
+    private String storedOrganization(String enterpriseId, String subject) {
+        return jdbc.query("select organization_id from summer_organization_context where enterprise_id = ? and subject = ?",
+                (rs, index) -> rs.getString(1), enterpriseId, subject).stream().filter(Objects::nonNull).findFirst().orElse(null);
+    }
+
+    private record OrganizationLink(String id, String parent) {}
 
     public void assertWrite(String enterpriseId, String resource, Authentication auth, String organizationId) {
         ScopeFilter f = filter(enterpriseId, resource, auth);
@@ -190,122 +266,7 @@ public class DataScopeService {
 
     private Object readObject(String json) {
         if (json == null || "null".equals(json)) return null;
-        try { return mapper.readValue(json, Object.class); } catch (RuntimeException e) { return null; }
-    }
-
-    private void validateRules(List<DataScopeRule> rules) {
-        for (DataScopeRule rule : rules) {
-            if (rule == null || field(rule) == null || !ALLOWED_FIELDS.contains(field(rule))) {
-                throw new IllegalArgumentException("unsupported data scope field");
-            }
-            if (rule.effect() != null && !Set.of("ALLOW", "DENY").contains(upper(rule.effect()))) {
-                throw new IllegalArgumentException("effect must be ALLOW or DENY");
-            }
-            validateComparator(rule.operator());
-            validateRules(rule.children() == null ? List.of() : rule.children());
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void validateConditionTree(Object node) {
-        if (node == null) return;
-        if (node instanceof Collection<?> values) { for (Object value : values) validateConditionTree(value); return; }
-        if (!(node instanceof Map<?, ?> map)) throw new IllegalArgumentException("conditions must be a structured object");
-        Object operator = map.get("operator");
-        Object field = map.containsKey("field") ? map.get("field") : map.get("type");
-        if (field != null && !ALLOWED_FIELDS.contains(normalizeField(String.valueOf(field)))) throw new IllegalArgumentException("unsupported data scope field");
-        if (operator != null) {
-            String op = upper(String.valueOf(operator));
-            if (!ALLOWED_LOGICAL_OPERATORS.contains(op) && !ALLOWED_COMPARATORS.contains(op)) throw new IllegalArgumentException("unsupported data scope operator");
-        }
-        Object children = map.get("children");
-        if (children == null) children = map.get("rules");
-        if (children != null) validateConditionTree(children);
-        for (Object key : map.keySet()) {
-            if (Set.of("operator", "field", "type", "value", "effect", "children", "rules").contains(String.valueOf(key))) continue;
-            throw new IllegalArgumentException("unsupported condition field: " + key);
-        }
-    }
-
-    private void validateComparator(String operator) {
-        if (operator != null && !ALLOWED_COMPARATORS.contains(upper(operator)) && !ALLOWED_LOGICAL_OPERATORS.contains(upper(operator))) {
-            throw new IllegalArgumentException("unsupported data scope operator");
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void collectConditionFields(Object node, Set<String> fields) {
-        if (node instanceof Collection<?> values) { values.forEach(value -> collectConditionFields(value, fields)); return; }
-        if (!(node instanceof Map<?, ?> map)) return;
-        Object field = map.get("field") == null ? map.get("type") : map.get("field");
-        if (field != null) fields.add(normalizeField(String.valueOf(field)));
-        Object children = map.get("children");
-        if (children == null) children = map.get("rules");
-        collectConditionFields(children, fields);
-    }
-
-    private boolean ruleConditionMatch(DataScopeRule rule, DataScopePreviewRequest input, String subject) {
-        if (rule.value() == null) return true;
-        return compare(rule.operator(), rule.value(), valueFor(field(rule), input, subject));
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean policyConditionsMatch(String json, DataScopePreviewRequest input, String subject) {
-        Object value = readObject(json);
-        if (!(value instanceof Map<?, ?>)) return false;
-        return evaluateNode((Map<String, Object>) value, input, subject);
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean evaluateNode(Map<String, Object> node, DataScopePreviewRequest input, String subject) {
-        String op = upper(String.valueOf(node.getOrDefault("operator", "AND")));
-        Object children = node.get("children");
-        if (children == null) children = node.get("rules");
-        if (children instanceof Collection<?> list && ("AND".equals(op) || "OR".equals(op))) {
-            List<Boolean> values = list.stream().filter(Map.class::isInstance).map(Map.class::cast).map(v -> evaluateNode((Map<String, Object>) v, input, subject)).toList();
-            return "AND".equals(op) ? !values.isEmpty() && values.stream().allMatch(Boolean.TRUE::equals) : values.stream().anyMatch(Boolean.TRUE::equals);
-        }
-        String field = node.get("field") == null ? String.valueOf(node.getOrDefault("type", "")) : String.valueOf(node.get("field"));
-        return compare(op, node.get("value"), valueFor(normalizeField(field), input, subject));
-    }
-
-    private boolean compare(String operator, Object expected, Object actual) {
-        String op = upper(blank(operator) ? "EQ" : operator);
-        if ("=".equals(op)) op = "EQ";
-        if ("!=".equals(op) || "NOT_EQUALS".equals(op)) op = "NE";
-        if (actual == null) return false;
-        if ("IN".equals(op) || "CONTAINS".equals(op)) return asValues(expected).stream().anyMatch(v -> Objects.equals(String.valueOf(v), String.valueOf(actual)));
-        if ("NOT_IN".equals(op)) return asValues(expected).stream().noneMatch(v -> Objects.equals(String.valueOf(v), String.valueOf(actual)));
-        boolean equal = Objects.equals(String.valueOf(expected), String.valueOf(actual));
-        return "NE".equals(op) ? !equal : equal;
-    }
-
-    private Set<String> upperSet(List<String> values) { return values == null ? Set.of() : values.stream().filter(Objects::nonNull).map(DataScopeService::upper).collect(java.util.stream.Collectors.toSet()); }
-
-    private boolean matchesScopeToken(String token, DataScopePreviewRequest input, String subject) {
-        return switch (token) {
-            case "TENANT" -> true;
-            case "SELF", "CREATOR" -> Objects.equals(subject, blank(input.creatorId()) ? subject : input.creatorId());
-            case "OWNER" -> Objects.equals(subject, input.ownerId());
-            case "ORGANIZATION", "DEPARTMENT", "ORGANIZATION_TREE" -> (input.organizationId() != null && !input.organizationId().isBlank()) || (input.organizationIds() != null && !input.organizationIds().isEmpty());
-            default -> false;
-        };
-    }
-
-    private Object valueFor(String field, DataScopePreviewRequest input, String subject) {
-        if (input == null) return subject;
-        return switch (upper(field)) {
-            case "TENANT" -> ENTERPRISE;
-            case "SELF", "CREATOR" -> blank(input.creatorId()) ? subject : input.creatorId();
-            case "OWNER" -> input.ownerId();
-            case "ORGANIZATION", "DEPARTMENT", "ORGANIZATION_TREE" -> input.organizationId() != null ? input.organizationId() : (input.organizationIds() == null ? null : input.organizationIds());
-            default -> null;
-        };
-    }
-
-    private List<Object> asValues(Object value) {
-        if (value instanceof Collection<?> collection) return new ArrayList<>(collection);
-        return value == null ? List.of() : List.of(value);
+        try { return mapper.readValue(json, Object.class); } catch (RuntimeException e) { throw new IllegalArgumentException("policy cannot be decoded", e); }
     }
 
     private String write(Object value) {
@@ -317,19 +278,9 @@ public class DataScopeService {
         catch (Exception e) { throw new IllegalStateException("checksum unavailable", e); }
     }
 
-    private String field(DataScopeRule rule) { return normalizeField(blank(rule.field()) ? rule.type() : rule.field()); }
-    private static String normalizeField(String value) {
-        String normalized = upper(value);
-        return switch (normalized == null ? "" : normalized) {
-            case "ORGANIZATION_ID", "ORG", "ORG_ID" -> "ORGANIZATION";
-            case "CREATED_BY", "CREATOR_ID" -> "CREATOR";
-            case "OWNER_ID" -> "OWNER";
-            default -> normalized;
-        };
-    }
     private static String upper(String value) { return value == null ? null : value.trim().toUpperCase(Locale.ROOT); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
-    private static String principal(Authentication auth) { return auth == null ? null : auth.getName(); }
+    private static String principal(Authentication auth) { return auth == null || auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken ? null : auth.getName(); }
 
     private void require(String enterpriseId, String capability, Authentication auth) {
         if (!ENTERPRISE.equals(enterpriseId) || auth == null || !hasMembership(auth, enterpriseId) || !hasCapability(auth, enterpriseId, capability)) {
@@ -356,7 +307,7 @@ public class DataScopeService {
         Object value = map.get(first); if (value == null) value = map.get(second); return value == null ? null : value.toString();
     }
 
-    private static String organizationId(Authentication auth) {
+    public static String organizationId(Authentication auth) {
         if (!(auth instanceof JwtAuthenticationToken jwt)) return null;
         var claims = jwt.getToken().getClaims();
         for (String key : List.of("organization_id", "organizationId", "current_organization_id")) { Object value = claims.get(key); if (value != null) return value.toString(); }
@@ -365,18 +316,28 @@ public class DataScopeService {
         return null;
     }
 
-    public record ScopeFilter(boolean tenant, boolean self, boolean creator, boolean owner, boolean organization,
-                              boolean operatorAnd, String subject, String organizationId) {
-        public boolean allows(String rowOrg, String rowCreator, String rowOwner, String rowSubject) {
-            if (operatorAnd) {
-                if (self && !Objects.equals(subject, rowSubject)) return false;
-                if (creator && !Objects.equals(subject, rowCreator)) return false;
-                if (owner && !Objects.equals(subject, rowOwner)) return false;
-                if (organization && !Objects.equals(organizationId, rowOrg)) return false;
-                return tenant || self || creator || owner || organization;
+    public static final class ScopeFilter {
+        private final String enterpriseId;
+        private final DataScopeExpression.Node expression;
+        private final String fingerprint;
+        private ScopeFilter(String enterpriseId, DataScopeExpression.Node expression, String policyChecksum) {
+            this.enterpriseId = enterpriseId;
+            this.expression = expression;
+            try {
+                this.fingerprint = policyChecksum + ":" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                        .digest(expression.toString().getBytes(StandardCharsets.UTF_8)));
+            } catch (java.security.NoSuchAlgorithmException failure) {
+                throw new IllegalStateException("scope fingerprint unavailable", failure);
             }
-            return tenant || (self && Objects.equals(subject, rowSubject)) || (creator && Objects.equals(subject, rowCreator))
-                    || (owner && Objects.equals(subject, rowOwner)) || (organization && organizationId != null && Objects.equals(organizationId, rowOrg));
         }
+        public boolean allows(String rowOrg, String rowCreator, String rowOwner, String rowSubject) {
+            return expression.matches(new DataScopeExpression.Row(enterpriseId, rowOrg, rowCreator, rowOwner, rowSubject));
+        }
+        public <T> org.springframework.data.jpa.domain.Specification<T> specification() {
+            return DataScopeExpression.specification(expression);
+        }
+        public String sqlPredicate() { return DataScopeExpression.sql(expression).predicate(); }
+        public Map<String, Object> sqlBindings() { return DataScopeExpression.sql(expression).bindings(); }
+        public String fingerprint() { return fingerprint; }
     }
 }

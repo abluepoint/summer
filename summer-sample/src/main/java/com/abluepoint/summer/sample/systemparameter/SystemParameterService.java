@@ -34,12 +34,17 @@ class SystemParameterService {
     private final DataScopeService dataScopes;
     private final SystemParameterReleaseService releases;
     private final ResilientReadService resilientReads;
+    private final com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard;
+    private final com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides;
+
+    private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
                            CustomerAuditService audit, SystemParameterEventService events,
                            VersionedTwoLevelCache cache, DataScopeService dataScopes,
-                           SystemParameterReleaseService releases, ResilientReadService resilientReads) {
+                           SystemParameterReleaseService releases, ResilientReadService resilientReads, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard) {
         this.repository = repository;
+        this.actions = actions;
         this.objectMapper = objectMapper;
         this.audit = audit;
         this.events = events;
@@ -47,6 +52,8 @@ class SystemParameterService {
         this.dataScopes = dataScopes;
         this.releases = releases;
         this.resilientReads = resilientReads;
+        this.fallbackGuard = fallbackGuard;
+        this.overrides = overrides;
     }
 
     @Transactional
@@ -55,9 +62,12 @@ class SystemParameterService {
         List<SummerException.Violation> violations = validateCreate(request);
         if (!violations.isEmpty()) throw new SystemParameterValidationException(violations);
         if (repository.existsByKey(request.key())) {
+            if (repository.findScoped(request.key(), dataScopes.filter(TENANT_ID, "system-parameters", authentication)).isEmpty())
+                throw new com.abluepoint.summer.common.error.SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
             throw new SystemParameterConflictException("System parameter key is already in use");
         }
         dataScopes.assertWrite(TENANT_ID, "system-parameters", authentication, request.organizationId());
+        if (Boolean.TRUE.equals(request.publicValue())) actions.require("system-parameters", "publish", authentication);
         String valueJson = serialize(request.value());
         try {
             SystemParameterEntity saved = repository.saveAndFlush(new SystemParameterEntity(
@@ -77,18 +87,15 @@ class SystemParameterService {
     @Transactional(readOnly = true)
     SystemParameterPage list(int page, int size, SystemParameterType type, SystemParameterStatus status, Authentication authentication) {
         DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
-        List<SystemParameterView> filtered = repository.findScoped(TENANT_ID, scope.tenant(), scope.subject(), scope.self(), scope.creator(), scope.owner(), scope.organization(), scope.organizationId()).stream()
-                .filter(value -> type == null || value.type() == type)
-                .filter(value -> status == null || value.status() == status)
-                .map(this::view)
-                .toList();
+        org.springframework.data.jpa.domain.Specification<SystemParameterEntity> specification = scope.specification();
+        if (type != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("type"), type));
+        if (status != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("status"), status));
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, Math.min(size, 200));
-        int from = Math.min(safePage * safeSize, filtered.size());
-        int to = Math.min(from + safeSize, filtered.size());
-        int totalPages = (filtered.size() + safeSize - 1) / safeSize;
-        return new SystemParameterPage(filtered.subList(from, to), safePage, safeSize,
-                filtered.size(), totalPages);
+        var result = repository.findAll(specification, org.springframework.data.domain.PageRequest.of(safePage, safeSize,
+                org.springframework.data.domain.Sort.by("key")));
+        return new SystemParameterPage(result.getContent().stream().map(this::view).toList(), safePage, safeSize,
+                result.getTotalElements(), result.getTotalPages());
     }
 
     @Transactional(readOnly = true)
@@ -100,20 +107,19 @@ class SystemParameterService {
     @Transactional(readOnly = true)
     SystemParameterView find(String key, Authentication authentication) {
         DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
-        String cacheKey = key + ":" + (authentication == null ? "" : authentication.getName()) + ":" + scope.self() + scope.creator() + scope.owner() + scope.organizationId();
+        SystemParameterEntity visible = repository.findScoped(key, scope)
+                .orElseThrow(() -> new SystemParameterNotFoundException(key));
+        String cacheKey = key + ":" + visible.id() + ":" + visible.version() + ":" + (authentication == null ? "" : authentication.getName()) + ":" + scope.fingerprint();
         return resilientReads.read(ResilientReadService.PARAMETERS, cacheKey, () ->
                 cache.get(TENANT_ID, "system-parameter", cacheKey, SystemParameterView.class,
-                        () -> repository.findByKey(key).filter(value -> TENANT_ID.equals(value.tenantId()))
-                                .filter(value -> scope.allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
-                                .map(this::view).orElseThrow(() -> new SystemParameterNotFoundException(key))));
+                        () -> view(visible)), () -> fallbackGuard.parameter(visible.id(), visible.version(),
+                        visible.publicValue(), scope.fingerprint(), authentication));
     }
 
     @Transactional
     SystemParameterView update(String key, UpdateSystemParameterRequest request, String requestId,
                                Authentication authentication) {
-        SystemParameterEntity entity = repository.findByKey(key)
-                .filter(value -> TENANT_ID.equals(value.tenantId()))
-                .filter(value -> dataScopes.filter(TENANT_ID, "system-parameters", authentication).allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
+        SystemParameterEntity entity = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", authentication))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         if (request.version() == null || request.version() != entity.version()) {
             throw new SystemParameterVersionConflictException();
@@ -129,6 +135,7 @@ class SystemParameterService {
         List<SummerException.Violation> violations = validate(entity.key(), entity.type(), value, required,
                 min, max, pattern);
         if (!violations.isEmpty()) throw new SystemParameterValidationException(violations);
+        actions.require("system-parameters", request.status() == SystemParameterStatus.INACTIVE ? "disable" : "publish", authentication);
         entity.update(serialize(value), required, min, max, pattern, publicValue, description, status);
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
@@ -144,9 +151,7 @@ class SystemParameterService {
     @Transactional
     SystemParameterView setStatus(String key, SystemParameterStatus status, String requestId,
                                   Authentication authentication) {
-        SystemParameterEntity entity = repository.findByKey(key)
-                .filter(value -> TENANT_ID.equals(value.tenantId()))
-                .filter(value -> dataScopes.filter(TENANT_ID, "system-parameters", authentication).allows(value.organizationId(), value.createdBy(), value.ownerId(), value.createdBy()))
+        SystemParameterEntity entity = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", authentication))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         entity.update(entity.valueJson(), entity.required(), entity.min(), entity.max(), entity.pattern(),
                 entity.publicValue(), entity.description(), status);
@@ -161,6 +166,27 @@ class SystemParameterService {
         } catch (ObjectOptimisticLockingFailureException exception) {
             throw new SystemParameterVersionConflictException();
         }
+    }
+
+    @Transactional(readOnly = true)
+    PublicSystemParameterView publicRead(String key, Authentication authentication) {
+        actions.requirePublic("system-parameters", authentication);
+        SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", authentication))
+                .filter(p -> p.publicValue() && p.status() == SystemParameterStatus.ACTIVE)
+                .orElseThrow(() -> new SystemParameterNotFoundException(key));
+        var override = overrides.resolve("system-parameters", key, authentication);
+        Object value = override.map(v -> deserialize(v.valueJson())).orElseGet(() -> deserialize(row.valueJson()));
+        return new PublicSystemParameterView(key, value, override.map(v -> v.version()).orElse(row.version()));
+    }
+
+    @Transactional
+    com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(String key, String organization,
+            com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth, String requestId) {
+        SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", auth))
+                .orElseThrow(() -> new SystemParameterNotFoundException(key));
+        List<SummerException.Violation> violations = validate(row.key(), row.type(), request.value(), row.required(), row.min(), row.max(), row.pattern());
+        if (!violations.isEmpty()) throw new SystemParameterValidationException(violations);
+        return overrides.save("system-parameters", key, organization, request, auth, requestId);
     }
 
     private List<SummerException.Violation> validateCreate(CreateSystemParameterRequest request) {

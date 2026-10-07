@@ -74,6 +74,7 @@ class PluginController {
         else if (exception instanceof PluginTrustException) { status = HttpStatus.CONFLICT; code = "SUMMER_PLUGIN_UNTRUSTED"; }
         else if (exception instanceof PluginCompatibilityException) { status = HttpStatus.CONFLICT; code = "SUMMER_PLUGIN_INCOMPATIBLE"; }
         else if (exception instanceof PluginNotFoundException) { status = HttpStatus.NOT_FOUND; code = "SUMMER_NOT_FOUND"; }
+        else if (exception instanceof RuntimeException failure) throw failure;
         String rid = requestId.currentRequestId();
         return ResponseEntity.status(status).header("X-Request-Id", rid).body(ApiResponse.failure(new ApiError(code, exception.getMessage(), List.of()), rid));
     }

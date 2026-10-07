@@ -44,7 +44,7 @@ class DataScopeCompositionHttpTest {
 
         mvc.perform(post("/api/v1/enterprises/ent-acme/data-scopes/system-parameters:preview")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\":\"alice\",\"organizationId\":\"org-engineering\",\"roleAllows\":[\"TENANT\"],\"userDenies\":[]}")
+                        .content("{\"subject\":\"alice\",\"organizationId\":\"org-engineering\"}")
                         .with(reader("alice")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.allowed").value(true))
@@ -59,9 +59,13 @@ class DataScopeCompositionHttpTest {
                         .content("{\"operator\":\"OR\",\"rules\":[{\"type\":\"TENANT\",\"effect\":\"ALLOW\"}]}")
                         .with(admin())).andExpect(status().isOk());
 
+        mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/system-parameters/bindings/USER/alice")
+                        .with(admin()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rules\":[{\"type\":\"TENANT\"}]}"))
+                .andExpect(status().isOk());
         mvc.perform(post("/api/v1/enterprises/ent-acme/data-scopes/system-parameters:preview")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\":\"alice\",\"roleAllows\":[\"TENANT\"],\"userDenies\":[\"TENANT\"]}")
+                        .content("{\"subject\":\"alice\"}")
                         .with(reader("alice")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.allowed").value(false))
