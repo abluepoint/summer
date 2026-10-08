@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessTokenFromMemory } from '@/auth/oidc';
 import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type DictionaryOption = {
@@ -26,7 +27,8 @@ export type DictionaryStreamState = 'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CL
 
 export async function getPublicDictionary(code: string): Promise<PublicDictionary> {
   try {
-    const response = await axios.get(`/public/dictionaries/${encodeURIComponent(code)}`);
+    const token = await getAccessTokenFromMemory();
+    const response = await axios.get(`/public/dictionaries/${encodeURIComponent(code)}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
     return readEnvelope(response.data, response.status) as PublicDictionary;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
@@ -36,7 +38,7 @@ export async function getPublicDictionary(code: string): Promise<PublicDictionar
       status,
       String(error.response?.headers?.['x-request-id'] || '')
     );
-    throw new Error(failure.message || `HTTP ${status || 'network'}`);
+    throw Object.assign(new Error(failure.message || `HTTP ${status || 'network'}`), { status, code: failure.code, requestId: failure.requestId });
   }
 }
 
@@ -81,4 +83,15 @@ export function subscribeDictionaryNotifications(
     source.close();
     onState('CLOSED');
   };
+}
+
+export async function saveDictionaryOverride(code: string, organization: string, options: DictionaryOption[], expectedVersion?: number): Promise<{ version: number }> {
+  try {
+    const response = await axios.put(`/api/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}`, { value: options, publicReadable: true, expectedVersion });
+    return readEnvelope(response.data, response.status) as { version: number };
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    const failure = readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || ''));
+    throw Object.assign(new Error(failure.message), failure);
+  }
 }

@@ -312,6 +312,7 @@ const i18n = {
     'interfaceResources.error': 'Interface resources could not be loaded.',
     'interfaceResources.forbidden': 'You do not have permission to view interface resources.',
     'audit.refresh': 'Refresh',
+    'audit.export': 'Export CSV',
     'audit.search': 'Search',
     'audit.principal': 'Principal',
     'audit.resource': 'Resource',
@@ -763,6 +764,7 @@ const i18n = {
     'interfaceResources.error': '接口资源加载失败。',
     'interfaceResources.forbidden': '您没有查看接口资源的权限。',
     'audit.refresh': '刷新',
+    'audit.export': '导出 CSV',
     'audit.search': '查询',
     'audit.principal': '主体',
     'audit.resource': '资源',
@@ -919,5 +921,3 @@ const i18n = {
 };
 
 export default i18n;
-    'audit.export': 'Export CSV',
-    'audit.export': '导出 CSV',

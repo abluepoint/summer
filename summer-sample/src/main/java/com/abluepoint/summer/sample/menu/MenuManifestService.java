@@ -21,8 +21,8 @@ class MenuManifestService {
     private final Map<String, Receipt> receipts = new HashMap<>();
 
     MenuManifestService(MenuManifestRepository manifestRepository, MenuManifestOverrideRepository overrideRepository,
-                         AuthorizationService authorizationService, AuthorizationChangeEventService changeEvents,
-                         RequestIdAccessor requestId) {
+                        AuthorizationService authorizationService, AuthorizationChangeEventService changeEvents,
+                        RequestIdAccessor requestId) {
         this.manifestRepository = manifestRepository;
         this.overrideRepository = overrideRepository;
         this.authorizationService = authorizationService;

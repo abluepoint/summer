@@ -7,7 +7,7 @@
     "start": "vite",
     "dev": "vite",
     "preview": "vite preview",
-    "test": "node scripts/verify-baseline.mjs && node scripts/verify-sessions.mjs && node scripts/verify-redis-diagnostics.mjs && node scripts/verify-resilience.mjs && node scripts/verify-dictionary.mjs && node scripts/verify-dictionary-notifications.mjs && node scripts/verify-system-parameters.mjs && node scripts/verify-roles.mjs && node scripts/verify-data-scopes.mjs && node scripts/verify-tasks.mjs && node scripts/verify-messages.mjs && node scripts/verify-authorization-events.mjs && node scripts/verify-statistics.mjs && node scripts/verify-menu-manifest.mjs && node scripts/verify-plugins.mjs && node --test scripts/verify-auth.mjs scripts/verify-customer.mjs scripts/verify-customer-form.mjs scripts/verify-customer-page.mjs",
+    "test": "node scripts/verify-baseline.mjs && node scripts/verify-sessions.mjs && node scripts/verify-redis-diagnostics.mjs && node scripts/verify-resilience.mjs && node scripts/verify-dictionary.mjs && node scripts/verify-dictionary-notifications.mjs && node scripts/verify-system-parameters.mjs && node scripts/verify-roles.mjs && node scripts/verify-data-scopes.mjs && node scripts/verify-menu-manifest.mjs && node scripts/verify-plugins.mjs && node scripts/verify-tasks.mjs && node scripts/verify-messages.mjs && node scripts/verify-authorization-events.mjs && node scripts/verify-statistics.mjs && node --test scripts/verify-auth.mjs scripts/verify-customer.mjs scripts/verify-customer-form.mjs scripts/verify-customer-page.mjs",
     "test:e2e:auth": "node scripts/e2e-auth.mjs",
     "test:e2e:baseline": "node scripts/verify-issue-84-browser.mjs",
     "test:e2e:recovery": "node scripts/e2e-auth-recovery.mjs",

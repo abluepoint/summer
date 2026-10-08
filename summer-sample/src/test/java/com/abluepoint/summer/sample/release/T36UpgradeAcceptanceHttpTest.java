@@ -44,11 +44,11 @@ class T36UpgradeAcceptanceHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "t36-release-request"))
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.decision").value("READY"))
+                .andExpect(jsonPath("$.data.decision").value("NOT_VERIFIED"))
                 .andExpect(jsonPath("$.data.gates[*].name", containsInAnyOrder(
                         "migration", "configuration", "keys", "authorization", "tasks",
                         "cache", "events", "realtime", "plugins", "ui")))
-                .andExpect(jsonPath("$.data.gates[*].executed").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is(true))))
+                .andExpect(jsonPath("$.data.gates[*].executed").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is(false))))
                 .andExpect(jsonPath("$.error").doesNotExist());
 
         mockMvc.perform(post("/internal/v1/release/gates:validate")
@@ -67,9 +67,9 @@ class T36UpgradeAcceptanceHttpTest {
                         .with(operator("internal.release.read")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "t36-readiness-request"))
-                .andExpect(jsonPath("$.data.status").value("READY"))
+                .andExpect(jsonPath("$.data.status").value("NOT_READY"))
                 .andExpect(jsonPath("$.data.checks[*].name", containsInAnyOrder(
-                        "iam", "connectionService", "database", "auditLedger", "migrations", "runbook")))
+                        "database", "migrations", "configuration", "keys", "authorization", "tasks", "cache", "events", "realtime", "plugins")))
                 .andExpect(jsonPath("$.data.rollbackDryRunSupported").value(true));
 
         mockMvc.perform(post("/internal/v1/release/rollback:dry-run")

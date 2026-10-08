@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Card, Form, Select, Spin, Tag } from '@arco-design/web-react';
+import { useHistory } from 'react-router-dom';
+import { isAuthRedirecting } from '@/auth/oidc';
+import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { DictionaryOption, getPublicDictionary, subscribeDictionaryNotifications, DictionaryStreamState } from './api';
+import { DictionaryOption, getPublicDictionary, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
 
 const enterpriseId = 'ent-acme';
 const dictionaryCode = 'customer-segment';
 
 export default function DictionaryConsumerPage() {
   const t = useLocale();
+  const history = useHistory();
   const [options, setOptions] = useState<DictionaryOption[]>([]);
   const [value, setValue] = useState('');
   const [version, setVersion] = useState<number | undefined>();
@@ -17,13 +20,27 @@ export default function DictionaryConsumerPage() {
   const [streamState, setStreamState] = useState<DictionaryStreamState>('CONNECTING');
   const [streamError, setStreamError] = useState(false);
   const valueRef = useRef('');
+  const readRequest = useRef(0);
+  const overrideDirty = useRef(false);
+  const [overrideOrg, setOverrideOrg] = useState('_tenant');
+  const [overrideJson, setOverrideJson] = useState('[]');
+  const [overrideVersion, setOverrideVersion] = useState<number | undefined>();
+  useEffect(() => {
+    if (!overrideDirty.current) return undefined;
+    const unblock = history.block(() => isAuthRedirecting() ? undefined : '字典覆盖有未保存修改，确认离开？');
+    const beforeUnload = (event: BeforeUnloadEvent) => { if (!isAuthRedirecting()) { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => { unblock(); window.removeEventListener('beforeunload', beforeUnload); };
+  }, [overrideJson, overrideOrg, overrideVersion, history]);
 
   const load = useCallback((eventType?: string) => {
+    const request = ++readRequest.current;
     setLoading(true);
     setError('');
     return getPublicDictionary(dictionaryCode)
       .then((dictionary) => {
-        setOptions(dictionary.items);
+        if (request !== readRequest.current) return;
+        setOptions(dictionary.items); if (!overrideDirty.current) setOverrideJson(JSON.stringify(dictionary.items, null, 2));
         setVersion(dictionary.version);
         const current = valueRef.current;
         const next = current || dictionary.items[0]?.value || '';
@@ -32,17 +49,22 @@ export default function DictionaryConsumerPage() {
         setValue(next);
       })
       .catch((failure) => {
-        setError(failure instanceof Error ? failure.message : t['dictionary.error']);
+        if (request !== readRequest.current) return;
+        setOptions([]); setVersion(undefined); setSelectedUnavailable(true);
+        if ([401, 403, 404].includes((failure as { status?: number }).status || 0)) { valueRef.current = ''; setValue(''); setOverrideJson('[]'); overrideDirty.current = false; }
+        else if (!overrideDirty.current) setOverrideJson('[]');
+        const denied = failure as Error & { status?: number; requestId?: string };
+        setError(`${denied.status === 403 ? '无权读取此字典' : denied.status === 404 ? '字典不可用或不在授权范围内' : denied.message || t['dictionary.error']}${denied.requestId ? ` (${denied.requestId})` : ''}`);
         if (eventType === 'DICTIONARY_DISABLED' || eventType === 'dictionary.disabled') {
           setSelectedUnavailable(Boolean(valueRef.current));
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (request === readRequest.current) setLoading(false); });
   }, [t]);
 
   useEffect(() => {
     load();
-    return subscribeDictionaryNotifications(
+    const unsubscribe = subscribeDictionaryNotifications(
       enterpriseId,
       dictionaryCode,
       (event) => {
@@ -52,6 +74,7 @@ export default function DictionaryConsumerPage() {
       setStreamState,
       () => setStreamError(true),
     );
+    return () => { readRequest.current++; unsubscribe(); };
   }, [load]);
 
   return (
@@ -68,10 +91,11 @@ export default function DictionaryConsumerPage() {
     >
       {loading && !options.length ? <Spin /> : (
         <Form layout="vertical" style={{ maxWidth: 520 }}>
+          <Alert type="info" content="覆盖优先级：组织 > 租户 > 基础值。高优先级覆盖不可访问时不会回退；发布覆盖需要独立授权。" style={{ marginBottom: 16 }} />
           {error && <Alert type="error" content={error} style={{ marginBottom: 16 }} />}
           {streamError && <Alert type="warning" content={t['dictionary.streamDisconnected']} style={{ marginBottom: 16 }} />}
           {selectedUnavailable && <Alert type="warning" content={t['dictionary.reselect']} style={{ marginBottom: 16 }} />}
-          <Form.Item label={t['dictionary.segment']} field="segment">
+          <Form.Item label={t['dictionary.segment']}>
             <Select
               value={value}
               onChange={(next) => { valueRef.current = next; setValue(next); setSelectedUnavailable(false); }}
@@ -79,6 +103,10 @@ export default function DictionaryConsumerPage() {
               options={options.map((item) => ({ label: item.label, value: item.value }))}
             />
           </Form.Item>
+          <Form.Item label="覆盖范围（_tenant 或组织 ID）"><Input value={overrideOrg} onChange={(v) => { overrideDirty.current = true; setOverrideOrg(v); setOverrideVersion(undefined); }} /></Form.Item>
+          <Form.Item label="覆盖版本（新建留空）"><InputNumber min={0} value={overrideVersion} onChange={(v) => { overrideDirty.current = true; setOverrideVersion(v); }} /></Form.Item>
+          <Form.Item label="覆盖选项 JSON"><Input.TextArea aria-label="覆盖选项 JSON" value={overrideJson} onChange={(text) => { overrideDirty.current = true; setOverrideJson(text); }} /></Form.Item>
+          <Button onClick={() => { try { saveDictionaryOverride(dictionaryCode, overrideOrg, JSON.parse(overrideJson), overrideVersion).then((result) => { setOverrideVersion(result.version); overrideDirty.current = false; load(); }).catch((e) => setError(`${e.status === 403 ? '无权发布字典覆盖' : e.message}${e.requestId ? ` (${e.requestId})` : ''}`)); } catch { setError('请输入有效选项 JSON'); } }}>发布字典覆盖</Button>
           {version !== undefined && <div data-testid="dictionary-version">{t['dictionary.version']}: {version}</div>}
         </Form>
       )}

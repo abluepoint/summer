@@ -10,11 +10,14 @@ Sample JAR 不包含 `summer-ui/dist`。前端使用官方 Arco Pro v2.8.1 模�
 
 | 场景 | 浏览器 origin / issuer | 后端地址 | redirect URI | post-logout URI |
 | --- | --- | --- | --- | --- |
-| 后端独立测试 | `http://127.0.0.1:8080` | `http://127.0.0.1:8080` | 测试配置固定值 | 测试配置固定值 |
-| 本地联调示例 | `http://127.0.0.1:5193` | `http://127.0.0.1:8093` | `http://127.0.0.1:5193/oauth2/callback` | `http://127.0.0.1:5193/login?logout` |
+| 本地开发默认 | `http://127.0.0.1:5173` | 内部 `http://127.0.0.1:8080` | `http://127.0.0.1:5173/oauth2/callback` | `http://127.0.0.1:5173/login?logout` |
+| 隔离验收示例 | `http://127.0.0.1:5193` | 内部 `http://127.0.0.1:8093` | `http://127.0.0.1:5193/oauth2/callback` | `http://127.0.0.1:5193/login?logout` |
 | 生产 | `https://<public-host>` | 内部 Spring 地址 | `https://<public-host>/oauth2/callback` | `https://<public-host>/login?logout` |
 
-本地联调需要对同一个 Sample 进程设置
+本地开发默认无需设置 issuer；Sample 的默认配置已经把认证公开地址设为
+Summer UI 的 `5173`，而 Spring 的 `8080` 只作为 Vite 的内部代理目标。启动
+Sample 和 `summer-ui` 后，浏览器只打开 `http://127.0.0.1:5173`，不直接访问
+8080。若使用隔离端口，本地联调需要对同一个 Sample 进程设置
 `SUMMER_SAMPLE_ISSUER`、`SUMMER_SAMPLE_REDIRECT_URI`、
 `SUMMER_SAMPLE_POST_LOGOUT_REDIRECT_URI` 为表中的外部地址，并用
 `SUMMER_BACKEND_ORIGIN=http://127.0.0.1:8093 VITE_ENABLE_MOCK=false yarn dev --host 127.0.0.1 --port 5193 --strictPort`

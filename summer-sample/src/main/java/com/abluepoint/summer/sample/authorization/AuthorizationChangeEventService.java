@@ -16,9 +16,10 @@ public class AuthorizationChangeEventService {
     static final String STREAM = "summer:authorization-change-events";
     private final AuthorizationChangeEventOutboxRepository repository;
     private final ObjectMapper objectMapper;
+    private final AuthorizationChangeEventReceiptRepository receipts;
 
-    AuthorizationChangeEventService(AuthorizationChangeEventOutboxRepository repository, ObjectMapper objectMapper) {
-        this.repository = repository; this.objectMapper = objectMapper;
+    AuthorizationChangeEventService(AuthorizationChangeEventOutboxRepository repository, ObjectMapper objectMapper, AuthorizationChangeEventReceiptRepository receipts) {
+        this.repository = repository; this.objectMapper = objectMapper; this.receipts = receipts;
     }
 
     @Transactional
@@ -55,6 +56,8 @@ public class AuthorizationChangeEventService {
         AuthorizationChangeEventOutboxEntity entity = repository.findById(eventId)
                 .filter(row -> enterpriseId.equals(row.enterpriseId()))
                 .orElseThrow(() -> new AuthorizationChangeEventNotFoundException(eventId));
+        receipts.findById(eventId).filter(receipt -> receipt.status() == AuthorizationChangeReceiptStatus.DEAD_LETTER)
+                .ifPresent(receipts::delete);
         entity.resetForRetry(Instant.now());
         return view(repository.saveAndFlush(entity));
     }

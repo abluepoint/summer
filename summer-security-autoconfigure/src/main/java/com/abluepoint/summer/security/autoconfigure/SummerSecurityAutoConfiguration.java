@@ -302,7 +302,8 @@ public class SummerSecurityAutoConfiguration {
             SummerSecurityProperties properties,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler,
-            ObjectProvider<SecurityContextRepository> sessionStores
+            ObjectProvider<SecurityContextRepository> sessionStores,
+            ObjectProvider<org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter> jwtConverters
     ) throws Exception {
         var bearerConverter = new org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationConverter();
         // The default WebAuthenticationDetails(request) reads HttpSession even for
@@ -339,7 +340,8 @@ public class SummerSecurityAutoConfiguration {
                         .accessDeniedHandler(accessDeniedHandler))
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationConverter(bearerConverter)
-                        .jwt(Customizer.withDefaults())
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverters.getIfAvailable(
+                                org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter::new)))
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler));
         return http.build();

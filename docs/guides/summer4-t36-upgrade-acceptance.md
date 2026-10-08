@@ -2,18 +2,20 @@
 
 本文是 T36 的运行手册和验收记录模板。它把迁移、备份恢复、滚动升级、跨节点一致性、错误契约、审计、权限、缓存、实时推送和插件兼容性收敛为同一组可复核门禁。机器可读的门禁矩阵位于 [`summer4-t36-release-gates.json`](summer4-t36-release-gates.json)，可执行入口为 [`scripts/t36-upgrade-gate.sh`](../../scripts/t36-upgrade-gate.sh)。
 
+当前隔离环境结论见文末“2026-10-07 真实隔离环境复验”；此前按日期保留的记录是历史证据，不覆盖该章节的最新结果和剩余边界。
+
 ## 需求—设计—实现—测试—缺陷—验收追踪
 
 | 需求 | 设计决定 | 实现/证据 | 测试门禁 | 当前结论 |
 | --- | --- | --- | --- | --- |
 | 49：每次结构变化可回放、可核对 | Flyway 只做追加迁移；启动前 validate，迁移遵循 expand/contract | `summer-sample/src/main/resources/db/migration/mysql/`、`application.yml` | Flyway validate、迁移版本唯一性、`T36UpgradeAcceptanceHttpTest` | 以运行环境结果为准 |
-| 50：备份、健康检查、兼容窗口 | 先备份再升级；旧列/新列并存，双节点共享会话和事件回放 | `t36-upgrade-gate.sh preflight/backup/restore/rolling` | 真实 MySQL dump/restore、两节点 HTTP 探针 | 需要目标环境执行 |
+| 50：备份、健康检查、兼容窗口 | 先备份再升级；旧列/新列并存，双节点共享会话和事件回放 | `t36-upgrade-gate.sh preflight/backup/restore/rolling` | 真实 MySQL dump/restore、两节点 HTTP 探针 | 本地隔离环境通过；生产目标环境未执行 |
 | 51：稳定单体边界、可演进拆分 | 当前保持模块化单体；只有独立伸缩、发布、数据 ownership 或故障隔离才拆分 | `summer4-t36-release-gates.json` 的 `microserviceBoundary` | 模块边界、跨模块 API 门禁 | 当前不拆进程 |
 | 52：过程可追踪 | 固定门禁矩阵、证据命名和缺陷记录 | 本文与 JSON 矩阵 | 文档契约脚本、后端真实 HTTP 测试、UI 合约测试 | 持续更新 |
 
 ## 升级前检查
 
-在目标环境设置受控运行时配置。数据库密码、Redis 密码、主密钥、Token 和私钥只通过 Secret 或进程环境注入；不要写入命令行、脚本、日志、测试快照或本文。需要认证的 HTTP 探针使用权限为 `internal.release.read` 的受保护 curl 配置文件，通过 `T36_CURL_CONFIG` 指定其路径；脚本不会读取或打印该文件内容。
+在目标环境设置受控运行时配置。数据库密码、Redis 密码、主密钥、Token 和私钥只通过 Secret 或进程环境注入；不要写入命令行、脚本、日志、测试快照或本文。需要认证的 HTTP 探针从 `T36_ACCESS_TOKEN` 进程环境读取真实签发且具有 `internal.release.read` 能力的短期令牌；不要将其放入命令参数或文件。
 
 ```bash
 ./gradlew :summer-sample:test \
@@ -24,7 +26,6 @@ node summer-ui/scripts/verify-t36-upgrade.mjs
 ./scripts/t36-upgrade-gate.sh contract
 ./scripts/t36-upgrade-gate.sh migrations
 T36_BASE_URL=http://127.0.0.1:8080 \
-T36_CURL_CONFIG=/path/to/protected-curl.conf \
 ./scripts/t36-upgrade-gate.sh preflight
 ```
 
@@ -42,17 +43,17 @@ T36_CURL_CONFIG=/path/to/protected-curl.conf \
 
 ```bash
 T36_DB_HOST=127.0.0.1 T36_DB_PORT=3306 T36_DB_NAME=summer \
-T36_DB_USER=summer_app T36_DB_PASSWORD='(由受控环境注入)' \
+T36_DB_USER=summer_app \
 ./scripts/t36-upgrade-gate.sh backup
 
-T36_BACKUP_FILE=/secure/evidence/summer-<timestamp>.sql \
+T36_BACKUP_FILE=/secure/evidence/summer-<timestamp>.sql.enc \
 T36_ALLOW_RESTORE=1 T36_RESTORE_DATABASE=summer_t36_restore \
 T36_DB_HOST=127.0.0.1 T36_DB_PORT=3306 T36_DB_NAME=summer \
-T36_DB_USER=summer_app T36_DB_PASSWORD='(由受控环境注入)' \
+T36_DB_USER=summer_app \
 ./scripts/t36-upgrade-gate.sh restore
 ```
 
-上面的占位文本只表示由 Secret 注入，不是可提交或可复制的凭据。脚本输出仅包含备份路径、恢复库名和表数量。
+执行前由受控进程环境注入 `T36_DB_PASSWORD`、`T36_BACKUP_PASSPHRASE` 和所需的 `T36_ACCESS_TOKEN`。备份在内存中加密后才写盘；恢复在内存中解密并通过 stdin 导入新建的隔离库，拒绝覆盖已有库。备份口令独立保管，脚本只输出加密备份路径、恢复库名和表数量。当前内存方式适合本地演练，大库需要流式加密备份系统。
 
 ## 双节点滚动升级
 
@@ -66,7 +67,6 @@ T36_DB_USER=summer_app T36_DB_PASSWORD='(由受控环境注入)' \
 ```bash
 T36_NODE_A_URL=http://127.0.0.1:8080 \
 T36_NODE_B_URL=http://127.0.0.1:8081 \
-T36_CURL_CONFIG=/path/to/protected-curl.conf \
 ./scripts/t36-upgrade-gate.sh rolling
 ```
 
@@ -120,8 +120,8 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 
 本轮使用本项目源码、本地 Kubernetes MySQL 9.7.1/Redis、隔离 schema `summer_t36_runtime`、临时节点端口 18081/18082，以及关闭 Mock 的 Summer UI 5173。原有 18080 实例未修改或停止。
 
-- 空 schema 默认启动失败：`AuthorizationService` 初始化读取 `summer_authorization_capability` 时表不存在，失败后 schema 表数为 0。尚未定位 Flyway 与业务初始化的依赖顺序；不能将这次尝试记为 Flyway 自动迁移通过。
-- 手工应用迁移后得到 52 张表；使用 Redis 安全上下文配置启动仍失败，`LocalConsoleAuthenticationConfiguration` 注入所需的 `SecurityContextRepository` Bean 不存在。源码中 Redis store 的 `@ConditionalOnBean(StringRedisTemplate.class)` 装配时序是待验证线索。
+- 空 schema 首次启动失败：`AuthorizationService` 初始化读取 `summer_authorization_capability` 时表不存在，失败后 schema 表数为 0；随后已通过显式 Flyway 初始化门闩修复依赖顺序，`summer-sample:compileJava` 通过。此次运行本身不计为迁移验收通过。
+- 手工应用迁移后得到 52 张表；Redis 安全上下文启动曾因 `SecurityContextRepository` Bean 缺失失败，随后移除 `@ConditionalOnBean(StringRedisTemplate.class)` 的时序敏感条件并通过编译。真实节点重启验证仍待 Redis 可用环境。
 - 为进一步隔离问题，临时关闭 Flyway、session index 并改用内存安全上下文后，两节点健康响应均为 HTTP 200 / UP，Quartz 均声明 JDBC clustered store。但这些覆盖不满足共享会话验收配置，也不证明任务只执行一次。
 - 保持 JDBC OAuth 时浏览器授权请求返回 HTTP 400；源码显示关闭 Flyway 同时关闭配置客户端的 seed runner。再临时使用内存 OAuth，浏览器提交登录后到达工作台路由，但页面显示“认证仍不可用。请手动登录；请求不会自动重发。”，未完成登录后的关键流程。
 - 两节点未认证 readiness/runtime diagnostics 均返回 HTTP 403。没有取得可用发布操作员认证，因此认证后的 `preflight`/`rolling` 门禁未完成；共享会话撤销、事件/缓存一致性、任务唯一执行和浏览器关键业务流程均未通过，禁止据此宣布 T36 全部验收完成。
@@ -129,6 +129,32 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 - 临时应用进程和 UI 已停止，18081/18082/5173 回读无监听；隔离 schema 已删除并回读计数为 0，`summer:t36:*` 键回读为 0，临时浏览器标签和凭据文件已清理。会话索引、缓存、Stream 部分前缀在源码中固定，未建立全域 Redis 隔离；本轮不能宣称全域 Redis 无副作用，未删除不明归属键或全库清空。
 
 后续应先修复并验证默认配置的空库初始化和 Redis store 装配，再恢复 JDBC OAuth/shared-session 配置继续验收。内存覆盖只用于诊断，不作为发布配置或验收通过依据。
+
+### 2026-10-05 Flyway 与 Redis 会话 Bean 生命周期修复
+
+本轮源码诊断确认：Spring Boot 4.0.7 依赖图只有 `flyway-core` 与 `flyway-mysql`，未提供可直接复用的 `FlywayMigrationInitializer`/Flyway 自动配置类。空库启动时，自定义 `Flyway` Bean 没有依赖消费者，导致 `AuthorizationService.@PostConstruct` 先读表而失败。已在 `SampleFlywayConfiguration` 增加可选 Flyway 的显式初始化门闩，并让 `AuthorizationService` 依赖该门闩；禁用 Flyway 时门闩为空操作，保留原配置语义。
+
+`SessionIndexConfiguration` 原先以 `@ConditionalOnBean(StringRedisTemplate.class)` 保护 Redis 会话存储，组件扫描阶段可能早于 Redis 自动配置完成，造成 `SummerSessionStore` 缺失并进一步导致 `SecurityContextRepository` 缺失。已移除该时序敏感条件，改由 `SessionIndexService` 的依赖注入在 Redis Bean 不可用时明确失败。
+
+验证：`./gradlew :summer-sample:compileJava --no-daemon --max-workers=1` 通过。随后将 `SharedSessionHttpTest` 的 duration 属性修正为纯毫秒值；上下文可启动，1/5 通过，4/5 因 Redis 会话存储不可用返回 503，该环境阻塞与本轮 Bean 修复分开记录。
+
+### 2026-10-05 SharedSessionHttpTest duration 属性复核
+
+将 `SharedSessionHttpTest` 内 `timeout-ms=100ms`、`open-duration-ms=1s` 修正为契约要求的纯毫秒值 `100`、`1000`。测试上下文现可启动，`rejectsMalformedSessionReferencesBeforeRedisAccess` 通过；其余 4 项返回 `503 SUMMER_SESSION_STORE_UNAVAILABLE`，测试 XML 明确指向 Redis 会话存储不可用，未继续启动 Redis 或本地节点。
+
+### 2026-10-05 SharedSessionHttpTest 本地 Redis 最后验证
+
+使用本地 k8s `local-base/redis-auth` Secret 通过进程环境注入（未回显），连接 `127.0.0.1:6379` 的隔离 Redis DB 15，并设置独立 Spring Session namespace。测试上下文启动成功，5 项中 1 项通过；其余 4 项返回 `503 SUMMER_SESSION_STORE_UNAVAILABLE`。XML 仅记录脱敏后的业务错误，底层 Redis 异常被 SessionIndexService 按设计吞掉；未启动或修改 Redis，测试属性修正未提交。
+
+### 2026-10-05 SharedSessionHttpTest username=default 最终验证
+
+按要求以 `SUMMER_REDIS_USERNAME=default`、进程环境注入的本地 Secret 密码、`127.0.0.1:6379`、Redis DB 15 和独立 namespace 做最后一次有界运行。结果仍为 1/5 通过、4/5 返回 `503 SUMMER_SESSION_STORE_UNAVAILABLE`；未启动或修改 Redis，未提交测试属性修正。
+
+本次父会话有效凭据注入复核：用户名为 `default`、密码通过本地 Secret 进程环境注入，结果与本地 Secret 复核一致：上下文启动，1/5 通过，4/5 返回 `503 SUMMER_SESSION_STORE_UNAVAILABLE`。凭据未写入文件或日志。
+
+### 2026-10-05 SessionIndexService 定点诊断收口
+
+临时脱敏日志仅确认 `RedisConnectionFailureException → RedisConnectionException → RedisCommandExecutionException` 异常链；不记录异常消息或凭据时无法进一步区分 Redis 写入、序列化、ACL 或超时。诊断源码和临时文件已恢复/清理，未形成代码修复。保留 SharedSessionHttpTest 结果：1/5 通过、4/5 为 `503 SUMMER_SESSION_STORE_UNAVAILABLE`。
 
 
 ### 2026-10-05 Redis 认证映射、同一会话撤销与失败关闭修复
@@ -149,3 +175,41 @@ T36 不新增第二套前端工程或 mock 后端。Summer UI 的真实路由、
 | SessionControllerTest | 3 | 0 | 0 | 0 |
 
 范围限制：上述 HTTP 用例以已有本机 servlet 登录为夹具，证明索引管理/撤销行为；仓库单测证明失败关闭。资源服务器安全链尚未显式接入共享 SecurityContextRepository，跨节点 servlet session 恢复也尚未验证；不能据此宣布 API 全链路失败关闭、T25 或 T36 完成。双节点、JWT 独立性、浏览器与发布门禁仍待后续集成修复及实测。本轮未修改该安全链、业务数据库或原 18080 实例，未推送。
+
+## 2026-10-07 真实隔离环境复验
+
+本轮 **10 类本地门禁在下述范围内通过**，不代表生产发布批准或 T18/T19 全部需求完成。汇总及逐项红绿证据保存在项目内 `.git/summer4-review-20261007/t36-live/result.json`；实际使用随机 `summer_t36_*` MySQL schema、独立 Redis 容器、18081/18082 两个 JVM，以及恢复节点 18083。浏览器通过 5173/18580 完成真实用户密码登录、PKCE 和服务端签发，未伪造或注入 Token。
+
+| 门禁 | 本轮实际证据 |
+| --- | --- |
+| 迁移 | 31 个文件版本均被脚本计入；真实启动执行 Flyway validate/migrate；恢复库 history 31/31 一致 |
+| 配置与预检 | 携带真实短期令牌的 `preflight`、两节点 readiness 探针退出 0；暂停隔离 Redis 后返回 `NOT_READY`，不再无条件 READY |
+| 密钥 | 显式选择 MySQL key store；两节点初始公钥一致；轮换后 active/grace 共 2 把公钥一致；旧令牌继续可用 |
+| 权限 | 特权与受限账号跨节点 6 项 200/403 矩阵通过且均有 requestId；OAuth 仍只有原四项 scope，业务能力与组织上下文从持久化记录解析 |
+| 任务 | 两节点同 key 并发触发返回 202/202，仅 1 条成功执行；失败任务尝试 3 次；实际杀掉执行 JVM 后另一节点恢复成功，1 条执行记录且 recoveryCount 为 1 |
+| 缓存 | 两节点预热后，经 A 更新，B 读到新值；Redis 共享版本递增，存在真实 L2 条目 |
+| 事件 | outbox 发布、两个独立节点消费组均清空 pending/lag；重复事件只有一条 processed receipt；暂态故障无需重新发布即可恢复；持续失败在第 3 次后进入死信 |
+| 实时 | 浏览器 Cookie 鉴权连接 B，A 的消息经 Redis 到达 B；pong、heartbeat、游标重放及其他租户拒绝通过；任务 SSE 两节点均收到目标事件，无串任务事件，Last-Event-ID 重放通过 |
+| 插件 | 真实 API 拒绝未知目录摘要，注册/启用成功；不兼容版本不可启用，回退到兼容版本后恢复；B 读取兼容诊断，受限账号 403 |
+| UI | 原始 `e2e-t18-t19.mjs` 六组全部通过：策略预览、参数创建、组织/租户/基础覆盖、组织字典、无效 JSON 零写入、真实 403/requestId；tests=6、failures=0、errors=0、skipped=0 |
+
+备份恢复还核对了密钥、角色绑定、角色、Capability、本地用户、OAuth 客户端、OAuth 授权及 Flyway history 八类表计数；恢复节点真实 PKCE 登录及原有令牌访问均为 200。包含 OAuth 二进制列的内存 dump 使用 `--hex-blob`，从未把明文 dump 写盘。运维脚本的加密备份/恢复另经真实 MySQL 验证：加密文件无明文 SQL、关键表计数一致、已有目标库被拒绝覆盖，临时备份已删除。
+
+滚动演练使用两个真实不同的本地开发制品：旧 JAR SHA-256 `546510c7646131b34fbb5fa5e8088074de913a4e919dac0f74862a4363dc9b20`，新 JAR SHA-256 `912d4bc5b3616c80ea111565aee8cb06db926038f64d2efbbc8f47aae4e8be03`。两者混合运行时授权读取成功；停 A 后 B 继续服务，A 升级后旧令牌仍可使用。每次最终演练都先冻结独立 JAR，避免构建期间替换运行制品。此证据不覆盖历史生产版本或破坏性 schema 变更。
+
+本轮修复：
+
+- 本地身份业务声明在登录及 OAuth 签发时读取持久化角色、显式拒绝与组织上下文；保持 OAuth 可申请 scope 不变。
+- 用户角色绑定改写合法 JSON 数组，兼容读取原文本投影，修复 MySQL 真实绑定 API 500。
+- readiness 查询真实运行前提；`gates:validate` 对未执行的外部门禁返回 `NOT_VERIFIED`，不伪报执行通过。
+- Quartz 作业启用 recovery，并在启动时升级已有作业的恢复标志；任务 SSE 按任务读取已提交事件，实现跨节点推送与游标重放。
+- 授权事件先重读本节点 pending，再读取新事件；死信终态不再被另一节点继续执行，显式操作员重试可重置死信 receipt。
+- MySQL 原生查询采用 `hibernate.query.native.prefer_jdbc_datetime_types=true`，保留 JDBC Timestamp 到原有 Instant DTO 的转换，并明确 JDBC/Hibernate UTC 配置；真实 MySQL 测试覆盖非空列表和时间正确性。
+- 补齐 `/dictionary/form` 的页面入口，复用现有字典页面。
+- 发布脚本支持进程环境中的短期令牌，正确计入含下划线的 Flyway 版本；备份加密后才写盘，恢复只允许新建隔离目标库。
+
+后端本轮综合定向回归实际执行 50 项，全部 0 failures/errors/skipped；终态保护新增 2 项测试通过，并重跑授权事件 HTTP 测试通过。Security 模块原有 12 项本轮输入未变，Gradle 复用既有结果，不算新增执行数。前端 typecheck/build 通过；构建仍提示既有 Browserslist 数据陈旧、eval 与大 chunk 警告。所有 Gradle 命令均使用共享 `fcntl` 执行锁。
+
+剩余边界：固定 `ent-acme` 的通用指定租户能力仍未完成；平台菜单 GET 请求返回 400（当前平台 controller 只有 PUT），不在上述六组页面断言范围内；任务进度在执行事务提交后推送，不证明执行中的增量进度或外部业务副作用恰好一次；插件验证是内置可信目录摘要匹配，不是第三方二进制签名验证。没有执行生产部署、推送或关闭 Issue。
+
+最终三个冻结制品演练均已清理自己的 schema/恢复库、Redis 容器和监听端口，未操作原 18080 或业务库。本聊天未执行暂存或提交；共享索引相较初始快照新增 10 项条目，具体行为者未核实，已保留原样并写入 `index-final-audit.json`。临时诊断 runner 已从工作区删除，其已存在的暂存快照未回写；整合时按 `own-manifest.json` 的明确文件清单审阅，排除诊断 runner 与日志，勿统一暂存或复活旧迁移。

@@ -32,7 +32,9 @@ yarn test:proxy:production
 ```
 
 Summer UI 由 Node/Vite 独立构建。Gradle 不调用前端包管理器，也不把
-`summer-ui/dist` 嵌入 Summer Sample JAR。
+`summer-ui/dist` 嵌入 Summer Sample JAR。浏览器只访问 Summer UI 的单一
+origin；开发时 Vite 在 `5173` 提供页面并把认证、协议和业务请求代理到
+内部 Spring 服务（默认监听 `8080`），因此 `8080` 不是用户登录入口。
 
 ## 导航基线
 

@@ -6,6 +6,6 @@ import java.util.List;
 
 interface TaskProgressEventRepository extends JpaRepository<TaskProgressEventEntity, Long> {
     List<TaskProgressEventEntity> findAllByEnterpriseIdAndTaskIdOrderByEventIdAsc(String enterpriseId, String taskId);
-    List<TaskProgressEventEntity> findAllByEnterpriseIdAndTaskIdAndEventIdGreaterThanOrderByEventIdAsc(
+    List<TaskProgressEventEntity> findTop500ByEnterpriseIdAndTaskIdAndEventIdGreaterThanOrderByEventIdAsc(
             String enterpriseId, String taskId, Long eventId);
 }

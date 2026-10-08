@@ -24,7 +24,7 @@ Sample 47 项中，`SharedSessionNodesHttpTest` 占 14 项：真实 Redis、两�
 
 Security 12 项在本轮独立执行通过；最后组合 Gradle 调用因源码未再变化而复用其 UP-TO-DATE 结果，未计作另一轮新执行。最后 Sample 定向调用实际执行了 47 项（通配 `SessionControllerTest` 还匹配了 5 项 BFF 用例）。`bootJar` 构建成功。
 
-完整应用验证从空的随机 MySQL schema 运行现有 Flyway，使用独立 Redis 容器、实际 JDBC OAuth 和持久化密钥，启动 18081/18082。真实 Chrome 访问 5173 的 Vite，关闭 Mock，由 18580 代理轮换节点：
+完整应用验证从空的随机 MySQL schema 运行现有 Flyway，使用独立 Redis 容器和实际 JDBC OAuth，启动 18081/18082。真实 Chrome 访问 5173 的 Vite，关闭 Mock，由 18580 代理轮换节点：
 
 1. UI 完成真实 public-client PKCE 登录并进入工作台，Token 保留内存。
 2. 同一 Cookie 在节点 B 读取登录快照成功。
@@ -51,3 +51,5 @@ Security 12 项在本轮独立执行通过；最后组合 Gradle 调用因源码
 - 关闭 Mock 后，工作台演示接口 `overview-content`、`popular-contents`、`content-percentage`、`announcement` 返回 404，未在本轮修改或计为通过。
 - 真实 Chrome 验证使用 HTTP；生产 HTTPS Cookie、完整授权拒绝矩阵、会话页面所有交互和不同版本制品滚动升级仍需对应环境验证。现有 Secure Cookie 回归通过不等于完整生产代理验收。
 - 本轮未逐一注入 Redis 保存超时/序列化故障，连接失败诊断的通过不能扩大为所有故障模型通过。
+
+2026-10-07 T36 复核更正：T25 启动器传入了 master-key，但未显式设置 `summer.security.storage.keys=mysql`。因此此前“持久化密钥”的表述没有依据，不能据该 7 项浏览器检查推断 JWK 共享或跨节点旧 Token 验签连续性。后续 T36 已显式启用 MySQL 密钥，完成两节点公钥、轮换与恢复库登录验证；证据见 [T36 真实隔离环境复验](summer4-t36-upgrade-acceptance.md#2026-10-07-真实隔离环境复验)，不能倒算为本节原有 T25 测试已覆盖。

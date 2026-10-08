@@ -45,9 +45,9 @@ class ReleaseGateControllerTest {
     void readinessReportsDependencyHealthAndRequiredReleaseArtifacts() throws Exception {
         mockMvc.perform(get("/internal/v1/release/readiness").with(operator("internal.release.read")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("READY"))
-                .andExpect(jsonPath("$.data.checks[*].name", containsInAnyOrder("iam", "connectionService", "database", "auditLedger", "migrations", "runbook")))
-                .andExpect(jsonPath("$.data.checks[*].passed", everyItem(is(true))))
+                .andExpect(jsonPath("$.data.status").value("NOT_READY"))
+                .andExpect(jsonPath("$.data.checks[*].name", containsInAnyOrder("database", "migrations", "configuration", "keys", "authorization", "tasks", "cache", "events", "realtime", "plugins")))
+                .andExpect(jsonPath("$.data.checks[?(@.name == 'configuration')].passed", everyItem(is(false))))
                 .andExpect(jsonPath("$.data.rollbackDryRunSupported").value(true));
     }
 
@@ -59,10 +59,10 @@ class ReleaseGateControllerTest {
                         .header("Idempotency-Key", "release-gates-1")
                         .with(operator("internal.release.write")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.decision").value("READY"))
+                .andExpect(jsonPath("$.data.decision").value("NOT_VERIFIED"))
                 .andExpect(jsonPath("$.data.releaseVersion").value("aict-17"))
                 .andExpect(jsonPath("$.data.gates[*].name", containsInAnyOrder("format", "lint", "typecheck", "unit", "bff-contract", "build", "e2e")))
-                .andExpect(jsonPath("$.data.gates[*].executed").value(everyItem(is(true))))
+                .andExpect(jsonPath("$.data.gates[*].executed").value(everyItem(is(false))))
                 .andExpect(jsonPath("$.data.dryRun").value(true));
         mockMvc.perform(post("/internal/v1/release/gates:validate")
                         .contentType(MediaType.APPLICATION_JSON)

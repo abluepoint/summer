@@ -19,7 +19,16 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      data-source-properties:
+        # Keep JDBC sessions and ORM writes in UTC.
+        connectionTimeZone: UTC
+        forceConnectionTimeZoneToSession: true
   jpa:
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      # Preserve Timestamp -> Instant conversion for native SQL DTO projections.
+      hibernate.query.native.prefer_jdbc_datetime_types: true
     open-in-view: false
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:none}
@@ -57,6 +66,12 @@ summer:
     enabled: true
     wrap-responses: true
   sample:
+    session-index:
+      enabled: ${SUMMER_SAMPLE_SESSION_INDEX_ENABLED:true}
+      timeout-ms: ${SUMMER_SAMPLE_SESSION_INDEX_TIMEOUT_MS:500}
+      retries: ${SUMMER_SAMPLE_SESSION_INDEX_RETRIES:2}
+      failure-threshold: ${SUMMER_SAMPLE_SESSION_INDEX_FAILURE_THRESHOLD:3}
+      open-duration-ms: ${SUMMER_SAMPLE_SESSION_INDEX_OPEN_DURATION_MS:5000}
     resilience:
       enabled: ${SUMMER_SAMPLE_RESILIENCE_ENABLED:true}
       timeout: ${SUMMER_SAMPLE_RESILIENCE_TIMEOUT:750ms}
@@ -69,12 +84,6 @@ summer:
       circuit-failure-rate: ${SUMMER_SAMPLE_RESILIENCE_CIRCUIT_FAILURE_RATE:50}
       bulkhead: ${SUMMER_SAMPLE_RESILIENCE_BULKHEAD:8}
       fallback-ttl: ${SUMMER_SAMPLE_RESILIENCE_FALLBACK_TTL:30s}
-    session-index:
-      enabled: ${SUMMER_SAMPLE_SESSION_INDEX_ENABLED:true}
-      timeout-ms: ${SUMMER_SAMPLE_SESSION_INDEX_TIMEOUT_MS:500}
-      retries: ${SUMMER_SAMPLE_SESSION_INDEX_RETRIES:2}
-      failure-threshold: ${SUMMER_SAMPLE_SESSION_INDEX_FAILURE_THRESHOLD:3}
-      open-duration-ms: ${SUMMER_SAMPLE_SESSION_INDEX_OPEN_DURATION_MS:5000}
     cache:
       ttl: ${SUMMER_SAMPLE_CACHE_TTL:5m}
       node-id: ${SUMMER_SAMPLE_CACHE_NODE_ID:${HOSTNAME:summer-sample}}
@@ -119,6 +128,8 @@ summer:
       enabled: true
       protected-paths:
         - /api/**
+        - /internal/**
+        - /ws/**
     storage:
       oauth-client: jdbc
       authorization: jdbc

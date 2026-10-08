@@ -61,7 +61,7 @@ assert.doesNotMatch(gateScript, /echo\s+.*(PASSWORD|TOKEN|PRIVATE_KEY)/i);
 const config = read(configPath);
 assert.match(config, /ddl-auto: \$\{SPRING_JPA_HIBERNATE_DDL_AUTO:none\}/);
 assert.match(config, /validate-on-migrate: true/);
-assert.match(config, /store-type: \$\{SUMMER_SAMPLE_SESSION_STORE_TYPE:redis\}/);
+assert.match(config, /namespace: \$\{SUMMER_SAMPLE_SESSION_NAMESPACE:summer:servlet-session\}/);
 assert.match(config, /org\.quartz\.jobStore\.isClustered: true/);
 assert.match(config, /node-id: \$\{SUMMER_SAMPLE_CACHE_NODE_ID/);
 

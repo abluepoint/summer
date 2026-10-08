@@ -12,6 +12,9 @@ final class ReleaseGateService {
     private static final String CURRENT = "aict-17";
     private static final List<String> DEFAULT_CHECKS = List.of("format", "lint", "typecheck", "unit", "bff-contract", "build", "e2e");
     private final Map<String, Object> receipts = new HashMap<>();
+    private final RuntimeReleaseChecks runtimeChecks;
+
+    ReleaseGateService(RuntimeReleaseChecks runtimeChecks) { this.runtimeChecks = runtimeChecks; }
 
     synchronized PerformanceBudgetView budgets(Authentication auth) {
         require(auth, "internal.release.read");
@@ -47,9 +50,8 @@ final class ReleaseGateService {
 
     synchronized ReadinessView readiness(Authentication auth) {
         require(auth, "internal.release.read");
-        List<ReadinessCheck> checks = List.of("iam", "connectionService", "database", "auditLedger", "migrations", "runbook")
-                .stream().map(name -> new ReadinessCheck(name, true, "sample check passed")).toList();
-        return new ReadinessView("READY", checks, true);
+        List<ReadinessCheck> checks = runtimeChecks.snapshot();
+        return new ReadinessView(checks.stream().allMatch(ReadinessCheck::passed) ? "READY" : "NOT_READY", checks, true);
     }
 
     synchronized ReleaseGateView validate(ReleaseGateRequest request, String key, Authentication auth) {
@@ -63,8 +65,8 @@ final class ReleaseGateService {
         }
         if (request == null || request.releaseVersion() == null || !Boolean.TRUE.equals(request.dryRun())) throw new ReleaseValidationException("dryRun is required");
         List<String> checks = request.requiredChecks() == null || request.requiredChecks().isEmpty() ? DEFAULT_CHECKS : request.requiredChecks();
-        List<ReleaseGate> gates = checks.stream().distinct().map(c -> new ReleaseGate(c, true, true, "recorded")).toList();
-        ReleaseGateView out = new ReleaseGateView("READY", request.releaseVersion(), true, gates); receipts.put(key, new Receipt(fp, out)); return out;
+        List<ReleaseGate> gates = checks.stream().distinct().map(c -> new ReleaseGate(c, false, false, "External execution evidence required")).toList();
+        ReleaseGateView out = new ReleaseGateView("NOT_VERIFIED", request.releaseVersion(), true, gates); receipts.put(key, new Receipt(fp, out)); return out;
     }
 
     synchronized RollbackDryRunView rollback(RollbackDryRunRequest request, String key, Authentication auth) {

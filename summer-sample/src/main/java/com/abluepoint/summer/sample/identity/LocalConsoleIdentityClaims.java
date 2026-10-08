@@ -1,0 +1,87 @@
+package com.abluepoint.summer.sample.identity;
+
+import java.util.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** Resolves the local console's business grants independently of requested OAuth scopes. */
+@Service
+class LocalConsoleIdentityClaims {
+    private final JdbcTemplate jdbc;
+    LocalConsoleIdentityClaims(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> resolve(String username, Map<String, Object> legacyClaims) {
+        var users = jdbc.queryForList("select active from summer_auth_user where username = ?", Boolean.class, username);
+        if (users.size() != 1 || !Boolean.TRUE.equals(users.getFirst())) throw new AccessDeniedException("Local user is unavailable");
+        var bindings = jdbc.queryForList("select enterprise_id, role_ids, denied_capability_codes from summer_authorization_user_binding where username = ?", username);
+        Map<String, Object> claims = new LinkedHashMap<>(legacyClaims);
+        if (!bindings.isEmpty() || Boolean.TRUE.equals(claims.get("summer_managed_grants"))) {
+            claims.put("summer_managed_grants", true);
+            List<Map<String, Object>> memberships = new ArrayList<>();
+            Map<String, List<String>> enterpriseGrants = new LinkedHashMap<>();
+            Set<String> platformGrants = new TreeSet<>();
+            for (var binding : bindings) {
+                String enterprise = String.valueOf(binding.get("enterprise_id"));
+                var active = jdbc.queryForList("select enterprise_id from summer_enterprise where enterprise_id = ? and status = 'ACTIVE'", String.class, enterprise);
+                if (active.isEmpty()) continue;
+                memberships.add(Map.of("enterpriseId", enterprise, "status", "ACTIVE"));
+                Set<String> denied = new HashSet<>(lines(binding.get("denied_capability_codes")));
+                Set<String> granted = new TreeSet<>();
+                for (String role : lines(binding.get("role_ids"))) {
+                    for (String ids : jdbc.queryForList("select capability_ids from summer_authorization_role where role_id = ? and enterprise_id = ? and status = 'ACTIVE'", String.class, role, enterprise)) {
+                        for (String id : lines(ids)) {
+                            for (var cap : jdbc.queryForList("select code, scope from summer_authorization_capability where capability_id = ? and status = 'ACTIVE' and (enterprise_id = ? or (enterprise_id is null and scope = 'PLATFORM'))", id, enterprise)) {
+                                String code = String.valueOf(cap.get("code"));
+                                if (denied.contains(code)) continue;
+                                if ("PLATFORM".equals(cap.get("scope"))) platformGrants.add(code); else granted.add(code);
+                            }
+                        }
+                    }
+                }
+                enterpriseGrants.put(enterprise, List.copyOf(granted));
+            }
+            claims.put("enterprise_memberships", memberships);
+            claims.put("enterprise_capabilities", enterpriseGrants);
+            claims.put("platform_capabilities", List.copyOf(platformGrants));
+        }
+        claims.remove("organization_id");
+        var contexts = jdbc.queryForList("select c.enterprise_id, c.organization_id from summer_organization_context c join summer_organization_unit u on u.unit_id = c.organization_id and u.enterprise_id = c.enterprise_id where c.subject = ? and u.status = 'ACTIVE'", username);
+        Object raw = claims.get("enterprise_memberships");
+        for (var context : contexts) {
+            if (raw instanceof Collection<?> memberships && memberships.stream().filter(Map.class::isInstance)
+                    .map(Map.class::cast).anyMatch(m -> context.get("enterprise_id").equals(m.get("enterpriseId")) && "ACTIVE".equals(m.get("status")))) {
+                claims.put("organization_id", context.get("organization_id"));
+            }
+        }
+        var platform = claims.get("platform_capabilities");
+        claims.put("release_operator", platform instanceof Collection<?> values && values.contains("internal.release.read"));
+        claims.put("summer_identity_source", "local-user");
+        return claims;
+    }
+
+    static List<String> lines(Object value) {
+        if (value == null || value.toString().isBlank()) return List.of();
+        if (value.toString().stripLeading().startsWith("[")) {
+            var node = new tools.jackson.databind.ObjectMapper().readTree(value.toString());
+            List<String> values = new ArrayList<>();
+            for (var item : node) {
+                if (!item.isString()) throw new IllegalStateException("Invalid persisted grant list");
+                if (!item.asText().isBlank()) values.add(item.asText());
+            }
+            return List.copyOf(values);
+        }
+        return Arrays.stream(value.toString().split("\n")).filter(s -> !s.isBlank()).toList();
+    }
+
+    static List<String> capabilities(Map<String, Object> claims) {
+        Set<String> values = new TreeSet<>();
+        if (claims.get("platform_capabilities") instanceof Collection<?> platform) platform.forEach(c -> values.add(c.toString()));
+        if (claims.get("enterprise_capabilities") instanceof Map<?, ?> enterprises) enterprises.values().forEach(raw -> {
+            if (raw instanceof Collection<?> list) list.forEach(c -> values.add(c.toString()));
+        });
+        return List.copyOf(values);
+    }
+}

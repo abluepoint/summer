@@ -40,12 +40,14 @@ class TaskProgressEventService {
         this.definitions = definitions;
         this.repository = repository;
         this.objectMapper = objectMapper;
+        scheduler.scheduleWithFixedDelay(this::pollCommitted, 500, 500, TimeUnit.MILLISECONDS);
     }
 
     SseEmitter subscribe(String enterpriseId, String taskId, long lastEventId) {
         requireTask(enterpriseId, taskId);
         SseEmitter emitter = new SseEmitter(TimeUnit.MINUTES.toMillis(30));
         Connection connection = new Connection(enterpriseId, taskId, emitter);
+        connection.cursor = lastEventId;
         synchronized (subscriptionLock) {
             Set<Connection> active = connections.computeIfAbsent(enterpriseId, ignored -> ConcurrentHashMap.newKeySet());
             if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE) throw new TaskProgressConnectionLimitException();
@@ -96,9 +98,7 @@ class TaskProgressEventService {
             String json = writePayload(eventPayload);
             TaskProgressEventEntity event = repository.saveAndFlush(new TaskProgressEventEntity(
                     execution.enterpriseId(), execution.taskId(), execution.executionId(), type, json));
-            Set<Connection> active = connections.get(execution.enterpriseId());
-            if (active == null) return;
-            for (Connection connection : List.copyOf(active)) send(connection, event);
+            // Poll committed rows on every node; never publish another transaction's uncommitted progress.
         }
     }
 
@@ -117,14 +117,28 @@ class TaskProgressEventService {
                 connection.enterpriseId, connection.taskId);
         int start = Math.max(0, all.size() - MAX_REPLAY_EVENTS);
         List<TaskProgressEventEntity> window = all.subList(start, all.size());
-        if (!window.isEmpty() && lastEventId > 0 && lastEventId < window.get(0).eventId() - 1) {
+        if (all.size() > MAX_REPLAY_EVENTS && lastEventId > 0 && lastEventId < window.get(0).eventId() - 1) {
             connection.emitter.send(SseEmitter.event().name("resync").data(writePayload(Map.of(
                     "reason", "EVENT_WINDOW_EXCEEDED", "taskId", connection.taskId,
                     "latestEventId", window.get(window.size() - 1).eventId()))));
+            connection.cursor = window.get(window.size() - 1).eventId();
             return;
         }
         for (TaskProgressEventEntity event : window) {
             if (event.eventId() > lastEventId) send(connection, event);
+        }
+    }
+
+    private void pollCommitted() {
+        synchronized (subscriptionLock) {
+            for (Set<Connection> active : connections.values()) for (Connection connection : List.copyOf(active)) {
+                try {
+                    repository.findTop500ByEnterpriseIdAndTaskIdAndEventIdGreaterThanOrderByEventIdAsc(
+                            connection.enterpriseId, connection.taskId, connection.cursor).forEach(event -> send(connection, event));
+                } catch (RuntimeException unavailable) {
+                    // Keep the cursor unchanged so a transient read failure retries safely.
+                }
+            }
         }
     }
 
@@ -138,9 +152,11 @@ class TaskProgressEventService {
     }
 
     private void send(Connection connection, TaskProgressEventEntity event) {
+        if (!connection.taskId.equals(event.taskId()) || event.eventId() <= connection.cursor) return;
         try {
             connection.emitter.send(SseEmitter.event().id(String.valueOf(event.eventId()))
                     .name(event.eventType()).data(event.payloadJson()));
+            connection.cursor = event.eventId();
         } catch (IOException failure) {
             remove(connection);
             connection.emitter.completeWithError(failure);
@@ -176,6 +192,7 @@ class TaskProgressEventService {
         private final String taskId;
         private final SseEmitter emitter;
         private ScheduledFuture<?> heartbeat;
+        private long cursor;
         private Connection(String enterpriseId, String taskId, SseEmitter emitter) {
             this.enterpriseId = enterpriseId; this.taskId = taskId; this.emitter = emitter;
         }

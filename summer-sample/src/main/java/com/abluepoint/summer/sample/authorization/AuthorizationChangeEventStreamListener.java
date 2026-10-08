@@ -7,6 +7,7 @@ import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
+import org.springframework.data.redis.connection.stream.StreamReadOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -37,9 +38,21 @@ class AuthorizationChangeEventStreamListener {
     void poll() {
         try {
             ensureGroup();
-            List<?> records = redis.opsForStream().read(Consumer.from(group, consumerName),
-                    StreamOffset.create(AuthorizationChangeEventService.STREAM, ReadOffset.lastConsumed()));
-            for (Object value : records) {
+            // Retry this stable node consumer's unacknowledged records before reading new work.
+            // lastConsumed alone never delivers pending records after handler failure or restart.
+            consume(redis.opsForStream().read(Consumer.from(group, consumerName), StreamReadOptions.empty().count(100),
+                    StreamOffset.create(AuthorizationChangeEventService.STREAM, ReadOffset.from("0"))));
+            consume(redis.opsForStream().read(Consumer.from(group, consumerName), StreamReadOptions.empty().count(100),
+                    StreamOffset.create(AuthorizationChangeEventService.STREAM, ReadOffset.lastConsumed())));
+        } catch (RuntimeException unavailable) {
+            // Preserve pending entries; the next poll retries them without a fresh publication.
+        }
+    }
+
+    private void consume(List<?> records) {
+        if (records == null) return;
+        for (Object value : records) {
+            try {
                 MapRecord<?, ?, ?> record = (MapRecord<?, ?, ?>) value;
                 AuthorizationChangeEventBody event = toEvent(record);
                 // Every node evicts its own tier even when the shared receipt says another node
@@ -52,9 +65,9 @@ class AuthorizationChangeEventStreamListener {
                         || result == AuthorizationChangeEventConsumeResult.DEAD_LETTER) {
                     redis.opsForStream().acknowledge(AuthorizationChangeEventService.STREAM, group, record.getId());
                 }
+            } catch (RuntimeException unavailable) {
+                // One failed entry must not prevent the rest of a bounded batch from progressing.
             }
-        } catch (RuntimeException ignored) {
-            // Leave records pending and let the outbox retry path recover publication failures.
         }
     }
 

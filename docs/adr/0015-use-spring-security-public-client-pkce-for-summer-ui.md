@@ -46,13 +46,13 @@ Because `GET /login` is rendered by Summer UI while `POST /login` is handled by 
 
 ## Development origin and client registration
 
-During integrated UI development, the browser uses `http://127.0.0.1:5173` as its single visible origin. Vite serves Summer UI and proxies `/api/**`, `/oauth2/**`, `/.well-known/**`, `/connect/**`, `/csrf`, and only `POST /login` to the Summer Sample process on `http://127.0.0.1:8080`; `GET /login` remains the SPA route. The UI integration profile publishes `http://127.0.0.1:5173` as the issuer, while the backend's standalone default issuer remains `http://127.0.0.1:8080`.
+During integrated UI development, the browser uses `http://127.0.0.1:5173` as its single visible origin. Vite serves Summer UI and proxies `/api/**`, `/oauth2/**`, `/.well-known/**`, `/connect/**`, `/csrf`, and only `POST /login` to the Summer Sample process on the internal `http://127.0.0.1:8080`; `GET /login` remains the SPA route. The Sample's default issuer is the UI origin, so the default local startup does not expose the backend port as a browser authentication entry point. A standalone backend test profile may still use `http://127.0.0.1:8080` as its issuer.
 
 A separate public client named `summer-ui` uses `http://127.0.0.1:5173/oauth2/callback` as its redirect URI and `http://127.0.0.1:5173/login?logout` as its post-logout redirect URI. Summer Sample registers only the public `summer-ui` client; it does not retain the configured confidential `summer-client` instance. Summer Security still supports confidential clients when another application configures one explicitly. Production supplies its HTTPS issuer and redirect URIs through environment-specific configuration rather than source constants.
 
 ## Browser origin boundary
 
-Summer UI uses relative URLs and same-origin proxying for API, authorization, login, CSRF, and logout traffic. The backend does not add wildcard CORS or a Summer UI cross-origin exception. Direct access to the backend port remains available for backend tests and non-browser debugging, but it is not the browser integration path. A future cross-origin deployment requires a separate explicit origin allowlist and security review.
+Summer UI uses relative URLs and same-origin proxying for API, authorization, login, CSRF, and logout traffic. The backend does not add wildcard CORS or a Summer UI cross-origin exception. Direct access to the internal backend port remains available for backend tests and non-browser debugging, but it is not the browser integration path. A future cross-origin deployment requires a separate explicit origin allowlist and security review.
 
 ## Summer UI registered-client policy
 

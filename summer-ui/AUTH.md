@@ -8,12 +8,14 @@ The UI never calls the former mocked JSON login endpoint.
 
 ## Local integration
 
-Start Summer Sample with `SUMMER_SAMPLE_ISSUER=http://127.0.0.1:5173`, then run
+Start Summer Sample on its internal listener (8080 by default), then run
 `yarn dev` in `summer-ui`. Open `http://127.0.0.1:5173/customer/drawer`. The
-single browser origin is `127.0.0.1:5173`; Vite proxies `/api/**`, the OIDC
-protocol paths, `/csrf`, and only `POST /login` to `127.0.0.1:8080`. It serves
-`GET /login` and `/oauth2/callback` as SPA routes. The matching redirect and
-post-logout URIs are registered in Summer Sample's `application.yml`.
+single browser-visible origin is `http://127.0.0.1:5173`; Vite proxies
+`/api/**`, the OIDC protocol paths, `/csrf`, and only `POST /login` to the
+internal Spring service. It serves `GET /login` and `/oauth2/callback` as SPA
+routes. The default Sample issuer, redirect URI, and post-logout URI all use
+the UI origin; override them together when using another public origin.
+The browser does not need to open port 8080 directly.
 Set `SUMMER_BACKEND_ORIGIN` before starting Vite when the backend does not
 listen on the default `http://127.0.0.1:8080`. Set `VITE_ENABLE_MOCK=false` for
 integrated browser acceptance; it disables the upstream example mocks while

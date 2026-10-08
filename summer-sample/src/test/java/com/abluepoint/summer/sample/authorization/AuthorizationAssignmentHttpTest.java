@@ -25,6 +25,9 @@ class AuthorizationAssignmentHttpTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired
+    org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     @Test
     void roleBindingToScannedResourceAllowsUserAndAuditExplainsDecision() throws Exception {
         MvcResult role = mockMvc.perform(post("/api/v1/enterprises/ent-acme/roles")
@@ -45,6 +48,10 @@ class AuthorizationAssignmentHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.username").value("alice"))
                 .andExpect(jsonPath("$.data.roleIds[0]").value(roleId));
+
+        String stored = jdbc.queryForObject("select role_ids from summer_authorization_user_binding where username = 'alice'", String.class);
+        org.assertj.core.api.Assertions.assertThat(new tools.jackson.databind.ObjectMapper().readTree(stored).get(0).asText()).isEqualTo(roleId);
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select denied_capability_codes from summer_authorization_user_binding where username = 'alice'", String.class)).isEqualTo("[]");
 
         mockMvc.perform(get("/api/customers")
                         .with(user("alice", "customer.read")))

@@ -63,3 +63,6 @@ export const rollbackParameterVersion = (key: string, payload: Record<string, un
   request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/rollback`, payload));
 export const deactivateParameterVersion = (key: string, payload: Record<string, unknown>) =>
   request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/deactivate`, payload));
+
+export const saveParameterOverride = (key: string, organization: string, payload: Record<string, unknown>) =>
+  request<{ version: number }>(() => axios.put(`/api/system-parameters/${encodeURIComponent(key)}/overrides/${encodeURIComponent(organization)}`, payload));

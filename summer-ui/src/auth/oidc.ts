@@ -135,7 +135,7 @@ export async function signOut() {
   } finally {
     clearTemporaryAuthState();
   }
-  let timeoutId: ReturnType<typeof window.setTimeout> | undefined;
+  let timeoutId: number | undefined;
   try {
     await Promise.race([
       oidcManager.signoutRedirect({ id_token_hint: user?.id_token }),

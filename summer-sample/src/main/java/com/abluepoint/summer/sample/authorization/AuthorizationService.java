@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.*;
 
 @Service
+@DependsOn("flywayMigrationInitializer")
 public class AuthorizationService {
     private static final String ENTERPRISE = "ent-acme";
     private final Map<String, CapabilityRecord> capabilities = new LinkedHashMap<>();
@@ -27,8 +28,7 @@ public class AuthorizationService {
     private final AuthorizationRoleRepository roleRepository;
     private final AuthorizationChangeEventService changeEvents;
 
-    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository,
-                                AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents) {
+    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents) {
         this.bindingRepository = bindingRepository;
         this.capabilityRepository = capabilityRepository;
         this.roleRepository = roleRepository;
@@ -56,8 +56,8 @@ public class AuthorizationService {
         roleRepository.findAllByOrderByEnterpriseIdAscCodeAsc().forEach(entity -> roles.put(entity.roleId(), new RoleRecord(entity.roleId(), entity.enterpriseId(), entity.name(), entity.code(), entity.builtIn(), entity.status(), split(entity.capabilityIds()), entity.version(), entity.bundleId())));
         bindingRepository.findAllByOrderByEnterpriseIdAscUsernameAsc().forEach(entity ->
                 userAssignments.put(entity.enterpriseId() + ":" + entity.username(),
-                        new UserAssignmentRecord(entity.username(), entity.enterpriseId(), split(entity.roleIds()),
-                                split(entity.deniedCapabilityCodes()), entity.version())));
+                        new UserAssignmentRecord(entity.username(), entity.enterpriseId(), bindingList(entity.roleIds()),
+                                bindingList(entity.deniedCapabilityCodes()), entity.version())));
     }
 
     /** Reloads node-local authorization projections after a change event. */
@@ -187,7 +187,7 @@ public class AuthorizationService {
         userAssignments.put(assignmentKey, updated);
         AuthorizationUserBindingEntity entity = bindingRepository.findByEnterpriseIdAndUsername(enterpriseId, username)
                 .orElseGet(() -> new AuthorizationUserBindingEntity("binding-" + Integer.toUnsignedString(assignmentKey.hashCode()), enterpriseId, username, "", "", updated.version));
-        entity.update(join(updated.roleIds), join(updated.deniedCodes), updated.version);
+        entity.update(jsonList(updated.roleIds), jsonList(updated.deniedCodes), updated.version);
         bindingRepository.save(entity);
         UserRoleAssignmentView view = userAssignmentView(updated);
         receipts.put("user-assignment:" + assignmentKey + ":" + key, new Receipt(fingerprint, view));
@@ -208,7 +208,6 @@ public class AuthorizationService {
         if (!(authentication instanceof JwtAuthenticationToken jwt) || enterpriseId == null || permissionCode == null) {
             return new Decision(false, "DEFAULT_DENY");
         }
-        // Reloading from MySQL is the recovery path when a node missed a Redis notification.
         reloadPersistentState();
         UserAssignmentRecord assignment = userAssignments.get(enterpriseId + ":" + authentication.getName());
         if (assignment == null) return new Decision(true, "LEGACY_SCOPE");
@@ -263,6 +262,20 @@ public class AuthorizationService {
     private static boolean blank(String s) { return s == null || s.isBlank(); }
     private static String join(List<String> values) { return String.join("\n", values); }
     private static List<String> split(String value) { return value == null || value.isBlank() ? List.of() : Arrays.stream(value.split("\\n", -1)).filter(s -> !s.isBlank()).toList(); }
+    private static String jsonList(List<String> values) {
+        return new tools.jackson.databind.ObjectMapper().writeValueAsString(values);
+    }
+    private static List<String> bindingList(String value) {
+        // H2 and older local projections used newline lists; MySQL requires JSON arrays.
+        if (value == null || !value.stripLeading().startsWith("[")) return split(value);
+        var node = new tools.jackson.databind.ObjectMapper().readTree(value);
+        List<String> values = new ArrayList<>();
+        for (var item : node) {
+            if (!item.isString()) throw new IllegalStateException("Invalid persisted authorization binding");
+            if (!item.asText().isBlank()) values.add(item.asText());
+        }
+        return List.copyOf(values);
+    }
     private static String op(String e, String k) { return e + ":" + k; }
     private static String fingerprint(Object... v) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Arrays.deepToString(v).getBytes(StandardCharsets.UTF_8))); } catch (Exception x) { throw new IllegalStateException(x); } }
     @SuppressWarnings("unchecked") private <T> T replay(Receipt p, String fp) { if (!p.fingerprint.equals(fp)) throw new AuthorizationIdempotencyConflictException("Idempotency key reused"); return (T) p.result; }

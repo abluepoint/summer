@@ -17,6 +17,7 @@ class AuthorizationChangeEventConsumer {
     AuthorizationChangeEventConsumeResult consume(AuthorizationChangeEventBody event, Consumer<AuthorizationChangeEventBody> handler) {
         AuthorizationChangeEventReceiptEntity existing = receipts.findById(event.eventId()).orElse(null);
         if (existing != null && existing.status() == AuthorizationChangeReceiptStatus.PROCESSED) return AuthorizationChangeEventConsumeResult.DUPLICATE;
+        if (existing != null && existing.status() == AuthorizationChangeReceiptStatus.DEAD_LETTER) return AuthorizationChangeEventConsumeResult.DEAD_LETTER;
         try {
             handler.accept(event);
             if (existing == null) existing = new AuthorizationChangeEventReceiptEntity(event.eventId(), Instant.now());

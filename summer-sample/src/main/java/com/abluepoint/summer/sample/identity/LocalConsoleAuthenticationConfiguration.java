@@ -42,7 +42,8 @@ class LocalConsoleAuthenticationConfiguration {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     AuthenticationSuccessHandler localConsoleAuthenticationSuccessHandler(
             SummerSecurityProperties properties,
-            SecurityContextRepository securityContextRepository
+            SecurityContextRepository securityContextRepository,
+            LocalConsoleIdentityClaims identityClaims
     ) {
         SavedRequestAwareAuthenticationSuccessHandler savedRequestHandler =
                 new SavedRequestAwareAuthenticationSuccessHandler();
@@ -67,19 +68,19 @@ class LocalConsoleAuthenticationConfiguration {
             List<String> platformCapabilities = admin ? platformCapabilities() : List.of();
             claims.put("enterprise_capabilities", Map.of(ENTERPRISE_ID, enterpriseCapabilities));
             claims.put("platform_capabilities", platformCapabilities);
+            Map<String, Object> resolvedClaims = identityClaims.resolve(authentication.getName(), claims);
             Jwt jwt = Jwt.withTokenValue("local-console-session")
                     .header("alg", "none")
                     .subject(authentication.getName())
                     .claim("name", authentication.getName())
                     .claim("principal_type", "USER")
-                    .claims(values -> values.putAll(claims))
+                    .claims(values -> values.putAll(resolvedClaims))
                     .issuedAt(now)
                     .expiresAt(now.plusSeconds(8 * 60 * 60))
                     .build();
 
             List<GrantedAuthority> authorities = new ArrayList<>();
-            enterpriseCapabilities.forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
-            platformCapabilities.forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
+            LocalConsoleIdentityClaims.capabilities(resolvedClaims).forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
             authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
             authorities.add(FactorGrantedAuthority.fromFactor("PASSWORD"));
             JwtAuthenticationToken localJwt = new JwtAuthenticationToken(jwt, authorities, authentication.getName());
