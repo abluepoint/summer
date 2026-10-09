@@ -62,7 +62,7 @@
             <!--注意：只有这个版本的hibernate兼容达梦数据库 -->
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>5.3.20.Final</version>
+            <version>5.3.38.Final</version>
         </dependency>
 
     </dependencies>
