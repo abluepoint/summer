@@ -21,7 +21,8 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
   const editorBaseline = useRef('');
   const alive = useRef(true);
   const writing = useRef(false);
-  useEffect(() => () => { alive.current = false; }, []);
+  const historySelection = useRef<string | null>(null);
+  useEffect(() => () => { alive.current = false; historySelection.current = null; }, []);
   const listRequest = useRef(0);
   const eventRequest = useRef(0);
   const historyRequest = useRef(0);
@@ -41,9 +42,9 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
     window.addEventListener('beforeunload', beforeUnload);
     return () => { unblock(); window.removeEventListener('beforeunload', beforeUnload); };
   }, [dirty, saving, router]);
-  const load = useCallback(() => { const request = ++listRequest.current; setLoading(true); setError(null); listParameters(query).then((result) => { if (request === listRequest.current) setPage(result); }).catch((e) => { if (request !== listRequest.current) return; setPage(null); historyRequest.current++; setHistory(null); setHistoryKey(null); setEditor(false); setForm(empty); setError(e); }).finally(() => { if (request === listRequest.current) setLoading(false); }); }, [query]);
-  const loadEvents = useCallback(() => { const request = ++eventRequest.current; setEvents([]); listParameterEvents().then((result) => { if (request === eventRequest.current) setEvents(result.items); }).catch((e) => { if (request === eventRequest.current) { setEvents([]); setError(e); } }); }, []);
-  const loadHistory = useCallback((key: string) => { const request = ++historyRequest.current; setHistory(null); setHistoryKey(key); listParameterVersions(key).then((result) => { if (request === historyRequest.current) setHistory(result); }).catch((e) => { if (request === historyRequest.current) { setHistory(null); setHistoryKey(null); setError(e); } }); }, []);
+  const load = useCallback(() => { const request = ++listRequest.current; setLoading(true); setError(null); return listParameters(query).then((result) => { if (request === listRequest.current) setPage(result); }).catch((e) => { if (request !== listRequest.current) return; setPage(null); historyRequest.current++; historySelection.current = null; setHistory(null); setHistoryKey(null); setEditor(false); setForm(empty); setError(e); }).finally(() => { if (request === listRequest.current) setLoading(false); }); }, [query]);
+  const loadEvents = useCallback(() => { const request = ++eventRequest.current; setEvents([]); return listParameterEvents().then((result) => { if (request === eventRequest.current) setEvents(result.items); }).catch((e) => { if (request === eventRequest.current) { setEvents([]); setError(e); } }); }, []);
+  const loadHistory = useCallback((key: string) => { const request = ++historyRequest.current; historySelection.current = key; setHistory(null); setHistoryKey(key); return listParameterVersions(key).then((result) => { if (request === historyRequest.current) setHistory(result); }).catch((e) => { if (request === historyRequest.current) { historySelection.current = null; setHistory(null); setHistoryKey(null); setError(e); } }); }, []);
   useEffect(() => { load(); loadEvents(); return () => { listRequest.current++; eventRequest.current++; historyRequest.current++; }; }, [load, loadEvents]);
   function open(parameter?: Parameter) { const nextForm = parameter ? { ...empty, ...parameter, value: typeof parameter.value === 'object' ? JSON.stringify(parameter.value) : String(parameter.value ?? '') } : empty; editorBaseline.current = JSON.stringify({ form: nextForm, overrideOrg: '_tenant', overrideVersion: undefined }); setError(null); setOverrideOrg('_tenant'); setOverrideVersion(undefined); setEditor(parameter || null); setForm(nextForm); }
   function closeEditor() { if (saving) return; if (!dirty) { setEditor(false); return; } Modal.confirm({ title: '放弃未保存的配置？', okText: '放弃修改', cancelText: '继续编辑', onOk: () => setEditor(false) }); }
@@ -61,10 +62,15 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
   }
   function localError(failure: Error) { setError(new ParameterApiError(0, 'INVALID_INPUT', failure.message, '')); }
   function mutableFields() { return { value: valueForType(), required: form.required, min: form.min, max: form.max, pattern: form.pattern || undefined, publicValue: form.public, description: form.description }; }
-  function write<T>(call: () => Promise<T>, success: (result: T) => void) {
+  function write<T>(call: () => Promise<T>, success: (result: T) => void | Promise<unknown>) {
     if (writing.current) return;
     writing.current = true; setSaving(true); setError(null);
-    call().then((result) => { if (alive.current) success(result); }).catch((failure) => { if (alive.current) setError(failure); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); });
+    call().then(async (result) => { if (alive.current) await success(result); }).catch((failure) => { if (alive.current) setError(failure); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); });
+  }
+  function changeStatus(parameter: Parameter) {
+    write(() => parameter.status === 'ACTIVE' ? deactivateParameterVersion(parameter.key, { expectedVersion: parameter.version, idempotencyKey: `ui-disable-${parameter.key}-${Date.now()}` }) : setParameterStatus(parameter.key, 'ACTIVE'), () => Promise.all([
+      load(), loadEvents(), historySelection.current === parameter.key ? loadHistory(parameter.key) : Promise.resolve(),
+    ]));
   }
   function save() { try { const payload = mutableFields(); write(() => editor ? updateParameter(editor.key, { ...payload, version: editor.version }) : createParameter({ ...payload, key: form.key, type: form.type }), () => { setEditor(false); load(); loadEvents(); }); } catch (failure) { localError(failure); } }
   function saveDraft() { if (!editor) return; const key = editor.key; try { const payload = mutableFields(); write(() => saveParameterDraft(key, { ...payload, baseVersion: editor.version, idempotencyKey: `ui-draft-${Date.now()}` }), () => { editorBaseline.current = editorState; loadHistory(key); loadEvents(); }); } catch (failure) { localError(failure); } }
@@ -103,9 +109,9 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
     {error && editor === false && <Alert type="error" content={errorMessage} style={{ marginBottom: 16 }} />}
     {page?.projection === 'summary' && <Alert type="info" content="当前仅展示摘要；切换到 detail 查看完整配置后，才能编辑或变更状态。" style={{ marginBottom: 16 }} />}
     <Table<Parameter> rowKey="key" loading={loading} data={(page?.items || []) as Parameter[]} pagination={{ current: (page?.page || 0) + 1, pageSize: page?.size || query.size, total: page?.totalElements || 0, onChange: (current, size) => setQuery({ ...query, page: current - 1, size }) }} columns={[
-      { title: t['systemParameters.key'], dataIndex: 'key' }, { title: t['systemParameters.type'], dataIndex: 'type' }, { title: t['systemParameters.value'], dataIndex: 'value', render: (v) => String(v) },
-      { title: t['systemParameters.status'], dataIndex: 'status', render: (v) => <Tag color={v === 'ACTIVE' ? 'green' : 'gray'}>{v}</Tag> }, { title: t['systemParameters.version'], dataIndex: 'version' },
-      { title: t['systemParameters.actions'], render: (_, row) => <Space><Button size="small" disabled={saving || page?.projection === 'summary'} onClick={() => open(row)}>{t['systemParameters.edit']}</Button><Button disabled={saving} size="small" onClick={() => loadHistory(row.key)}>{t['systemParameters.history']}</Button><Button size="small" disabled={saving || page?.projection === 'summary'} onClick={() => write(() => row.status === 'ACTIVE' ? deactivateParameterVersion(row.key, { expectedVersion: row.version, idempotencyKey: `ui-disable-${row.key}-${Date.now()}` }) : setParameterStatus(row.key, 'ACTIVE'), () => { load(); loadEvents(); })}>{row.status === 'ACTIVE' ? t['systemParameters.disable'] : t['systemParameters.enable']}</Button></Space> },
+      { title: t['systemParameters.key'], dataIndex: 'key' }, { title: t['systemParameters.type'], dataIndex: 'type' }, { title: t['systemParameters.value'], dataIndex: 'value', render: (v) => v === undefined ? '—' : String(v) },
+      { title: t['systemParameters.status'], dataIndex: 'status', render: (v) => <Tag color={v === 'ACTIVE' ? 'green' : 'gray'}>{v}</Tag> }, { title: t['systemParameters.version'], dataIndex: 'version', render: (v) => v === undefined ? '—' : v },
+      { title: t['systemParameters.actions'], render: (_, row) => <Space><Button size="small" disabled={saving || page?.projection === 'summary'} onClick={() => open(row)}>{t['systemParameters.edit']}</Button><Button disabled={saving} size="small" onClick={() => loadHistory(row.key)}>{t['systemParameters.history']}</Button><Button size="small" disabled={saving || page?.projection === 'summary'} onClick={() => changeStatus(row)}>{row.status === 'ACTIVE' ? t['systemParameters.disable'] : t['systemParameters.enable']}</Button></Space> },
     ]} />
     <Card title={t['systemParameters.deliveryTitle']} style={{ marginTop: 16 }}>
       <Table<ParameterEvent> rowKey="eventId" data={events} pagination={false} columns={[

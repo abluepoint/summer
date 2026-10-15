@@ -1,0 +1,264 @@
+{
+  "status": "ACCEPTED_FOR_COORDINATOR_CLOSEOUT",
+  "issue": 118,
+  "dependency": {
+    "number": 117,
+    "requiredState": "CLOSED/COMPLETED"
+  },
+  "candidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "runtime": {
+    "issue": 118,
+    "stage": "complete",
+    "checks": [
+      {
+        "name": "initial_published_history_exists",
+        "passed": true
+      },
+      {
+        "name": "both_nodes_prime_actual_cache",
+        "passed": true
+      },
+      {
+        "name": "draft_does_not_change_active_version",
+        "passed": true
+      },
+      {
+        "name": "draft_does_not_affect_runtime_or_public_read",
+        "passed": true
+      },
+      {
+        "name": "publish_changes_both_nodes_and_invalidates_cache",
+        "passed": true
+      },
+      {
+        "name": "old_published_revision_rolls_back_across_nodes",
+        "passed": true
+      },
+      {
+        "name": "deactivation_invalidates_cache_and_public_access",
+        "passed": true
+      },
+      {
+        "name": "rollback_restores_active_public_value",
+        "passed": true
+      },
+      {
+        "name": "same_version_publish_has_one_winner",
+        "passed": true,
+        "responses": [
+          {
+            "status": 200,
+            "correlation": true,
+            "code": null
+          },
+          {
+            "status": 409,
+            "correlation": true,
+            "code": "SUMMER_PARAMETER_VERSION_CONFLICT"
+          }
+        ]
+      },
+      {
+        "name": "concurrent_publish_increments_version_once",
+        "passed": true
+      },
+      {
+        "name": "invalid_draft_has_unified_error_and_request_id",
+        "passed": true
+      },
+      {
+        "name": "read_only_and_anonymous_release_access_denied",
+        "passed": true
+      },
+      {
+        "name": "stale_publish_rejected_without_mutation",
+        "passed": true
+      },
+      {
+        "name": "history_exposes_draft_publish_rollback_and_inactive",
+        "passed": true
+      },
+      {
+        "name": "release_events_are_published_without_parameter_values",
+        "passed": true
+      },
+      {
+        "name": "publish_disable_rollback_and_draft_audited",
+        "passed": true
+      },
+      {
+        "name": "production_migrations_and_durable_history_exist",
+        "passed": true
+      },
+      {
+        "name": "jvm_restart_retains_effective_version_and_history",
+        "passed": true
+      }
+    ],
+    "businessSqlWrites": false,
+    "networkMocking": false,
+    "candidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+    "key": "acceptance.release.36c39b8251",
+    "sensitiveLogDetected": false,
+    "cleanup": "VERIFIED",
+    "counts": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "passed": true
+  },
+  "realChrome": {
+    "checks": [
+      {
+        "name": "actual_pkce_parameter_management_page",
+        "passed": true
+      },
+      {
+        "name": "page_reads_initial_published_history",
+        "passed": true
+      },
+      {
+        "name": "page_saves_draft_without_changing_current_version",
+        "passed": true
+      },
+      {
+        "name": "draft_is_visible_in_history_while_active_value_is_unchanged",
+        "passed": true
+      },
+      {
+        "name": "page_publishes_draft_and_displays_effective_value",
+        "passed": true
+      },
+      {
+        "name": "page_rolls_back_to_old_revision",
+        "passed": true
+      },
+      {
+        "name": "page_deactivates_with_current_version",
+        "passed": true
+      },
+      {
+        "name": "page_restores_active_version_after_deactivation",
+        "passed": true
+      },
+      {
+        "name": "reload_retains_effective_version_and_release_history",
+        "passed": true
+      },
+      {
+        "name": "invalid_draft_is_visible_with_request_id_and_keeps_input",
+        "passed": true
+      },
+      {
+        "name": "actual_reader_cannot_publish_and_sees_request_id",
+        "passed": true
+      },
+      {
+        "name": "no_unhandled_page_errors",
+        "passed": true
+      }
+    ],
+    "networkMocking": false,
+    "pageErrors": 0,
+    "complete": true
+  },
+  "browserReadbackAndCleanup": {
+    "stage": "complete",
+    "businessSqlWrites": false,
+    "browserExitCode": 0,
+    "effectiveVersion": 4,
+    "active": true,
+    "historyCount": 6,
+    "publishedValueRestored": true,
+    "sensitiveLogDetected": false,
+    "cleanup": "VERIFIED",
+    "uiInputCount": 242,
+    "changedUiInputs": [],
+    "passed": true
+  },
+  "componentRegression": {
+    "red": {
+      "tests": 4,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "evidence": "component-red-attempt02.log"
+    },
+    "green": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "newHistoryCases": 4,
+      "preservedProjectionAndErrorCases": 5,
+      "evidence": "component-green.log"
+    },
+    "typecheckExit": 0,
+    "buildExit": 0
+  },
+  "priorFullCheckReleaseJUnit": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "newBackendSourceChanges": false,
+  "uiSourceSha256": "2e8304b8cecb5c452f50be45a96fa00e5e23bad1e374ef61d039e1ca1b6ef8e5",
+  "sourceBoundary": "Two system-parameter UI regressions and page only; shared T07 summary missing-value rendering retained. T07 independent count endpoint is not in this change and #115 remains open. T16 menu UI changes excluded from this commit.",
+  "historicalFailure": {
+    "directory": ".git/summer4-closeout-20261015/t10-live/browser-attempt-01",
+    "completedChecks": 7,
+    "failureType": "TimeoutError",
+    "defect": "After deactivation history retained effective version2; rollback sent stale expectedVersion and returned409. Post API version3/INACTIVE. Original receipt and screenshots unchanged.",
+    "cleanup": "VERIFIED"
+  },
+  "acceptanceClauses": [
+    {
+      "clause": 1,
+      "title": "草稿与生效读取隔离",
+      "status": "PASS",
+      "evidence": "草稿20时两节点运行值与public仍为10；发布后同步20，实际页面草稿历史不影响当前值。"
+    },
+    {
+      "clause": 2,
+      "title": "发布、停用和回滚审计及缓存失效",
+      "status": "PASS",
+      "evidence": "实际Redis缓存版本和两JVM读取，发布后20、停用404、回滚10；MySQL成功审计与已投递outbox无参数值。"
+    },
+    {
+      "clause": 3,
+      "title": "并发冲突与旧版本回滚",
+      "status": "PASS",
+      "evidence": "相同期望版本双JVM一200一409且仅递增一次；历史旧修订回滚恢复10。"
+    },
+    {
+      "clause": 4,
+      "title": "管理历史与当前生效版本",
+      "status": "PASS",
+      "evidence": "Chrome保存草稿、发布、回滚、停用、直接再次回滚、reload，最终ACTIVE/version4/history6。"
+    },
+    {
+      "clause": 5,
+      "title": "迁移、真实HTTP及UI成功/拒绝/无效或故障",
+      "status": "PASS",
+      "evidence": "生产迁移、真实MySQL与独立Redis、18后端命名断言、12真实Chrome；readonly/anonymous拒绝、非法/陈旧发布失败与JVM重启。"
+    },
+    {
+      "clause": 6,
+      "title": "统一契约、关联ID及敏感边界",
+      "status": "PASS",
+      "evidence": "成功与错误信封、X-Request-Id/body requestId一致；SUMMER参数/权限错误、字段错误输入保留；敏感日志检测无命中。"
+    },
+    {
+      "clause": 7,
+      "title": "故事到验收追踪与实际计数",
+      "status": "PASS",
+      "evidence": "故事5/6/49/50，原票/页面缺陷红灯/专用组件红绿/实际复验/清理均留存，各层单列计数，既有用户改动保留。"
+    }
+  ],
+  "counting": "18 runtime,12 actual Chrome,9 component checks are separate sets. Prior 2 JUnit belong to the already completed688 full check, not newly run. First failed browser run is retained and not summed as green.",
+  "replayEvidenceRoot": ".git/summer4-closeout-20261015/t10-live",
+  "credentialsHandling": "Runtime values only in process memory/environment/stdin; no tokens, passwords, private keys or raw JVM logs in public receipts."
+}
