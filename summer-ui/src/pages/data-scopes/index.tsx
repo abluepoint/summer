@@ -57,7 +57,7 @@ function DataScopesContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
       const call = binding
         ? saveDataScopeBinding(enterpriseId, resource, bindingKind, bindingSubject, conditions)
         : saveDataScope(enterpriseId, resource, 'AND', [], conditions);
-      call.then((saved) => { if (!alive.current) return; Message.success(t['dataScopes.saved']); setPreview(null); if (!binding) { originalTrees.current = { ...originalTrees.current, [resource]: trees[resource] }; setPolicies((current) => current.map((policy) => policy.resource === resource ? saved as DataScopePolicy : policy)); } }).catch((failure) => { if (alive.current) setError(failure); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); });
+      call.then((saved) => { if (!alive.current) return; Message.success(t['dataScopes.saved']); setError(null); setPreview(null); if (!binding) { originalTrees.current = { ...originalTrees.current, [resource]: trees[resource] }; setPolicies((current) => current.map((policy) => policy.resource === resource ? saved as DataScopePolicy : policy)); } }).catch((failure) => { if (alive.current) setError(failure); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); });
     } catch { Message.error('条件树必须是有效 JSON'); }
   };
   const runPreview = (resource: string) => {

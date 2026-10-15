@@ -1,0 +1,174 @@
+{
+  "issue": 125,
+  "date": "2026-10-15",
+  "status": "READY_FOR_COORDINATOR_REVIEW",
+  "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+  "productionFiles": [
+    "summer-ui/src/pages/data-scopes/index.tsx"
+  ],
+  "productionChange": "Clear previous scope error after successful save",
+  "backendChanged": false,
+  "backendSourceFilesMatched": 16,
+  "stories": [
+    29,
+    30,
+    31,
+    32,
+    33
+  ],
+  "acceptanceCriteria": [
+    {
+      "number": 1,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    },
+    {
+      "number": 2,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    },
+    {
+      "number": 3,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    },
+    {
+      "number": 4,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    },
+    {
+      "number": 5,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    },
+    {
+      "number": 6,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    },
+    {
+      "number": 7,
+      "status": "PASS",
+      "detail": "See corresponding row in data-scopes.md"
+    }
+  ],
+  "batches": [
+    {
+      "name": "initial-993ad757-01",
+      "httpSqlChecks": {
+        "tests": 20,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserChecks": null,
+      "cleanup": "VERIFIED",
+      "sourceChanged": [],
+      "sensitiveLogDetected": false
+    },
+    {
+      "name": "initial-993ad757-02",
+      "httpSqlChecks": {
+        "tests": 204,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserChecks": null,
+      "cleanup": "VERIFIED",
+      "sourceChanged": [],
+      "sensitiveLogDetected": false
+    },
+    {
+      "name": "initial-993ad757-03",
+      "httpSqlChecks": {
+        "tests": 279,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserChecks": {
+        "tests": 6,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sourceChanged": [],
+      "sensitiveLogDetected": false,
+      "browserShutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    {
+      "name": "ui-fixed-993ad757-01",
+      "httpSqlChecks": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserChecks": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sourceChanged": [],
+      "sensitiveLogDetected": false,
+      "browserShutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    {
+      "name": "ui-shared-final-993ad757-01",
+      "httpSqlChecks": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserChecks": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sourceChanged": [],
+      "sensitiveLogDetected": false,
+      "browserShutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    }
+  ],
+  "finalBackendBatch": "initial-993ad757-03",
+  "finalUiBatch": "ui-shared-final-993ad757-01",
+  "uiTypecheckExit": 0,
+  "junitExecutedThisTask": false,
+  "finalUiRelatedSourceCount": 10,
+  "finalUiMode": "current_shared_workspace",
+  "migrations": [
+    "V15 success=1",
+    "V19 success=1",
+    "V29 success=1"
+  ],
+  "limitations": [
+    "Batch read means the existing multi-row summary projection; no independent ID-batch endpoint exists.",
+    "Org context switch tested after a fresh real login, not stale-token invalidation.",
+    "No owner reassignment was invented; server-generated creator/owner identities were used."
+  ],
+  "defectEvidence": {
+    "before": "initial-993ad757-03/valid_save_recovers_from_previous_error-red.png",
+    "after": "ui-shared-final-993ad757-01/browser-result.json"
+  },
+  "rawEvidenceRoot": ".git/summer4-closeout-20261015/t17-live",
+  "indexWrites": false,
+  "commitsOrPushes": false,
+  "issueMutations": false
+}
