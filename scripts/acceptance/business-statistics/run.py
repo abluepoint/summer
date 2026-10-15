@@ -69,7 +69,9 @@ try:
     if code!=200:raise RuntimeError('statistics_success_path_failed')
     check('bounded_default_window',27*86400<=datetime.timedelta.total_seconds(datetime.datetime.fromisoformat(initial['data']['window']['to'].replace('Z','+00:00'))-datetime.datetime.fromisoformat(initial['data']['window']['from'].replace('Z','+00:00')))<=31*86400)
     for query in ['unexpected=1','from=invalid','from=2026-01-02T00%3A00%3A00Z&to=2026-01-01T00%3A00%3A00Z','from=2020-01-01T00%3A00%3A00Z&to=2026-01-01T00%3A00%3A00Z','organizationId=foreign']:
-        call(admin,STATS+'?'+query,expected=403 if query.startswith('organizationId') else 400,fixture=False)
+        _,invalid,_=call(admin,STATS+'?'+query,expected=403 if query.startswith('organizationId') else 400,fixture=False)
+        if not query.startswith('organizationId'):
+            check('invalid_statistics_uses_framework_argument_code',(invalid.get('error') or {}).get('code')=='SUMMER_INVALID_ARGUMENT')
     call(admin,'/api/v1/enterprises/ent-foreign/statistics',expected=403)
     _,past,_=call(admin,STATS+'?to=2025-02-01T00%3A00%3A00Z');check('default_from_is_relative_to_requested_to',past['data']['window']['from']=='2025-01-02T00:00:00Z')
     result['stage']='persistent_tasks_and_audit'

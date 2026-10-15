@@ -1,0 +1,338 @@
+{
+  "issue": 142,
+  "date": "2026-10-16",
+  "status": "UI integration verified; event B revocation resolved by subsequent scoped backend remediation",
+  "uiIntegrationReady": true,
+  "issueClosureReady": true,
+  "candidateSha256": "4dd825e8df88aa35cb5f6b16563d39a659c26034513889d17f43c7be8fd944cf",
+  "productionFiles": {
+    "summer-ui/src/pages/roles/index.tsx": "c1697f626965c0c475d905f419832b261c6324077caf7a5aacf8c4df63ea3872",
+    "summer-ui/src/pages/authorization-events/index.tsx": "cb6dac6e2478c9d40aa9a39ba218fcb0ac77ecd2a026a552e8346349a3e74c28"
+  },
+  "frontendFrozenFiles": {
+    "summer-ui/src/pages/roles/index.tsx": "c1697f626965c0c475d905f419832b261c6324077caf7a5aacf8c4df63ea3872",
+    "summer-ui/src/pages/authorization-events/index.tsx": "cb6dac6e2478c9d40aa9a39ba218fcb0ac77ecd2a026a552e8346349a3e74c28",
+    "summer-ui/scripts/enterprise-page-integration-fixture.tsx": "168e93d101e53d33bd9b4bed9ff605353250716794697302a709de1b928c1fa5",
+    "summer-ui/scripts/verify-enterprise-page-integration.mjs": "dc75085291ed48155225f79595eda4d1ade6a83e0d19fbca0be14e578bdee6ff",
+    "summer-ui/scripts/verify-roles-component.mjs": "56f4ee7fd582fba7140ae90ae7831d37bdf29a91503094169a1bd6eb3bd641fb"
+  },
+  "component": {
+    "originalRed": {
+      "tests": 8,
+      "failures": 8,
+      "errors": 0,
+      "skipped": 0
+    },
+    "green": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "legacyGreen": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "duplicateCatalogRed": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "duplicateCatalogActualSourceGreen": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "boundary": "Synthetic identity and axios transport with actual React/Arco; duplicate probe uses actual source by default. In-memory proposed-key green is separate, not actual-source evidence. Legacy two-test fixture has explicit single-tenant hook stub."
+  },
+  "batches": [
+    {
+      "name": "native-01",
+      "resultPath": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/native-01/result.json",
+      "resultSha256": "e72c2f9c151c20c988be2e2ffdd1a368fea96de1558ae65cf0764998ef456038",
+      "counts": {
+        "tests": 35,
+        "failures": 2,
+        "errors": 2,
+        "skipped": 0
+      },
+      "originalRunnerResult": true,
+      "passed": false,
+      "failureCode": "fixture_http_409",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+      "executedScripts": {
+        "run.py": "50828ca6a85732e07c5e592b1aa3c005b6552ca4d1909c15a0ee8902c085ba0f",
+        "browser.mjs": "b6c9b8b76448a56477fcfc15242077ce4e92f2fa722a35b4888baf81601f465a",
+        "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+        "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+        "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc"
+      },
+      "browserCounts": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserResultSha256": "c7ab229b7f6c4596b1119feb62f997eb8816d251e7f0065af229cfae86a5dbcc"
+    },
+    {
+      "name": "native-02",
+      "resultPath": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/native-02/result.json",
+      "resultSha256": "05a5e081f0fc99df45975e5d1c279cc22d078114950e004a88d9ba637aa132dc",
+      "counts": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "originalRunnerResult": true,
+      "passed": false,
+      "failureCode": "authorize_status_401",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+      "executedScripts": {
+        "run.py": "e461d628a51dd711c9700cfd3b239e6b28b413ad3e23eb029c4c75d7b13b212e",
+        "browser.mjs": "6c4f11353c406a6e2733fc2bb6d4ac001bfec80e41272200d1f8d3c9ceb5e6ad",
+        "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+        "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+        "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc"
+      }
+    },
+    {
+      "name": "native-03",
+      "resultPath": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/native-03/result.json",
+      "resultSha256": "e8415fd8c4de3fc057c65b27714b7ee8fbb4d2bae4b9e287d3bbae5a6459c42a",
+      "counts": {
+        "tests": 26,
+        "failures": 0,
+        "errors": 2,
+        "skipped": 0
+      },
+      "originalRunnerResult": true,
+      "passed": false,
+      "failureCode": "browser_incomplete",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+      "executedScripts": {
+        "run.py": "ecf75c1b6f256b6e5f1bfe767694ec655a80256109acd3f05761e13c888f39b4",
+        "browser.mjs": "6c4f11353c406a6e2733fc2bb6d4ac001bfec80e41272200d1f8d3c9ceb5e6ad",
+        "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+        "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+        "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc"
+      },
+      "browserCounts": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserResultSha256": "12c8e2193b2b8704def1c8dc4b044607b39e6ff9668c864840163b74af6c6626"
+    },
+    {
+      "name": "native-04",
+      "resultPath": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/native-04/recovered-observations.json",
+      "resultSha256": "dd5a87741b92047c6bb40042056ad736468cfe80f9f63fc9e6bb79417783ada4",
+      "counts": null,
+      "originalRunnerResult": false,
+      "passed": false,
+      "failureCode": null,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+      "executedScripts": {
+        "run.py": "ecf75c1b6f256b6e5f1bfe767694ec655a80256109acd3f05761e13c888f39b4",
+        "browser.mjs": "f849ad642b8400745e141e26f06625d1ea8558010fa80716a94e5885a8809134",
+        "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+        "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+        "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc"
+      },
+      "browserCounts": {
+        "tests": 6,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserResultSha256": "d7fffe23205e5d2c601caaea2846dab6a4dc9239684c10a8517866751d5e35b4",
+      "observedFixtureCounts": {
+        "tests": 28,
+        "failures": 1
+      },
+      "cleanupRecovery": true
+    },
+    {
+      "name": "native-05-supplement",
+      "resultPath": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/native-05-supplement/result.json",
+      "resultSha256": "42b33384ba5ded65208922bb7060f8bb5d11e2a8a1d0bc649e41407ce34dab80",
+      "counts": {
+        "tests": 41,
+        "failures": 0,
+        "errors": 2,
+        "skipped": 0
+      },
+      "originalRunnerResult": true,
+      "passed": false,
+      "failureCode": "browser_incomplete",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+      "executedScripts": {
+        "run.py": "65717057e0d28e7d088fcbd1a564fae910a91ede6a430116f1cb7713be687557",
+        "browser.mjs": "16e662d06fd130ee69369d99cbcfbae3bfa22789811446129c5bf8bf2576d7c9",
+        "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+        "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+        "duplicate-catalog.mjs": "f8b45184b3e3ab3546d1aad4ddc8d2a1d481f731bd9058b26d3df724bd9125b1",
+        "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc"
+      },
+      "browserCounts": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserResultSha256": "cba44afc12c82fb2eb31a53be396626bd08c291d47af3b05c38aefaf2e6e56e6"
+    },
+    {
+      "name": "native-06-final-supplement",
+      "resultPath": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/native-06-final-supplement/result.json",
+      "resultSha256": "ffcd131dedb1d9f4ad94c3f25cb372f00eab1739b1ded00f1a9dc831dab56b1d",
+      "counts": {
+        "tests": 54,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "originalRunnerResult": true,
+      "passed": true,
+      "failureCode": null,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+      "executedScripts": {
+        "run.py": "956655fee9f1d2e8217d2c3650f3e1b3021cc1f9091fd877469a751f5d49ad90",
+        "browser.mjs": "3fd8e30b7a1cd9da6ff20b7cf08141f5a2fd221a15fc9fd2a99c18788bb89f1b",
+        "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+        "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+        "duplicate-catalog.mjs": "f8b45184b3e3ab3546d1aad4ddc8d2a1d481f731bd9058b26d3df724bd9125b1",
+        "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc"
+      },
+      "browserCounts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserResultSha256": "def102709f9f8ae2a42eb80ead60d4944b91939665b2bb409afd05a8bc04e223"
+    }
+  ],
+  "countsPolicy": "Keep every original batch; no summed full-matrix pass. native04 has no original runner result due finally timeout; recovered observations are explicitly separate. native05 six Chrome checks passed but later denial wait and outer runner errored; native06 47 fixture/HTTP plus7 Chrome=54/0/0/0 only covers final supplement.",
+  "backendFinding": {
+    "status": "new backend boundary finding; no Java edits",
+    "nativeEvidence": "native-05-supplement/browser-before-close.json and executed-scripts/run.py",
+    "observed": "After formal B binding PUT denies enterprise.roles.read (HTTP200), GET /api/authorization-events?enterpriseId=B still returns200 with old JWT; role-page B read denial already returned403 and cleared correctly.",
+    "source": [
+      "AuthorizationRequestInterceptor.java:60-73 chooses fixed ent-acme when no /enterprises path",
+      "AuthorizationChangeEventController.java:34 and47 calls requireEnterpriseMenu(B)",
+      "AuthorizationService.java:294-296 delegates require; line363 checks JWT capability/scope; active() does persistent membership check but no B persisted deny decision"
+    ],
+    "scope": "Event data and retry target explicit B correctly; this is persisted B revocation vs global Sample gate, not UI selection state or server org-context switching. Do not generalize all global endpoints.",
+    "nextUiAcceptance": "Use actual fixed-A persisted permission gate to obtain real403 while page selectsB; explicitly label A gate. Keep B revocation behavior as separate finding for root, not fixed.",
+    "rootDecisionNeeded": "Whether backend finding belongs in expanded P2 remediation or a separate tracked issue; existing authorization Java is frozen and untouched."
+  },
+  "protectedInputs": {
+    "count": 50,
+    "unchanged": true
+  },
+  "frontendGatesByRoot": {
+    "frontend02": "seven gates passed before unique-key fix; 330 captured inputs stable,39 Node tests",
+    "frontend03": "after v2 keys: typecheck/lint/production build exit0;330 captured inputs stable;other successful gates reused"
+  },
+  "boundaries": [
+    "UI selection remains in memory, no server org-context mutation.",
+    "No backend authorization edits or production backend build in this task.",
+    "Old statistics eleven batches and public reports retained.",
+    "native02 overlapped another root-owned runtime on same ports; OAuth401 cause unproven. Other failures not attributed to overlap.",
+    "All6 native environments cleaned; native04 cleanup recovered separately.",
+    "New event B persisted-deny finding is not claimed fixed by A-gate403 acceptance."
+  ],
+  "backendRemediation": {
+    "status": "verified",
+    "report": "enterprise-event-authorization-142.md",
+    "result": "enterprise-event-authorization-142-result.json",
+    "candidateSha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+    "boundary": "Historical backendFinding and old batches retained; new native01 117/0/2/0 followed by native02 42/0/0/0 with5Chrome. No single combined green matrix."
+  }
+}

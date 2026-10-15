@@ -1,8 +1,11 @@
 package com.abluepoint.summer.sample.statistics;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.ErrorCode;
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
+import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +24,12 @@ final class StatisticsController {
     private final StatisticsService service;
     private final RequestIdAccessor requestId;
 
-    StatisticsController(StatisticsService service, RequestIdAccessor requestId) {
+    private final ErrorStatusResolver errorStatus;
+
+    StatisticsController(StatisticsService service, RequestIdAccessor requestId, ErrorStatusResolver errorStatus) {
         this.service = service;
         this.requestId = requestId;
+        this.errorStatus = errorStatus;
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/statistics")
@@ -46,7 +52,7 @@ final class StatisticsController {
         } catch (AccessDeniedException exception) {
             return error(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", exception.getMessage());
         } catch (IllegalArgumentException exception) {
-            return error(HttpStatus.BAD_REQUEST, "SUMMER_STATISTICS_INVALID", exception.getMessage());
+            return error(CommonErrorCode.INVALID_ARGUMENT, exception.getMessage());
         } catch (RuntimeException exception) {
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "SUMMER_INTERNAL_ERROR", "Statistics query failed");
         }
@@ -71,6 +77,10 @@ final class StatisticsController {
     private <T> ResponseEntity<ApiResponse<T>> ok(T value) {
         return ResponseEntity.ok().header("X-Request-Id", requestId.currentRequestId())
                 .body(ApiResponse.success(value, requestId.currentRequestId()));
+    }
+
+    private <T> ResponseEntity<ApiResponse<T>> error(ErrorCode code, String message) {
+        return error(errorStatus.resolve(code), code.code(), message);
     }
 
     private <T> ResponseEntity<ApiResponse<T>> error(HttpStatus status, String code, String message) {

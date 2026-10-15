@@ -1,0 +1,199 @@
+{
+  "issue": 142,
+  "date": "2026-10-16",
+  "status": "verified_ready_for_root_integration",
+  "ready": true,
+  "sourceFreeze": {
+    "files": {
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationRequestInterceptor.java": "d7dee71937c4c6b12f80bb6a28344dee2f0652acd05a79a9ff71d01df1c2c031",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationChangeEventController.java": "2f9c7b8b556383ce2f1ad9c3c8223538bde2f3ac5a04ab31c92256f77dc5b5e4",
+      "summer-sample/src/test/java/com/abluepoint/summer/sample/authorization/AuthorizationEventTenantAuthorizationHttpTest.java": "50292a77bd4f04d2399d8c9d863f0bce23b620f46729f763c8f4cfb22d7d3691"
+    },
+    "tests": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "nativeStatus": "Await root candidate02 and exclusive port window. Old candidate not valid for backend fix.",
+    "authorizationServiceEditedByThisTask": false
+  },
+  "junitBatches": {
+    "red-01": {
+      "counts": {
+        "tests": 10,
+        "failures": 7,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 1,
+      "changedDuringExecution": [],
+      "resultSha256": "a4d5395eea8383197ae55f19a04694b765523539483bf6f0a4d5f51df13d0b68",
+      "xml": {
+        "red-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationEventTenantAuthorizationHttpTest.xml": "f35b56a0de9d0f9c0750c7d4182acee635404ef3337df1c9934588ab570ca741"
+      }
+    },
+    "red-02": {
+      "counts": {
+        "tests": 11,
+        "failures": 5,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 1,
+      "changedDuringExecution": [],
+      "resultSha256": "edb8b9140fffa6b6b19ec60f0607def206dea422b1f9ef26e99813667e36e34f",
+      "xml": {
+        "red-02/xml/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationEventTenantAuthorizationHttpTest.xml": "4b83850809f330860ba4f98b2773398de0bfffd8d1f669a86aced76f7da27170"
+      }
+    },
+    "green-01": {
+      "counts": {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "changedDuringExecution": [],
+      "resultSha256": "89fb903a06c4ade202bb7dbb3b2bcbc7686f0bc8dbed7b94a8e6fa6f733f9a44",
+      "xml": {
+        "green-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationChangeEventHttpTest.xml": "264bf3a75225929eed6eb1c4443116c16b44428fe4875c649738e61bb0308fa5",
+        "green-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationEventTenantAuthorizationHttpTest.xml": "21346fbce315436bc9646d8b5d0c97ddb217f11268ce5c390cdd03dec73a1011",
+        "green-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationRequestInterceptorTest.xml": "62d5ce67c8d1e6b21e35b4022027bf2f7beadabc962b43d9f3abf2b07750dd0f"
+      }
+    }
+  },
+  "native": {
+    "status": "required_scoped_checks_verified_across_preserved_batches",
+    "batches": [
+      {
+        "name": "native-01",
+        "counts": {
+          "tests": 117,
+          "failures": 0,
+          "errors": 2,
+          "skipped": 0
+        },
+        "browserCounts": {
+          "tests": 0,
+          "failures": 0,
+          "errors": 1,
+          "skipped": 0
+        },
+        "browserExit": 1,
+        "passed": false,
+        "changedInputs": [],
+        "cleanup": {
+          "schema_absent": true,
+          "container_absent": true,
+          "redis_isolated_container_destroyed": true,
+          "listeners": {
+            "20081": false,
+            "20082": false,
+            "20083": false,
+            "20573": false,
+            "20580": false
+          },
+          "app_account_absent": true
+        },
+        "resultSha256": "1e34b907442135b598c69602b69fb6ac4192bdd5f5e7237b913233f87b6d1bcb",
+        "browserResultSha256": "2e8c3f1acd2e322c20f48c9e321e7e29210f529853078ea4d168fc67d9a8817a",
+        "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+        "executedScripts": {
+          "event-authorization-browser.mjs": "46797699ebde7e5e7ad17cda1275b9d098aaab18c9de5101f89958036cc4ebe9",
+          "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+          "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+          "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc",
+          "event-authorization.py": "f6b23f4be8abdeebd0da505c5b9e995848388267011983107a2a22bbbb998f45"
+        },
+        "screenshots": {
+          "incomplete.png": "4b2a3d1ffc44ce411300f9a99aa39ae1ea428aa32e1af0b34ba9539855a44763"
+        }
+      },
+      {
+        "name": "native-02-browser-supplement",
+        "counts": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "browserCounts": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "browserExit": 0,
+        "passed": true,
+        "changedInputs": [],
+        "cleanup": {
+          "schema_absent": true,
+          "container_absent": true,
+          "redis_isolated_container_destroyed": true,
+          "listeners": {
+            "20081": false,
+            "20082": false,
+            "20083": false,
+            "20573": false,
+            "20580": false
+          },
+          "app_account_absent": true
+        },
+        "resultSha256": "f78f6bcca7cc26959903b18c47d5ea817d9b5e9f93507ac845e916fb4b9b3969",
+        "browserResultSha256": "b1fa578baf242c3290d33895eb8aa9d277b4ca6299b9b6dc2e127baf85cf96eb",
+        "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+        "executedScripts": {
+          "event-authorization-browser.mjs": "b306fc0e7cbf89effcf1c134c550c9043c691f1885a67f9fc82b28c2fe411e19",
+          "export-manifest.mjs": "f23235604dadee55dfe9df9affc13184f437e4436f1c02b582d185a0b0559755",
+          "ui-server.mjs": "2d057bf267a29efb4c47e4b0a1b7d6ccd8e7bdf4cf370e097e66774fe6522929",
+          "grants.py": "81eb6a7b2543bb99cc7916452ab6bf4fc7a34200bfcabbfb575d65342d9fe6b3",
+          "environment.py": "ec4a0a05dd48ed5433712ae6a1a991a8b7a6d4c2db12f3a41f87c335fc727edc",
+          "event-authorization.py": "7e945e29bfaa008def027f186c9facc6ffb553f5802eeb0e365381e7215c2f1d"
+        },
+        "screenshots": {
+          "events-B-before-revocation.png": "1399e1b833cf5ab8e99020d92bc0d8c055f915f3f460687240d9b1758d31b0ce",
+          "events-B-persisted-denied.png": "eddbe3964867f984b3d4932367728d3cf7750d38323bd60b6c59c9011e681f9c"
+        }
+      }
+    ],
+    "countsPolicy": "native01 has117 passed HTTP/fixture/listener checks but Chrome0/error1 plus runner error1:117/0/2/0 retained. Native02 repeats only necessary fixtures, registers actual manifest through admin HTTP and completes Chrome5:42/0/0/0. Do not sum as one whole green run.",
+    "menuFixture": "Native01 reader was first UI user in empty database and could not publish manifest. Native02 admin published actual routes version7/54items via HTTP200; event menu requires enterprise.roles.read. Browser route guard remains active; reader auto-publish403 is expected and does not substitute fixture registration.",
+    "visualInspection": "Both native02 before-revocation and denied screenshots viewed; currentB, Chinese labels, rows/empty state and requestId legible."
+  },
+  "boundaries": [
+    "Dedicated business tests use H2 persistence, synthetic JWT and MockMvc.",
+    "Dedicated otherGlobalControllerIgnoresEnterpriseQueryAndKeepsSampleBoundary mocks AuthorizationService; existing interceptor tests also use mocks.",
+    "18 is not real TCP/MySQL/PKCE acceptance.",
+    "AuthorizationService is independently owned; this task did not edit it.",
+    "UI v2 and frontend03 remain frozen.",
+    "Old native05 B deny200 and native06 A gate54 green remain historical and do not prove this backend fix.",
+    "Both native environments clean; ownership verified by JVM/UI listener PIDs. No full-gate or backend build by author."
+  ],
+  "candidate": {
+    "candidateJar": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar",
+    "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+    "metadataSha256": {
+      "candidate-inputs.json": "21d0dbb56b3222a425da6cfe2624bc1a63cf5f453b08462877acd6483315ee0e",
+      "candidate-build.json": "da9b834b3a9dcc4c78a8e9b9c99e6a13cc06e3b88baf4b8ef444317a4ac6ff2f",
+      "migration-count-correction.json": "94ed1b26c7d93eb43bfe67d3284637b2983c0ac90f00538d5c51d50b2c9ff829"
+    },
+    "validatorCorrection": {
+      "status": "PASSED_AFTER_VALIDATOR_CORRECTION",
+      "gradleBuildSuccessful": true,
+      "originalResultPreserved": true,
+      "originalFailureCause": "Validator incorrectly required all migration resources count39; MySQL39 plus other database1 gives total40; all resources already matched source",
+      "jarSha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+      "allMigrationResourcesMatchSource": true,
+      "mysqlMigrationCount": 39,
+      "totalMigrationCount": 40,
+      "otherResources": [
+        "db/migration/V1__audit_ledger.sql"
+      ],
+      "inputCount": 543,
+      "changedDuringAttestation": [],
+      "sourceFreezeVerified": true
+    }
+  }
+}

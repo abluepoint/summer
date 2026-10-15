@@ -1,0 +1,119 @@
+{
+  "issue": 142,
+  "date": "2026-10-16",
+  "status": "TARGETED_VALIDATION_PASSED",
+  "reviewFinding": "STD-DELTA-01",
+  "change": "Invalid statistics arguments reuse CommonErrorCode.INVALID_ARGUMENT through ErrorStatusResolver.",
+  "scope": [
+    "StatisticsController invalid-argument mapping",
+    "StatisticsHttpTest exact error and correlation regressions",
+    "Future native error assertion; independent targeted native script"
+  ],
+  "junit": {
+    "red-01": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "green-01": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "junitBoundary": "Spring/H2 with managed synthetic JWT fixtures; actual sanitized XML archived in unique directories. Not real PKCE evidence.",
+  "sourceFreeze": ".git/summer4-closeout-20261015/statistics-standards-fix-01/MAIN_SOURCE_FROZEN.json",
+  "buildRequest": ".git/summer4-closeout-20261015/statistics-standards-fix-01/BUILD-REQUEST.json",
+  "runtime": {
+    "status": "PASSED",
+    "executed": true,
+    "counts": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "processExit": 0,
+    "candidateSha256": "6fbb80b774b51f98250b006eee243f6a1153086c77de2d08889e055a1f9c953b",
+    "candidate": ".git/summer4-closeout-20261015/t36-final/frozen-build-01/candidate.jar",
+    "candidateInputManifest": ".git/summer4-closeout-20261015/t36-final/frozen-build-01/candidate-inputs.json",
+    "mainInputsMatchCandidate": true,
+    "script": "scripts/acceptance/business-statistics/standards-probe.py",
+    "scriptSha256": "c89b4f1d99f6b754b6272c34be80ef199c89b1ac71bfb6ac99d3f3a9836b50a1",
+    "result": ".git/summer4-closeout-20261015/statistics-standards-fix-01/runtime-01/result.json",
+    "resultSha256": "a3ce4dd8da7fa1650300b3444bd8c348e1fc9b554bd0c22fb499e098b5018fb0",
+    "cleanup": ".git/summer4-closeout-20261015/statistics-standards-fix-01/runtime-01/cleanup.json",
+    "cleanupSha256": "50eecbcddd7fe73e0db72a0c3a011217a4a6c21fe7726945756ed2c4d69f01df",
+    "execution": ".git/summer4-closeout-20261015/statistics-standards-fix-01/runtime-01/execution.json",
+    "realHttp": true,
+    "realMySql": true,
+    "realPkce": true,
+    "legacyCompatibility": false,
+    "networkMocking": false,
+    "businessSqlWrites": false,
+    "changedInputs": [],
+    "sensitiveLogDetected": false,
+    "cleanupVerified": true,
+    "checks": [
+      {
+        "name": "reversed_window_uses_common_invalid_argument",
+        "passed": true,
+        "httpStatus": 400,
+        "code": "SUMMER_INVALID_ARGUMENT",
+        "requestId": "adb53310-c9f9-4cfa-b544-ab7912bc6907",
+        "sameRequestId": true,
+        "requestIdMatchesContract": true
+      },
+      {
+        "name": "overlong_window_uses_common_invalid_argument",
+        "passed": true,
+        "httpStatus": 400,
+        "code": "SUMMER_INVALID_ARGUMENT",
+        "requestId": "statistics_invalid__window",
+        "sameRequestId": true,
+        "requestIdMatchesContract": true
+      },
+      {
+        "name": "invalid_iso_date_uses_common_invalid_argument",
+        "passed": true,
+        "httpStatus": 400,
+        "code": "SUMMER_INVALID_ARGUMENT",
+        "requestId": "statistics-date",
+        "sameRequestId": true,
+        "requestIdMatchesContract": true
+      },
+      {
+        "name": "unknown_parameter_stays_field_contract_error",
+        "passed": true,
+        "httpStatus": 400,
+        "code": "SUMMER_INVALID_ARGUMENT",
+        "requestId": "statistics-unknown",
+        "sameRequestId": true,
+        "requestIdMatchesContract": true
+      },
+      {
+        "name": "overlong_date_stays_field_contract_error",
+        "passed": true,
+        "httpStatus": 400,
+        "code": "SUMMER_INVALID_ARGUMENT",
+        "requestId": "statistics-length",
+        "sameRequestId": true,
+        "requestIdMatchesContract": true
+      },
+      {
+        "name": "exact_366_day_window_is_accepted",
+        "passed": true,
+        "httpStatus": 200,
+        "code": null,
+        "requestId": "statistics-boundary",
+        "sameRequestId": true,
+        "requestIdMatchesContract": true
+      }
+    ]
+  },
+  "historicalEvidence": "Original 11 T34 batches, runtime162, Chrome8/5, shared-context batches10/11 and the original review reports remain historical and unchanged. No matrix or Chrome replay.",
+  "futureFullScript": "run.py only strengthens exact INVALID_ARGUMENT assertions; not rerun as a full suite.",
+  "commitPushIssueOwner": "root"
+}

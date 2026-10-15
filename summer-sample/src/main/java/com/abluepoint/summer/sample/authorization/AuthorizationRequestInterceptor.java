@@ -58,6 +58,11 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         }
         if (isApplicantEndpoint(method, permissionCode, jwt)) return true;
         String requestedEnterprise = enterpriseFromPath(request.getRequestURI());
+        if (AuthorizationChangeEventController.class.isAssignableFrom(method.getBeanType())) {
+            // This global-looking route explicitly addresses one enterprise's outbox.
+            // Other Sample/platform routes retain their existing fixed boundary.
+            requestedEnterprise = AuthorizationChangeEventController.requestedEnterpriseId(request.getParameterValues("enterpriseId"));
+        }
         if (requestedEnterprise != null && !hasActiveMembership(jwt, requestedEnterprise)) {
             throw new AccessDeniedException("Inactive enterprise membership");
         }

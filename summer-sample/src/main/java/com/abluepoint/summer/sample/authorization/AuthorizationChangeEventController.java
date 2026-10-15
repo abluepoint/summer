@@ -17,6 +17,17 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/authorization-events")
 class AuthorizationChangeEventController {
+    private static final String DEFAULT_ENTERPRISE_ID = "ent-acme";
+
+    /** Match the controller's default binding, while rejecting ambiguous query values before authorization. */
+    static String requestedEnterpriseId(String[] values) {
+        if (values == null || values.length == 1 && values[0].isEmpty()) return DEFAULT_ENTERPRISE_ID;
+        if (values.length != 1 || !values[0].matches("[A-Za-z0-9_-]{1,80}")) {
+            throw new AccessDeniedException("A single valid enterpriseId is required");
+        }
+        return values[0];
+    }
+
     private final AuthorizationChangeEventService service;
     private final AuthorizationService authorization;
     private final RequestIdAccessor requestId;
@@ -27,7 +38,7 @@ class AuthorizationChangeEventController {
     @GetMapping
     @RawResponse
     @ResourcePermission("enterprise.roles.read")
-    ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(defaultValue = "ent-acme") String enterpriseId,
+    ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                             @RequestParam(required = false) String resourceType,
                                                             Authentication authentication) {
         try {
@@ -41,7 +52,7 @@ class AuthorizationChangeEventController {
     @RawResponse
     @ResourcePermission("enterprise.roles.write")
     ResponseEntity<ApiResponse<AuthorizationChangeEventView>> retry(@PathVariable String eventId,
-                                                                      @RequestParam(defaultValue = "ent-acme") String enterpriseId,
+                                                                      @RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                                       Authentication authentication) {
         try {
             authorization.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.write");

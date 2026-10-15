@@ -1,4 +1,5 @@
 // Component regression: real React/Arco/roles API, with an explicit in-memory HTTP adapter.
+// Identity selection is explicitly fixed to ent-acme here; the separate integration fixture exercises the real shared hook.
 // This supplements (and never replaces) the separate real-server Chrome acceptance.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -31,7 +32,7 @@ axios.defaults.adapter = async config => {
 };
 ReactDOM.render(<GlobalContext.Provider value={{lang:'zh-CN'}}><Roles/></GlobalContext.Provider>,document.getElementById('root'));
 `;
-const compiled = await build({stdin:{contents:entry,resolveDir:root,loader:'tsx'},bundle:true,write:false,target:'es2020',format:'iife',define:{'process.env.NODE_ENV':'"test"'},plugins:[{name:'source-alias',setup(b){b.onResolve({filter:/^@\//},args=>({path:root+'src/'+args.path.slice(2)+'.ts'}));}}]});
+const compiled = await build({stdin:{contents:entry,resolveDir:root,loader:'tsx'},bundle:true,write:false,target:'es2020',format:'iife',define:{'process.env.NODE_ENV':'"test"'},plugins:[{name:'fixture-identity',setup(b){b.onResolve({filter:/useActiveEnterprise$/},()=>({path:'fixture-identity',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`const noop=()=>{}; export default function(){return {enterpriseId:'ent-acme',options:[{label:'ent-acme',value:'ent-acme'}],ready:true,busy:false,setDirty:noop,setBusy:noop,change:noop};}`,loader:'js'}));}},{name:'source-alias',setup(b){b.onResolve({filter:/^@\//},args=>({path:root+'src/'+args.path.slice(2)+'.ts'}));}}]});
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/bundle.js'?'text/javascript':'text/html');res.end(req.url==='/bundle.js'?compiled.outputFiles[0].text:'<div id="root"></div><script src="/bundle.js"></script>');});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
@@ -61,4 +62,4 @@ try {
    assert.deepEqual(await page.evaluate(()=>window.fixture.denied),['GET:/api/customers']);
   }finally{await page.close();}
  });
-}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+}finally{await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}

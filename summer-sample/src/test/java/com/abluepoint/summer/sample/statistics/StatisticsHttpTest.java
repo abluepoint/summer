@@ -2,6 +2,8 @@ package com.abluepoint.summer.sample.statistics;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -82,10 +84,25 @@ class StatisticsHttpTest {
         mockMvc.perform(get(URL).queryParam("to","2025-02-01T00:00:00Z").with(admin()))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.window.from").value("2025-01-02T00:00:00Z"));
     }
-    @Test void rejectsUnknownParametersAndInvalidWindows() throws Exception {
-        mockMvc.perform(get(URL).queryParam("typo","1").with(admin())).andExpect(status().isBadRequest());
-        mockMvc.perform(get(URL).queryParam("from","2026-01-02T00:00:00Z").queryParam("to","2026-01-01T00:00:00Z").with(admin()))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SUMMER_STATISTICS_INVALID"));
+    @Test void rejectsUnknownParameters() throws Exception {
+        mockMvc.perform(get(URL).queryParam("typo","1").with(admin()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"));
+    }
+    @ParameterizedTest(name = "invalid window from={0} to={1}")
+    @CsvSource({
+        "2026-01-02T00:00:00Z,2026-01-01T00:00:00Z",
+        "2024-01-01T00:00:00Z,2026-01-01T00:00:00Z",
+        "not-an-instant,2026-01-01T00:00:00Z"
+    })
+    void invalidWindowsUseFrameworkInvalidArgument(String from, String to) throws Exception {
+        var response = mockMvc.perform(get(URL).queryParam("from",from).queryParam("to",to)
+                .header("X-Request-Id","statistics invalid:/window").with(admin()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"))
+            .andExpect(jsonPath("$.requestId").value("statistics_invalid__window"))
+            .andReturn().getResponse();
+        org.assertj.core.api.Assertions.assertThat(response.getHeader("X-Request-Id")).isEqualTo("statistics_invalid__window");
     }
     private org.springframework.test.web.servlet.ResultActions query() throws Exception {
         return mockMvc.perform(get(URL).queryParam("from",START.toString()).queryParam("to",START.plusSeconds(60).toString()).with(admin()));
