@@ -112,7 +112,7 @@
   "limitations": [
     "仓库级check及其他真实页面验收另行记录，不能由定向用例推定全部通过。",
     "T02/T03/T04在2859固定候选完成独立验收，提交后按依赖关闭；仓库级H2隔离后完整重跑仍待执行。",
-    "T12/T13真实API112项通过；退出/自然超时流程补验通过，组织刷新回显最新修复仍待真实身份页面重放。T14生产协议专项4项、后端16项和Chrome6项通过，但管理组合映射完整性诊断仍待独立修复。",
+    "T12/T13固定2859候选实际API112/112、修复后CRUD及拒绝页面Chrome22/22、退出/自然超时Chrome10/10；T14管理组合映射修复定向25/0/0/0，仍待新候选实际验收。",
     "T24实际客户端修改、禁用重启及协议行为还需独立验收。",
     "真实测试运行于随机隔离schema/会话namespace；不代表生产部署或微服务拆分验收。"
   ],
@@ -228,6 +228,63 @@
       110,
       111,
       112
+    ]
+  },
+  "identityCurrentCandidate": {
+    "candidateSha256": "2859eaad1029a271db4e44e11911b322af1374b2adaf9dad539dc9c69307872c",
+    "api": {
+      "checks": 112,
+      "passed": 112,
+      "failed": 0
+    },
+    "apiCleanup": "VERIFIED",
+    "browser": {
+      "checks": 22,
+      "passed": 22,
+      "failed": 0,
+      "pageErrors": 0,
+      "complete": true,
+      "evidence": "ui-2859eaad-02/browser-permissions.json",
+      "cleanup": "VERIFIED",
+      "uiInputs": {
+        "files": 244,
+        "stable": true,
+        "changedPaths": []
+      }
+    },
+    "status": "READY_FOR_PARENT_INTEGRATION",
+    "mainAndJUnitFrozen": true,
+    "protocolBrowser": {
+      "checks": 10,
+      "passed": 10,
+      "failed": 0,
+      "pageErrors": 0,
+      "complete": true,
+      "cleanup": "VERIFIED",
+      "evidence": "protocol-2859eaad-01/browser-permissions.json"
+    },
+    "sourcePasswordAudit": "password-source-audit.json",
+    "originalAcMatrix": "AC-MATRIX-2859eaad.md",
+    "historicalBrowser": {
+      "checks": 19,
+      "passed": 18,
+      "failed": 1,
+      "pageErrors": 0,
+      "complete": true
+    },
+    "testIsolationRepair": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sourceFrozen": "H2-ISOLATION-SOURCE-FROZEN.json"
+    },
+    "allowlist": "fix-files.txt",
+    "manifest": "fix-manifest.json",
+    "allowlistPaths": 31,
+    "pending": [
+      "Parent final whole-repository check after test-only H2 isolation fix",
+      "Parent dependency/Issue closure; no local Issue mutation"
     ]
   }
 }

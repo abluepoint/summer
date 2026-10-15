@@ -5,11 +5,12 @@ const req=createRequire(process.cwd()+'/package.json');
 const {chromium}=req('playwright-core');
 const base='http://127.0.0.1:21573',out=process.env.SUMMER_IDENTITY_EVIDENCE_DIR;
 const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+process.on('SIGTERM',()=>browser.close().finally(()=>process.exit(1)));
 const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(20000);
 const result={phase:'permission-probe',networkMocking:false,checks:[],pageErrors:0};
 let stage='login',safeScreenshot=false;
 page.on('pageerror',()=>result.pageErrors++);
-function check(name,passed){result.checks.push({name,passed:Boolean(passed)});}
+function check(name,passed,facts={}){result.checks.push({name,passed:Boolean(passed),...facts});}
 try {
  const usersReady=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/users'&&r.status()===200);
  await page.goto(base+'/auth-users');
@@ -31,6 +32,14 @@ try {
  check('authorized_organization_create_control_visible',await page.getByRole('button',{name:'新建组织',exact:true}).count()===1);
  check('authorized_member_directory_visible',await page.getByText('租户成员',{exact:true}).count()===1);
  await page.screenshot({path:resolve(out,'organizations-permissions.png'),fullPage:true});
+ if(process.env.SUMMER_IDENTITY_UI_FLOWS==='1'&&result.checks.every(c=>c.passed)) {
+  const {runFlows}=await import('./flows.mjs');
+  await runFlows(page,{base,out,check,setStage:value=>stage=value,setSafeScreenshot:value=>safeScreenshot=value});
+ }
+ if(process.env.SUMMER_IDENTITY_PROTOCOL_FLOWS==='1'&&result.checks.every(c=>c.passed)) {
+  const {runProtocol}=await import('./protocol.mjs');
+  await runProtocol(page,{base,out,check,setStage:value=>stage=value,setSafeScreenshot:value=>safeScreenshot=value});
+ }
  result.complete=true;
 } catch(error) {
  result.complete=false;result.failureType=error.name;result.failureStage=stage;
