@@ -19,13 +19,17 @@ class ResilienceDiagnosticsHttpTest {
     void exposes_resilience_state_and_metrics_without_secret_values() throws Exception {
         http.perform(get("/internal/v1/diagnostics/resilience")
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(token -> token.claim("active_enterprise_id", "ent-acme")
+                                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of(
+                                                "enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.operations").isArray())
                 .andExpect(jsonPath("$.data.operations[0].name").isString())
                 .andExpect(jsonPath("$.data.operations[0].circuitBreaker").isString())
-                .andExpect(jsonPath("$.data.operations[0].calls").isNumber());
+                .andExpect(jsonPath("$.data.operations[0].calls").isNumber())
+                .andExpect(jsonPath("$.data.operations[0].retryAttempts").isNumber());
     }
 
     @Test

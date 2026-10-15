@@ -21,8 +21,13 @@ class ResilientReadServiceTest {
             if (attempts.incrementAndGet() < 2) throw new IllegalStateException("temporary");
             return "v1";
         }, () -> true)).isEqualTo("v1");
+        assertThat(attempts).hasValue(2);
+        assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS))
+                .findFirst().orElseThrow().retryAttempts()).isEqualTo(1);
         String fallback = service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException("down"); }, () -> true);
         assertThat(fallback).isEqualTo("v1");
+        assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS))
+                .findFirst().orElseThrow().retryAttempts()).isEqualTo(2);
         assertThat(service.snapshot().stream()
                 .filter(view -> view.name().equals(ResilientReadService.PARAMETERS))
                 .findFirst().orElseThrow().fallbacks()).isEqualTo(1);
@@ -90,6 +95,7 @@ class ResilientReadServiceTest {
     void concurrentBulkheadRejectionIsCountedAndDoesNotBlockOtherOperations() throws Exception {
         var p = new ResilienceProperties();
         p.setBulkhead(1);
+        p.setCircuitWindow(2);
         p.setMaxAttempts(1);
         p.setTimeout(Duration.ofSeconds(5));
         var service = service(p);
@@ -103,11 +109,66 @@ class ResilientReadServiceTest {
         }, () -> true));
         try {
             assertThat(started.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
-            assertThat(service.read(ResilientReadService.PARAMETERS, "warm", () -> "unexpected", () -> true)).isEqualTo("safe");
+            for (int i = 0; i < 3; i++) {
+                assertThat(service.read(ResilientReadService.PARAMETERS, "warm", () -> "unexpected", () -> true)).isEqualTo("safe");
+            }
+            assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS))
+                    .findFirst().orElseThrow().circuitBreaker()).isEqualTo("CLOSED");
             assertThat(service.read(ResilientReadService.DICTIONARIES, "independent", () -> "dictionary", () -> true)).isEqualTo("dictionary");
-            assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow().rejected()).isEqualTo(1);
+            assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow().rejected()).isEqualTo(3);
         } finally { release.countDown(); }
         assertThat(occupied.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo("done");
+    }
+
+    @Test
+    void callerTimeoutsOpenCircuitEvenWhenDependencyEventuallySucceeds() throws Exception {
+        var p = new ResilienceProperties();
+        p.setTimeout(Duration.ofMillis(100));
+        p.setMaxAttempts(1);
+        p.setCircuitWindow(2);
+        p.setCircuitOpenWait(Duration.ofMinutes(1));
+        p.setBulkhead(2);
+        var service = service(p);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var finished = new java.util.concurrent.CountDownLatch(2);
+        var calls = new AtomicInteger();
+        java.util.function.Supplier<String> slow = () -> {
+            calls.incrementAndGet();
+            try { release.await(); return "late success"; }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+            finally { finished.countDown(); }
+        };
+        try {
+            for (int i = 0; i < 2; i++) {
+                assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "cold", slow))
+                        .isInstanceOf(DependencyDegradedException.class);
+            }
+            var view = service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow();
+            assertThat(view.timedOut()).isEqualTo(2);
+            assertThat(view.circuitBreaker()).isEqualTo("OPEN");
+            assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "cold", slow))
+                    .isInstanceOf(DependencyDegradedException.class);
+            assertThat(calls).hasValue(2);
+        } finally { release.countDown(); }
+        assertThat(finished.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThat(service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow().circuitBreaker()).isEqualTo("OPEN");
+    }
+
+    @Test
+    void localRateRejectionsDoNotOpenDependencyCircuit() {
+        var p = new ResilienceProperties();
+        p.setCircuitWindow(2);
+        p.setRateLimit(1);
+        p.setRateLimitPeriod(Duration.ofMinutes(1));
+        p.setTimeout(Duration.ofSeconds(5));
+        var service = service(p);
+        assertThat(service.read(ResilientReadService.PARAMETERS, "key", () -> "safe", () -> true)).isEqualTo("safe");
+        for (int i = 0; i < 3; i++) {
+            assertThat(service.read(ResilientReadService.PARAMETERS, "key", () -> "must not run", () -> true)).isEqualTo("safe");
+        }
+        var view = service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow();
+        assertThat(view.rejected()).isEqualTo(3);
+        assertThat(view.circuitBreaker()).isEqualTo("CLOSED");
     }
 
     private static ResilientReadService service(ResilienceProperties p) {

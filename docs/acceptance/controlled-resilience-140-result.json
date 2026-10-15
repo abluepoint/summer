@@ -1,0 +1,412 @@
+{
+  "issue": 140,
+  "status": "APPROVED_FUNCTIONAL_ACCEPTANCE",
+  "stories": [
+    43,
+    44
+  ],
+  "candidateSha256": "a0ecd6e1af2d45453f7575b6a00fed246c4a2cddf1403796846833a4ca7a905c",
+  "buildInputs": 541,
+  "batches": {
+    "revocation-red-01": {
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "revocation-green-01": {
+      "exit": 1,
+      "counts": {
+        "tests": 19,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "revocation-green-02": {
+      "exit": 0,
+      "counts": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "circuit-red-01": {
+      "exit": 1,
+      "counts": {
+        "tests": 2,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "circuit-green-01": {
+      "exit": 0,
+      "counts": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "retry-metrics-red-01": {
+      "exit": 1,
+      "counts": {
+        "tests": 2,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "retry-metrics-green-01": {
+      "exit": 0,
+      "counts": {
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "native-attempt-01": {
+      "counts": {
+        "tests": 88,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false,
+      "cleanup": "VERIFIED",
+      "changedInputs": [],
+      "sensitiveLogDetected": false
+    },
+    "native-attempt-02": {
+      "counts": {
+        "tests": 88,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false,
+      "cleanup": "VERIFIED",
+      "changedInputs": [],
+      "sensitiveLogDetected": false
+    },
+    "native-attempt-03-circuit": {
+      "counts": {
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false,
+      "cleanupError": "TimeoutExpired",
+      "changedInputs": [],
+      "sensitiveLogDetected": false
+    }
+  },
+  "supplementalCleanup": {
+    "status": "VERIFIED",
+    "businessTestsRerun": 0,
+    "originalResultUnchanged": true,
+    "originalResultSha256": "ac8d50fdd7a3ded875fe6e3bd168648dd25a6fa52616962a3d0807bf500f6cfb",
+    "originalCleanupError": "TimeoutExpired",
+    "ownedNodePidsStopped": [],
+    "cleanup": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "26081": false,
+        "26082": false,
+        "26083": false,
+        "26573": false,
+        "26580": false
+      },
+      "app_account_absent": true
+    }
+  },
+  "countsAreNotSummed": true,
+  "lastNativeBusinessAllGreen": true,
+  "lastNativeOriginalExit": 1,
+  "fullFinalRunnerGreen": false,
+  "junitOriginalXmlArchived": true,
+  "nativeNetworkMocking": false,
+  "nativeBusinessSqlWrites": false,
+  "traceability": [
+    {
+      "defect": "old JWT retained diagnostics access after persisted revocation",
+      "evidence": "revocation-red-01",
+      "fix": "ResilienceDiagnosticsController persistent authorization decision",
+      "verification": [
+        "revocation-green-02",
+        "retry-metrics-green-01",
+        "native-attempt-02"
+      ]
+    },
+    {
+      "defect": "caller timeouts not counted by breaker around eventual loader success",
+      "evidence": [
+        "native-attempt-01",
+        "circuit-red-01"
+      ],
+      "fix": "breaker wraps caller-visible TimeLimiter result; local rejections ignored",
+      "verification": [
+        "circuit-green-01",
+        "native-attempt-02",
+        "native-attempt-03-circuit"
+      ]
+    },
+    {
+      "defect": "diagnostics exposes retry configuration without observed retry attempts",
+      "evidence": "retry-metrics-red-01",
+      "fix": "actual Retry event counter and diagnostic field",
+      "verification": [
+        "retry-metrics-green-01",
+        "native-attempt-03-circuit"
+      ]
+    }
+  ],
+  "qualifications": [
+    "native-attempt-02 HALF_OPEN is valid recovery-probe state; original OPEN-only assertion retained as failed",
+    "native-attempt-03 original 41/0/0/0 business complete but UNPAUSE cleanup TimeoutExpired and exit1; separate verified cleanup without rerunning business, original result unchanged",
+    "current run.py differs after execution only in finally cleanup path; actual executed snapshot retained",
+    "JUnit batches overlap and are not summed; latest 11 covers service/diagnostic/revocation while previous 10 HTTP proof scenarios remain separately verified"
+  ],
+  "frontend": {
+    "runtimeCounts": {
+      "tests": 51,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "actualChromeCounts": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "runtimeExitCode": 0,
+    "browserExitCode": 0,
+    "chromeForced": true,
+    "chromeExited": true,
+    "actualMetrics": [
+      {
+        "name": "dictionaries.read",
+        "circuitBreaker": "CLOSED",
+        "retryMaxAttempts": 2,
+        "rateLimitForPeriod": 1,
+        "bulkheadMaxConcurrent": 1,
+        "calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "fallbacks": 0,
+        "rejected": 0,
+        "timedOut": 0,
+        "retryAttempts": 0,
+        "lastFailureAt": null
+      },
+      {
+        "name": "system-parameters.read",
+        "circuitBreaker": "OPEN",
+        "retryMaxAttempts": 2,
+        "rateLimitForPeriod": 1,
+        "bulkheadMaxConcurrent": 1,
+        "calls": 5,
+        "successes": 2,
+        "failures": 3,
+        "fallbacks": 2,
+        "rejected": 2,
+        "timedOut": 1,
+        "retryAttempts": 0,
+        "lastFailureAt": "2026-10-15T17:15:06.487797Z"
+      }
+    ],
+    "responseSequence": [
+      {
+        "status": 200,
+        "requestId": "9a817bd2-6cec-41e6-920e-262464961d55",
+        "correlated": true,
+        "code": null
+      },
+      {
+        "status": 200,
+        "requestId": "f0e0c89d-a744-444b-8227-28c36509d3a3",
+        "correlated": true,
+        "code": null
+      },
+      {
+        "status": 403,
+        "requestId": "5e9828c6-84e2-4c6e-861b-995fb7e9e5bb",
+        "correlated": true,
+        "code": "SUMMER_FORBIDDEN"
+      },
+      {
+        "status": 200,
+        "requestId": "5476d24c-ac9c-4bf9-94cd-8c7a12b0eb7d",
+        "correlated": true,
+        "code": null
+      }
+    ],
+    "checks": [
+      {
+        "name": "real_pkce_diagnostics_read_is_correlated",
+        "passed": true
+      },
+      {
+        "name": "both_operation_rows_render_exact_server_metrics",
+        "passed": true
+      },
+      {
+        "name": "real_fault_metrics_are_nonzero_and_circuit_open",
+        "passed": true
+      },
+      {
+        "name": "diagnostics_request_id_is_visible",
+        "passed": true
+      },
+      {
+        "name": "recovery_metrics_render_closed_circuit",
+        "passed": true
+      },
+      {
+        "name": "same_browser_diagnostics_permission_revocation_rejects",
+        "passed": true
+      },
+      {
+        "name": "denial_displays_request_id",
+        "passed": true
+      },
+      {
+        "name": "denial_hides_previous_metrics",
+        "passed": true
+      },
+      {
+        "name": "explicit_retry_recovers_after_permission_restore",
+        "passed": true
+      },
+      {
+        "name": "successful_retry_clears_error_feedback",
+        "passed": true
+      },
+      {
+        "name": "diagnostics_never_replays_business_writes",
+        "passed": true
+      },
+      {
+        "name": "no_unhandled_page_errors",
+        "passed": true
+      }
+    ],
+    "batches": {
+      "attempt-01": {
+        "runtimeCounts": {
+          "tests": 8,
+          "failures": 1,
+          "errors": 1,
+          "skipped": 0
+        },
+        "browserCounts": null,
+        "cleanup": "VERIFIED",
+        "sensitiveLogDetected": false
+      },
+      "attempt-02": {
+        "runtimeCounts": {
+          "tests": 21,
+          "failures": 0,
+          "errors": 1,
+          "skipped": 0
+        },
+        "browserCounts": null,
+        "cleanup": "VERIFIED",
+        "sensitiveLogDetected": false
+      },
+      "attempt-03": {
+        "runtimeCounts": {
+          "tests": 21,
+          "failures": 0,
+          "errors": 1,
+          "skipped": 0
+        },
+        "browserCounts": null,
+        "cleanup": "VERIFIED",
+        "sensitiveLogDetected": false
+      },
+      "attempt-04": {
+        "runtimeCounts": {
+          "tests": 24,
+          "failures": 1,
+          "errors": 1,
+          "skipped": 0
+        },
+        "browserCounts": null,
+        "cleanup": "VERIFIED",
+        "sensitiveLogDetected": false
+      },
+      "attempt-05": {
+        "runtimeCounts": {
+          "tests": 51,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "browserCounts": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cleanup": "VERIFIED",
+        "sensitiveLogDetected": false
+      }
+    },
+    "allFiveCleanups": "VERIFIED",
+    "uiInputCount": 243,
+    "changedUiInputsOutsideRelatedScope": [
+      "summer-ui/src/pages/statistics/index.tsx",
+      "summer-ui/src/pages/statistics/api.ts"
+    ],
+    "sensitiveLogDetected": false,
+    "retryCounterBoundary": "Both actual rows report retryAttempts0 in this HTTP/UI scenario, rendered exactly. Nonzero retry transitions are root-owned backend/JUnit evidence; no UI nonzero retry claim.",
+    "typecheckExitCode": 0
+  },
+  "acceptanceCriteria": [
+    {
+      "ac": 1,
+      "passed": true
+    },
+    {
+      "ac": 2,
+      "passed": true
+    },
+    {
+      "ac": 3,
+      "passed": true
+    },
+    {
+      "ac": 4,
+      "passed": true
+    },
+    {
+      "ac": 5,
+      "passed": true
+    },
+    {
+      "ac": 6,
+      "passed": true
+    },
+    {
+      "ac": 7,
+      "passed": true
+    }
+  ],
+  "rootScreenshotsViewed": [
+    "resilience-nonzero.png",
+    "resilience-recovered.png",
+    "resilience-denied.png",
+    "resilience-restored.png"
+  ]
+}

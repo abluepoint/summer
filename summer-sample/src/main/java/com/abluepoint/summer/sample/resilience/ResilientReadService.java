@@ -49,8 +49,11 @@ public class ResilientReadService {
         this.limiters = limiters;
         this.bulkheads = bulkheads;
         this.timers = timers;
-        counters.put(PARAMETERS, new Counters());
-        counters.put(DICTIONARIES, new Counters());
+        for (String operation : List.of(PARAMETERS, DICTIONARIES)) {
+            Counters stats = new Counters();
+            counters.put(operation, stats);
+            retries.retry(operation).getEventPublisher().onRetry(event -> stats.retryAttempts.incrementAndGet());
+        }
     }
 
     public <T> T read(String operation, String cacheKey, Supplier<T> loader) {
@@ -73,18 +76,21 @@ public class ResilientReadService {
             Bulkhead bulkhead = bulkheads.bulkhead(operation);
             TimeLimiter timer = timers.timeLimiter(operation);
             Supplier<T> decorated = loader;
-            decorated = CircuitBreaker.decorateSupplier(breaker, decorated);
             decorated = Retry.decorateSupplier(retry, decorated);
             decorated = Bulkhead.decorateSupplier(bulkhead, decorated);
             decorated = RateLimiter.decorateSupplier(limiter, decorated);
             Supplier<T> finalSupplier = decorated;
-            CompletableFuture<T> stage = CompletableFuture.supplyAsync(finalSupplier, executor);
-            T value;
-            try {
-                value = timer.executeFutureSupplier(() -> stage);
-            } catch (Exception failure) {
-                throw new java.util.concurrent.CompletionException(failure);
-            }
+            // Record the caller-visible outcome, including timeout, once per logical read.
+            // Admission remains inside the physical call so timeout cannot free its bulkhead early.
+            Supplier<T> timedRead = () -> {
+                CompletableFuture<T> stage = CompletableFuture.supplyAsync(finalSupplier, executor);
+                try {
+                    return timer.executeFutureSupplier(() -> stage);
+                } catch (Exception failure) {
+                    throw new java.util.concurrent.CompletionException(failure);
+                }
+            };
+            T value = CircuitBreaker.decorateSupplier(breaker, timedRead).get();
             stats.successes.incrementAndGet();
             return eligible ? remember(operation, cacheKey, value) : value;
         } catch (RuntimeException failure) {
@@ -141,7 +147,7 @@ public class ResilientReadService {
             Bulkhead bulkhead = bulkheads.bulkhead(name);
             result.add(new ResilienceOperationView(name, breaker.getState().name(), retry.getRetryConfig().getMaxAttempts(),
                     limiter.getRateLimiterConfig().getLimitForPeriod(), bulkhead.getBulkheadConfig().getMaxConcurrentCalls(),
-                    stats.calls.get(), stats.successes.get(), stats.failures.get(), stats.fallbacks.get(), stats.rejected.get(), stats.timedOut.get(),
+                    stats.calls.get(), stats.successes.get(), stats.failures.get(), stats.fallbacks.get(), stats.rejected.get(), stats.timedOut.get(), stats.retryAttempts.get(),
                     stats.lastFailureAt));
         });
         return result.stream().sorted(Comparator.comparing(ResilienceOperationView::name)).toList();
@@ -166,10 +172,11 @@ public class ResilientReadService {
         return entry;
     }
 
-    private static boolean isRejected(Throwable failure) {
-        return failure.getClass().getName().contains("RequestNotPermitted")
-                || failure.getClass().getName().contains("BulkheadFull")
-                || failure.getClass().getName().contains("CallNotPermitted");
+    static boolean isRejected(Throwable failure) {
+        Throwable cause = unwrap(failure);
+        return cause instanceof io.github.resilience4j.ratelimiter.RequestNotPermitted
+                || cause instanceof io.github.resilience4j.bulkhead.BulkheadFullException
+                || cause instanceof io.github.resilience4j.circuitbreaker.CallNotPermittedException;
     }
 
     private static boolean isTimeout(Throwable failure) {
@@ -185,6 +192,7 @@ public class ResilientReadService {
         private final java.util.concurrent.atomic.AtomicLong fallbacks = new java.util.concurrent.atomic.AtomicLong();
         private final java.util.concurrent.atomic.AtomicLong rejected = new java.util.concurrent.atomic.AtomicLong();
         private final java.util.concurrent.atomic.AtomicLong timedOut = new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicLong retryAttempts = new java.util.concurrent.atomic.AtomicLong();
         private volatile Instant lastFailureAt;
     }
 }

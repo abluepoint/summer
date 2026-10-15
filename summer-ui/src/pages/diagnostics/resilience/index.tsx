@@ -24,6 +24,7 @@ export default function ResilienceDiagnosticsPage() {
       { title: t['diagnostics.resilience.operation'], dataIndex: 'name' },
       { title: t['diagnostics.resilience.circuit'], dataIndex: 'circuitBreaker', render: (value: string) => <Tag color={value === 'CLOSED' ? 'green' : value === 'OPEN' ? 'red' : 'orange'}>{value}</Tag> },
       { title: t['diagnostics.resilience.calls'], dataIndex: 'calls' },
+      { title: t['diagnostics.resilience.retry'], dataIndex: 'retryAttempts' },
       { title: t['diagnostics.resilience.failures'], dataIndex: 'failures' },
       { title: t['diagnostics.resilience.fallbacks'], dataIndex: 'fallbacks' },
       { title: t['diagnostics.resilience.rejected'], dataIndex: 'rejected' },

@@ -8,6 +8,7 @@ export type ResilienceOperation = {
   rateLimitForPeriod: number;
   bulkheadMaxConcurrent: number;
   calls: number;
+  retryAttempts: number;
   successes: number;
   failures: number;
   fallbacks: number;

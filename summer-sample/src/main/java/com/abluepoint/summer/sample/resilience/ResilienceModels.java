@@ -8,7 +8,7 @@ record ResilienceDiagnosticsView(String requestId, Instant checkedAt, List<Resil
 record ResilienceOperationView(String name, String circuitBreaker, int retryMaxAttempts,
                                int rateLimitForPeriod, int bulkheadMaxConcurrent,
                                long calls, long successes, long failures, long fallbacks,
-                               long rejected, long timedOut, Instant lastFailureAt) {}
+                               long rejected, long timedOut, long retryAttempts, Instant lastFailureAt) {}
 
 final class DependencyDegradedException extends RuntimeException {
     DependencyDegradedException(String message, Throwable cause) { super(message, cause); }

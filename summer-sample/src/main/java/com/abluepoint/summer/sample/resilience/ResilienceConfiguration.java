@@ -21,7 +21,8 @@ import java.time.Duration;
 class ResilienceConfiguration {
     @Bean CircuitBreakerRegistry resilienceCircuitBreakers(ResilienceProperties p) {
         CircuitBreakerConfig c = CircuitBreakerConfig.custom()
-                .ignoreException(ResilientReadService::isBusinessFailure)
+                .ignoreException(failure -> ResilientReadService.isBusinessFailure(failure)
+                        || ResilientReadService.isRejected(failure))
                 .failureRateThreshold(p.getCircuitFailureRate())
                 .slidingWindowSize(Math.max(2, p.getCircuitWindow()))
                 .minimumNumberOfCalls(Math.max(2, p.getCircuitWindow()))
