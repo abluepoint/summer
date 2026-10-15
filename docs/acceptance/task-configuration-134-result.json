@@ -1,0 +1,360 @@
+{
+  "issue": 134,
+  "status": "READY_FOR_COORDINATOR_CLOSEOUT",
+  "stories": [
+    38,
+    39
+  ],
+  "dependency": {
+    "issue": 123,
+    "requiredState": "CLOSED/COMPLETED"
+  },
+  "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+  "runtime": {
+    "issue": 134,
+    "stage": "complete",
+    "checks": [
+      {
+        "name": "roles_and_membership_configured_by_real_http",
+        "passed": true
+      },
+      {
+        "name": "only_registered_trusted_task_types_exposed",
+        "passed": true
+      },
+      {
+        "name": "invalid_cron_and_unregistered_code_rejected",
+        "passed": true
+      },
+      {
+        "name": "read_only_identity_cannot_create",
+        "passed": true
+      },
+      {
+        "name": "configuration_created_with_real_plan_and_parameters",
+        "passed": true
+      },
+      {
+        "name": "versioned_edit_and_stale_conflict",
+        "passed": true
+      },
+      {
+        "name": "pause_resume_and_paused_execution_rejected",
+        "passed": true
+      },
+      {
+        "name": "read_only_identity_cannot_trigger_or_change_status",
+        "passed": true
+      },
+      {
+        "name": "cross_tenant_access_rejected",
+        "passed": true
+      },
+      {
+        "name": "real_quartz_execution_has_persistent_success_history",
+        "passed": true
+      },
+      {
+        "name": "all_five_configuration_and_execution_actions_audited",
+        "passed": true
+      },
+      {
+        "name": "production_quartz_mysql_tables_exist",
+        "passed": true
+      },
+      {
+        "name": "definitions_and_execution_history_survive_jvm_restart",
+        "passed": true
+      }
+    ],
+    "networkMocking": false,
+    "businessSqlWrites": false,
+    "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+    "browser": {
+      "mode": "real-browser-real-backend",
+      "executed": true,
+      "requiresSchemaOwnerTeardown": true,
+      "checks": [
+        {
+          "name": "real_pkce_browser_login",
+          "status": "passed"
+        },
+        {
+          "name": "invalid_json_rejected_before_write",
+          "status": "passed"
+        },
+        {
+          "name": "create_and_edit_real_api",
+          "status": "passed"
+        },
+        {
+          "name": "pause_resume_real_api",
+          "status": "passed"
+        },
+        {
+          "name": "live_running_progress_then_success",
+          "status": "passed"
+        },
+        {
+          "name": "real_history_retry_failure",
+          "status": "passed"
+        },
+        {
+          "name": "reader_write_rejected_with_request_id",
+          "status": "passed"
+        }
+      ],
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "status": "SCOPED_TASK_UI_GATES_PASSED",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/types",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/enterprises/ent-acme/tasks",
+          "status": 201
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672:pause",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672:resume",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672/executions",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672:trigger",
+          "status": 202
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672/events",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672/executions",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/92e0046d-ccd2-4d7f-bdaa-0e280b0fd672/executions",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/types",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/bb88b2a7-c7db-46f2-b3c8-405919289f1d/executions",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/enterprises/ent-acme/tasks/bb88b2a7-c7db-46f2-b3c8-405919289f1d:trigger",
+          "status": 202
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/bb88b2a7-c7db-46f2-b3c8-405919289f1d/events",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/bb88b2a7-c7db-46f2-b3c8-405919289f1d/executions",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/enterprises/ent-acme/tasks/bb88b2a7-c7db-46f2-b3c8-405919289f1d/executions",
+          "status": 200
+        }
+      ],
+      "tests": 7
+    },
+    "browserExit": 0,
+    "uiInputCount": 243,
+    "changedUiInputs": [],
+    "sensitiveLogDetected": false,
+    "diagnostics": [
+      {
+        "node": 26081,
+        "class": "org.springframework.web.context.request.async.AsyncRequestNotUsableException"
+      },
+      {
+        "node": 26081,
+        "class": "org.apache.catalina.connector.ClientAbortException"
+      },
+      {
+        "node": 26081,
+        "class": "java.io.IOException"
+      },
+      {
+        "node": 26081,
+        "class": "org.springframework.web.context.request.async.AsyncRequestNotUsableException"
+      },
+      {
+        "node": 26081,
+        "class": "org.apache.catalina.connector.ClientAbortException"
+      },
+      {
+        "node": 26081,
+        "class": "java.io.IOException"
+      }
+    ],
+    "cleanup": "VERIFIED",
+    "counts": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "passed": true
+  },
+  "runtimeCounts": {
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "realChromeCounts": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "productionTaskChanges": false,
+  "taskAndQuartzMainInputs": 25,
+  "taskAndQuartzInputsMatchCandidate": true,
+  "uiInputsStable": {
+    "count": 243,
+    "changed": []
+  },
+  "priorFull688TaskSchedulerJUnit": {
+    "suites": [
+      {
+        "suite": "com.abluepoint.summer.sample.task.TaskSchedulerHttpTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "newRun": false
+  },
+  "historicalSetupFailures": [
+    {
+      "attempt": 1,
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      }
+    },
+    {
+      "attempt": 2,
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      }
+    },
+    {
+      "attempt": 3,
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      }
+    },
+    {
+      "attempt": 4,
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      }
+    }
+  ],
+  "historicalSetupDiagnosis": [
+    "attempt01/02 omitted required Idempotency-Key on member fixture; actual500 preserved, generic MVC mapping being repaired separately",
+    "attempt03 omitted scanned route capabilities in reader role; actual403 correct",
+    "attempt04 assumed all route codes pre-exist in catalog; role API accepts and persists these mappings, corrected fixture only"
+  ],
+  "sourceProtection": "Task main/UI not changed. Actual run fixed917JAR; only captured task inputs and243UI inputs certified, no global unchanged claim. Real Git index preserved by separate allowlist index.",
+  "visualReview": "Native Chrome screenshots inspected: FAILED attempt2 history and persisted timestamps readable; reader403/error/requestId visible. No crop/overlap observed.",
+  "scope": "T26 task configuration/permissions/plans/parameters/status/history. T27 retry/takeover and T29 SSE full acceptance remain separate.",
+  "credentialHandling": "Memory/environment/stdin only; no secrets in public evidence; runtime known credential scan zero.",
+  "evidenceRoot": ".git/summer4-closeout-20261015/t26-live/attempt-05",
+  "acceptanceClauses": [
+    {
+      "number": 1,
+      "status": "PASS",
+      "evidence": "Roles and precise method/path grants created through actual HTTP; administrator configures cron/type/parameters and status; read-only writes403."
+    },
+    {
+      "number": 2,
+      "status": "PASS",
+      "evidence": "Real production Quartz/MySQL migration tables; definitions and SUCCESS history survive JVM restart."
+    },
+    {
+      "number": 3,
+      "status": "PASS",
+      "evidence": "Five actions CREATED/UPDATED/PAUSED/RESUMED/TRIGGERED correlated in persistent audit."
+    },
+    {
+      "number": 4,
+      "status": "PASS",
+      "evidence": "Actual Chrome sees RUNNING/progress/SUCCESS/FAILED, attempt2 and server timestamps."
+    },
+    {
+      "number": 5,
+      "status": "PASS",
+      "evidence": "Real PKCE/API/browser13+7, unregistered type/invalidcron/staleversion/foreigntenant/read-only denials; cleanupverified."
+    },
+    {
+      "number": 6,
+      "status": "PASS",
+      "evidence": "Unified envelopes matching header/body requestId; SUMMER errors; reader page shows ID; sensitive scan0."
+    },
+    {
+      "number": 7,
+      "status": "PASS",
+      "evidence": "Stories38/39, existing task guide, new scripts, setup errors and final evidence retained; no task-source change."
+    }
+  ]
+}
