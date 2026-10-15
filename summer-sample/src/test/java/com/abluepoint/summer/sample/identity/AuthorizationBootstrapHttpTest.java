@@ -31,13 +31,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 class AuthorizationBootstrapHttpTest {
     @Autowired MockMvc mvc;
-    @Autowired AuthUserService users;
+    @Autowired com.abluepoint.summer.security.autoconfigure.SummerSecurityProperties properties;
 
     @Test
     void bootstrapAdminCanAssignPersistedManagementRightsAndManageAfterFreshPkceLogin() throws Exception {
-        String username = "bootstrap-" + UUID.randomUUID();
-        String password = UUID.randomUUID().toString();
-        users.create(username, password, "ADMIN");
+        // Bootstrap authority belongs to the configured first administrator, not every ADMIN account.
+        String username = properties.getAuthorizationServer().getUser().getUsername();
+        String password = properties.getAuthorizationServer().getUser().getPassword();
         String bootstrap = login(username, password);
 
         MvcResult catalog = mvc.perform(get("/api/v1/platform/interface-resources")

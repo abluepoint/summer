@@ -64,6 +64,11 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         }
         // Global Sample business and platform resources share the Sample's fixed tenant boundary.
         String enterpriseId = requestedEnterprise == null ? SAMPLE_ENTERPRISE : requestedEnterprise;
+        String controllerClass = method.getBeanType().getName();
+        if (requestedEnterprise == null && (controllerClass.startsWith("com.abluepoint.summer.sample.systemparameter.")
+                || controllerClass.startsWith("com.abluepoint.summer.sample.dictionary."))) {
+            enterpriseId = EnterpriseRequestContext.resolve(authentication);
+        }
         AuthorizationService.Decision decision = authorizationService.decision(authentication, enterpriseId, permissionCode,
                 request.getHeader("X-Request-Id"));
         if (!decision.allowed()) throw new AccessDeniedException("Authorization denied: " + decision.reasonCode());

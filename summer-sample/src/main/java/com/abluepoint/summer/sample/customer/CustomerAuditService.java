@@ -23,10 +23,13 @@ public class CustomerAuditService {
     static final String TENANT_ID = "ent-acme";
     private final CustomerAuditEventRepository repository;
     private final ObjectMapper objectMapper;
+    private final AuditOrganizationContext organizationContext;
 
-    CustomerAuditService(CustomerAuditEventRepository repository, ObjectMapper objectMapper) {
+    CustomerAuditService(CustomerAuditEventRepository repository, ObjectMapper objectMapper,
+                         AuditOrganizationContext organizationContext) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        this.organizationContext = organizationContext;
     }
 
     @Transactional
@@ -38,6 +41,15 @@ public class CustomerAuditService {
     public void recordResourceSuccess(String resource, String action, String requestId,
                                       Authentication authentication) {
         recordResource(resource, action, "SUCCESS", requestId, authentication, Map.of());
+    }
+
+    @Transactional
+    public void recordTenantResourceSuccess(String tenant, String resource, String action, String requestId,
+                                            Authentication authentication) {
+        String principal = authentication == null ? "system" : authentication.getName();
+        repository.save(new CustomerAuditEventEntity(UUID.randomUUID().toString(), tenant,
+                organizationContext.current(tenant, authentication), principal,
+                resource, action, "SUCCESS", requestId, "{}", Instant.now()));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -100,7 +112,8 @@ public class CustomerAuditService {
         String principal = authentication == null || authentication.getName() == null
                 ? "system" : authentication.getName();
         repository.save(new CustomerAuditEventEntity(
-                UUID.randomUUID().toString(), TENANT_ID, null, principal, resource, action, result,
+                UUID.randomUUID().toString(), TENANT_ID, organizationContext.current(TENANT_ID, authentication),
+                principal, resource, action, result,
                 requestId, serialize(detail), Instant.now()));
     }
 

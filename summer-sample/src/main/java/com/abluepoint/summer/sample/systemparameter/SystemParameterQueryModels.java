@@ -37,8 +37,8 @@ record SystemParameterDetailRow(
         String status,
         Long version,
         String tenantId,
-        Instant createdAt,
-        Instant updatedAt
+        Object createdAt,
+        Object updatedAt
 ) {
 }
 

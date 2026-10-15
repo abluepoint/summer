@@ -18,6 +18,15 @@ class EnterpriseEntity extends BaseLongEntity {
     @Column(nullable = false, length = 32)
     private String status = "ACTIVE";
 
+    @Column(nullable = false, length = 32)
+    @org.hibernate.annotations.ColumnDefault("'PENDING'")
+    private String reviewStatus = "PENDING";
+    @org.hibernate.annotations.ColumnDefault("0")
+    @jakarta.persistence.Version private long version;
+    String reviewStatus() { return reviewStatus; }
+    long version() { return version; }
+    void status(String status) { this.status = status; }
+    void reviewStatus(String status) { this.reviewStatus = status; }
     protected EnterpriseEntity() {}
     EnterpriseEntity(String enterpriseId, String name, String code) {
         this.enterpriseId = enterpriseId;

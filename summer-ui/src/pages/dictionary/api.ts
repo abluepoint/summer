@@ -25,10 +25,10 @@ export type DictionaryNotification = {
 
 export type DictionaryStreamState = 'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CLOSED';
 
-export async function getPublicDictionary(code: string): Promise<PublicDictionary> {
+export async function getPublicDictionary(code: string, enterpriseId?: string): Promise<PublicDictionary> {
   try {
     const token = await getAccessTokenFromMemory();
-    const response = await axios.get(`/public/dictionaries/${encodeURIComponent(code)}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+    const response = await axios.get(enterpriseId ? `/public/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}` : `/public/dictionaries/${encodeURIComponent(code)}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
     return readEnvelope(response.data, response.status) as PublicDictionary;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
@@ -85,9 +85,9 @@ export function subscribeDictionaryNotifications(
   };
 }
 
-export async function saveDictionaryOverride(code: string, organization: string, options: DictionaryOption[], expectedVersion?: number): Promise<{ version: number }> {
+export async function saveDictionaryOverride(code: string, organization: string, options: DictionaryOption[], expectedVersion?: number, enterpriseId?: string): Promise<{ version: number }> {
   try {
-    const response = await axios.put(`/api/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}`, { value: options, publicReadable: true, expectedVersion });
+    const response = await axios.put(enterpriseId ? `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}` : `/api/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}`, { value: options, publicReadable: true, expectedVersion });
     return readEnvelope(response.data, response.status) as { version: number };
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;

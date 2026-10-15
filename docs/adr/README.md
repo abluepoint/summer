@@ -35,6 +35,10 @@
 | [0029](0029-share-servlet-login-context-and-isolate-bearer-authentication.md) | 共享 Servlet 登录上下文并隔离 Bearer 认证 | Cookie CSRF、原子撤销、故障诊断与 JDBC 本地登录身份映射 |
 | [0030](0030-deny-unassigned-users-and-align-configurable-resource-grants.md) | 未分配主体默认拒绝、管理权限码对齐与持久审计 | 初始化权限限定、前端空权限关闭、精确路由例外；补充 0026/0027/0029 |
 
+| [0031](0031-resolve-configuration-tenants-and-version-overrides.md) | 显式配置租户、租户复合键与覆盖独立版本生命周期 | 部分替代 0028 的固定租户/无覆盖历史边界；浏览器与整应用双节点单独验收 |
+
+| [0032](0032-persist-enterprise-members-and-organization-context.md) | 持久化企业成员、组织上下文与企业目录 | 角色绑定不代替成员资格；邀请接桥、目录/审核共用持久记录；保留原邀请码生命周期边界 |
+
 ## 来源与适用范围
 
 2026-09-22 整理时，本工作树只有 ADR 0001–0013。通过 `git worktree list` 找到 `core` 工作树中的未提交 ADR 0014–0016，并与 2026-09-08 的 [Issue #69](https://github.com/abluepoint/summer/issues/69) 核对；本次将三份 ADR 原文同步到 `summer4`，同时补入其新增领域词汇。未修改来源工作树，也未把未提交文件描述为远端提交。

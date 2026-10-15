@@ -12,9 +12,11 @@ import java.util.Map;
 public class PublishedDictionaryReader {
     private final DictionaryVersionService dictionaries;
     PublishedDictionaryReader(DictionaryVersionService dictionaries) { this.dictionaries = dictionaries; }
-    public List<Map<String, Object>> read(String code, Authentication auth) {
+    public List<Map<String, Object>> read(String code, Authentication auth) { return read(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), code, auth); }
+    public List<Map<String, Object>> read(String tenant, String code, Authentication auth) {
+        com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(tenant, auth);
         try {
-            return dictionaries.publicRead(code, auth).items().stream()
+            return dictionaries.publicRead(tenant, code, auth).items().stream()
                     .map(item -> Map.<String, Object>of("value", item.value(), "label", item.label(), "sortOrder", item.sortOrder()))
                     .toList();
         } catch (SummerException failure) {

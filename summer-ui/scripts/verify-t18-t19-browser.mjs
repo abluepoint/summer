@@ -64,7 +64,7 @@ const parameterPage = { items: [parameter], page: 0, size: 20, totalElements: 1,
 test('denied event reload removes old delivery rows and retains requestId', async () => {
   let events = 0;
   const page = await pageFor('system-parameters', async (route) => {
-    if (new URL(route.request().url()).pathname === '/api/system-parameter-events') {
+    if (new URL(route.request().url()).pathname.endsWith('/system-parameter-events')) {
       if (++events === 1) return json(route, success({ items: [{ eventId: 'UI_OLD_DELIVERY', parameterKey: 'UI_OLD_DELIVERY', status: 'PUBLISHED', attempts: 0 }] }));
       return json(route, failure(403, 'events-denied'), 403);
     }
@@ -86,7 +86,7 @@ test('denied history reload removes the old version values', async () => {
       if (++histories === 1) return json(route, success({ items: [{ revision: 1, state: 'PUBLISHED', value: 'UI_OLD_VERSION', status: 'ACTIVE' }], currentVersion: 1 }));
       return json(route, failure(403, 'history-denied'), 403);
     }
-    return json(route, success(path === '/api/system-parameter-events' ? { items: [] } : parameterPage));
+    return json(route, success(path.endsWith('/system-parameter-events') ? { items: [] } : parameterPage));
   });
   try {
     const button = page.getByRole('button', { name: '版本历史', exact: true });
@@ -108,9 +108,12 @@ test('public dictionary reads carry the current identity without requiring anony
         return json(route, success(dictionary));
       }
       return route.fulfill({ contentType: 'text/event-stream', body: 'event: connected\ndata: {}\n\n' });
-    }, anonymous ? '?anonymous=1' : '');
+    }, anonymous ? '?anonymous=1&enterpriseId=ent-acme' : '');
     try {
-      await page.getByTestId('dictionary-version').waitFor();
+      if (anonymous) {
+        await page.getByText('请选择一个活动成员租户；没有可用租户时不会读取配置。', { exact: true }).waitFor();
+        await page.evaluate(async () => { const api = await import('/src/pages/dictionary/api.ts'); await api.getPublicDictionary('customer-segment', 'ent-acme'); });
+      } else await page.getByTestId('dictionary-version').waitFor();
       assert.equal(authenticated, !anonymous, 'public reads must use an available identity but remain anonymous-capable');
     } finally { await page.close(); }
   }
@@ -137,7 +140,7 @@ test('parameter edit sends only mutable fields and retains the public marker', a
   let submitted;
   const page = await pageFor('system-parameters', async (route) => {
     if (route.request().method() === 'PATCH') { submitted = route.request().postDataJSON(); return json(route, success(parameter)); }
-    return json(route, success(new URL(route.request().url()).pathname === '/api/system-parameter-events' ? { items: [] } : parameterPage));
+    return json(route, success(new URL(route.request().url()).pathname.endsWith('/system-parameter-events') ? { items: [] } : parameterPage));
   });
   try {
     await page.getByRole('button', { name: '编辑', exact: true }).click();
@@ -153,7 +156,7 @@ test('invalid boolean input is rejected instead of silently publishing false', a
   let writes = 0;
   const page = await pageFor('system-parameters', async (route) => {
     if (route.request().method() === 'PATCH') { writes++; return json(route, failure(400, 'should-not-submit'), 400); }
-    return json(route, success(new URL(route.request().url()).pathname === '/api/system-parameter-events' ? { items: [] } : parameterPage));
+    return json(route, success(new URL(route.request().url()).pathname.endsWith('/system-parameter-events') ? { items: [] } : parameterPage));
   });
   try {
     await page.getByRole('button', { name: '编辑', exact: true }).click();
@@ -181,7 +184,7 @@ test('unsaved data scope trees block navigation and remain editable after cancel
 });
 
 test('parameter drawer cancellation keeps dirty edits until discard is confirmed', async () => {
-  const page = await pageFor('system-parameters', (route) => json(route, success(new URL(route.request().url()).pathname === '/api/system-parameter-events' ? { items: [] } : parameterPage)));
+  const page = await pageFor('system-parameters', (route) => json(route, success(new URL(route.request().url()).pathname.endsWith('/system-parameter-events') ? { items: [] } : parameterPage)));
   try {
     await page.getByRole('button', { name: '编辑', exact: true }).click();
     const drawer = page.locator('.arco-drawer');
@@ -211,7 +214,7 @@ test('dictionary form displays the selected option returned by an authorized rea
   const page = await pageFor('dictionary', (route) => new URL(route.request().url()).pathname.startsWith('/public/') ? json(route, success(dictionary)) : route.fulfill({ contentType: 'text/event-stream', body: 'event: connected\ndata: {}\n\n' }));
   try {
     await page.getByTestId('dictionary-version').waitFor();
-    assert.match(await page.locator('.arco-select-view').innerText(), /Fixture segment/);
+    assert.match(await page.locator('.arco-form .arco-select-view').innerText(), /Fixture segment/);
   } finally { await page.close(); }
 });
 
@@ -246,7 +249,7 @@ test('a late parameter response cannot restore rows after a newer denied read', 
   let release;
   const page = await pageFor('system-parameters', async (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname === '/api/system-parameter-events') return json(route, success({ items: [] }));
+    if (url.pathname.endsWith('/system-parameter-events')) return json(route, success({ items: [] }));
     if (url.searchParams.has('key')) return json(route, failure(403, 'newer-read-denied'), 403);
     await new Promise((resolve) => { release = resolve; });
     return json(route, success(parameterPage));
@@ -254,7 +257,7 @@ test('a late parameter response cannot restore rows after a newer denied read', 
   try {
     await page.getByPlaceholder('键', { exact: true }).fill('restricted');
     await page.getByText('无权执行此配置操作 (newer-read-denied)').waitFor();
-    const late = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/system-parameters' && !new URL(response.url()).searchParams.has('key'));
+    const late = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('/system-parameters') && !new URL(response.url()).searchParams.has('key'));
     release();
     await late;
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -317,7 +320,7 @@ test('invalid condition and option JSON remains editable without submitting writ
 
 test('summary-only parameter rows cannot submit edits using absent values and versions', async () => {
   const summary = { id: parameter.id, key: parameter.key, type: parameter.type, status: parameter.status, public: parameter.public };
-  const page = await pageFor('system-parameters', (route) => json(route, success(new URL(route.request().url()).pathname === '/api/system-parameter-events' ? { items: [] } : { ...parameterPage, projection: 'summary', items: [summary] })));
+  const page = await pageFor('system-parameters', (route) => json(route, success(new URL(route.request().url()).pathname.endsWith('/system-parameter-events') ? { items: [] } : { ...parameterPage, projection: 'summary', items: [summary] })));
   try {
     const edit = page.getByRole('button', { name: '编辑', exact: true });
     await edit.waitFor();

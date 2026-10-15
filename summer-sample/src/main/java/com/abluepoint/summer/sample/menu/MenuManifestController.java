@@ -22,6 +22,14 @@ final class MenuManifestController {
 
     MenuManifestController(MenuManifestService service, RequestIdAccessor requestId) { this.service = service; this.requestId = requestId; }
 
+    @GetMapping("/v1/platform/menu-manifest")
+    @RawResponse
+    @ResourcePermission("platform.menu.write")
+    ResponseEntity<ApiResponse<MenuManifestView>> current(Authentication authentication) {
+        try { MenuManifestView view = service.current(authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
+        catch (Exception e) { return error(e); }
+    }
+
     @PutMapping(value = "/v1/platform/menu-manifest", consumes = "application/json")
     @RawResponse
     @ResourcePermission("platform.menu.write")
@@ -39,6 +47,14 @@ final class MenuManifestController {
         catch (Exception e) { return error(e); }
     }
 
+    @GetMapping("/v1/enterprises/{enterpriseId}/menu-manifest/management")
+    @RawResponse
+    @ResourcePermission("enterprise.menu.write")
+    ResponseEntity<ApiResponse<MenuManifestView>> management(@PathVariable String enterpriseId, Authentication authentication) {
+        try { MenuManifestView view = service.management(enterpriseId, authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
+        catch (Exception e) { return error(e); }
+    }
+
     @PatchMapping(value = "/v1/enterprises/{enterpriseId}/menu-manifest/{menuId}", consumes = "application/json")
     @RawResponse
     @ResourcePermission("enterprise.menu.write")
@@ -49,6 +65,20 @@ final class MenuManifestController {
                                                                  Authentication authentication) {
         try { MenuManifestItemView view = service.override(enterpriseId, menuId, body, ifMatch, key, authentication); return result(HttpStatus.OK, view, view.version()); }
         catch (Exception e) { return error(e); }
+    }
+
+    // Nested frontend route IDs contain '/', which must not be encoded into a
+    // path segment or require weakening the HTTP firewall's encoded-slash rule.
+    @PatchMapping(value = "/v1/enterprises/{enterpriseId}/menu-manifest", consumes = "application/json")
+    @RawResponse
+    @ResourcePermission("enterprise.menu.write")
+    ResponseEntity<ApiResponse<MenuManifestItemView>> overrideById(@PathVariable String enterpriseId,
+                                                                  @RequestParam String menuId,
+                                                                  @RequestBody MenuManifestOverrideRequest body,
+                                                                  @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                                  @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                                  Authentication authentication) {
+        return override(enterpriseId, menuId, body, ifMatch, key, authentication);
     }
 
     private String rid() { return requestId.currentRequestId(); }

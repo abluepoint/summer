@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TaskExecutionRecoveryTest {
     @Autowired TaskDefinitionRepository definitions;
     @Autowired TaskExecutionRepository executions;
+    @Autowired TaskAttemptRepository attempts;
     @Autowired TaskExecutionService service;
 
     @Test
@@ -37,5 +38,45 @@ class TaskExecutionRecoveryTest {
         assertThat(rows.getFirst().status()).isEqualTo(TaskExecutionStatus.SUCCESS);
         assertThat(rows.getFirst().idempotencyKey()).isEqualTo(key);
         assertThat(rows.getFirst().recoveryCount()).isEqualTo(1);
+    }
+
+    @Test
+    void committedInterruptedAttemptCanRecoverEvenAfterLastConfiguredAttempt() {
+        String taskId = UUID.randomUUID().toString();
+        definitions.saveAndFlush(new TaskDefinitionEntity(taskId, "ent-acme", "Interrupted", "system.noop",
+                "0 0 0 1 1 ? 2099", "{}", 0, 30_000));
+        var execution = new TaskExecutionEntity(UUID.randomUUID().toString(), taskId, "ent-acme", "dead-fire",
+                "interrupted-key", "dead-node", Instant.now().minusSeconds(10));
+        execution.attempt(1);
+        executions.saveAndFlush(execution);
+        attempts.saveAndFlush(new TaskAttemptEntity(UUID.randomUUID().toString(), execution.executionId(), 1, "dead-node"));
+
+        service.execute(taskId, "recovery-fire", "interrupted-key", Instant.now(), true);
+
+        var recovered = executions.findById(execution.executionId()).orElseThrow();
+        assertThat(recovered.status()).isEqualTo(TaskExecutionStatus.SUCCESS);
+        assertThat(recovered.recoveryCount()).isEqualTo(1);
+        assertThat(attempts.findAllByExecutionIdOrderByAttemptAsc(execution.executionId()))
+                .extracting(TaskAttemptEntity::status)
+                .containsExactly(TaskExecutionStatus.FAILED, TaskExecutionStatus.SUCCESS);
+        assertThat(attempts.findAllByExecutionIdOrderByAttemptAsc(execution.executionId()).getFirst().failureCode())
+                .isEqualTo("TASK_NODE_LOST");
+    }
+
+    @Test
+    void concurrentDuplicateExecutionsDoNotCreateAnotherAttempt() throws Exception {
+        String taskId = UUID.randomUUID().toString();
+        definitions.saveAndFlush(new TaskDefinitionEntity(taskId, "ent-acme", "Concurrent", "system.sleep",
+                "0 0 0 1 1 ? 2099", "{\"millis\":1000}", 0, 30_000));
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> service.execute(taskId, "fire-a", "shared-key", Instant.now(), false));
+            var second = executor.submit(() -> service.execute(taskId, "fire-b", "shared-key", Instant.now(), false));
+            first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            second.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        var values = executions.findAllByEnterpriseIdAndTaskIdOrderByStartedAtDesc("ent-acme", taskId);
+        assertThat(values).hasSize(1);
+        assertThat(values.getFirst().status()).isEqualTo(TaskExecutionStatus.SUCCESS);
+        assertThat(attempts.findAllByExecutionIdOrderByAttemptAsc(values.getFirst().executionId())).hasSize(1);
     }
 }

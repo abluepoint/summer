@@ -29,7 +29,7 @@ class PluginConfigurationHttpTest {
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").value("Visible"))
                 .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Published"));
-        mvc.perform(get(SUMMARY).with(actor("bob","org-sales"))).andExpect(status().isOk())
+        mvc.perform(get(SUMMARY).with(actor("bob","org-operations"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").doesNotExist())
                 .andExpect(jsonPath("$.data.dictionary.items").isEmpty());
         policy("system-parameters","SELF"); policy("dictionaries","SELF");

@@ -41,17 +41,22 @@ const routes = evaluateModule('../src/routes.ts', {
   '@/menu/manifest': menu,
   react: {},
 });
-assert.equal(routes.menuManifest.manifestVersion, 2, 'changed metadata must have a new version');
+assert.equal(routes.menuManifest.manifestVersion, 5, 'changed metadata must have a new version');
 const bootstrapCodes = {
   roles: 'enterprise.roles.read',
   'interface-resources': 'platform.interface-resources.read',
+  'auth-users': 'enterprise.members.read',
+  organization: 'enterprise.organization.read',
+  audit: 'enterprise.audit.read',
+  'diagnostics/redis': 'platform.capabilities.read',
+  'diagnostics/runtime': 'platform.capabilities.read',
 };
 for (const [key, code] of Object.entries(bootstrapCodes)) {
-  const route = routes.routes.find((item) => item.key === key);
+  const route = routes.routes.flatMap((item) => [item, ...(item.children || [])]).find((item) => item.key === key);
   const item = routes.menuManifest.items.find((item) => item.menuId === key);
   assert.equal(item.capabilityCode, code);
   const permissions = await load(async () => {}, async () => manifest([{ ...item, actions: ['read'] }]));
   assert.equal(authentication.default(route, permissions), true, `${key} must be navigable with its backend grant`);
   assert.equal(authentication.default(route, {}), false, `${key} must remain hidden without a grant`);
 }
-console.log('Menu permissions: 5 failure/action regressions and 2 bootstrap navigation contracts passed');
+console.log('Menu permissions: 5 failure/action regressions and 7 bootstrap navigation contracts passed');

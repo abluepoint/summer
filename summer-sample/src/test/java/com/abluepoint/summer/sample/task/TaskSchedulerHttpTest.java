@@ -30,6 +30,37 @@ class TaskSchedulerHttpTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Test
+    void isolatesTaskDefinitionsAndAuditAcrossActiveEnterprises() throws Exception {
+        String taskId = null;
+        for (String enterprise : List.of("ent-acme", "ent-north")) {
+            var auth = jwt().jwt(token -> token.subject("task-admin")
+                            .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
+                            .claim("enterprise_capabilities", Map.of(enterprise, List.of("enterprise.tasks.write", "enterprise.tasks.read"))))
+                    .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_enterprise.tasks.write"),
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_enterprise.tasks.read"));
+            var created = mockMvc.perform(post("/api/v1/enterprises/{enterprise}/tasks", enterprise)
+                            .header("X-Request-Id", "tenant-task-create")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"Tenant task\",\"taskType\":\"system.noop\",\"cronExpression\":\"0 0 0 1 1 ? 2099\"}")
+                            .with(auth))
+                    .andExpect(status().isCreated()).andReturn();
+            taskId = JsonPath.read(created.getResponse().getContentAsString(), "$.data.taskId");
+            mockMvc.perform(get("/api/v1/enterprises/{enterprise}/tasks", enterprise).with(auth))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.items.length()").value(1))
+                    .andExpect(jsonPath("$.data.items[0].enterpriseId").value(enterprise));
+            org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                    "select count(*) from summer_audit_event where tenant_id = ? and resource = ? and action = 'TASK_CREATED'",
+                    Integer.class, enterprise, "task:" + taskId)).isEqualTo(1);
+        }
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/{task}/executions", taskId)
+                        .with(admin("enterprise.tasks.read")))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void createsPausesResumesTriggersAndPersistsExecutionHistory() throws Exception {
         MvcResult created = mockMvc.perform(post("/api/v1/enterprises/ent-acme/tasks")

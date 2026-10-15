@@ -15,9 +15,15 @@ import static org.mockito.Mockito.when;
 
 class AuthorizationDefaultDenyTest {
     private final AuthorizationUserBindingRepository bindings = mock(AuthorizationUserBindingRepository.class);
+    private final org.springframework.jdbc.core.JdbcTemplate membershipJdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
     private final AuthorizationService service = new AuthorizationService(
             bindings, mock(AuthorizationCapabilityRepository.class),
-            mock(AuthorizationRoleRepository.class), mock(AuthorizationChangeEventService.class), mock(AuthorizationAuditStore.class));
+            mock(AuthorizationRoleRepository.class), mock(AuthorizationChangeEventService.class), mock(AuthorizationAuditStore.class), membershipJdbc);
+
+    @org.junit.jupiter.api.BeforeEach void persistedMembershipFixture() {
+        org.mockito.Mockito.when(membershipJdbc.queryForObject(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(Integer.class), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(1);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "bootstrapUsername", "unassigned");
+    }
 
     @Test
     void requestedOAuthScopesDoNotGrantUnassignedLocalUsersBusinessAccess() {

@@ -7,6 +7,9 @@ import org.springframework.boot.health.actuate.endpoint.CompositeHealthDescripto
 import org.springframework.boot.health.actuate.endpoint.HealthDescriptor;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.stereotype.Service;
+import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.ObjectProvider;
+import org.flywaydb.core.Flyway;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -23,13 +26,17 @@ final class RuntimeDiagnosticsService {
     private final MeterRegistry meterRegistry;
     private final RequestIdAccessor requestIdAccessor;
     private final Clock clock;
+    private final Environment environment;
+    private final ObjectProvider<Flyway> migrations;
 
     RuntimeDiagnosticsService(HealthEndpoint healthEndpoint, MeterRegistry meterRegistry,
-                              RequestIdAccessor requestIdAccessor) {
+                              RequestIdAccessor requestIdAccessor, Environment environment, ObjectProvider<Flyway> migrations) {
         this.healthEndpoint = healthEndpoint;
         this.meterRegistry = meterRegistry;
         this.requestIdAccessor = requestIdAccessor;
         this.clock = Clock.systemUTC();
+        this.environment = environment;
+        this.migrations = migrations;
     }
 
     RuntimeDiagnosticsView snapshot() {
@@ -41,14 +48,15 @@ final class RuntimeDiagnosticsService {
     }
 
     private List<RuntimeComponentHealth> components(HealthDescriptor root) {
-        if (!(root instanceof CompositeHealthDescriptor composite)) {
-            return List.of(new RuntimeComponentHealth("application", root.getStatus().getCode()));
-        }
         List<RuntimeComponentHealth> result = new ArrayList<>();
-        composite.getComponents().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> result.add(new RuntimeComponentHealth(
-                        entry.getKey(), entry.getValue().getStatus().getCode())));
+        if (root instanceof CompositeHealthDescriptor composite) {
+            composite.getComponents().entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> result.add(new RuntimeComponentHealth(
+                            entry.getKey(), entry.getValue().getStatus().getCode())));
+        } else {
+            result.add(new RuntimeComponentHealth("application", root.getStatus().getCode()));
+        }
         if (result.stream().noneMatch(value -> "db".equals(value.name()))) {
             result.add(new RuntimeComponentHealth("db", "NOT_CONNECTED"));
         }
@@ -58,7 +66,25 @@ final class RuntimeDiagnosticsService {
         if (result.stream().noneMatch(value -> "audit".equals(value.name()))) {
             result.add(new RuntimeComponentHealth("audit", "NOT_CONNECTED"));
         }
+        result.add(new RuntimeComponentHealth("migrations", migrationStatus()));
         return List.copyOf(result);
+    }
+
+    private String migrationStatus() {
+        try {
+            if (!environment.getProperty("spring.flyway.enabled", Boolean.class, true)) {
+                return "NOT_ENABLED";
+            }
+            Flyway flyway = migrations.getIfAvailable();
+            if (flyway == null) return "UNAVAILABLE";
+            if (!flyway.validateWithResult().validationSuccessful) return "VALIDATION_FAILED";
+            var info = flyway.info();
+            if (info.pending().length > 0) return "PENDING";
+            return info.applied().length > 0 ? "UP" : "NOT_APPLIED";
+        } catch (RuntimeException unavailable) {
+            // Driver, configuration and migration details never cross the diagnostics boundary.
+            return "UNAVAILABLE";
+        }
     }
 
     private RuntimeMetricSnapshot metrics() {

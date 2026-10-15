@@ -1,0 +1,233 @@
+{
+  "date": "2026-10-15",
+  "baseline": "ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3",
+  "status": "集成候选；仅按逐票完整验收证据关闭，不代表全部T01–T36完成",
+  "candidate": {
+    "sha256": "2859eaad1029a271db4e44e11911b322af1374b2adaf9dad539dc9c69307872c",
+    "mainInputCount": 529,
+    "inputsStableDuringBuild": true,
+    "migrationsMatchSource": true,
+    "inputManifestSha256": "1b7c43a032857226e9e0102e701db881bc5ff237ce3663767fd14affc4cd6307"
+  },
+  "verification": [
+    {
+      "scope": "配置/组织/成员/身份/即时撤销后端",
+      "tests": 185,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "includesRealMysqlTests": 20,
+      "note": "独立定向回归；与早期配置批次有重叠，不叠加为唯一总数"
+    },
+    {
+      "scope": "任务、业务幂等、SSE、会话lease后端",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "includesRealMysqlTests": 3
+    },
+    {
+      "scope": "审计组织归属及405 HTTP",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "接口目录与历史后端",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "note": "最终协议/基础设施URL可配置标记定向红绿；COMPONENT_OWNED保护不变；新候选真实重放待执行"
+    },
+    {
+      "scope": "OAuth持久化与PKCE回归",
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "note": "MockMvc/H2，不替代T24真实双节点验收"
+    },
+    {
+      "scope": "真实MySQL/Redis双JVM Cookie会话撤销 SSE",
+      "before": {
+        "streamClosedWithin6Seconds": false,
+        "executionEventsAfterRevoke": 9
+      },
+      "after": {
+        "streamClosedWithin6Seconds": true,
+        "executionEventsAfterRevoke": 0
+      },
+      "cleanup": "VERIFIED"
+    },
+    {
+      "scope": "固定候选真实双JVM业务副作用计数及真实任务页面",
+      "businessCases": 3,
+      "businessEffectsPerCase": 1,
+      "realTaskUi": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "realRecoveredHistoryUi": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reservedContext": "实际SQL验证receipt tenant/task/businessKey来自受信执行上下文，不接受任务参数伪造",
+      "cleanup": "VERIFIED",
+      "note": "重试/竞争/业务提交后杀实际owner；fixture只在验收外部jar中，不进入生产制品或生产迁移"
+    },
+    {
+      "scope": "新租户创建/升级与组织审计读取后续回归",
+      "broadBeforeCollisionGuard": {
+        "tests": 193,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "finalCollisionGuard": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "note": "两批有重叠；193不包含后新增碰撞用例，最终全仓check另计。"
+    }
+  ],
+  "reproducibleEntrypoints": [
+    "scripts/acceptance/foundation/run.py",
+    "scripts/acceptance/foundation/redis-run.py",
+    "scripts/acceptance/foundation/context-probe.py",
+    "scripts/acceptance/foundation/audit-run.py",
+    "summer-ui/scripts/e2e-tasks.mjs",
+    "scripts/acceptance/foundation/scope-probe.py",
+    "scripts/acceptance/identity/run.py",
+    "scripts/acceptance/interface-resources/run.py"
+  ],
+  "limitations": [
+    "仓库级check及其他真实页面验收另行记录，不能由定向用例推定全部通过。",
+    "T02/T03/T04在2859固定候选完成独立验收，提交后按依赖关闭；仓库级H2隔离后完整重跑仍待执行。",
+    "T12/T13真实API112项通过；退出/自然超时流程补验通过，组织刷新回显最新修复仍待真实身份页面重放。T14生产协议专项4项、后端16项和Chrome6项通过，但管理组合映射完整性诊断仍待独立修复。",
+    "T24实际客户端修改、禁用重启及协议行为还需独立验收。",
+    "真实测试运行于随机隔离schema/会话namespace；不代表生产部署或微服务拆分验收。"
+  ],
+  "preservation": {
+    "userCustomerController": "仅格式差异，未纳入本次提交选择，保持用户文件",
+    "realIndex": "临时索引构造集成提交，不覆盖当前真实索引；已保存语义与字节快照",
+    "credentials": "运行时Secret仅内存/env/stdin；交付文件精确凭据扫描0命中"
+  },
+  "integrationRepairs": {
+    "firstRepositoryCheck": {
+      "status": "FAILED_AND_INCOMPLETE",
+      "tests": 578,
+      "failures": 28,
+      "errors": 0,
+      "skipped": 20,
+      "limit": "包含执行器OOM失败；后续任务未完整执行。不能称全仓已验收。"
+    },
+    "classifiedCauses": [
+      "authorization反向依赖configuration形成循环；企业请求上下文算法移入authorization，原配置公开API委托保留。",
+      "两个新实体硬编码LONGTEXT使Postgres建表失败；改Hibernate LONG32VARCHAR，由方言选文本类型，既有MySQL Flyway迁移不变。",
+      "旧字典MySQL夹具缺有效租户/成员且匿名裸路径没有租户；改真实成员及显式租户，不降低服务检查。",
+      "Bootstrap夹具把随机ADMIN当首个引导账号；改从实际配置取得首个账号，不给予任意ADMIN引导权限。",
+      "首轮未给共享Redis测试传凭据，20项MySQL环境门控未启用，且默认512MiB堆在长回归中OOM；下一轮只在测试运行器提供必要env、1GiB堆及4个缓存上下文。"
+    ],
+    "targetedRepairVerification": {
+      "tests": 51,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "postgresAndRedisActual": true
+    },
+    "finalRepositoryCheck": {
+      "status": "FAILED_ONE_CASE",
+      "tests": 633,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "sourceInputCount": 683,
+      "sourceChangesDuringRun": [],
+      "elapsedSeconds": 1460.8,
+      "failure": "IdentityChainE2EContractTest highRisk approval HTTP500: H2 summer_authorization_capability table missing (42S02)",
+      "limit": "sample test失败后下游Gradle任务未继续，不能称全仓完整通过；测试上下文共享数据库隔离修复待验证。"
+    },
+    "h2ContextIsolationRepair": {
+      "red": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "green": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "change": "测试默认H2库按上下文独立命名，保留MySQL模式；关闭一个真实上下文后另一个的能力表仍可读取",
+      "productionJarUnchanged": true
+    }
+  },
+  "previousCandidate": {
+    "sha256": "4c81a803dd19f610999a8a8b5b336b4a25771af82a981a3a47e79a5c3e86eeae",
+    "mainInputCount": 523,
+    "inputsStableDuringBuild": true,
+    "migrationsMatchSource": true,
+    "inputManifestSha256": "842a43cbe345a88fd20d50986ca7965655d7a9a604b7894f98efc45ffea27ca5"
+  },
+  "taskTimestampRepair": {
+    "red": {
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "componentGreen": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "realUiReplay": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "contract": "SSE终态后读取持久化HTTP历史；禁止用浏览器时间伪造finishedAt",
+    "cleanup": "VERIFIED"
+  },
+  "foundationCurrentCandidate": {
+    "candidate_sha256": "2859eaad1029a271db4e44e11911b322af1374b2adaf9dad539dc9c69307872c",
+    "T02": {
+      "scope": 12,
+      "customer_api": 20,
+      "real_browser_flows": 3,
+      "restricted_account_checks": 2,
+      "missing_configuration_checks": 1
+    },
+    "T03": {
+      "real_states": 5,
+      "page_errors": 0,
+      "healthy_fault_recovery_checks": 5
+    },
+    "T04": {
+      "context_checks": 7,
+      "audit_checks": 8,
+      "real_mutations": 27,
+      "real_browser_flows": 4
+    },
+    "http_mocking": false,
+    "cleanup": "VERIFIED",
+    "closureReady": [
+      110,
+      111,
+      112
+    ]
+  }
+}

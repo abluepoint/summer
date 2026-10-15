@@ -22,7 +22,7 @@ class EnterpriseDirectoryHttpTest {
     @Test
     void administratorCreatesEnterpriseAndReadsItsEmptyOrganizationTree() throws Exception {
         var created = mvc.perform(post("/api/v1/platform/enterprises")
-                        .with(jwt().jwt(j -> j.subject("directory-admin"))
+                        .with(jwt().jwt(j -> j.subject("directory-admin").claim("platform_capabilities", java.util.List.of("platform.enterprise.write")))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise.write")))
                         .header("X-Request-Id", "create-tenant-test")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -45,7 +45,7 @@ class EnterpriseDirectoryHttpTest {
     @Test
     void memberCanSelectAnOrganizationContextAndCannotSelectAnotherTenant() throws Exception {
         mvc.perform(put("/api/v1/enterprises/{id}/context", "ent-acme")
-                        .with(jwt().jwt(j -> j.subject("context-user")
+                        .with(jwt().jwt(j -> j.subject("alice")
                                 .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                 .claim("enterprise_capabilities", java.util.Map.of("ent-acme", java.util.List.of("enterprise.organization.read"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read")))
@@ -56,7 +56,7 @@ class EnterpriseDirectoryHttpTest {
                 .andExpect(jsonPath("$.data.organizationId").value("org-engineering"));
 
         mvc.perform(get("/api/v1/enterprises/{id}/org-tree", "ent-other")
-                        .with(jwt().jwt(j -> j.subject("context-user")
+                        .with(jwt().jwt(j -> j.subject("alice")
                                 .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                 .claim("enterprise_capabilities", java.util.Map.of("ent-acme", java.util.List.of("enterprise.organization.read"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"))))

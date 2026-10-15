@@ -127,7 +127,7 @@ class AuthorizationAuditPersistenceTest {
         authorization.decision(principal("legacy"), ENTERPRISE, "GET:/api/customers", "legacy-request");
         authorization.decision(withClaims(principal("managed"), Map.of("summer_managed_grants", true)),
                 ENTERPRISE, "GET:/api/customers", "managed-request");
-        var bootstrap = withClaims(principal("bootstrap", "enterprise.roles.write"), Map.of(
+        var bootstrap = withClaims(principal("summer-user", "enterprise.roles.write"), Map.of(
                 "summer_identity_source", "local-user", "platform_capabilities", List.of("platform.capabilities.write")));
         authorization.decision(bootstrap, ENTERPRISE, "POST:/api/v1/enterprises/{enterpriseId}/roles", "bootstrap-request");
         authorization.assignUserRoles(ENTERPRISE, "inactive", new UserRoleAssignmentRequest(List.of(), List.of()),
@@ -141,7 +141,7 @@ class AuthorizationAuditPersistenceTest {
                 assertThat(row).containsEntry("decision", "ALLOW").containsEntry("reasonCode", "LEGACY_SCOPE"));
         assertThat(independent.audit(ENTERPRISE, "managed", admin())).anySatisfy(row ->
                 assertThat(row).containsEntry("decision", "DENY").containsEntry("reasonCode", "DEFAULT_DENY"));
-        assertThat(independent.audit(ENTERPRISE, "bootstrap", admin())).anySatisfy(row ->
+        assertThat(independent.audit(ENTERPRISE, "summer-user", admin())).anySatisfy(row ->
                 assertThat(row).containsEntry("decision", "ALLOW").containsEntry("reasonCode", "BOOTSTRAP_ADMIN"));
         assertThat(independent.audit(ENTERPRISE, "inactive", admin())).anySatisfy(row ->
                 assertThat(row).containsEntry("decision", "DENY").containsEntry("reasonCode", "INACTIVE_MEMBERSHIP"));

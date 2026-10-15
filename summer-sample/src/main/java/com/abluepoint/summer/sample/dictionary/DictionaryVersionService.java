@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.dictionary;
 
+import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.resilience.ResilientReadService;
@@ -15,7 +16,6 @@ import java.util.UUID;
 
 @Service
 class DictionaryVersionService {
-    static final String TENANT_ID = "ent-acme";
     private final DictionaryTypeRepository types;
     private final DictionaryItemRepository items;
     private final DictionaryVersionRepository versions;
@@ -58,10 +58,10 @@ class DictionaryVersionService {
         if (replay != null) return replay;
         long current = currentVersion(type);
         requireExpected(request, current);
-        long next = versions.findTopByTenantIdAndDictionaryCodeOrderByVersionDesc(TENANT_ID, code)
+        long next = versions.findTopByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code)
                 .map(value -> value.version() + 1).orElse(1L);
         String snapshot = snapshot(type, code);
-        DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), TENANT_ID,
+        DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), resolve(authentication),
                 code, next, "PUBLISHED", snapshot, principal(authentication), requestId);
         type.publish(next);
         versions.saveAndFlush(version);
@@ -84,7 +84,7 @@ class DictionaryVersionService {
         type.disable();
         types.saveAndFlush(type);
         evidence(code, current, "DICTIONARY_DISABLED", requestId, request == null ? null : request.idempotencyKey(), authentication);
-        return view(type, versions.findByTenantIdAndDictionaryCodeAndVersion(TENANT_ID, code, current).orElse(null));
+        return view(type, versions.findByTenantIdAndDictionaryCodeAndVersion(resolve(authentication), code, current).orElse(null));
     }
 
     @Transactional
@@ -100,7 +100,7 @@ class DictionaryVersionService {
             throw invalidState("Rollback target is not a previous version");
         }
         DictionaryVersionEntity target = versions.findByTenantIdAndDictionaryCodeAndVersion(
-                        TENANT_ID, code, request.targetVersion())
+                        resolve(authentication), code, request.targetVersion())
                 .orElseThrow(() -> invalidState("Rollback target does not exist"));
         type.publish(target.version());
         types.saveAndFlush(type);
@@ -111,7 +111,7 @@ class DictionaryVersionService {
     @Transactional(readOnly = true)
     List<DictionaryVersionView> list(String code, Authentication authentication) {
         scopedType(code, authentication);
-        return versions.findAllByTenantIdAndDictionaryCodeOrderByVersionDesc(TENANT_ID, code).stream()
+        return versions.findAllByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code).stream()
                 .map(value -> new DictionaryVersionView(value.version(), value.status(), value.createdAt(), value.createdBy()))
                 .toList();
     }
@@ -120,16 +120,19 @@ class DictionaryVersionService {
     PublicDictionaryView publicRead(String code) { return publicRead(code, null); }
 
     @Transactional(readOnly = true)
-    PublicDictionaryView publicRead(String code, Authentication authentication) {
-        actions.requirePublic("dictionaries", authentication);
-        DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "dictionaries", authentication);
+    PublicDictionaryView publicRead(String code, Authentication authentication) { return publicRead(resolve(authentication), code, authentication); }
+
+    @Transactional(readOnly = true)
+    PublicDictionaryView publicRead(String tenant, String code, Authentication authentication) {
+        actions.requirePublic(tenant, "dictionaries", authentication);
+        DataScopeService.ScopeFilter scope = dataScopes.filter(tenant, "dictionaries", authentication);
         DictionaryTypeEntity type = types.findScoped(code, scope)
                 .filter(t -> t.enabled() && t.publicReadable() && t.published())
                 .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
         // Recheck both type and item scope before any cache/fallback read. Snapshot values remain immutable.
         List<DictionaryItemEntity> visible = items.findScoped(code, scope);
         java.util.Set<String> allowedValues = visible.stream().map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
-        var override = overrides.resolve("dictionaries", code, authentication);
+        var override = overrides.resolve(tenant, "dictionaries", code, authentication);
         if (override.isPresent()) {
             List<DictionaryItemView> options = objectMapper.readValue(override.get().valueJson(), objectMapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class));
             return new PublicDictionaryView(code, options.stream().filter(DictionaryItemView::enabled).filter(i -> allowedValues.contains(i.value())).toList(), override.get().version());
@@ -138,15 +141,15 @@ class DictionaryVersionService {
             return new PublicDictionaryView(code, visible.stream().filter(DictionaryItemEntity::enabled)
                     .map(i -> new DictionaryItemView(i.value(), i.label(), i.sortOrder(), i.enabled())).toList(), 0);
         }
-        DictionaryVersionEntity version = versions.findByTenantIdAndDictionaryCodeAndVersion(TENANT_ID, code, type.publishedVersion())
+        DictionaryVersionEntity version = versions.findByTenantIdAndDictionaryCodeAndVersion(tenant, code, type.publishedVersion())
                 .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
         DictionarySnapshot snapshot = objectMapper.readValue(version.snapshotJson(), DictionarySnapshot.class);
         if (!snapshot.publicReadable() || !snapshot.enabled()) throw new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
-        String cacheKey = code + ":" + (authentication == null ? "" : authentication.getName()) + ":" + version.version() + ":" + scope.fingerprint() + ":" + new java.util.TreeSet<>(allowedValues);
-        return resilientReads.read(ResilientReadService.DICTIONARIES, cacheKey, () -> cache.get(TENANT_ID, "dictionary", cacheKey, PublicDictionaryView.class,
+        String cacheKey = tenant + ":" + code + ":" + (authentication == null ? "" : authentication.getName()) + ":" + version.version() + ":" + scope.fingerprint() + ":" + new java.util.TreeSet<>(allowedValues);
+        return resilientReads.read(ResilientReadService.DICTIONARIES, cacheKey, () -> cache.get(tenant, "dictionary", cacheKey, PublicDictionaryView.class,
                 () -> new PublicDictionaryView(code, snapshot.items().stream().filter(DictionaryItemView::enabled)
                         .filter(i -> allowedValues.contains(i.value())).toList(), version.version())),
-                () -> fallbackGuard.dictionary(code, version.version(), scope.fingerprint(), allowedValues, authentication));
+                () -> fallbackGuard.dictionary(tenant, code, version.version(), scope.fingerprint(), allowedValues, authentication));
     }
 
     @Transactional
@@ -158,7 +161,7 @@ class DictionaryVersionService {
         List<DictionaryItemView> options;
         try { options = objectMapper.convertValue(request.value(), objectMapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class)); }
         catch (RuntimeException e) { throw invalidOverride(); }
-        java.util.Set<String> allowed = items.findScoped(code, dataScopes.filter(TENANT_ID, "dictionaries", auth))
+        java.util.Set<String> allowed = items.findScoped(code, dataScopes.filter(resolve(auth), "dictionaries", auth))
                 .stream().map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
         if (options.stream().anyMatch(i -> i.value() == null || !allowed.contains(i.value()) || i.label() == null || i.label().isBlank() || i.label().length() > 200 || i.sortOrder() < 0)
                 || options.stream().map(DictionaryItemView::value).distinct().count() != options.size())
@@ -167,7 +170,7 @@ class DictionaryVersionService {
     }
 
     private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "dictionaries", authentication);
+        DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
         return types.findScoped(code, scope)
                 .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
     }
@@ -175,7 +178,7 @@ class DictionaryVersionService {
     private String snapshot(DictionaryTypeEntity type, String code) {
         try {
             return objectMapper.writeValueAsString(new DictionarySnapshot(type.name(), type.publicReadable(),
-                    type.enabled(), items.findAllByDictionaryCodeOrderBySortOrderAscValueAsc(code).stream()
+                    type.enabled(), items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(type.tenantId(), code).stream()
                             .map(item -> new DictionaryItemView(item.value(), item.label(), item.sortOrder(), item.enabled())).toList()));
         } catch (JacksonException exception) {
             throw new IllegalStateException("Dictionary snapshot cannot be serialized", exception);
@@ -185,10 +188,10 @@ class DictionaryVersionService {
     private void evidence(String code, long version, String eventType, String requestId, String idempotencyKey, Authentication authentication) {
         try {
             String eventId = UUID.randomUUID().toString();
-            String payload = objectMapper.writeValueAsString(new DictionaryEvent(eventId, TENANT_ID, code, eventType, version, requestId));
-            outbox.saveAndFlush(new DictionaryOutboxEntity(eventId, TENANT_ID, code, eventType, version, requestId, idempotencyKey, payload));
-            cache.invalidate(TENANT_ID, "dictionary");
-            notifications.record(code, eventType, version, requestId);
+            String payload = objectMapper.writeValueAsString(new DictionaryEvent(eventId, resolve(authentication), code, eventType, version, requestId));
+            outbox.saveAndFlush(new DictionaryOutboxEntity(eventId, resolve(authentication), code, eventType, version, requestId, idempotencyKey, payload));
+            cache.invalidate(resolve(authentication), "dictionary");
+            notifications.record(resolve(authentication), code, eventType, version, requestId);
             audit.recordSuccess(code, eventType, requestId, authentication);
         } catch (JacksonException exception) {
             throw new IllegalStateException("Dictionary event cannot be serialized", exception);
@@ -198,10 +201,10 @@ class DictionaryVersionService {
     private DictionaryTypeVersionView replay(String code, DictionaryVersionRequest request, DictionaryTypeEntity type, String eventType) {
         String key = request == null ? null : request.idempotencyKey();
         if (key == null || key.isBlank()) return null;
-        DictionaryOutboxEntity event = outbox.findByTenantIdAndDictionaryCodeAndIdempotencyKey(TENANT_ID, code, key).orElse(null);
+        DictionaryOutboxEntity event = outbox.findByTenantIdAndDictionaryCodeAndIdempotencyKey(type.tenantId(), code, key).orElse(null);
         if (event == null) return null;
         if (!eventType.equals(event.eventType())) throw new SummerException(DictionaryErrorCode.CONFLICT);
-        DictionaryVersionEntity version = versions.findByTenantIdAndDictionaryCodeAndVersion(TENANT_ID, code, event.version()).orElse(null);
+        DictionaryVersionEntity version = versions.findByTenantIdAndDictionaryCodeAndVersion(type.tenantId(), code, event.version()).orElse(null);
         return view(type, version);
     }
 

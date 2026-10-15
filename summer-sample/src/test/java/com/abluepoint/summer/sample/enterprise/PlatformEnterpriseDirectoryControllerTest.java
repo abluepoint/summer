@@ -22,13 +22,13 @@ class PlatformEnterpriseDirectoryControllerTest {
     @Test
     void platformOperatorReadsEnterpriseDirectoryAndSummaryWithFilters() throws Exception {
         mockMvc.perform(get("/api/v1/platform/enterprises")
-                        .param("status", "已认证")
+                        .param("status", "待审核")
                         .with(platformAuth("platform.enterprise.read")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items.length()").value(2))
-                .andExpect(jsonPath("$.data.summary.total").value(4))
-                .andExpect(jsonPath("$.data.summary.authenticated").value(2))
-                .andExpect(jsonPath("$.data.items[0].enterpriseId").value("ent-bjai"));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.summary.total").value(1))
+                .andExpect(jsonPath("$.data.summary.pending").value(1))
+                .andExpect(jsonPath("$.data.items[0].enterpriseId").value("ent-acme"));
     }
 
     @Test
@@ -36,18 +36,18 @@ class PlatformEnterpriseDirectoryControllerTest {
         String revision = mockMvc.perform(get("/api/v1/platform/enterprises")
                         .with(platformAuth("platform.enterprise.read")))
                 .andReturn().getResponse().getContentAsString()
-                .replaceAll(".*\\\"enterpriseId\\\":\\\"ent-bjai\\\".*?\\\"revision\\\":\\\"([^\\\"]+)\\\".*", "$1");
+                .replaceAll(".*\\\"enterpriseId\\\":\\\"ent-acme\\\".*?\\\"revision\\\":\\\"([^\\\"]+)\\\".*", "$1");
 
-        mockMvc.perform(post("/api/v1/platform/enterprises/{id}:freeze", "ent-bjai")
+        mockMvc.perform(post("/api/v1/platform/enterprises/{id}:freeze", "ent-acme")
                         .header("If-Match", "\"" + revision + "\"")
-                        .header("Idempotency-Key", "freeze-ent-bjai-1")
+                        .header("Idempotency-Key", "freeze-ent-acme-1")
                         .with(platformAuth("platform.enterprise.write")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("已冻结"));
 
-        mockMvc.perform(post("/api/v1/platform/enterprises/{id}:freeze", "ent-bjai")
+        mockMvc.perform(post("/api/v1/platform/enterprises/{id}:freeze", "ent-acme")
                         .header("If-Match", "\"" + revision + "\"")
-                        .header("Idempotency-Key", "freeze-ent-bjai-1")
+                        .header("Idempotency-Key", "freeze-ent-acme-1")
                         .with(platformAuth("platform.enterprise.write")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("已冻结"));
@@ -61,6 +61,17 @@ class PlatformEnterpriseDirectoryControllerTest {
                                 .claim("platform_capabilities", java.util.List.of("platform.enterprise.read")))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise.read"))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aCreatedEnterpriseIsVisibleInThePlatformDirectory() throws Exception {
+        var created = mockMvc.perform(post("/api/v1/platform/enterprises").with(platformAuth("platform.enterprise.write"))
+                        .contentType("application/json").content("{\"name\":\"Created directory enterprise\",\"code\":\"created-directory-enterprise\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        String id = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.data.enterpriseId");
+        mockMvc.perform(get("/api/v1/platform/enterprises").param("search", "Created directory enterprise")
+                        .with(platformAuth("platform.enterprise.read")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].enterpriseId").value(id));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platformAuth(String capability) {

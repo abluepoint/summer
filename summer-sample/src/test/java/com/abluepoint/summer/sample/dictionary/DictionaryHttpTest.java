@@ -8,7 +8,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,6 +19,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionaryHttpTest {
+    // These legacy fixtures now declare their enterprise; production has no implicit sample tenant.
+    private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor jwt() {
+        return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+                .jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -50,7 +55,7 @@ class DictionaryHttpTest {
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/public/dictionaries/customer-segment"))
+        mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/customer-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items", hasSize(1)))
                 .andExpect(jsonPath("$.data.items[0].value").value("standard"));
@@ -63,7 +68,7 @@ class DictionaryHttpTest {
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/public/dictionaries/customer-segment"))
+        mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/customer-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items", hasSize(2)))
                 .andExpect(jsonPath("$.data.items[0].value").value("vip"));
@@ -79,7 +84,7 @@ class DictionaryHttpTest {
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/public/dictionaries/internal-only"))
+        mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/internal-only"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"))
@@ -118,7 +123,7 @@ class DictionaryHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor dictionaryWriter() {
-        return jwt().jwt(token -> token.subject("operator"))
+        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
     }
 }

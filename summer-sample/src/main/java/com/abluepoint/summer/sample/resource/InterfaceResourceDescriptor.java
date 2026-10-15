@@ -2,6 +2,10 @@ package com.abluepoint.summer.sample.resource;
 
 import java.util.Locale;
 import java.util.Objects;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.Collections;
 
 public record InterfaceResourceDescriptor(
         String httpMethod,
@@ -11,10 +15,20 @@ public record InterfaceResourceDescriptor(
         ResourceType resourceType,
         SensitiveLevel sensitiveLevel,
         String permissionCode,
-        boolean configurable
+        boolean configurable,
+        String contextId,
+        String source,
+        Map<String, List<String>> conditions,
+        String configurationPolicy
 ) {
 
     public InterfaceResourceDescriptor {
+        contextId = requireText(contextId, "contextId");
+        source = requireText(source, "source");
+        configurationPolicy = requireText(configurationPolicy, "configurationPolicy");
+        Map<String, List<String>> ordered = new TreeMap<>();
+        conditions.forEach((key, values) -> { if (!values.isEmpty()) ordered.put(key, values.stream().distinct().sorted().toList()); });
+        conditions = Collections.unmodifiableMap(ordered);
         httpMethod = requireText(httpMethod, "httpMethod").toUpperCase(Locale.ROOT);
         normalizedPath = normalizePath(normalizedPath);
         handler = requireText(handler, "handler");
@@ -37,12 +51,13 @@ public record InterfaceResourceDescriptor(
             boolean configurable
     ) {
         return new InterfaceResourceDescriptor(
-                httpMethod, path, handler, module, resourceType, sensitiveLevel, permissionCode, configurable
+                httpMethod, path, handler, module, resourceType, sensitiveLevel, permissionCode, configurable,
+                "application", "MVC", Map.of(), resourceType == ResourceType.BUSINESS ? "MANAGED_ROLE" : "COMPONENT_OWNED"
         );
     }
 
     public String key() {
-        return httpMethod + " " + normalizedPath;
+        return contextId + " " + httpMethod + " " + normalizedPath + " " + conditions;
     }
 
     private static String normalizePath(String value) {

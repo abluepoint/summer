@@ -13,7 +13,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "summer_system_parameter_version", uniqueConstraints =
         @UniqueConstraint(name = "uk_summer_parameter_version_idempotency",
-                columnNames = {"parameter_key", "idempotency_key"}))
+                columnNames = {"tenant_id", "parameter_key", "idempotency_key"}))
 class SystemParameterVersionEntity {
     @Id
     @Column(name = "id", nullable = false, updatable = false, length = 36)
@@ -41,11 +41,11 @@ class SystemParameterVersionEntity {
     protected SystemParameterVersionEntity() {
     }
 
-    SystemParameterVersionEntity(String parameterKey, long revision, SystemParameterReleaseState state,
+    SystemParameterVersionEntity(String tenantId, String parameterKey, long revision, SystemParameterReleaseState state,
                                   String snapshotJson, long baseVersion, String idempotencyKey,
                                   String principal) {
         this.id = UuidV7.next();
-        this.tenantId = SystemParameterService.TENANT_ID;
+        this.tenantId = tenantId;
         this.parameterKey = parameterKey;
         this.revision = revision;
         this.state = state;

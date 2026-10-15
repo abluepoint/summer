@@ -16,6 +16,8 @@ class ConfigurationOverrideEntity {
     @Column(name="public_readable",nullable=false) boolean publicReadable;
     @Column(nullable=false) boolean enabled;
     @Version long version;
+    @Column(name="latest_revision",nullable=false) long latestRevision;
+    @Column(name="published_revision") Long publishedRevision;
     @Column(name="updated_at",nullable=false) Instant updatedAt;
     protected ConfigurationOverrideEntity() {}
 }

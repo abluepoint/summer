@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
-@Table(name = "summer_system_parameter")
+@Table(name = "summer_system_parameter", uniqueConstraints = @jakarta.persistence.UniqueConstraint(columnNames = {"tenant_id", "parameter_key"}))
 class SystemParameterEntity {
     @Id
     @Column(name = "id", nullable = false, updatable = false, length = 36)
@@ -22,7 +22,7 @@ class SystemParameterEntity {
     @Column(name = "organization_id", length = 64) private String organizationId;
     @Column(name = "created_by", length = 128) private String createdBy;
     @Column(name = "owner_id", length = 128) private String ownerId;
-    @Column(name = "parameter_key", nullable = false, unique = true, length = 120)
+    @Column(name = "parameter_key", nullable = false, length = 120)
     private String key;
     @Enumerated(EnumType.STRING)
     @Column(name = "value_type", nullable = false, length = 20)
@@ -55,11 +55,11 @@ class SystemParameterEntity {
     protected SystemParameterEntity() {
     }
 
-    SystemParameterEntity(String key, SystemParameterType type, String valueJson, boolean required,
+    SystemParameterEntity(String tenantId, String key, SystemParameterType type, String valueJson, boolean required,
                            BigDecimal min, BigDecimal max, String pattern, boolean publicValue,
                            String description, String organizationId, String createdBy, String ownerId) {
         this.id = UuidV7.next();
-        this.tenantId = "ent-acme";
+        this.tenantId = tenantId;
         this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.key = key;
         this.type = type;

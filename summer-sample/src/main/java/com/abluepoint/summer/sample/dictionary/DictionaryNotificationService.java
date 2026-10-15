@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 class DictionaryNotificationService {
-    private static final String TENANT_ID = DictionaryVersionService.TENANT_ID;
     private static final int MAX_CONNECTIONS_PER_ENTERPRISE = 32;
     private static final int MAX_REPLAY_EVENTS = 500;
     private static final long HEARTBEAT_SECONDS = 15L;
@@ -34,6 +33,7 @@ class DictionaryNotificationService {
     private final DictionaryNotificationRepository repository;
     private final DictionaryTypeRepository types;
     private final DataScopeService dataScopes;
+    private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher events;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, runnable -> {
@@ -46,18 +46,19 @@ class DictionaryNotificationService {
 
     DictionaryNotificationService(DictionaryNotificationRepository repository, DictionaryTypeRepository types,
                                    DataScopeService dataScopes, ObjectMapper objectMapper,
-                                   ApplicationEventPublisher events) {
+                                   ApplicationEventPublisher events, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions) {
         this.repository = repository;
         this.types = types;
         this.dataScopes = dataScopes;
         this.objectMapper = objectMapper;
         this.events = events;
+        this.actions = actions;
     }
 
-    void record(String dictionaryCode, String eventType, long version, String requestId) {
-        String payload = payload(dictionaryCode, eventType, version, requestId);
+    void record(String tenantId, String dictionaryCode, String eventType, long version, String requestId) {
+        String payload = payload(tenantId, dictionaryCode, eventType, version, requestId);
         DictionaryNotificationEventEntity event = repository.saveAndFlush(new DictionaryNotificationEventEntity(
-                TENANT_ID, dictionaryCode, eventType, version, requestId, payload));
+                tenantId, dictionaryCode, eventType, version, requestId, payload));
         events.publishEvent(new DictionaryNotificationCreated(event.eventId(), event.tenantId(),
                 event.dictionaryCode(), event.eventType(), event.version(), event.payloadJson()));
     }
@@ -65,7 +66,7 @@ class DictionaryNotificationService {
     SseEmitter subscribe(String enterpriseId, String dictionaryCode, long lastEventId, Authentication authentication) {
         requireReadable(enterpriseId, dictionaryCode, authentication);
         SseEmitter emitter = new SseEmitter(TimeUnit.MINUTES.toMillis(30));
-        Connection connection = new Connection(enterpriseId, dictionaryCode, emitter);
+        Connection connection = new Connection(enterpriseId, dictionaryCode, emitter, authentication, lastEventId);
         synchronized (subscriptionLock) {
             Set<Connection> active = connections.computeIfAbsent(enterpriseId, ignored -> ConcurrentHashMap.newKeySet());
             if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE) throw new DictionaryNotificationConnectionLimitException();
@@ -101,14 +102,15 @@ class DictionaryNotificationService {
     }
 
     private void requireReadable(String enterpriseId, String dictionaryCode, Authentication authentication) {
-        if (!TENANT_ID.equals(enterpriseId)) throw new AccessDeniedException("Enterprise context mismatch");
+        com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(enterpriseId, authentication);
+        actions.requirePublic(enterpriseId, "dictionaries", authentication);
         DataScopeService.ScopeFilter scope = dataScopes.filter(enterpriseId, "dictionaries", authentication);
         boolean visible = types.findScoped(dictionaryCode, scope).isPresent();
         if (!visible) throw new DictionaryNotificationNotFoundException();
     }
 
     private void sendConnected(Connection connection, long lastEventId) throws IOException {
-        List<DictionaryNotificationEventEntity> all = repository.findTop500ByTenantIdAndDictionaryCodeOrderByEventIdAsc(
+        List<DictionaryNotificationEventEntity> all = repository.findTop500ByTenantIdAndDictionaryCodeOrderByEventIdDesc(
                 connection.tenantId, connection.dictionaryCode);
         long latest = all.stream().map(DictionaryNotificationEventEntity::eventId).filter(java.util.Objects::nonNull)
                 .max(Comparator.naturalOrder()).orElse(0L);
@@ -119,13 +121,14 @@ class DictionaryNotificationService {
 
     private void replay(Connection connection, long lastEventId) throws IOException {
         List<DictionaryNotificationEventEntity> window = repository
-                .findTop500ByTenantIdAndDictionaryCodeOrderByEventIdAsc(connection.tenantId, connection.dictionaryCode);
-        if (window.size() == MAX_REPLAY_EVENTS && lastEventId > 0 && lastEventId < window.get(0).eventId()) {
+                .findTop500ByTenantIdAndDictionaryCodeOrderByEventIdDesc(connection.tenantId, connection.dictionaryCode);
+        if (window.size() == MAX_REPLAY_EVENTS && lastEventId > 0 && lastEventId < window.get(window.size() - 1).eventId()) {
             connection.emitter.send(SseEmitter.event().name("resync").data(payload(Map.of(
                     "reason", "EVENT_WINDOW_EXCEEDED", "dictionaryCode", connection.dictionaryCode,
-                    "latestEventId", window.get(window.size() - 1).eventId()))));
+                    "latestEventId", window.get(0).eventId()))));
             return;
         }
+        window = window.stream().sorted(Comparator.comparing(DictionaryNotificationEventEntity::eventId)).toList();
         for (DictionaryNotificationEventEntity event : window) {
             if (event.eventId() > lastEventId) send(connection, event);
         }
@@ -133,18 +136,23 @@ class DictionaryNotificationService {
 
     private void heartbeat(Connection connection) {
         try {
+            requireReadable(connection.tenantId, connection.dictionaryCode, connection.authentication);
+            replay(connection, connection.lastEventId);
             connection.emitter.send(SseEmitter.event().comment("keep-alive"));
-        } catch (IOException failure) {
+        } catch (IOException | RuntimeException failure) {
             remove(connection);
             connection.emitter.completeWithError(failure);
         }
     }
 
-    private void send(Connection connection, DictionaryNotificationEventEntity event) {
+    private synchronized void send(Connection connection, DictionaryNotificationEventEntity event) {
         try {
+            if (event.eventId() <= connection.lastEventId) return;
+            requireReadable(connection.tenantId, connection.dictionaryCode, connection.authentication);
             connection.emitter.send(SseEmitter.event().id(String.valueOf(event.eventId()))
                     .name(event.eventType()).data(event.payloadJson()));
-        } catch (IOException failure) {
+            connection.lastEventId = event.eventId();
+        } catch (IOException | RuntimeException failure) {
             remove(connection);
             connection.emitter.completeWithError(failure);
         }
@@ -160,8 +168,8 @@ class DictionaryNotificationService {
         if (heartbeat != null) heartbeat.cancel(false);
     }
 
-    private String payload(String code, String type, long version, String requestId) {
-        return payload(Map.of("dictionaryCode", code, "eventType", type, "version", version,
+    private String payload(String tenantId, String code, String type, long version, String requestId) {
+        return payload(Map.of("tenantId", tenantId, "dictionaryCode", code, "eventType", type, "version", version,
                 "requestId", requestId == null ? "" : requestId));
     }
 
@@ -181,10 +189,14 @@ class DictionaryNotificationService {
         private final String dictionaryCode;
         private final SseEmitter emitter;
         private ScheduledFuture<?> heartbeat;
-        private Connection(String tenantId, String dictionaryCode, SseEmitter emitter) {
+        private final Authentication authentication;
+        private volatile long lastEventId;
+        private Connection(String tenantId, String dictionaryCode, SseEmitter emitter, Authentication authentication, long lastEventId) {
             this.tenantId = tenantId;
             this.dictionaryCode = dictionaryCode;
             this.emitter = emitter;
+            this.authentication = authentication;
+            this.lastEventId = lastEventId;
         }
     }
 

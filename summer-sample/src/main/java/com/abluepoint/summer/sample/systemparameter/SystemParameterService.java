@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
@@ -23,7 +24,6 @@ import java.util.regex.PatternSyntaxException;
 
 @Service
 class SystemParameterService {
-    static final String TENANT_ID = "ent-acme";
     private static final Pattern KEY = Pattern.compile("[a-z][a-z0-9._-]{2,119}");
 
     private final SystemParameterRepository repository;
@@ -61,23 +61,23 @@ class SystemParameterService {
                                Authentication authentication) {
         List<SummerException.Violation> violations = validateCreate(request);
         if (!violations.isEmpty()) throw new SystemParameterValidationException(violations);
-        if (repository.existsByKey(request.key())) {
-            if (repository.findScoped(request.key(), dataScopes.filter(TENANT_ID, "system-parameters", authentication)).isEmpty())
+        if (repository.existsByTenantIdAndKey(resolve(authentication), request.key())) {
+            if (repository.findScoped(request.key(), dataScopes.filter(resolve(authentication), "system-parameters", authentication)).isEmpty())
                 throw new com.abluepoint.summer.common.error.SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
             throw new SystemParameterConflictException("System parameter key is already in use");
         }
-        dataScopes.assertWrite(TENANT_ID, "system-parameters", authentication, request.organizationId());
+        dataScopes.assertWrite(resolve(authentication), "system-parameters", authentication, request.organizationId());
         if (Boolean.TRUE.equals(request.publicValue())) actions.require("system-parameters", "publish", authentication);
         String valueJson = serialize(request.value());
         try {
             SystemParameterEntity saved = repository.saveAndFlush(new SystemParameterEntity(
-                    request.key(), request.type(), valueJson, Boolean.TRUE.equals(request.required()),
+                    resolve(authentication), request.key(), request.type(), valueJson, Boolean.TRUE.equals(request.required()),
                     request.min(), request.max(), blankToNull(request.pattern()),
                     Boolean.TRUE.equals(request.publicValue()), blankToNull(request.description()), request.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName()));
             releases.recordInitial(saved, authentication);
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
-            cache.evictLocal(TENANT_ID, "system-parameter");
-            audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_CREATED", requestId, authentication);
+            cache.evictLocal(resolve(authentication), "system-parameter");
+            audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + saved.key(), "SYSTEM_PARAMETER_CREATED", requestId, authentication);
             return view(saved);
         } catch (DataIntegrityViolationException exception) {
             throw new SystemParameterConflictException("System parameter key is already in use");
@@ -86,7 +86,7 @@ class SystemParameterService {
 
     @Transactional(readOnly = true)
     SystemParameterPage list(int page, int size, SystemParameterType type, SystemParameterStatus status, Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
+        DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "system-parameters", authentication);
         org.springframework.data.jpa.domain.Specification<SystemParameterEntity> specification = scope.specification();
         if (type != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("type"), type));
         if (status != null) specification = specification.and((root, query, builder) -> builder.equal(root.get("status"), status));
@@ -106,20 +106,21 @@ class SystemParameterService {
 
     @Transactional(readOnly = true)
     SystemParameterView find(String key, Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(TENANT_ID, "system-parameters", authentication);
+        DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "system-parameters", authentication);
         SystemParameterEntity visible = repository.findScoped(key, scope)
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
-        String cacheKey = key + ":" + visible.id() + ":" + visible.version() + ":" + (authentication == null ? "" : authentication.getName()) + ":" + scope.fingerprint();
+        String tenant = visible.tenantId();
+        String cacheKey = tenant + ":" + key + ":" + visible.id() + ":" + visible.version() + ":" + (authentication == null ? "" : authentication.getName()) + ":" + scope.fingerprint();
         return resilientReads.read(ResilientReadService.PARAMETERS, cacheKey, () ->
-                cache.get(TENANT_ID, "system-parameter", cacheKey, SystemParameterView.class,
-                        () -> view(visible)), () -> fallbackGuard.parameter(visible.id(), visible.version(),
+                cache.get(tenant, "system-parameter", cacheKey, SystemParameterView.class,
+                        () -> view(visible)), () -> fallbackGuard.parameter(tenant, visible.id(), visible.version(),
                         visible.publicValue(), scope.fingerprint(), authentication));
     }
 
     @Transactional
     SystemParameterView update(String key, UpdateSystemParameterRequest request, String requestId,
                                Authentication authentication) {
-        SystemParameterEntity entity = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", authentication))
+        SystemParameterEntity entity = repository.findScoped(key, dataScopes.filter(resolve(authentication), "system-parameters", authentication))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         if (request.version() == null || request.version() != entity.version()) {
             throw new SystemParameterVersionConflictException();
@@ -140,8 +141,8 @@ class SystemParameterService {
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
-            cache.evictLocal(TENANT_ID, "system-parameter");
-            audit.recordResourceSuccess("system-parameter:" + saved.key(), "SYSTEM_PARAMETER_UPDATED", requestId, authentication);
+            cache.evictLocal(resolve(authentication), "system-parameter");
+            audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + saved.key(), "SYSTEM_PARAMETER_UPDATED", requestId, authentication);
             return view(saved);
         } catch (ObjectOptimisticLockingFailureException exception) {
             throw new SystemParameterVersionConflictException();
@@ -151,15 +152,15 @@ class SystemParameterService {
     @Transactional
     SystemParameterView setStatus(String key, SystemParameterStatus status, String requestId,
                                   Authentication authentication) {
-        SystemParameterEntity entity = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", authentication))
+        SystemParameterEntity entity = repository.findScoped(key, dataScopes.filter(resolve(authentication), "system-parameters", authentication))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         entity.update(entity.valueJson(), entity.required(), entity.min(), entity.max(), entity.pattern(),
                 entity.publicValue(), entity.description(), status);
         try {
             SystemParameterEntity saved = repository.saveAndFlush(entity);
             events.enqueue(saved, "SYSTEM_PARAMETER_CHANGED", requestId);
-            cache.evictLocal(TENANT_ID, "system-parameter");
-            audit.recordResourceSuccess("system-parameter:" + saved.key(),
+            cache.evictLocal(resolve(authentication), "system-parameter");
+            audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + saved.key(),
                     status == SystemParameterStatus.ACTIVE ? "SYSTEM_PARAMETER_ENABLED" : "SYSTEM_PARAMETER_DISABLED",
                     requestId, authentication);
             return view(saved);
@@ -169,12 +170,15 @@ class SystemParameterService {
     }
 
     @Transactional(readOnly = true)
-    PublicSystemParameterView publicRead(String key, Authentication authentication) {
-        actions.requirePublic("system-parameters", authentication);
-        SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", authentication))
+    PublicSystemParameterView publicRead(String key, Authentication authentication) { return publicRead(resolve(authentication), key, authentication); }
+
+    @Transactional(readOnly = true)
+    PublicSystemParameterView publicRead(String tenant, String key, Authentication authentication) {
+        actions.requirePublic(tenant, "system-parameters", authentication);
+        SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(tenant, "system-parameters", authentication))
                 .filter(p -> p.publicValue() && p.status() == SystemParameterStatus.ACTIVE)
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
-        var override = overrides.resolve("system-parameters", key, authentication);
+        var override = overrides.resolve(tenant, "system-parameters", key, authentication);
         Object value = override.map(v -> deserialize(v.valueJson())).orElseGet(() -> deserialize(row.valueJson()));
         return new PublicSystemParameterView(key, value, override.map(v -> v.version()).orElse(row.version()));
     }
@@ -182,7 +186,7 @@ class SystemParameterService {
     @Transactional
     com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(String key, String organization,
             com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth, String requestId) {
-        SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(TENANT_ID, "system-parameters", auth))
+        SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(resolve(auth), "system-parameters", auth))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         List<SummerException.Violation> violations = validate(row.key(), row.type(), request.value(), row.required(), row.min(), row.max(), row.pattern());
         if (!violations.isEmpty()) throw new SystemParameterValidationException(violations);
@@ -205,7 +209,7 @@ class SystemParameterService {
         return violations;
     }
 
-    private List<SummerException.Violation> validate(String key, SystemParameterType type, Object value,
+    static List<SummerException.Violation> validate(String key, SystemParameterType type, Object value,
                                                      boolean required, BigDecimal min, BigDecimal max,
                                                      String pattern) {
         List<SummerException.Violation> violations = new ArrayList<>();

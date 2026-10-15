@@ -16,7 +16,7 @@ async function render() {
     await oidcManager.storeUser(new User({
       access_token: 'synthetic-component-fixture', token_type: 'Bearer',
       expires_at: Math.floor(Date.now() / 1000) + 600,
-      profile: { sub: 'ui-fixture', iss: location.origin, aud: 'summer-ui', exp: 0, iat: 0 },
+      profile: { sub: 'ui-fixture', iss: location.origin, aud: 'summer-ui', exp: 0, iat: 0, enterprise_memberships: new URLSearchParams(location.search).has('multi') ? [{ enterpriseId: 'tenant-a', status: 'ACTIVE' }, { enterpriseId: 'tenant-b', status: 'ACTIVE' }, { enterpriseId: 'inactive', status: 'INACTIVE' }] : [{ enterpriseId: 'ent-acme', status: 'ACTIVE' }], active_enterprise_id: new URLSearchParams(location.search).has('multi') ? 'tenant-a' : 'ent-acme' },
     }));
   }
   ReactDOM.render(

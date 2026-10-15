@@ -48,7 +48,7 @@ class JdbcOAuthStorageConfiguration {
                                             JdbcSummerOAuthClientStore clients,
                                             PasswordEncoder passwordEncoder) {
         return args -> properties.getAuthorizationServer().getClients().forEach(configured -> {
-            if (clients.findByClientId(configured.getId()) != null) return;
+            if (clients.isRegistered(configured.getId())) return;
             RegisteredClient.Builder builder = RegisteredClient.withId(java.util.UUID.randomUUID().toString())
                     .clientId(configured.getId()).clientName(configured.getId())
                     .clientSettings(ClientSettings.builder().requireProofKey(configured.isPublicClient()).requireAuthorizationConsent(false).build())

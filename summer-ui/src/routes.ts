@@ -204,7 +204,8 @@ export const routes: IRoute[] = [
   {
     name: 'menu.audit',
     key: 'audit',
-    requiredPermissions: [{ resource: 'menu.audit', actions: ['read'] }],
+    requiredPermissions: [{ resource: 'enterprise.audit', actions: ['read'] }],
+    capabilityCode: 'enterprise.audit.read',
   },
   {
     name: 'menu.systemParameters',
@@ -212,9 +213,16 @@ export const routes: IRoute[] = [
     requiredPermissions: [{ resource: 'menu.systemParameters', actions: ['read'] }],
   },
   {
+    name: 'menu.authUsers',
+    key: 'auth-users',
+    requiredPermissions: [{ resource: 'enterprise.members', actions: ['read'] }],
+    capabilityCode: 'enterprise.members.read',
+  },
+  {
     name: 'menu.organization',
     key: 'organization',
-    requiredPermissions: [{ resource: 'menu.organization', actions: ['read'] }],
+    requiredPermissions: [{ resource: 'enterprise.organization', actions: ['read'] }],
+    capabilityCode: 'enterprise.organization.read',
   },
   {
     name: 'menu.roles',
@@ -267,15 +275,17 @@ export const routes: IRoute[] = [
       {
         name: 'menu.diagnostics.redis',
         key: 'diagnostics/redis',
+        capabilityCode: 'platform.capabilities.read',
         requiredPermissions: [
-          { resource: 'menu.diagnostics.redis', actions: ['read'] },
+          { resource: 'platform.capabilities', actions: ['read'] },
         ],
       },
       {
         name: 'menu.diagnostics.runtime',
         key: 'diagnostics/runtime',
+        capabilityCode: 'platform.capabilities.read',
         requiredPermissions: [
-          { resource: 'menu.diagnostics.runtime', actions: ['read'] },
+          { resource: 'platform.capabilities', actions: ['read'] },
         ],
       },
       {

@@ -90,6 +90,102 @@ class MenuManifestHttpTest {
                 .andExpect(jsonPath("$.error.code").value("SUMMER_MENU_MANIFEST_INVALID"));
     }
 
+    @Test
+    void platformAdministratorCanReadCurrentManifestWithoutWritingIt() throws Exception {
+        String body = "{\"manifestVersion\":7,\"items\":[{\"menuId\":\"root\",\"path\":\"/root\",\"titleKey\":\"menu.root\",\"iconKey\":\"root\",\"sortOrder\":10}]}";
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "read-current").with(platformAdmin("platform.menu.write")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/platform/menu-manifest").with(platformAdmin("platform.menu.write")))
+                .andExpect(status().isOk()).andExpect(header().string("ETag", "\"7\""))
+                .andExpect(jsonPath("$.data.items[0].menuId").value("root"));
+        mockMvc.perform(get("/api/v1/platform/menu-manifest").with(subject("ordinary", "customer.read")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void managementReadIncludesDisabledItemsAndUsesOverrideVersionForEditing() throws Exception {
+        String body = "{\"manifestVersion\":7,\"items\":[{\"menuId\":\"root\",\"path\":\"/root\",\"titleKey\":\"menu.root\",\"iconKey\":\"root\",\"sortOrder\":10},{\"menuId\":\"child\",\"parentMenuId\":\"root\",\"path\":\"/child\",\"titleKey\":\"menu.child\",\"iconKey\":\"child\",\"sortOrder\":20}]}";
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "manage-current").with(platformAdmin("platform.menu.write")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(enterpriseAdmin("enterprise.menu.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[1].version").value(1));
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/child").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false,\"parentMenuId\":\"\",\"sortOrder\":3,\"capabilityCode\":\"customer.write\"}")
+                        .header("Idempotency-Key", "manage-disable").header("If-Match", "\"1\"").with(enterpriseAdmin("enterprise.menu.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.parentMenuId").doesNotExist());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(enterpriseAdmin("enterprise.menu.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].menuId").value("child"))
+                .andExpect(jsonPath("$.data.items[0].enabled").value(false))
+                .andExpect(jsonPath("$.data.items[0].capabilityCode").value("customer.write"));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(subject("ordinary", "customer.read")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void hidesDescendantsOfDisabledParentsAndRejectsMissingOrStaleOverrideVersion() throws Exception {
+        String body = "{\"manifestVersion\":5,\"items\":[{\"menuId\":\"parent\",\"path\":\"/parent\",\"titleKey\":\"menu.parent\",\"iconKey\":\"parent\",\"sortOrder\":10},{\"menuId\":\"child\",\"parentMenuId\":\"parent\",\"path\":\"/child\",\"titleKey\":\"menu.child\",\"iconKey\":\"child\",\"sortOrder\":20}]}";
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "parents").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}").header("Idempotency-Key", "disable-parent").header("If-Match", "\"1\"")
+                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(subject("reader", "customer.read")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true}").header("Idempotency-Key", "missing-version").with(enterpriseAdmin("enterprise.menu.write")))
+                .andExpect(status().isPreconditionFailed());
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true}").header("Idempotency-Key", "enable-parent").header("If-Match", "\"2\"")
+                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(3));
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}").header("Idempotency-Key", "stale-version").header("If-Match", "\"1\"")
+                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed());
+    }
+
+    @Test
+    void acceptsNestedFrontendRouteIdsAndReplaysMetadataRegardlessOfArrayOrder() throws Exception {
+        String root = "{\"menuId\":\"dictionary\",\"path\":\"/dictionary\",\"titleKey\":\"menu.dictionary\",\"iconKey\":\"dictionary\",\"sortOrder\":10}";
+        String child = "{\"menuId\":\"dictionary/form\",\"parentMenuId\":\"dictionary\",\"path\":\"/dictionary/form\",\"titleKey\":\"menu.form\",\"iconKey\":\"form\",\"sortOrder\":20}";
+        String body = "{\"manifestVersion\":2,\"items\":[" + child + "," + root + "]}";
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "nested-order").with(platformAdmin("platform.menu.write")))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"manifestVersion\":2,\"items\":[" + root + "," + child + "]}")
+                        .header("Idempotency-Key", "nested-order").with(platformAdmin("platform.menu.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[1].menuId").value("dictionary/form"));
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest").param("menuId", "dictionary/form")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}")
+                        .header("If-Match", "\"1\"").header("Idempotency-Key", "nested-override")
+                        .with(enterpriseAdmin("enterprise.menu.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.menuId").value("dictionary/form"))
+                .andExpect(jsonPath("$.data.enabled").value(false));
+    }
+
+    @Test
+    void firstOverrideAdvancesVersionAndAStaleInitialEditorCannotOverwriteIt() throws Exception {
+        String body = "{\"manifestVersion\":1,\"items\":[{\"menuId\":\"root\",\"path\":\"/root\",\"titleKey\":\"menu.root\",\"iconKey\":\"root\",\"sortOrder\":10}]}";
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "first-override").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());
+        for (int retry = 0; retry < 2; retry++) {
+            mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/root").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"enabled\":false}").header("If-Match", "\"1\"").header("Idempotency-Key", "same-operation")
+                            .with(enterpriseAdmin("enterprise.menu.write")))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(2));
+        }
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/root").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true}").header("If-Match", "\"1\"").header("Idempotency-Key", "stale-initial-editor")
+                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed());
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("\"manifestVersion\":1", "\"manifestVersion\":2").replace("\"sortOrder\":10", "\"sortOrder\":50"))
+                        .header("Idempotency-Key", "next-manifest").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(enterpriseAdmin("enterprise.menu.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].enabled").value(false))
+                .andExpect(jsonPath("$.data.items[0].sortOrder").value(50));
+    }
+
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platformAdmin(String capability) {
         return jwt().jwt(token -> token.subject("platform-admin").claim("platform_capabilities", List.of(capability)))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));

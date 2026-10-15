@@ -17,7 +17,6 @@ import java.util.*;
 
 @Service
 class TaskSchedulerService {
-    static final String TENANT_ID = "ent-acme";
     private static final String GROUP = "summer-task";
     private final TaskDefinitionRepository definitions;
     private final TaskExecutionRepository executions;
@@ -38,8 +37,17 @@ class TaskSchedulerService {
 
     @EventListener(ApplicationReadyEvent.class)
     void schedulePersistedTasks() {
-        definitions.findAllByEnterpriseIdOrderByUpdatedAtDesc(TENANT_ID).stream()
-                .filter(task -> task.status() == TaskStatus.ACTIVE).forEach(this::scheduleExisting);
+        definitions.findAllByStatus(TaskStatus.ACTIVE).forEach(this::scheduleExisting);
+        JobKey recovery = new JobKey("trigger-recovery", "summer-internal");
+        try {
+            scheduler.scheduleJob(JobBuilder.newJob(TaskTriggerRecoveryJob.class).withIdentity(recovery).requestRecovery().build(),
+                    TriggerBuilder.newTrigger().withIdentity("trigger-recovery", "summer-internal").forJob(recovery)
+                            .withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(5).repeatForever()).build());
+        } catch (ObjectAlreadyExistsException alreadyScheduled) {
+            // One clustered maintenance job services receipts reserved by every application node.
+        } catch (SchedulerException unavailable) {
+            throw new TaskConflictException("Task scheduler unavailable");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -57,7 +65,7 @@ class TaskSchedulerService {
                 request.cronExpression().trim(), json(request.parameters()), retries(request.maxRetries()), timeout(request.timeoutMs()));
         TaskView result = view(definitions.saveAndFlush(task));
         schedule(task);
-        audit.recordResourceSuccess("task:" + id, "TASK_CREATED", requestId, authentication);
+        audit.recordTenantResourceSuccess(enterpriseId, "task:" + id, "TASK_CREATED", requestId, authentication);
         return result;
     }
 
@@ -75,7 +83,7 @@ class TaskSchedulerService {
         task.update(name, cron, request.parameters() == null ? task.parametersJson() : json(request.parameters()), maxRetries, timeoutMs);
         TaskView result = view(definitions.saveAndFlush(task));
         reschedule(task);
-        audit.recordResourceSuccess("task:" + taskId, "TASK_UPDATED", requestId, authentication);
+        audit.recordTenantResourceSuccess(enterpriseId, "task:" + taskId, "TASK_UPDATED", requestId, authentication);
         return result;
     }
 
@@ -86,7 +94,7 @@ class TaskSchedulerService {
         TaskView result = view(definitions.saveAndFlush(task));
         try { if (status == TaskStatus.PAUSED) scheduler.pauseJob(jobKey(task)); else { reschedule(task); scheduler.resumeJob(jobKey(task)); } }
         catch (SchedulerException exception) { throw new TaskConflictException("Task scheduler unavailable"); }
-        audit.recordResourceSuccess("task:" + taskId, status == TaskStatus.PAUSED ? "TASK_PAUSED" : "TASK_RESUMED", requestId, authentication);
+        audit.recordTenantResourceSuccess(enterpriseId, "task:" + taskId, status == TaskStatus.PAUSED ? "TASK_PAUSED" : "TASK_RESUMED", requestId, authentication);
         return result;
     }
 
@@ -106,17 +114,40 @@ class TaskSchedulerService {
         if (prior.isPresent()) {
             if (!prior.get().fingerprint().equals(fingerprint) || !prior.get().taskId().equals(taskId))
                 throw new TaskIdempotencyConflictException("Idempotency-Key was already used for another task trigger");
+            dispatchReserved(task, key, requestId, authentication);
             return;
         }
         try { triggerReceipts.saveAndFlush(new TaskTriggerReceiptEntity(UUID.randomUUID().toString(), enterpriseId, taskId, key, fingerprint)); }
         catch (DataIntegrityViolationException duplicate) {
             var replay = triggerReceipts.findByEnterpriseIdAndIdempotencyKey(enterpriseId, key).orElseThrow(() -> duplicate);
             if (!replay.taskId().equals(taskId) || !replay.fingerprint().equals(fingerprint)) throw new TaskIdempotencyConflictException("Idempotency-Key was already used for another task trigger");
+            dispatchReserved(task, key, requestId, authentication);
             return;
         }
-        try { scheduler.triggerJob(jobKey(task), new JobDataMap(Map.of("idempotencyKey", key))); }
+        dispatchReserved(task, key, requestId, authentication);
+    }
+
+    void dispatchPendingTriggers() {
+        for (TaskTriggerReceiptEntity receipt : triggerReceipts.findPending(TaskStatus.ACTIVE,
+                org.springframework.data.domain.PageRequest.of(0, 100))) {
+            definitions.findById(receipt.taskId()).filter(task -> task.status() == TaskStatus.ACTIVE).ifPresent(task -> {
+                try { dispatchReserved(task, receipt.idempotencyKey(), "task-trigger-recovery", null); }
+                catch (TaskConflictException unavailable) { /* Keep the durable reservation for the next attempt. */ }
+            });
+        }
+    }
+
+    private void dispatchReserved(TaskDefinitionEntity task, String key, String requestId,
+                                  org.springframework.security.core.Authentication authentication) {
+        if (executions.findByTaskIdAndIdempotencyKey(task.taskId(), key).isPresent()) return;
+        try {
+            scheduler.scheduleJob(TriggerBuilder.newTrigger()
+                    .withIdentity("manual-" + fingerprint(key), GROUP + "-" + task.enterpriseId())
+                    .forJob(jobKey(task)).usingJobData("idempotencyKey", key).startNow().build());
+        }
+        catch (ObjectAlreadyExistsException alreadyQueued) { return; }
         catch (SchedulerException exception) { throw new TaskConflictException("Task scheduler unavailable"); }
-        audit.recordResourceSuccess("task:" + taskId, "TASK_TRIGGERED", requestId, authentication);
+        audit.recordTenantResourceSuccess(task.enterpriseId(), "task:" + task.taskId(), "TASK_TRIGGERED", requestId, authentication);
     }
 
     List<TrustedTaskTypeView> types() { return registry.types(); }
@@ -133,7 +164,7 @@ class TaskSchedulerService {
     private static String fingerprint(String taskId) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(taskId.getBytes(StandardCharsets.UTF_8))); } catch (Exception e) { throw new IllegalStateException(e); } }
     private String json(Map<String, Object> parameters) { if (parameters == null) return "{}"; try { return objectMapper.writeValueAsString(parameters); } catch (JacksonException e) { throw new TaskValidationException("Task parameters are invalid"); } }
     private TaskDefinitionEntity require(String enterpriseId, String taskId) { requireTenant(enterpriseId); return definitions.findById(taskId).filter(t -> enterpriseId.equals(t.enterpriseId())).orElseThrow(TaskNotFoundException::new); }
-    private static void requireTenant(String enterpriseId) { if (!TENANT_ID.equals(enterpriseId)) throw new TaskNotFoundException(); }
+    private static void requireTenant(String enterpriseId) { if (enterpriseId == null || !enterpriseId.matches("[A-Za-z0-9_-]{1,64}")) throw new TaskNotFoundException(); }
     private static void etag(TaskDefinitionEntity task, String header) { if (header == null || !header.equals("\"" + task.version() + "\"")) throw new TaskPreconditionException(); }
     private TaskView view(TaskDefinitionEntity t) { return new TaskView(t.taskId(), t.enterpriseId(), t.name(), t.taskType(), t.cronExpression(), parameters(t.parametersJson()), t.maxRetries(), t.timeoutMs(), t.status().name(), t.version(), t.createdAt(), t.updatedAt()); }
     @SuppressWarnings("unchecked") private Map<String, Object> parameters(String json) { if (json == null || json.isBlank()) return Map.of(); try { Map<String,Object> m = objectMapper.readValue(json, Map.class); return m == null ? Map.of() : Map.copyOf(m); } catch (RuntimeException ignored) { return Map.of(); } }

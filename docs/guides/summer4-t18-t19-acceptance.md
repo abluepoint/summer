@@ -1,5 +1,7 @@
 # T18/T19 implementation and acceptance evidence
 
+> Current backend update: see **2026-10-15 通用租户与覆盖独立版本** below. Earlier fixed-tenant/no-override-history statements are historical boundaries superseded by ADR 0031; they are not the current backend contract. Browser and deployed multi-node acceptance remain separate.
+
 2026-10-05. Requirements: GitHub #108, #125, #126, #127 (cached authoritative issue bodies/comments in `.git/summer4-review-20261005/`). Review baseline: `76dbed5`; handoff HEAD: `be9520b`; concurrent frontend commit advanced the shared branch to `cb0a989`. This session created no commit and did not push or close issues.
 
 ## Requirement, implementation and verification
@@ -84,3 +86,34 @@ Machine-readable counts and logs: `.git/summer4-review-20261005/t18-t19-final-re
 6. 真实 Summer UI 登录：双租户成员切换上下文、指定用户 preview、同名参数/字典覆盖和发布回滚、撤权/故障、迟到响应与脏表单；回读 MySQL、网络请求及双节点结果。组件 mock 和 H2 通过不能将该项标完成。
 
 执行顺序：先由 T36 收口真实授权/组织 claim 接缝，再统一租户解析及数据库约束，然后接入服务/缓存/事件，最后由前端负责人接入并执行真实浏览器矩阵。此清单是明确待办，不是已交付声明。
+
+
+## 2026-10-15 通用租户与覆盖独立版本
+
+本轮按 #121/#125/#126/#127 的配置后端范围接续；父会话负责 `AuthorizationService`/`AuthorizationRequestInterceptor` 的共享边界，前端与 Task SSE 由其他既有会话负责。未提交、推送或关闭 Issue；实际工作区为唯一源码来源，未用基线副本替换源码，真实索引逐字节保留。
+
+### 实现契约
+
+- 新路径 `/api/v1/enterprises/{enterpriseId}/system-parameters/**`、`.../dictionaries/**` 及参数事件路径；公开读取使用 `/public/enterprises/{enterpriseId}/system-parameters/{key}` 和 `.../dictionaries/{code}`。旧路径仍可使用一致的 `X-Enterprise-Id`/`tenantId` 选择器、JWT `active_enterprise_id` 或唯一 ACTIVE 成员关系。缺失、冲突、歧义或非活动成员返回拒绝，没有 ent-acme/default 回退。匿名公开读必须明确租户。
+- 租户贯穿当前值、SQL list/count、JPA 查询/冲突检查、版本/幂等键、审计/outbox、插件 facade、缓存和独立事务中的降级校验。参数 key、字典 code/value 可跨租户同名；V32 改复合唯一键和字典项复合外键，不修改旧迁移。
+- 数据范围读取目标企业的策略、角色/用户绑定和组织元数据。当前组织、创建目标组织必须在目标企业内且 ACTIVE；不同企业的同一主体使用各自持久角色和 USER deny。缺策略继续默认拒绝。
+- V33 为既有覆盖保留 revision 1，并新增独立 draft/publish/disable/rollback/history。草稿不改变运行值；发布、停用、回滚分别授权。预期 aggregate `version` 与历史 `revision` 不可互换，过期写返回 409；回滚重新校验当前基础值约束/可见字典项。组织 > 租户 > 基础值，隐藏或停用的已发布覆盖不向下回退。
+- 字典创建接受组织，项继承其类型组织。类型响应补 tenantId/organizationId。插件按 enterpriseId 显式调用受控读取 facade；企业级读取审计使用该企业。
+- 字典通知发送前复核权限与数据范围，撤权后关闭连接；心跳从持久化最新有界窗口补读，游标避免同连接重复发送。参数事件列表和重试按租户定位，不能重试另一租户的 eventId。
+
+### 失败回归与修复
+
+1. 新企业保存策略原返回 403；同名参数/字典路由和全局唯一约束阻止实际双租户使用。
+2. 跨企业 organizationId 原可创建参数（201），现返回拒绝；字典此前不接受组织字段，现显式声明并校验。
+3. 覆盖无独立版本路由；新回归验证草稿不生效、发布生效、停用拒绝读取、回滚恢复及基础历史不受影响。
+4. 字典 SSE 撤权后仍收到下一次发布；发送前重新读取当前授权/策略后回归通过。
+5. MySQL 非空 SQL 列表原把 LocalDateTime -> Instant 投影失败吞成 400；按应用 UTC 配置转换后，MySQL 的预览/SQL/JPA 一致性用真实非空结果验证。
+6. 测试夹具修正不是放宽生产边界：旧 JWT 明确成员关系，匿名公开 URL 指定租户，组织使用实际存在的节点，MySQL 用户绑定使用合法 JSON。
+
+### 验证与仍需集成验收的部分
+
+`final-regression.json` 为 23 类、99 项，0 失败/错误/跳过。包含真实 MySQL 9 项（新矩阵 8、既有 1）、真实 Redis 4 项（缓存 3、参数 outbox 1）、双租户依赖故障 2 项及字典 SSE 4 项。MySQL 测试先在随机隔离 schema 迁移至 V31，保存旧参数/字典项/覆盖，再升级 V32/V33；验证旧值和覆盖版本保留、租户复合 FK 拒绝串租户引用，结束删除 schema 并断言不存在。Redis 使用独立 Testcontainers 容器并自动清理，未清空共享 Redis。
+
+完整日志、逐类 JUnit XML、红绿记录、源文件清单及前端契约位于本地 `.git/summer4-closeout-20261015/backend/`；它们不纳入源码提交。所有 Gradle 在共享 fcntl 锁下使用 JDK 21、最多 2 workers。MySQL 凭据从既有 Kubernetes Secret 仅载入进程环境，不写入参数、文件或输出。
+
+以上是真实 Spring HTTP/MySQL/Redis 组件证据，不能替代真实浏览器登录/企业切换，也不能把两个缓存对象称为两套独立应用进程。完整 BFF/strict 身份链、整应用双节点断连恢复/通知重放和发布门禁，仍由协调会话结合其他工作验收；本会话不据此关闭整张 T13/T17/T18/T19 票。

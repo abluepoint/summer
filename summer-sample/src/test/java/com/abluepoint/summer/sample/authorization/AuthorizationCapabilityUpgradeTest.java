@@ -18,9 +18,15 @@ class AuthorizationCapabilityUpgradeTest {
     private static final String EXISTING_ID = "cap-existing-role-reader";
     private final AuthorizationCapabilityRepository capabilities = mock(AuthorizationCapabilityRepository.class);
     private final AuthorizationRoleRepository roles = mock(AuthorizationRoleRepository.class);
+    private final org.springframework.jdbc.core.JdbcTemplate membershipJdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
     private final AuthorizationService service = new AuthorizationService(
             mock(AuthorizationUserBindingRepository.class), capabilities, roles,
-            mock(AuthorizationChangeEventService.class), mock(AuthorizationAuditStore.class));
+            mock(AuthorizationChangeEventService.class), mock(AuthorizationAuditStore.class), membershipJdbc);
+
+    @org.junit.jupiter.api.BeforeEach void persistedMembershipFixture() {
+        org.mockito.Mockito.when(membershipJdbc.queryForObject(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(Integer.class), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(1);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "bootstrapUsername", "unassigned");
+    }
 
     @Test
     void assigningACodeReusesItsPersistedIdentityInsteadOfInsertingANewSeed() {

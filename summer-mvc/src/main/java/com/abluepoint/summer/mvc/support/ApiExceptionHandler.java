@@ -12,9 +12,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -91,6 +94,17 @@ public class ApiExceptionHandler {
                 List.of(new ApiError.FieldViolation("$", "must be valid JSON"))
         );
         return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnsupportedMethod(HttpRequestMethodNotSupportedException exception) {
+        HttpHeaders headers = new HttpHeaders();
+        if (exception.getSupportedHttpMethods() != null) {
+            headers.setAllow(exception.getSupportedHttpMethods());
+        }
+        ApiError error = new ApiError("SUMMER_METHOD_NOT_ALLOWED", "Method not allowed", List.of());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).headers(headers)
+                .body(ApiResponse.failure(error, requestId()));
     }
 
     @ExceptionHandler(Exception.class)

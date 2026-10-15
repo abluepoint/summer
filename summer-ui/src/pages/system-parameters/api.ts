@@ -41,28 +41,49 @@ async function request<T>(call: () => Promise<{ data: unknown; status: number }>
   }
 }
 
-export const listParameters = (params: ParameterListQuery) =>
-  request<ParameterPage>(() => axios.get('/api/system-parameters', { params }));
-export const createParameter = (payload: Record<string, unknown>) =>
-  request<Parameter>(() => axios.post('/api/system-parameters', payload));
-export const updateParameter = (key: string, payload: Record<string, unknown>) =>
-  request<Parameter>(() => axios.patch(`/api/system-parameters/${encodeURIComponent(key)}`, payload));
-export const setParameterStatus = (key: string, status: 'ACTIVE' | 'INACTIVE') =>
-  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/${status === 'ACTIVE' ? 'enable' : 'disable'}`));
-export const listParameterEvents = (key?: string) =>
-  request<ParameterEventPage>(() => axios.get('/api/system-parameter-events', { params: key ? { key } : undefined }));
-export const retryParameterEvent = (eventId: string) =>
-  request<ParameterEvent>(() => axios.post(`/api/system-parameter-events/${encodeURIComponent(eventId)}/retry`));
-export const listParameterVersions = (key: string) =>
-  request<ParameterVersionPage>(() => axios.get(`/api/system-parameters/${encodeURIComponent(key)}/versions`));
-export const saveParameterDraft = (key: string, payload: Record<string, unknown>) =>
-  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/draft`, payload));
-export const publishParameterVersion = (key: string, payload: Record<string, unknown>) =>
-  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/publish`, payload));
-export const rollbackParameterVersion = (key: string, payload: Record<string, unknown>) =>
-  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/rollback`, payload));
-export const deactivateParameterVersion = (key: string, payload: Record<string, unknown>) =>
-  request<Parameter>(() => axios.post(`/api/system-parameters/${encodeURIComponent(key)}/deactivate`, payload));
+const parameterRoot = (enterpriseId?: string) => enterpriseId ? `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/system-parameters` : '/api/system-parameters';
+const eventRoot = (enterpriseId?: string) => enterpriseId ? `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/system-parameter-events` : '/api/system-parameter-events';
 
-export const saveParameterOverride = (key: string, organization: string, payload: Record<string, unknown>) =>
-  request<{ version: number }>(() => axios.put(`/api/system-parameters/${encodeURIComponent(key)}/overrides/${encodeURIComponent(organization)}`, payload));
+export const listParameters = (params: ParameterListQuery, enterpriseId?: string) =>
+  request<ParameterPage>(() => axios.get(parameterRoot(enterpriseId), { params }));
+export const createParameter = (payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<Parameter>(() => axios.post(parameterRoot(enterpriseId), payload));
+export const updateParameter = (key: string, payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<Parameter>(() => axios.patch(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}`, payload));
+export const setParameterStatus = (key: string, status: 'ACTIVE' | 'INACTIVE', enterpriseId?: string) =>
+  request<Parameter>(() => axios.post(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/${status === 'ACTIVE' ? 'enable' : 'disable'}`));
+export const listParameterEvents = (key?: string, enterpriseId?: string) =>
+  request<ParameterEventPage>(() => axios.get(eventRoot(enterpriseId), { params: key ? { key } : undefined }));
+export const retryParameterEvent = (eventId: string, enterpriseId?: string) =>
+  request<ParameterEvent>(() => axios.post(`${eventRoot(enterpriseId)}/${encodeURIComponent(eventId)}/retry`));
+export const listParameterVersions = (key: string, enterpriseId?: string) =>
+  request<ParameterVersionPage>(() => axios.get(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/versions`));
+export const saveParameterDraft = (key: string, payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<Parameter>(() => axios.post(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/draft`, payload));
+export const publishParameterVersion = (key: string, payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<Parameter>(() => axios.post(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/publish`, payload));
+export const rollbackParameterVersion = (key: string, payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<Parameter>(() => axios.post(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/rollback`, payload));
+export const deactivateParameterVersion = (key: string, payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<Parameter>(() => axios.post(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/deactivate`, payload));
+
+export const saveParameterOverride = (key: string, organization: string, payload: Record<string, unknown>, enterpriseId?: string) =>
+  request<{ version: number }>(() => axios.put(`${parameterRoot(enterpriseId)}/${encodeURIComponent(key)}/overrides/${encodeURIComponent(organization)}`, payload));
+
+export function parameterApiForEnterprise(enterpriseId: string) {
+  if (!enterpriseId) throw new Error('请选择活动租户');
+  return {
+    listParameters: (query: ParameterListQuery) => listParameters(query, enterpriseId),
+    createParameter: (body: Record<string, unknown>) => createParameter(body, enterpriseId),
+    updateParameter: (key: string, body: Record<string, unknown>) => updateParameter(key, body, enterpriseId),
+    setParameterStatus: (key: string, status: 'ACTIVE' | 'INACTIVE') => setParameterStatus(key, status, enterpriseId),
+    listParameterEvents: (key?: string) => listParameterEvents(key, enterpriseId),
+    retryParameterEvent: (id: string) => retryParameterEvent(id, enterpriseId),
+    listParameterVersions: (key: string) => listParameterVersions(key, enterpriseId),
+    saveParameterDraft: (key: string, body: Record<string, unknown>) => saveParameterDraft(key, body, enterpriseId),
+    publishParameterVersion: (key: string, body: Record<string, unknown>) => publishParameterVersion(key, body, enterpriseId),
+    rollbackParameterVersion: (key: string, body: Record<string, unknown>) => rollbackParameterVersion(key, body, enterpriseId),
+    deactivateParameterVersion: (key: string, body: Record<string, unknown>) => deactivateParameterVersion(key, body, enterpriseId),
+    saveParameterOverride: (key: string, scope: string, body: Record<string, unknown>) => saveParameterOverride(key, scope, body, enterpriseId),
+  };
+}

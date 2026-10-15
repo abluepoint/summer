@@ -10,37 +10,70 @@ export type InterfaceResource = {
   sensitiveLevel: 'NORMAL' | 'SENSITIVE' | 'CRITICAL';
   permissionCode: string;
   configurable: boolean;
+  contextId: string;
+  source: string;
+  conditions: Record<string, string[]>;
+  configurationPolicy: string;
 };
-
+export type DiscoveryIssue = {
+  contextId: string;
+  source: string;
+  code: string;
+  detail: string;
+};
 export type InterfaceResourceCatalog = {
   items: InterfaceResource[];
   revision: number;
+  complete: boolean;
+  issues: DiscoveryIssue[];
 };
-
+export type CatalogRevision = {
+  revision: number;
+  fingerprint: string;
+  resourceCount: number;
+  createdAt: string;
+};
+export type CatalogHistory = {
+  items: CatalogRevision[];
+  total: number;
+  page: number;
+  size: number;
+};
+export type CatalogDifference = {
+  from: number;
+  to: number;
+  added: InterfaceResource[];
+  removed: InterfaceResource[];
+  changed: {
+    before: InterfaceResource;
+    after: InterfaceResource;
+    kind: 'CHANGED' | 'REPLACED';
+  }[];
+};
 export class InterfaceResourceApiError extends Error {
-  status: number;
-  code: string;
-  requestId: string;
-
-  constructor(status: number, code: string, message: string, requestId: string) {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public requestId: string
+  ) {
     super(message || `HTTP ${status || 'network'}`);
     this.name = 'InterfaceResourceApiError';
-    this.status = status;
-    this.code = code;
-    this.requestId = requestId;
   }
 }
-
-export async function listInterfaceResources(): Promise<InterfaceResourceCatalog> {
+const root = '/api/v1/platform/interface-resources';
+async function request<T>(
+  path: string,
+  params?: Record<string, number>
+): Promise<T> {
   try {
-    const response = await axios.get('/api/v1/platform/interface-resources');
-    return readEnvelope(response.data, response.status) as InterfaceResourceCatalog;
+    const response = await axios.get(root + path, { params });
+    return readEnvelope(response.data, response.status) as T;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
     const failure = readFailure(
       error.response?.data,
-      status,
+      error.response?.status || 0,
       String(error.response?.headers?.['x-request-id'] || '')
     );
     throw new InterfaceResourceApiError(
@@ -51,3 +84,11 @@ export async function listInterfaceResources(): Promise<InterfaceResourceCatalog
     );
   }
 }
+export const listInterfaceResources = () =>
+  request<InterfaceResourceCatalog>('');
+export const listInterfaceResourceHistory = (page = 0, size = 20) =>
+  request<CatalogHistory>('/history', { page, size });
+export const getInterfaceResourceRevision = (revision: number) =>
+  request<InterfaceResourceCatalog>(`/history/${revision}`);
+export const compareInterfaceResourceRevisions = (from: number, to: number) =>
+  request<CatalogDifference>('/diff', { from, to });

@@ -35,7 +35,7 @@ class OrganizationControllerTest {
     void returnsOrganizationTreeForTheExplicitEnterpriseContext() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-tree", "ent-acme")
                         .header("X-Request-Id", "org-tree-request")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "org-tree-request"))
                 .andExpect(header().string("ETag", org.hamcrest.Matchers.startsWith("\"")))
@@ -52,7 +52,7 @@ class OrganizationControllerTest {
         MvcResult first = mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units", "ent-acme")
                         .queryParam("parentId", "org-acme")
                         .header("X-Request-Id", "org-list-request")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", org.hamcrest.Matchers.notNullValue()))
                 .andExpect(header().string("ETag", org.hamcrest.Matchers.startsWith("\"")))
@@ -65,7 +65,7 @@ class OrganizationControllerTest {
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units", "ent-acme")
                         .queryParam("parentId", "org-acme")
                         .header("If-None-Match", etag)
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isNotModified())
                 .andExpect(header().string("ETag", etag));
     }
@@ -73,7 +73,7 @@ class OrganizationControllerTest {
     @Test
     void returnsMemberAffiliationsForAnOrganizationWithoutCrossTenantData() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members", "ent-acme", "org-engineering")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("ETag", org.hamcrest.Matchers.startsWith("\"")))
                 .andExpect(jsonPath("$.data.enterpriseId").value("ent-acme"))
@@ -86,7 +86,7 @@ class OrganizationControllerTest {
     @Test
     void deniesAnOrganizationReadWhenThePrincipalIsNotAnActiveMemberOfTheExplicitEnterprise() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-tree", "ent-other")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }
@@ -197,7 +197,7 @@ class OrganizationControllerTest {
                 .andExpect(jsonPath("$.data.name").value("Operations & Support"));
 
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/audit", "ent-acme", "org-operations")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", org.hamcrest.Matchers.notNullValue()))
                 .andExpect(jsonPath("$.data[0].action").value("ORGANIZATION_UPDATED"))
@@ -209,7 +209,7 @@ class OrganizationControllerTest {
     void updatesMemberAssignmentsInBatchWithOnePrimaryOrganizationAndIdempotency() throws Exception {
         String payload = "{\"memberIds\":[\"member-alice\"],\"organizationIds\":[\"org-operations\"],\"primaryOrganizationId\":\"org-operations\"}";
         String etag = mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-tree", "ent-acme")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk()).andReturn().getResponse().getHeader("ETag");
         mockMvc.perform(put("/api/v1/enterprises/{enterpriseId}/org-assignments:batch", "ent-acme")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -239,13 +239,13 @@ class OrganizationControllerTest {
                 .andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
 
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members", "ent-acme", "org-operations")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(1))
                 .andExpect(jsonPath("$.data.items[0].primary").value(true));
 
         String updatedEtag = mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-tree", "ent-acme")
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk()).andReturn().getResponse().getHeader("ETag");
         mockMvc.perform(put("/api/v1/enterprises/{enterpriseId}/org-assignments:batch", "ent-acme")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -276,22 +276,23 @@ class OrganizationControllerTest {
                         .with(enterpriseWriteToken("ent-acme")))
                 .andExpect(status().isNoContent());
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}", "ent-acme", unitId)
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isNotFound());
     }
 
     private String currentUnitEtag(String unitId) throws Exception {
         return mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}", "ent-acme", unitId)
-                        .with(enterpriseReadToken("ent-acme")))
+                        .with(administratorReadToken("ent-acme")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getHeader("ETag");
     }
 
-    private static org.springframework.test.web.servlet.request.RequestPostProcessor enterpriseReadToken(String enterpriseId) {
+    // Full-directory assertions use an explicit organization administrator; member-only reads have a separate boundary suite.
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor administratorReadToken(String enterpriseId) {
         return jwt().jwt(token -> token
                         .subject("admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterpriseId, "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of(enterpriseId, List.of("enterprise.organization.read"))))
+                        .claim("enterprise_capabilities", Map.of(enterpriseId, List.of("enterprise.organization.read", "enterprise.organization.write"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"));
     }
 

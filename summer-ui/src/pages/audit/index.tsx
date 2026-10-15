@@ -114,6 +114,7 @@ export default function AuditPageScreen() {
         {detailLoading ? <Spin /> : detail && <Space direction="vertical" size="medium" style={{ width: '100%' }}>
           <Typography.Text>eventId: {detail.eventId}</Typography.Text>
           <Typography.Text>tenantId: {detail.tenantId}</Typography.Text>
+          <Typography.Text>organizationId: {detail.organizationId || '—'}</Typography.Text>
           <Typography.Text>{t['audit.principal']}: {detail.principal}</Typography.Text>
           <Typography.Text>{t['audit.resource']}: {detail.resource}</Typography.Text>
           <Typography.Text>{t['audit.action']}: {detail.action}</Typography.Text>

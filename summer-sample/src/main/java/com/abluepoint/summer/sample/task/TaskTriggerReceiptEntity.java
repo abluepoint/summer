@@ -19,4 +19,5 @@ class TaskTriggerReceiptEntity {
         this.idempotencyKey = idempotencyKey; this.fingerprint = fingerprint; this.createdAt = Instant.now();
     }
     String taskId() { return taskId; } String fingerprint() { return fingerprint; }
+    String idempotencyKey() { return idempotencyKey; }
 }

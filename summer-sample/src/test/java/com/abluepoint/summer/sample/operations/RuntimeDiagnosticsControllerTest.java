@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
+import java.util.Map;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,6 +21,9 @@ class RuntimeDiagnosticsControllerTest {
 
     @Autowired
     MockMvc mockMvc;
+
+    @Autowired
+    ConfigurableEnvironment environment;
 
     @Test
     void rejectsRequestsWithoutTheDiagnosticsCapability() throws Exception {
@@ -44,4 +50,31 @@ class RuntimeDiagnosticsControllerTest {
                 .andExpect(jsonPath("$.data.token").doesNotExist())
                 .andExpect(jsonPath("$.data.privateKey").doesNotExist());
     }
+    @Test
+    void reportsMigrationsNotEnabledInsteadOfHealthyWhenFlywayIsDisabled() throws Exception {
+        mockMvc.perform(get("/internal/v1/diagnostics/runtime")
+                        .with(jwt().jwt(token -> token.subject("operator"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.components[?(@.name == 'migrations')].status")
+                        .value(org.hamcrest.Matchers.contains("NOT_ENABLED")));
+    }
+
+    @Test
+    void reportsUnavailableWhenEnabledButTheMigrationComponentIsAbsent() throws Exception {
+        String overrideName = "missing-migration-component-fixture";
+        environment.getPropertySources().addFirst(new MapPropertySource(overrideName,
+                Map.of("spring.flyway.enabled", true)));
+        try {
+            mockMvc.perform(get("/internal/v1/diagnostics/runtime")
+                            .with(jwt().jwt(token -> token.subject("operator"))
+                                    .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.components[?(@.name == 'migrations')].status")
+                            .value(org.hamcrest.Matchers.contains("UNAVAILABLE")));
+        } finally {
+            environment.getPropertySources().remove(overrideName);
+        }
+    }
+
 }

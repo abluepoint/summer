@@ -26,6 +26,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TaskProgressSseHttpTest {
     @Autowired MockMvc mockMvc;
     @Autowired TaskProgressEventRepository events;
+    @Autowired TaskExecutionService executionService;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Test
+    void revokedReadPermissionClosesTheStreamBeforeNewTaskEventsAreSent() throws Exception {
+        var created = mockMvc.perform(post("/api/v1/enterprises/ent-acme/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Revocation\",\"taskType\":\"system.noop\",\"cronExpression\":\"0 0 0 1 1 ? 2099\"}")
+                        .with(admin("enterprise.tasks.write")))
+                .andExpect(status().isCreated()).andReturn();
+        String taskId = JsonPath.read(created.getResponse().getContentAsString(), "$.data.taskId");
+        var stream = mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/{id}/events", taskId)
+                        .accept(MediaType.TEXT_EVENT_STREAM).with(admin("enterprise.tasks.read")))
+                .andExpect(request().asyncStarted()).andReturn();
+        jdbc.update("insert into summer_authorization_user_binding (binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values (?,?,?,?,?,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                java.util.UUID.randomUUID().toString(), "ent-acme", "task-admin", "[]",
+                "[\"GET:/api/v1/enterprises/{enterpriseId}/tasks/{taskId}/events\"]");
+        executionService.execute(taskId, "revocation-fire");
+        stream.getAsyncResult(3000);
+        org.assertj.core.api.Assertions.assertThat(stream.getResponse().getContentAsString())
+                .doesNotContain("execution.started", "execution.succeeded");
+    }
+
+    @Test
+    void invalidCursorReturnsJsonFailureForAnEventStreamClient() throws Exception {
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/task-1/events")
+                        .header("Last-Event-ID", "-1").accept(MediaType.TEXT_EVENT_STREAM)
+                        .with(admin("enterprise.tasks.read")))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error.code").value("SUMMER_TASK_SSE_LAST_EVENT_ID"));
+    }
 
     @Test
     void taskExecutionPublishesProgressWithoutSensitiveParameters() throws Exception {
@@ -82,9 +114,6 @@ class TaskProgressSseHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(token -> token.subject("task-admin")
-                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
-                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));
+        return TaskAuthenticationFixture.cookie(capability);
     }
 }

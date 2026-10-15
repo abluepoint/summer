@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessTokenFromMemory } from '@/auth/oidc';
 import { readEnvelope, readFailure } from '../../customer/contract.mjs';
 
 export type RedisDiagnostics = {
@@ -33,7 +34,10 @@ export class RedisDiagnosticsError extends Error {
 
 export async function getRedisDiagnostics(): Promise<RedisDiagnostics> {
   try {
-    const response = await axios.get('/internal/v1/diagnostics/redis');
+    const token = await getAccessTokenFromMemory();
+    const response = await axios.get('/internal/v1/diagnostics/redis', {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
     return readEnvelope(response.data, response.status) as RedisDiagnostics;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;

@@ -10,7 +10,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,6 +19,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionaryVersionHttpTest {
+    // These legacy fixtures now declare their enterprise; production has no implicit sample tenant.
+    private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor jwt() {
+        return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+                .jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))));
+    }
+
     @Autowired MockMvc http;
     @Autowired JdbcTemplate jdbc;
 
@@ -29,7 +34,7 @@ class DictionaryVersionHttpTest {
         addItem("standard", "Standard", true);
         addItem("draft", "Draft", true);
 
-        http.perform(get("/public/dictionaries/versioned-segment"))
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isNotFound());
 
         http.perform(post("/api/dictionaries/versioned-segment/publish")
@@ -41,13 +46,13 @@ class DictionaryVersionHttpTest {
                 .andExpect(jsonPath("$.data.version").value(1))
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
 
-        http.perform(get("/public/dictionaries/versioned-segment"))
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(1))
                 .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(2)));
 
         addItem("new-option", "New option", true);
-        http.perform(get("/public/dictionaries/versioned-segment"))
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(2)));
 
@@ -65,7 +70,7 @@ class DictionaryVersionHttpTest {
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DISABLED"));
-        http.perform(get("/public/dictionaries/versioned-segment"))
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isNotFound());
 
         http.perform(post("/api/dictionaries/versioned-segment/rollback")
@@ -76,7 +81,7 @@ class DictionaryVersionHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(1))
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
-        http.perform(get("/public/dictionaries/versioned-segment"))
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(2)));
 
@@ -149,7 +154,7 @@ class DictionaryVersionHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor writer() {
-        return jwt().jwt(token -> token.subject("operator"))
+        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
     }
 }

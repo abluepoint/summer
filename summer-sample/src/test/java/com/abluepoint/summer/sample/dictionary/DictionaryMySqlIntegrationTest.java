@@ -39,9 +39,12 @@ class DictionaryMySqlIntegrationTest {
 
     @Autowired
     MockMvc mockMvc;
+    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
 
     @Test
     void flywayCreatesDictionaryTablesAndRealHttpReadUsesPublishedRows() throws Exception {
+        members.provision("ent-acme", "dictionary-mysql-member", "dictionary-mysql-writer",
+                "Dictionary writer", "dictionary-mysql@example.test");
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from information_schema.tables where table_schema = database() and table_name in ('summer_dictionary_type','summer_dictionary_item')",
                 Integer.class)).isEqualTo(2);
@@ -51,18 +54,25 @@ class DictionaryMySqlIntegrationTest {
                         .content("""
                                 {"code":"mysql-segment","name":"MySQL Segment","published":true,"publicReadable":true,"enabled":true}
                                 """)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"))))
+                        .with(writer()))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/dictionaries/mysql-segment/items")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"value":"standard","label":"Standard","sortOrder":1,"enabled":true}
                                 """)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"))))
+                        .with(writer()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/public/dictionaries/mysql-segment"))
+        mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/mysql-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].value").value("standard"));
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor writer() {
+        return jwt().jwt(token -> token.subject("dictionary-mysql-writer")
+                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                        .claim("enterprise_capabilities", java.util.Map.of("ent-acme", java.util.List.of("platform.dictionary.write"))))
+                .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
     }
 }

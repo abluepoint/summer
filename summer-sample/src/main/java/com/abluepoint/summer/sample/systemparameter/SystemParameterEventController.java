@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/system-parameter-events")
+@RequestMapping({"/api/system-parameter-events", "/api/v1/enterprises/{enterpriseId}/system-parameter-events"})
 class SystemParameterEventController {
     private final SystemParameterEventService service;
     private final RequestIdAccessor requestId;
@@ -24,19 +24,21 @@ class SystemParameterEventController {
     }
 
     @GetMapping
+    @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
     @RawResponse
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
-    ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(required = false) String key) {
-        SystemParameterEventPage page = service.list(key);
+    ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(required = false) String key, org.springframework.security.core.Authentication auth) {
+        SystemParameterEventPage page = service.list(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), key);
         return body(HttpStatus.OK, Map.of("items", page.items(), "totalElements", page.totalElements()));
     }
 
     @PostMapping("/{eventId}/retry")
+    @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.update")
     @RawResponse
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
-    ResponseEntity<ApiResponse<SystemParameterEventView>> retry(@PathVariable String eventId) {
+    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
+    ResponseEntity<ApiResponse<SystemParameterEventView>> retry(@PathVariable String eventId, org.springframework.security.core.Authentication auth) {
         try {
-            return body(HttpStatus.OK, service.retry(eventId));
+            return body(HttpStatus.OK, service.retry(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), eventId));
         } catch (SystemParameterEventNotFoundException exception) {
             return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage());
         }

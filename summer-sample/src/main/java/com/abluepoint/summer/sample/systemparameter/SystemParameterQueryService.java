@@ -43,13 +43,22 @@ class SystemParameterQueryService {
         return new SystemParameterView(row.id(), row.parameterKey(), SystemParameterType.valueOf(row.valueType()),
                 deserialize(row.valueJson()), Boolean.TRUE.equals(row.requiredFlag()), row.minValue(), row.maxValue(),
                 row.valuePattern(), Boolean.TRUE.equals(row.publicFlag()), row.description(),
-                SystemParameterStatus.valueOf(row.status()), row.version(), row.tenantId(), row.createdAt(), row.updatedAt());
+                SystemParameterStatus.valueOf(row.status()), row.version(), row.tenantId(), instant(row.createdAt()), instant(row.updatedAt()));
     }
 
     private SystemParameterSummaryView summary(SystemParameterSummaryRow row) {
         return new SystemParameterSummaryView(row.id(), row.parameterKey(),
                 SystemParameterType.valueOf(row.valueType()), SystemParameterStatus.valueOf(row.status()),
                 Boolean.TRUE.equals(row.publicFlag()));
+    }
+
+    private static java.time.Instant instant(Object value) {
+        if (value instanceof java.time.Instant instant) return instant;
+        if (value instanceof java.sql.Timestamp timestamp) return timestamp.toInstant();
+        // MySQL DATETIME has no zone; this application binds JDBC/Hibernate timestamps in UTC.
+        if (value instanceof java.time.LocalDateTime local) return local.toInstant(java.time.ZoneOffset.UTC);
+        if (value instanceof java.time.OffsetDateTime offset) return offset.toInstant();
+        throw new IllegalStateException("Unsupported configuration timestamp projection");
     }
 
     private Object deserialize(String value) {

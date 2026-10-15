@@ -38,18 +38,18 @@ class SystemParameterEventService {
     }
 
     @Transactional(readOnly = true)
-    SystemParameterEventPage list(String key) {
+    SystemParameterEventPage list(String tenant, String key) {
         List<SystemParameterEventOutboxEntity> rows = key == null || key.isBlank()
-                ? repository.findAllByTenantIdOrderByCreatedAtDesc(SystemParameterService.TENANT_ID)
-                : repository.findAllByTenantIdAndParameterKeyOrderByCreatedAtDesc(SystemParameterService.TENANT_ID, key);
+                ? repository.findAllByTenantIdOrderByCreatedAtDesc(tenant)
+                : repository.findAllByTenantIdAndParameterKeyOrderByCreatedAtDesc(tenant, key);
         return new SystemParameterEventPage(rows.stream().map(this::view).toList(), rows.size());
     }
 
     @Transactional
-    SystemParameterEventView retry(String eventId) {
+    SystemParameterEventView retry(String tenant, String eventId) {
         SystemParameterEventOutboxEntity entity = repository.findById(eventId)
                 .orElseThrow(() -> new SystemParameterEventNotFoundException(eventId));
-        if (!SystemParameterService.TENANT_ID.equals(entity.tenantId())) {
+        if (!tenant.equals(entity.tenantId())) {
             throw new SystemParameterEventNotFoundException(eventId);
         }
         entity.resetForRetry(Instant.now());

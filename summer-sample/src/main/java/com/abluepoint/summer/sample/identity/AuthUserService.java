@@ -54,9 +54,15 @@ class AuthUserService implements SummerIdentityStore {
 
     @Transactional
     AuthUserView create(String username, String password, String role) {
-        if (repository.existsByUsername(username)) throw new IllegalArgumentException("Username already exists");
-        AuthUser user = repository.save(new AuthUser(username, passwordEncoder.encode(password), role));
-        return AuthUserView.from(user);
+        if (repository.existsByUsername(username)) throw new AuthUserConflictException();
+        try {
+            AuthUser user = repository.save(new AuthUser(username, passwordEncoder.encode(password), role));
+            // Surface a concurrent unique-key conflict inside this operation, before transaction commit.
+            repository.flush();
+            return AuthUserView.from(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
+            throw new AuthUserConflictException();
+        }
     }
 
     @Transactional
@@ -69,4 +75,8 @@ class AuthUserService implements SummerIdentityStore {
     record AuthUserView(String username, String role, boolean active) {
         static AuthUserView from(AuthUser user) { return new AuthUserView(user.username(), user.role(), user.active()); }
     }
+}
+
+class AuthUserConflictException extends RuntimeException {
+    AuthUserConflictException() { super("Username already exists"); }
 }

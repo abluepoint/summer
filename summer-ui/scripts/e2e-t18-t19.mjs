@@ -4,7 +4,7 @@
 // Required: SUMMER_E2E_ORIGIN, SUMMER_E2E_USERNAME, SUMMER_E2E_PASSWORD,
 // SUMMER_E2E_DENIED_USERNAME, SUMMER_E2E_DENIED_PASSWORD,
 // SUMMER_E2E_CONFIGURATION_FIXTURE (path to non-secret JSON metadata):
-// { isolatedSchema: "summer_t19_...", organizationId: "existing-org",
+// { isolatedSchema: "summer_t19_...", enterpriseId: "existing-tenant", organizationId: "existing-org",
 //   previewResource: "system-parameters", previewSubject: "fixture-user",
 //   expectedPreviewDecision: "ALLOW", expectedDictionaryValues: ["fixture"] }
 // The schema owner must verify the running backend uses that schema and seed
@@ -34,6 +34,9 @@ async function run() {
   assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(base.hostname) && !base.username && !base.password && base.pathname === '/' && !base.search && !base.hash && base.port !== '18080', 'Use the explicitly provisioned isolated local UI origin');
   const fixture = JSON.parse(await readFile(process.env.SUMMER_E2E_CONFIGURATION_FIXTURE, 'utf8'));
   assert.match(fixture.isolatedSchema, /^summer_t(?:19|25|36)_[a-z0-9_]+$/);
+  assert.match(fixture.enterpriseId, /^[a-zA-Z0-9_-]{1,64}$/);
+  const tenantRoot = `/api/v1/enterprises/${encodeURIComponent(fixture.enterpriseId)}`;
+  const publicRoot = `/public/enterprises/${encodeURIComponent(fixture.enterpriseId)}`;
   assert.match(fixture.organizationId, /^[a-zA-Z0-9_-]{1,64}$/);
   assert.notEqual(fixture.organizationId, '_tenant');
   assert.ok(['ALLOW', 'DENY'].includes(fixture.expectedPreviewDecision));
@@ -62,7 +65,7 @@ async function run() {
       if (new URL(request.url()).pathname.startsWith('/api/')) bearer = request.headers().authorization || bearer;
     });
     if (denied) page.on('response', (response) => {
-      if (new URL(response.url()).pathname === '/api/v1/enterprises/ent-acme/data-scopes') deniedRead = response;
+      if (new URL(response.url()).pathname === `${tenantRoot}/data-scopes`) deniedRead = response;
     });
     await page.goto(new URL(path, base).href);
     await page.locator('input[autocomplete="current-password"]').waitFor();
@@ -70,7 +73,13 @@ async function run() {
     await page.locator('input[autocomplete="current-password"]').fill(process.env[denied ? 'SUMMER_E2E_DENIED_PASSWORD' : 'SUMMER_E2E_PASSWORD']);
     await page.getByRole('button', { name: /^(登录|login)$/i }).click();
     await page.waitForURL((url) => url.pathname === path);
+    await selectTenant(page);
     return page;
+  }
+  async function selectTenant(page) {
+    const selector = page.getByRole('combobox', { name: '活动租户', exact: true });
+    await selector.click();
+    await page.getByRole('option', { name: fixture.enterpriseId, exact: true }).click();
   }
   try {
     browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' });
@@ -92,12 +101,13 @@ async function run() {
 
     stage = 'isolated parameter creation';
     await admin.goto(new URL('/system-parameters', base).href);
+    await selectTenant(admin);
     await admin.getByRole('button', { name: '新建参数', exact: true }).click();
     const drawer = admin.locator('.arco-drawer');
     await formField(admin, drawer, '键').fill(results.syntheticKey);
     await formField(admin, drawer, '值').fill('base-fixture');
     await drawer.locator('.arco-form-item').filter({ has: admin.locator('label').getByText('公开', { exact: true }) }).getByRole('switch').click();
-    const createResponse = admin.waitForResponse((response) => new URL(response.url()).pathname === '/api/system-parameters' && response.request().method() === 'POST');
+    const createResponse = admin.waitForResponse((response) => new URL(response.url()).pathname === `${tenantRoot}/system-parameters` && response.request().method() === 'POST');
     await drawer.getByRole('button', { name: '确定', exact: true }).click();
     const creation = await createResponse;
     assert.equal(creation.status(), 201);
@@ -120,7 +130,7 @@ async function run() {
       assert.equal((await saved).status(), 200);
     }
     assert.ok(bearer);
-    const publicParameter = await admin.request.get(new URL(`/public/system-parameters/${results.syntheticKey}`, base).href, { headers: { Authorization: bearer } });
+    const publicParameter = await admin.request.get(new URL(`${publicRoot}/system-parameters/${results.syntheticKey}`, base).href, { headers: { Authorization: bearer } });
     assert.equal(publicParameter.status(), 200);
     const publicBody = await publicParameter.json();
     assert.equal(publicBody.success, true);
@@ -131,8 +141,9 @@ async function run() {
     mark(stage);
 
     stage = 'authorized dictionary organization fixture';
-    const dictionaryResponse = admin.waitForResponse((response) => new URL(response.url()).pathname === '/public/dictionaries/customer-segment');
+    const dictionaryResponse = admin.waitForResponse((response) => new URL(response.url()).pathname === `${publicRoot}/dictionaries/customer-segment`);
     await admin.goto(new URL('/dictionary/form', base).href);
+    await selectTenant(admin);
     const dictionary = await dictionaryResponse;
     assert.equal(dictionary.status(), 200);
     assert.ok(dictionary.request().headers().authorization);
@@ -144,7 +155,7 @@ async function run() {
 
     stage = 'invalid dictionary input without writes';
     let writes = 0;
-    admin.on('request', (request) => { if (request.method() === 'PUT' && new URL(request.url()).pathname.startsWith('/api/dictionaries/')) writes++; });
+    admin.on('request', (request) => { if (request.method() === 'PUT' && new URL(request.url()).pathname.startsWith(`${tenantRoot}/dictionaries/`)) writes++; });
     const optionsInput = admin.getByRole('textbox', { name: '覆盖选项 JSON', exact: true });
     await optionsInput.fill('{invalid-json');
     await admin.getByRole('button', { name: '发布字典覆盖', exact: true }).click();
@@ -158,6 +169,7 @@ async function run() {
     await denied.locator('.arco-alert-error').waitFor();
     assert.equal(await denied.locator('textarea').count(), 0);
     // The denied account is seeded without data-scope read/write authority.
+    // The account must remain an ACTIVE member of fixture.enterpriseId.
     // The UI read must itself have returned 403; no synthetic response is used.
     assert.equal(deniedRead.status(), 403);
     assert.ok(header(deniedRead));
@@ -171,7 +183,7 @@ async function run() {
   } finally {
     if (created && bearer && admin) {
       try {
-        const response = await admin.request.post(new URL(`/api/system-parameters/${results.syntheticKey}/deactivate`, base).href, { headers: { Authorization: bearer }, data: { expectedVersion: created.version, idempotencyKey: `cleanup-${randomUUID()}` } });
+        const response = await admin.request.post(new URL(`${tenantRoot}/system-parameters/${results.syntheticKey}/deactivate`, base).href, { headers: { Authorization: bearer }, data: { expectedVersion: created.version, idempotencyKey: `cleanup-${randomUUID()}` } });
         results.cleanupStatus = response.status();
         if (response.status() !== 200) { results.errors++; process.exitCode = 1; }
       } catch { results.errors++; process.exitCode = 1; results.cleanupStatus = 'unavailable'; }

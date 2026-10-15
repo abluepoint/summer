@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -20,9 +21,12 @@ import java.util.List;
 class TaskProgressController {
     private final TaskProgressEventService progress;
     private final RequestIdAccessor requestId;
+    private final com.abluepoint.summer.sample.identity.SessionStreamAccess sessionAccess;
 
-    TaskProgressController(TaskProgressEventService progress, RequestIdAccessor requestId) {
+    TaskProgressController(TaskProgressEventService progress, RequestIdAccessor requestId,
+                           com.abluepoint.summer.sample.identity.SessionStreamAccess sessionAccess) {
         this.progress = progress; this.requestId = requestId;
+        this.sessionAccess = sessionAccess;
     }
 
     @GetMapping(value = "/api/v1/enterprises/{enterpriseId}/tasks/{taskId}/events",
@@ -30,13 +34,15 @@ class TaskProgressController {
     @RawResponse
     @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
     ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String taskId,
-                                @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+                                @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
+                                Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
         try {
             long id = parseLastEventId(lastEventId);
             return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM)
                     .header("Cache-Control", "no-cache")
                     .header("X-Request-Id", requestId.currentRequestId())
-                    .body(progress.subscribe(enterpriseId, taskId, id));
+                    .body(progress.subscribe(enterpriseId, taskId, id, authentication,
+                            sessionAccess.capture(request, authentication)));
         } catch (TaskNotFoundException exception) {
             return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", "Task was not found");
         } catch (TaskProgressConnectionLimitException exception) {
@@ -54,7 +60,8 @@ class TaskProgressController {
     }
 
     private ResponseEntity<ApiResponse<Void>> failure(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON)
+                .header("X-Request-Id", requestId.currentRequestId())
                 .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
     }
 }

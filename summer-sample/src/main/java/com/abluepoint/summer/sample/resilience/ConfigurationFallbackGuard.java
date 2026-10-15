@@ -27,9 +27,9 @@ public class ConfigurationFallbackGuard {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
-    public boolean parameter(String id, long version, boolean publicValue, String fingerprint, Authentication auth) {
-        actions.requirePublic("system-parameters", auth);
-        var scope = scopes.filter("ent-acme", "system-parameters", auth);
+    public boolean parameter(String tenant, String id, long version, boolean publicValue, String fingerprint, Authentication auth) {
+        actions.requirePublic(tenant, "system-parameters", auth);
+        var scope = scopes.filter(tenant, "system-parameters", auth);
         if (!scope.fingerprint().equals(fingerprint)) return false;
         var bindings = new HashMap<String, Object>(scope.sqlBindings());
         bindings.put("expectedId", id);
@@ -41,12 +41,13 @@ public class ConfigurationFallbackGuard {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
-    public boolean dictionary(String code, long version, String fingerprint, Set<String> allowedValues, Authentication auth) {
-        actions.requirePublic("dictionaries", auth);
-        var scope = scopes.filter("ent-acme", "dictionaries", auth);
+    public boolean dictionary(String tenant, String code, long version, String fingerprint, Set<String> allowedValues, Authentication auth) {
+        actions.requirePublic(tenant, "dictionaries", auth);
+        var scope = scopes.filter(tenant, "dictionaries", auth);
         if (!scope.fingerprint().equals(fingerprint)) return false;
         var bindings = new HashMap<String, Object>(scope.sqlBindings());
         bindings.put("expectedCode", code);
+        bindings.put("expectedTenant", tenant);
         bindings.put("expectedVersion", version);
         if (jdbc.queryForObject("select count(*) from summer_dictionary_type where code=:expectedCode "
                 + "and published_version=:expectedVersion and enabled=true and published=true and public_readable=true and ("
@@ -54,10 +55,10 @@ public class ConfigurationFallbackGuard {
         var currentValues = jdbc.queryForList("select item_value from summer_dictionary_item where dictionary_code=:expectedCode and ("
                 + scope.sqlPredicate() + ")", bindings, String.class);
         if (!Set.copyOf(currentValues).equals(allowedValues)) return false;
-        String org = DataScopeService.organizationId(auth);
+        String org = scopes.organization(tenant, auth);
         bindings.put("candidates", org == null ? List.of("_tenant") : List.of("_tenant", org));
         // Any newly applicable override invalidates the cached base value, including a hidden override.
-        return jdbc.queryForObject("select count(*) from summer_configuration_override where tenant_id='ent-acme' "
-                + "and resource='dictionaries' and config_key=:expectedCode and scope_id in (:candidates)", bindings, Long.class) == 0;
+        return jdbc.queryForObject("select count(*) from summer_configuration_override where tenant_id=:expectedTenant "
+                + "and published_revision is not null and resource='dictionaries' and config_key=:expectedCode and scope_id in (:candidates)", bindings, Long.class) == 0;
     }
 }

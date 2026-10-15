@@ -10,7 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class LocalConsoleIdentityClaims {
     private final JdbcTemplate jdbc;
-    LocalConsoleIdentityClaims(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    private final String bootstrapUsername;
+    LocalConsoleIdentityClaims(JdbcTemplate jdbc, @org.springframework.beans.factory.annotation.Value("${summer.security.authorization-server.user.username:}") String bootstrapUsername) {
+        this.jdbc = jdbc; this.bootstrapUsername = bootstrapUsername;
+    }
 
     @Transactional(readOnly = true)
     public Map<String, Object> resolve(String username, Map<String, Object> legacyClaims) {
@@ -25,7 +28,7 @@ class LocalConsoleIdentityClaims {
             Set<String> platformGrants = new TreeSet<>();
             for (var binding : bindings) {
                 String enterprise = String.valueOf(binding.get("enterprise_id"));
-                var active = jdbc.queryForList("select enterprise_id from summer_enterprise where enterprise_id = ? and status = 'ACTIVE'", String.class, enterprise);
+                var active = jdbc.queryForList("select e.enterprise_id from summer_enterprise e join summer_enterprise_member m on m.enterprise_id=e.enterprise_id where e.enterprise_id=? and e.status='ACTIVE' and m.subject=? and m.status='ACTIVE'", String.class, enterprise, username);
                 if (active.isEmpty()) continue;
                 memberships.add(Map.of("enterpriseId", enterprise, "status", "ACTIVE"));
                 Set<String> denied = new HashSet<>(lines(binding.get("denied_capability_codes")));
@@ -47,13 +50,25 @@ class LocalConsoleIdentityClaims {
             claims.put("enterprise_capabilities", enterpriseGrants);
             claims.put("platform_capabilities", List.copyOf(platformGrants));
         }
+        if (!Boolean.TRUE.equals(claims.get("summer_managed_grants"))) {
+            boolean bootstrap = username.equals(bootstrapUsername) && !jdbc.queryForList("select m.member_id from summer_enterprise_member m join summer_enterprise e on e.enterprise_id=m.enterprise_id where m.enterprise_id='ent-acme' and m.subject=? and m.status='ACTIVE' and e.status='ACTIVE'", String.class, username).isEmpty();
+            if (!bootstrap) {
+                claims.put("enterprise_memberships", List.of());
+                claims.put("enterprise_capabilities", Map.of());
+                claims.put("platform_capabilities", List.of());
+            }
+        }
         claims.remove("organization_id");
-        var contexts = jdbc.queryForList("select c.enterprise_id, c.organization_id from summer_organization_context c join summer_organization_unit u on u.unit_id = c.organization_id and u.enterprise_id = c.enterprise_id where c.subject = ? and u.status = 'ACTIVE'", username);
+        claims.remove("organization_context");
+        claims.remove("active_enterprise_id");
+        var contexts = jdbc.queryForList("select c.enterprise_id, c.organization_id from summer_organization_context c join summer_organization_unit u on u.unit_id=c.organization_id and u.enterprise_id=c.enterprise_id join summer_enterprise_member m on m.enterprise_id=c.enterprise_id and m.subject=c.subject join summer_organization_membership a on a.enterprise_id=c.enterprise_id and a.member_id=m.member_id and a.organization_id=c.organization_id where c.subject=? and u.status='ACTIVE' and m.status='ACTIVE'", username);
         Object raw = claims.get("enterprise_memberships");
         for (var context : contexts) {
             if (raw instanceof Collection<?> memberships && memberships.stream().filter(Map.class::isInstance)
                     .map(Map.class::cast).anyMatch(m -> context.get("enterprise_id").equals(m.get("enterpriseId")) && "ACTIVE".equals(m.get("status")))) {
                 claims.put("organization_id", context.get("organization_id"));
+                claims.put("organization_context", Map.of("enterpriseId", context.get("enterprise_id"), "organizationId", context.get("organization_id")));
+                claims.put("active_enterprise_id", context.get("enterprise_id"));
             }
         }
         var platform = claims.get("platform_capabilities");

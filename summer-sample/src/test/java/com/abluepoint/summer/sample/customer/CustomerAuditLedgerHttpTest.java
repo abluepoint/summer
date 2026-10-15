@@ -29,6 +29,61 @@ class CustomerAuditLedgerHttpTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired AuditOrganizationContext organizationContext;
+
+    @Test
+    void auditContextRejectsRevokedOrForeignOrganizationSelections() {
+        members.provision("ent-acme", "audit-context-member", "audit-context-subject", "Audit member", "context@example.test");
+        jdbc.update("insert into summer_organization_membership(enterprise_id,member_id,organization_id,primary_organization,created_at,updated_at) values (?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                "ent-acme", "audit-context-member", "org-engineering", true);
+        jdbc.update("insert into summer_organization_context(subject,enterprise_id,organization_id,revision,created_at,updated_at) values (?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                "audit-context-subject", "ent-acme", "org-engineering", "audit-context-boundary");
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "audit-context-subject", null, List.of());
+        org.junit.jupiter.api.Assertions.assertEquals("org-engineering", organizationContext.current("ent-acme", authentication));
+        org.junit.jupiter.api.Assertions.assertNull(organizationContext.current("ent-foreign", authentication));
+        jdbc.update("update summer_enterprise_member set status='INACTIVE' where member_id=?", "audit-context-member");
+        org.junit.jupiter.api.Assertions.assertNull(organizationContext.current("ent-acme", authentication));
+        jdbc.update("update summer_enterprise_member set status='ACTIVE' where member_id=?", "audit-context-member");
+        jdbc.update("delete from summer_organization_membership where member_id=?", "audit-context-member");
+        org.junit.jupiter.api.Assertions.assertNull(organizationContext.current("ent-acme", authentication));
+        org.junit.jupiter.api.Assertions.assertNull(organizationContext.current("ent-acme", null));
+    }
+
+    @Test
+    void selectedPersistedOrganizationIsRecordedInsteadOfAnOldTokenClaim() throws Exception {
+        members.provision("ent-acme", "audit-operator", "operator", "Audit operator", "audit-operator@example.test");
+        jdbc.update("insert into summer_organization_membership(enterprise_id,member_id,organization_id,primary_organization,created_at,updated_at) values (?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                "ent-acme","audit-operator","org-engineering",true);
+        jdbc.update("insert into summer_organization_context(subject,enterprise_id,organization_id,revision,created_at,updated_at) values (?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                "operator","ent-acme","org-engineering","audit-context");
+        mockMvc.perform(post("/api/customers").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Request-Id","audit-current-org")
+                        .content("{\"username\":\"audit.org\",\"email\":\"audit.org@example.test\",\"displayName\":\"Context\"}")
+                        .with(jwt().jwt(token->token.subject("operator").claim("organization_id","org-stale"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_customer.write"))))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/audit-events").queryParam("requestId","audit-current-org").with(auditReader()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].organizationId").value("org-engineering"));
+    }
+
+    @Test
+    void auditReadOnlyResourceRejectsUnsupportedMethodsWith405() throws Exception {
+        for(String method:List.of("PATCH","DELETE")) {
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(
+                            org.springframework.http.HttpMethod.valueOf(method),"/api/audit-events/immutable")
+                            .contentType(MediaType.APPLICATION_JSON).content("{}").with(auditReader()))
+                    .andExpect(status().isMethodNotAllowed())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Allow",org.hamcrest.Matchers.containsString("GET")))
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.code").value("SUMMER_METHOD_NOT_ALLOWED"))
+                    .andExpect(jsonPath("$.requestId").isNotEmpty());
+        }
+    }
+
     @Test
     void customerWritesAppendQueryableTenantBoundAuditEvents() throws Exception {
         String username = "audit.customer";

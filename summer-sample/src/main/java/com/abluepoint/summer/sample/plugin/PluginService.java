@@ -16,7 +16,6 @@ import java.util.*;
 
 @Service
 public class PluginService {
-    private static final String ENTERPRISE = "ent-acme";
     private static final String FRAMEWORK_MAJOR = "4";
     private final PluginRepository repository;
     private final PluginCatalog catalog;
@@ -126,19 +125,19 @@ public class PluginService {
         PluginEntity entity = repository.findById("customer-insights").orElseThrow(() -> new PluginNotFoundException("Plugin is not registered"));
         if (entity.status() != PluginStatus.ENABLED) throw new PluginCompatibilityException("Plugin is not enabled");
         long activeCustomers = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_customer where active = true", Long.class)).orElse(0L);
-        List<Map<String, Object>> configuration = readConfiguration(entity, authentication);
-        PluginDictionaryView dictionary = new PluginDictionaryView("customer-segment", dictionaries.read("customer-segment", authentication));
+        List<Map<String, Object>> configuration = readConfiguration(enterpriseId, entity, authentication);
+        PluginDictionaryView dictionary = new PluginDictionaryView("customer-segment", dictionaries.read(enterpriseId, "customer-segment", authentication));
         String rid = requestId.currentRequestId();
-        audit.recordResourceSuccess("plugin:customer-insights", "PLUGIN_CUSTOMER_INSIGHTS_READ", rid, authentication);
+        audit.recordTenantResourceSuccess(enterpriseId, "plugin:customer-insights", "PLUGIN_CUSTOMER_INSIGHTS_READ", rid, authentication);
         long auditRevision = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_audit_event where tenant_id = ? and resource = ?", Long.class, enterpriseId, "plugin:customer-insights")).orElse(0L);
         return new PluginInsightsView(entity.pluginId(), entity.version(), rid, activeCustomers, configuration, dictionary, auditRevision);
     }
 
-    private List<Map<String, Object>> readConfiguration(PluginEntity entity, Authentication authentication) {
+    private List<Map<String, Object>> readConfiguration(String enterpriseId, PluginEntity entity, Authentication authentication) {
         PluginDescriptor descriptor = Objects.requireNonNull(catalog.find(entity.pluginId()));
         List<Map<String, Object>> result = new ArrayList<>();
         for (PluginConfiguration declaration : descriptor.configuration()) {
-            var published = declaration.publicValue() ? parameters.read(declaration.key(), authentication) : Optional.<PublishedParameterReader.Value>empty();
+            var published = declaration.publicValue() ? parameters.read(enterpriseId, declaration.key(), authentication) : Optional.<PublishedParameterReader.Value>empty();
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("key", declaration.key());
             value.put("type", declaration.type());

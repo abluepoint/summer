@@ -14,7 +14,21 @@ import java.util.List;
 @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.members.read','SCOPE_enterprise.members.write')")
 class AuthUserController {
     private final AuthUserService service;
-    AuthUserController(AuthUserService service) { this.service = service; }
+    private final com.abluepoint.summer.mvc.request.RequestIdAccessor requestId;
+    AuthUserController(AuthUserService service, com.abluepoint.summer.mvc.request.RequestIdAccessor requestId) {
+        this.service = service;
+        this.requestId = requestId;
+    }
+
+    @ExceptionHandler(AuthUserConflictException.class)
+    @com.abluepoint.summer.mvc.api.RawResponse
+    org.springframework.http.ResponseEntity<com.abluepoint.summer.common.response.ApiResponse<Void>> duplicate() {
+        return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                .header("X-Request-Id", requestId.currentRequestId())
+                .body(com.abluepoint.summer.common.response.ApiResponse.failure(
+                        new com.abluepoint.summer.common.response.ApiError("SUMMER_USER_CONFLICT", "Username already exists", List.of()),
+                        requestId.currentRequestId()));
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.read')")

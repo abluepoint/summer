@@ -5,6 +5,8 @@ import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerOAuthClientStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -107,4 +109,159 @@ class OAuthPersistenceHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DISABLED"));
     }
+    @Test
+    void editsClientMetadataWithVersionAndPreservesPublicPkceProtocol() throws Exception {
+        var admin = SecurityMockMvcRequestPostProcessors.jwt().authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.write"),
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read"));
+        mockMvc.perform(post("/api/security/oauth-clients").with(admin).contentType("application/json")
+                        .content("{\"clientId\":\"editable-client\",\"clientName\":\"Before\",\"publicClient\":true,\"redirectUris\":[\"https://example.test/callback\"],\"scopes\":[\"openid\"]}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(admin).contentType("application/json")
+                        .content("{\"clientName\":\"After\",\"redirectUris\":[\"https://example.test/new-callback\"],\"scopes\":[\"openid\",\"profile\"],\"version\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.version").value(2))
+                .andExpect(header().exists("X-Request-Id"));
+        mockMvc.perform(get("/api/security/oauth-clients").with(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].clientName").value("After"))
+                .andExpect(jsonPath("$.data.items[0].redirectUris[0]").value("https://example.test/new-callback"))
+                .andExpect(jsonPath("$.data.items[0].scopes").value(org.hamcrest.Matchers.containsInAnyOrder("openid", "profile")))
+                .andExpect(jsonPath("$.data.items[0].version").value(2))
+                .andExpect(jsonPath("$.data.items[0].authenticationMethods[0]").value("none"))
+                .andExpect(jsonPath("$.data.items[0].grantTypes[0]").value("authorization_code"))
+                .andExpect(jsonPath("$.data.items[0].clientSecret").doesNotExist());
+        assertThat(clients.findByClientId("editable-client").getClientSettings().isRequireProofKey()).isTrue();
+        assertThat(clients.findByClientId("editable-client").getClientSettings().isRequireAuthorizationConsent()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "\"clientName\":\"   \"",
+            "\"redirectUris\":[]",
+            "\"redirectUris\":[\"javascript:alert(1)\"]",
+            "\"redirectUris\":[\"http://example.test/callback\"]",
+            "\"redirectUris\":[\"https://example.test/callback#fragment\"]",
+            "\"redirectUris\":[\"https://*.example.test/callback\"]",
+            "\"redirectUris\":[\"https://example.test/callback,https://other.test/callback\"]",
+            "\"redirectUris\":[null]",
+            "\"scopes\":[]",
+            "\"scopes\":[\"openid profile\"]",
+            "\"scopes\":[\"openid,profile\"]"
+    })
+    void rejectsInvalidMetadataWithoutChangingVersion(String fields) throws Exception {
+        createEditableClient();
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                        .content("{" + fields + ",\"version\":1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_OAUTH_CLIENT_INVALID"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].clientName").value("Before"))
+                .andExpect(jsonPath("$.data.items[0].version").value(1));
+    }
+
+    @Test
+    void staleMetadataOrStatusCannotOverwriteTheCurrentClient() throws Exception {
+        createEditableClient();
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                        .content("{\"clientName\":\"Current\",\"version\":1}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(2));
+        for (String fields : new String[]{"\"clientName\":\"Stale\"", "\"status\":\"DISABLED\""}) {
+            mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                            .content("{" + fields + ",\"version\":1}"))
+                    .andExpect(status().isPreconditionFailed())
+                    .andExpect(jsonPath("$.error.code").value("SUMMER_OAUTH_CLIENT_VERSION_CONFLICT"))
+                    .andExpect(header().exists("X-Request-Id"));
+        }
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].clientName").value("Current"))
+                .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.items[0].version").value(2));
+    }
+
+    @Test
+    void metadataWritesRequirePermissionAndVersionAndKnownClient() throws Exception {
+        createEditableClient();
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().authorities(
+                                new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read")))
+                        .contentType("application/json").content("{\"clientName\":\"Denied\",\"version\":1}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager())
+                        .contentType("application/json").content("{\"clientName\":\"No version\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/api/security/oauth-clients/missing").with(manager())
+                        .contentType("application/json").content("{\"clientName\":\"Missing\",\"version\":1}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].clientName").value("Before"))
+                .andExpect(jsonPath("$.data.items[0].version").value(1));
+    }
+
+    @Test
+    void twoConcurrentWritersShareOneMetadataAndStatusVersion() throws Exception {
+        createEditableClient();
+        var gate = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var futures = java.util.stream.IntStream.range(0, 2).mapToObj(index -> executor.submit(() -> {
+                gate.await();
+                return mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager())
+                                .contentType("application/json").content("{\"clientName\":\"Writer " + index + "\",\"version\":1}"))
+                        .andReturn().getResponse().getStatus();
+            })).toList();
+            gate.countDown();
+            assertThat(java.util.List.of(futures.get(0).get(), futures.get(1).get()))
+                    .containsExactlyInAnyOrder(200, 412);
+        }
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].version").value(2));
+    }
+
+    @Test
+    void configuredClientSeedingPreservesDisabledMetadataAcrossRestart() throws Exception {
+        createEditableClient();
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager())
+                        .contentType("application/json").content("{\"clientName\":\"Persisted disabled client\",\"status\":\"DISABLED\",\"version\":1}"))
+                .andExpect(status().isOk());
+        var properties = new com.abluepoint.summer.security.autoconfigure.SummerSecurityProperties();
+        var configured = new com.abluepoint.summer.security.autoconfigure.SummerSecurityProperties.Client();
+        configured.setId("editable-client"); configured.setPublicClient(true);
+        configured.setGrantTypes(java.util.List.of("authorization_code"));
+        configured.setRedirectUris(java.util.List.of("https://example.test/callback"));
+        properties.getAuthorizationServer().setClients(java.util.List.of(configured));
+        new JdbcOAuthStorageConfiguration().seedConfiguredClients(properties, (JdbcSummerOAuthClientStore) clients,
+                        org.springframework.security.crypto.factory.PasswordEncoderFactories.createDelegatingPasswordEncoder())
+                .run(new org.springframework.boot.DefaultApplicationArguments());
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].clientName").value("Persisted disabled client"))
+                .andExpect(jsonPath("$.data.items[0].status").value("DISABLED"))
+                .andExpect(jsonPath("$.data.items[0].version").value(2));
+        assertThat(clients.findByClientId("editable-client")).isNull();
+    }
+
+    @Test
+    void duplicateClientRegistrationIsAConflictAndDoesNotReplaceMetadata() throws Exception {
+        createEditableClient();
+        mockMvc.perform(post("/api/security/oauth-clients").with(manager()).contentType("application/json")
+                        .content("{\"clientId\":\"editable-client\",\"clientName\":\"Duplicate\",\"publicClient\":true,\"redirectUris\":[\"https://example.test/other\"],\"scopes\":[\"openid\"]}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_OAUTH_CLIENT_EXISTS"));
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].clientName").value("Before"))
+                .andExpect(jsonPath("$.data.items[0].version").value(1));
+    }
+
+    private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor manager() {
+        return SecurityMockMvcRequestPostProcessors.jwt().authorities(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.write"),
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read"));
+    }
+
+    private void createEditableClient() throws Exception {
+        mockMvc.perform(post("/api/security/oauth-clients").with(manager()).contentType("application/json")
+                        .content("{\"clientId\":\"editable-client\",\"clientName\":\"Before\",\"publicClient\":true,\"redirectUris\":[\"https://example.test/callback\"],\"scopes\":[\"openid\"]}"))
+                .andExpect(status().isCreated());
+    }
+
 }

@@ -1,17 +1,27 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Drawer, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tag } from '@arco-design/web-react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
 import useLocale from '@/utils/useLocale';
-import { createParameter, deactivateParameterVersion, listParameterEvents, listParameterVersions, listParameters, Parameter, ParameterApiError, ParameterEvent, ParameterListQuery, ParameterPage, ParameterVersion, ParameterVersionPage, publishParameterVersion, retryParameterEvent, rollbackParameterVersion, saveParameterDraft, setParameterStatus, updateParameter, saveParameterOverride } from './api';
+import { Parameter, ParameterApiError, ParameterEvent, ParameterListQuery, ParameterPage, ParameterVersion, ParameterVersionPage, parameterApiForEnterprise } from './api';
+import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 
 const Item = Form.Item;
 const empty = { key: '', type: 'STRING' as Parameter['type'], value: '', required: false, min: undefined as number | undefined, max: undefined as number | undefined, pattern: '', public: false, description: '' };
 
 export default function SystemParametersPage() {
+  const tenant = useActiveEnterprise();
+  return <><Select aria-label="活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240, marginBottom: 16 }} />
+    {tenant.enterpriseId ? <SystemParametersContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} onDirtyChange={tenant.setDirty} onBusyChange={tenant.setBusy} /> : tenant.ready && <Alert type="info" content="请选择一个活动成员租户；没有可用租户时不会读取配置。" />}</>;
+}
+function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: { enterpriseId: string; onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }) {
+  const { createParameter, deactivateParameterVersion, listParameterEvents, listParameterVersions, listParameters, publishParameterVersion, retryParameterEvent, rollbackParameterVersion, saveParameterDraft, setParameterStatus, updateParameter, saveParameterOverride } = useMemo(() => parameterApiForEnterprise(enterpriseId), [enterpriseId]);
   const t = useLocale();
   const router = useHistory();
   const editorBaseline = useRef('');
+  const alive = useRef(true);
+  const writing = useRef(false);
+  useEffect(() => () => { alive.current = false; }, []);
   const listRequest = useRef(0);
   const eventRequest = useRef(0);
   const historyRequest = useRef(0);
@@ -22,6 +32,8 @@ export default function SystemParametersPage() {
   const [query, setQuery] = useState<ParameterListQuery>({ page: 0, size: 20, sort: 'key', direction: 'asc', projection: 'detail' });
   const editorState = JSON.stringify({ form, overrideOrg, overrideVersion });
   const dirty = editor !== false && editorState !== editorBaseline.current;
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
+  useEffect(() => onBusyChange(saving), [saving, onBusyChange]);
   useEffect(() => {
     if (!dirty && !saving) return undefined;
     const unblock = router.block(() => isAuthRedirecting() ? undefined : saving ? false : '配置有未保存修改，确认离开？');
@@ -49,12 +61,17 @@ export default function SystemParametersPage() {
   }
   function localError(failure: Error) { setError(new ParameterApiError(0, 'INVALID_INPUT', failure.message, '')); }
   function mutableFields() { return { value: valueForType(), required: form.required, min: form.min, max: form.max, pattern: form.pattern || undefined, publicValue: form.public, description: form.description }; }
-  function save() { try { const payload = mutableFields(); setSaving(true); const call = editor ? updateParameter(editor.key, { ...payload, version: editor.version }) : createParameter({ ...payload, key: form.key, type: form.type }); call.then(() => { setEditor(false); load(); loadEvents(); }).catch((e) => setError(e)).finally(() => setSaving(false)); } catch (failure) { localError(failure); } }
-  function saveDraft() { if (!editor) return; try { const payload = mutableFields(); setSaving(true); saveParameterDraft(editor.key, { ...payload, baseVersion: editor.version, idempotencyKey: `ui-draft-${Date.now()}` }).then(() => { editorBaseline.current = editorState; loadHistory(editor.key); loadEvents(); }).catch((e) => setError(e)).finally(() => setSaving(false)); } catch (failure) { localError(failure); } }
-  function publish(version: ParameterVersion) { if (!historyKey || !history) return; publishParameterVersion(historyKey, { revision: version.revision, expectedVersion: history.currentVersion, idempotencyKey: `ui-publish-${version.revision}-${Date.now()}` }).then(() => { load(); loadHistory(historyKey); loadEvents(); }).catch((e) => setError(e)); }
-  function rollback(version: ParameterVersion) { if (!historyKey || !history) return; rollbackParameterVersion(historyKey, { revision: version.revision, expectedVersion: history.currentVersion, idempotencyKey: `ui-rollback-${version.revision}-${Date.now()}` }).then(() => { load(); loadHistory(historyKey); loadEvents(); }).catch((e) => setError(e)); }
+  function write<T>(call: () => Promise<T>, success: (result: T) => void) {
+    if (writing.current) return;
+    writing.current = true; setSaving(true); setError(null);
+    call().then((result) => { if (alive.current) success(result); }).catch((failure) => { if (alive.current) setError(failure); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); });
+  }
+  function save() { try { const payload = mutableFields(); write(() => editor ? updateParameter(editor.key, { ...payload, version: editor.version }) : createParameter({ ...payload, key: form.key, type: form.type }), () => { setEditor(false); load(); loadEvents(); }); } catch (failure) { localError(failure); } }
+  function saveDraft() { if (!editor) return; const key = editor.key; try { const payload = mutableFields(); write(() => saveParameterDraft(key, { ...payload, baseVersion: editor.version, idempotencyKey: `ui-draft-${Date.now()}` }), () => { editorBaseline.current = editorState; loadHistory(key); loadEvents(); }); } catch (failure) { localError(failure); } }
+  function publish(version: ParameterVersion) { if (!historyKey || !history) return; write(() => publishParameterVersion(historyKey, { revision: version.revision, expectedVersion: history.currentVersion, idempotencyKey: `ui-publish-${version.revision}-${Date.now()}` }), () => { load(); loadHistory(historyKey); loadEvents(); }); }
+  function rollback(version: ParameterVersion) { if (!historyKey || !history) return; write(() => rollbackParameterVersion(historyKey, { revision: version.revision, expectedVersion: history.currentVersion, idempotencyKey: `ui-rollback-${version.revision}-${Date.now()}` }), () => { load(); loadHistory(historyKey); loadEvents(); }); }
   const updateQuery = (change: Partial<ParameterListQuery>) => setQuery({ ...query, ...change, page: 0 });
-  return <Card title={t['systemParameters.title']} extra={<Button type="primary" onClick={() => open()}>{t['systemParameters.create']}</Button>}>
+  return <Card title={t['systemParameters.title']} extra={<Button disabled={saving} type="primary" onClick={() => open()}>{t['systemParameters.create']}</Button>}>
     <Alert type="info" content="覆盖优先级：组织 > 租户 > 基础值。选中的高优先级覆盖不可访问时不会回退；各项写操作由服务端分别授权。" style={{ marginBottom: 16 }} />
     <Space wrap style={{ marginBottom: 16 }}>
       <Input value={query.key || ''} onChange={(key) => updateQuery({ key: key || undefined })} onPressEnter={load} placeholder={t['systemParameters.key']} style={{ width: 180 }} />
@@ -82,7 +99,7 @@ export default function SystemParametersPage() {
     <Table<Parameter> rowKey="key" loading={loading} data={(page?.items || []) as Parameter[]} pagination={{ current: (page?.page || 0) + 1, pageSize: page?.size || query.size, total: page?.totalElements || 0, onChange: (current, size) => setQuery({ ...query, page: current - 1, size }) }} columns={[
       { title: t['systemParameters.key'], dataIndex: 'key' }, { title: t['systemParameters.type'], dataIndex: 'type' }, { title: t['systemParameters.value'], dataIndex: 'value', render: (v) => String(v) },
       { title: t['systemParameters.status'], dataIndex: 'status', render: (v) => <Tag color={v === 'ACTIVE' ? 'green' : 'gray'}>{v}</Tag> }, { title: t['systemParameters.version'], dataIndex: 'version' },
-      { title: t['systemParameters.actions'], render: (_, row) => <Space><Button size="small" disabled={page?.projection === 'summary'} onClick={() => open(row)}>{t['systemParameters.edit']}</Button><Button size="small" onClick={() => loadHistory(row.key)}>{t['systemParameters.history']}</Button><Button size="small" disabled={page?.projection === 'summary'} onClick={() => (row.status === 'ACTIVE' ? deactivateParameterVersion(row.key, { expectedVersion: row.version, idempotencyKey: `ui-disable-${row.key}-${Date.now()}` }) : setParameterStatus(row.key, 'ACTIVE')).then(() => { load(); loadEvents(); }).catch(setError)}>{row.status === 'ACTIVE' ? t['systemParameters.disable'] : t['systemParameters.enable']}</Button></Space> },
+      { title: t['systemParameters.actions'], render: (_, row) => <Space><Button size="small" disabled={saving || page?.projection === 'summary'} onClick={() => open(row)}>{t['systemParameters.edit']}</Button><Button disabled={saving} size="small" onClick={() => loadHistory(row.key)}>{t['systemParameters.history']}</Button><Button size="small" disabled={saving || page?.projection === 'summary'} onClick={() => write(() => row.status === 'ACTIVE' ? deactivateParameterVersion(row.key, { expectedVersion: row.version, idempotencyKey: `ui-disable-${row.key}-${Date.now()}` }) : setParameterStatus(row.key, 'ACTIVE'), () => { load(); loadEvents(); })}>{row.status === 'ACTIVE' ? t['systemParameters.disable'] : t['systemParameters.enable']}</Button></Space> },
     ]} />
     <Card title={t['systemParameters.deliveryTitle']} style={{ marginTop: 16 }}>
       <Table<ParameterEvent> rowKey="eventId" data={events} pagination={false} columns={[
@@ -90,24 +107,24 @@ export default function SystemParametersPage() {
         { title: t['systemParameters.deliveryStatus'], dataIndex: 'status', render: (value) => <Tag color={value === 'PUBLISHED' ? 'green' : value === 'DEAD_LETTER' ? 'red' : 'orange'}>{value}</Tag> },
         { title: t['systemParameters.attempts'], dataIndex: 'attempts' },
         { title: t['systemParameters.requestId'], dataIndex: 'requestId' },
-        { title: t['systemParameters.actions'], render: (_, row) => row.status === 'DEAD_LETTER' ? <Button size="small" onClick={() => retryParameterEvent(row.eventId).then(() => loadEvents()).catch(setError)}>{t['systemParameters.retry']}</Button> : null },
+        { title: t['systemParameters.actions'], render: (_, row) => row.status === 'DEAD_LETTER' ? <Button disabled={saving} size="small" onClick={() => write(() => retryParameterEvent(row.eventId), loadEvents)}>{t['systemParameters.retry']}</Button> : null },
       ]} />
     </Card>
     {history && <Card title={`${t['systemParameters.history']} · ${historyKey}`} style={{ marginTop: 16 }}><Table<ParameterVersion> rowKey="revision" data={history.items} pagination={false} columns={[
       { title: t['systemParameters.revision'], dataIndex: 'revision' }, { title: t['systemParameters.releaseState'], dataIndex: 'state' }, { title: t['systemParameters.value'], dataIndex: 'value', render: (v) => String(v) }, { title: t['systemParameters.revisionStatus'], dataIndex: 'status' },
-      { title: t['systemParameters.actions'], render: (_, row) => <Space>{row.state === 'DRAFT' && <Button size="small" type="primary" onClick={() => publish(row)}>{t['systemParameters.publish']}</Button>}{row.state !== 'DRAFT' && <Button size="small" onClick={() => rollback(row)}>{t['systemParameters.rollback']}</Button>}</Space> },
+      { title: t['systemParameters.actions'], render: (_, row) => <Space>{row.state === 'DRAFT' && <Button disabled={saving} size="small" type="primary" onClick={() => publish(row)}>{t['systemParameters.publish']}</Button>}{row.state !== 'DRAFT' && <Button disabled={saving} size="small" onClick={() => rollback(row)}>{t['systemParameters.rollback']}</Button>}</Space> },
     ]} /></Card>}
-    <Drawer title={editor ? t['systemParameters.edit'] : t['systemParameters.create']} visible={editor !== false} onCancel={closeEditor} onOk={save} okButtonProps={{ loading: saving }} width={520}>
-      <Form layout="vertical"><Item label={t['systemParameters.key']}><Input value={form.key} disabled={Boolean(editor)} onChange={(v) => setForm({ ...form, key: v })} /></Item>
-        <Item label={t['systemParameters.type']}><Select value={form.type} disabled={Boolean(editor)} onChange={(v) => setForm({ ...form, type: v as Parameter['type'] })}><Select.Option value="STRING">STRING</Select.Option><Select.Option value="INTEGER">INTEGER</Select.Option><Select.Option value="DECIMAL">DECIMAL</Select.Option><Select.Option value="BOOLEAN">BOOLEAN</Select.Option></Select></Item>
-        <Item label={t['systemParameters.value']}><Input value={String(form.value)} onChange={(v) => setForm({ ...form, value: v })} /></Item>
-        <Space><Item label={t['systemParameters.required']}><Switch checked={form.required} onChange={(v) => setForm({ ...form, required: v })} /></Item><Item label={t['systemParameters.public']}><Switch checked={form.public} onChange={(v) => setForm({ ...form, public: v })} /></Item></Space>
-        <Space><Item label={t['systemParameters.min']}><InputNumber value={form.min} onChange={(v) => setForm({ ...form, min: v })} /></Item><Item label={t['systemParameters.max']}><InputNumber value={form.max} onChange={(v) => setForm({ ...form, max: v })} /></Item></Space>
-        <Item label={t['systemParameters.description']}><Input.TextArea value={form.description} onChange={(v) => setForm({ ...form, description: v })} /></Item>
-        {editor && <><Button onClick={saveDraft} loading={saving}>{t['systemParameters.saveDraft']}</Button>
-          <Item label="覆盖范围（_tenant 为租户，或组织 ID）"><Input value={overrideOrg} onChange={(v) => { setOverrideOrg(v); setOverrideVersion(undefined); }} /></Item>
-          <Item label="覆盖版本（新建留空，修改填写已有版本）"><InputNumber min={0} value={overrideVersion} onChange={setOverrideVersion} /></Item>
-          <Button onClick={() => { try { saveParameterOverride(editor.key, overrideOrg, { value: valueForType(), publicReadable: form.public, expectedVersion: overrideVersion }).then((result) => { setOverrideVersion(result.version); load(); }).catch(setError); } catch (failure) { localError(failure); } }}>发布当前表单值为覆盖</Button>
+    <Drawer title={editor ? t['systemParameters.edit'] : t['systemParameters.create']} visible={editor !== false} onCancel={closeEditor} onOk={save} okButtonProps={{ loading: saving, disabled: saving }} width={520}>
+      <Form layout="vertical"><Item label={t['systemParameters.key']}><Input value={form.key} disabled={saving || Boolean(editor)} onChange={(v) => setForm({ ...form, key: v })} /></Item>
+        <Item label={t['systemParameters.type']}><Select value={form.type} disabled={saving || Boolean(editor)} onChange={(v) => setForm({ ...form, type: v as Parameter['type'] })}><Select.Option value="STRING">STRING</Select.Option><Select.Option value="INTEGER">INTEGER</Select.Option><Select.Option value="DECIMAL">DECIMAL</Select.Option><Select.Option value="BOOLEAN">BOOLEAN</Select.Option></Select></Item>
+        <Item label={t['systemParameters.value']}><Input disabled={saving} value={String(form.value)} onChange={(v) => setForm({ ...form, value: v })} /></Item>
+        <Space><Item label={t['systemParameters.required']}><Switch disabled={saving} checked={form.required} onChange={(v) => setForm({ ...form, required: v })} /></Item><Item label={t['systemParameters.public']}><Switch disabled={saving} checked={form.public} onChange={(v) => setForm({ ...form, public: v })} /></Item></Space>
+        <Space><Item label={t['systemParameters.min']}><InputNumber disabled={saving} value={form.min} onChange={(v) => setForm({ ...form, min: v })} /></Item><Item label={t['systemParameters.max']}><InputNumber disabled={saving} value={form.max} onChange={(v) => setForm({ ...form, max: v })} /></Item></Space>
+        <Item label={t['systemParameters.description']}><Input.TextArea disabled={saving} value={form.description} onChange={(v) => setForm({ ...form, description: v })} /></Item>
+        {editor && <><Button disabled={saving} onClick={saveDraft} loading={saving}>{t['systemParameters.saveDraft']}</Button>
+          <Item label="覆盖范围（_tenant 为租户，或组织 ID）"><Input disabled={saving} value={overrideOrg} onChange={(v) => { setOverrideOrg(v); setOverrideVersion(undefined); }} /></Item>
+          <Item label="覆盖版本（新建留空，修改填写已有版本）"><InputNumber disabled={saving} min={0} value={overrideVersion} onChange={setOverrideVersion} /></Item>
+          <Button disabled={saving} loading={saving} onClick={() => { try { const value = valueForType(); write(() => saveParameterOverride(editor.key, overrideOrg, { value, publicReadable: form.public, expectedVersion: overrideVersion }), (result) => { setOverrideVersion(result.version); load(); }); } catch (failure) { localError(failure); } }}>发布当前表单值为覆盖</Button>
         </>}
       </Form>
     </Drawer>

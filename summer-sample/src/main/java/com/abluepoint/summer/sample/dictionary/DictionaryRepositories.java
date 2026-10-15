@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 interface DictionaryTypeRepository extends JpaRepository<DictionaryTypeEntity, String>, JpaSpecificationExecutor<DictionaryTypeEntity> {
-    Optional<DictionaryTypeEntity> findByCode(String code);
+    Optional<DictionaryTypeEntity> findByTenantIdAndCode(String tenantId, String code);
     List<DictionaryTypeEntity> findAllByOrderByCodeAsc();
     default List<DictionaryTypeEntity> findScoped(com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope) {
         return findAll(scope.specification(), org.springframework.data.domain.Sort.by("code"));
@@ -17,8 +17,8 @@ interface DictionaryTypeRepository extends JpaRepository<DictionaryTypeEntity, S
 }
 
 interface DictionaryItemRepository extends JpaRepository<DictionaryItemEntity, String>, JpaSpecificationExecutor<DictionaryItemEntity> {
-    List<DictionaryItemEntity> findAllByDictionaryCodeOrderBySortOrderAscValueAsc(String dictionaryCode);
-    Optional<DictionaryItemEntity> findByDictionaryCodeAndValue(String dictionaryCode, String value);
+    List<DictionaryItemEntity> findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(String tenantId, String dictionaryCode);
+    Optional<DictionaryItemEntity> findByTenantIdAndDictionaryCodeAndValue(String tenantId, String dictionaryCode, String value);
     default List<DictionaryItemEntity> findScoped(String code, com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope) {
         return findAll(scope.<DictionaryItemEntity>specification().and((root, query, builder) -> builder.equal(root.get("dictionaryCode"), code)), org.springframework.data.domain.Sort.by("sortOrder", "value"));
     }

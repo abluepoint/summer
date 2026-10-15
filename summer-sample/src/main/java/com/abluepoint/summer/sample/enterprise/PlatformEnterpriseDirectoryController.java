@@ -29,6 +29,7 @@ class PlatformEnterpriseDirectoryController {
     }
 
     @GetMapping("/api/v1/platform/enterprises")
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise.read")
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.read')")
     @RawResponse
     ResponseEntity<ApiResponse<PlatformEnterprisePage>> list(
@@ -37,7 +38,7 @@ class PlatformEnterpriseDirectoryController {
             @RequestParam(defaultValue = "") String qualification,
             Authentication auth) {
         PlatformEnterprisePage body = service.list(search, status, qualification, auth);
-        return ResponseEntity.ok().eTag(quote("platform-enterprises-v1"))
+        return ResponseEntity.ok().eTag(quote(java.util.UUID.nameUUIDFromBytes(body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString()))
                 .header("X-Request-Id", requestId.currentRequestId())
                 .body(ApiResponse.success(body, requestId.currentRequestId()));
     }
@@ -47,6 +48,7 @@ class PlatformEnterpriseDirectoryController {
             "/api/v1/platform/enterprises/{id}:disable",
             "/api/v1/platform/enterprises/{id}:reject"
     })
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise.write")
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.write')")
     @RawResponse
     ResponseEntity<ApiResponse<PlatformEnterpriseView>> transition(

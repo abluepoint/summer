@@ -23,7 +23,31 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class AuthorizationRequestInterceptorTest {
-    @AfterEach void clearContext() { SecurityContextHolder.clearContext(); }
+    @AfterEach void clearContext() {
+        SecurityContextHolder.clearContext();
+        org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+    }
+
+    @Test
+    void unqualifiedConfigurationRouteUsesTheActiveEnterpriseInsteadOfSampleTenant() throws Exception {
+        var service = mock(AuthorizationService.class);
+        var interceptor = new AuthorizationRequestInterceptor(service);
+        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("configuration-reader")
+                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-north", "status", "ACTIVE")))
+                .build();
+        var authentication = new JwtAuthenticationToken(jwt);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        var request = new MockHttpServletRequest("GET", "/api/system-parameters");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
+                new org.springframework.web.context.request.ServletRequestAttributes(request));
+        Class<?> controller = Class.forName("com.abluepoint.summer.sample.systemparameter.SystemParameterController");
+        var list = java.util.Arrays.stream(controller.getDeclaredMethods()).filter(method -> method.getName().equals("list")).findFirst().orElseThrow();
+        when(service.decision(authentication, "ent-north", "system.parameter.read", null))
+                .thenReturn(new AuthorizationService.Decision(true, "ROLE_ALLOW"));
+        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new HandlerMethod(mock(controller), list))).isTrue();
+        verify(service).decision(authentication, "ent-north", "system.parameter.read", null);
+        verifyNoMoreInteractions(service);
+    }
 
     @Test
     void missingMatchedMappingFailsClosedInsteadOfAuthorizingConcreteUri() throws Exception {

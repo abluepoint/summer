@@ -19,6 +19,12 @@ class OrganizationUnitEntity extends BaseLongEntity {
     @Column(length = 500) private String description;
     @Column(nullable = false) private int sortOrder;
     @Column(nullable = false, length = 32) private String status;
+    @org.hibernate.annotations.ColumnDefault("0")
+    @jakarta.persistence.Version private long version;
+    long version() { return version; }
+    void update(String parentId, String unitType, String name, String code, String leaderMemberId, String description, int sortOrder, String status) {
+        this.parentId = parentId; this.unitType = unitType; this.name = name; this.code = code; this.leaderMemberId = leaderMemberId; this.description = description; this.sortOrder = sortOrder; this.status = status;
+    }
     protected OrganizationUnitEntity() {}
     OrganizationUnitEntity(String unitId, String enterpriseId, String parentId, String unitType, String name, String code, String leaderMemberId, String description, int sortOrder, String status) {
         this.unitId = unitId; this.enterpriseId = enterpriseId; this.parentId = parentId; this.unitType = unitType; this.name = name; this.code = code; this.leaderMemberId = leaderMemberId; this.description = description; this.sortOrder = sortOrder; this.status = status;

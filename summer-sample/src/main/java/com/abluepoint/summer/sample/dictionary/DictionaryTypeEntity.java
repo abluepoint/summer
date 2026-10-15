@@ -6,12 +6,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "summer_dictionary_type")
+@Table(name = "summer_dictionary_type", uniqueConstraints = @jakarta.persistence.UniqueConstraint(columnNames = {"tenant_id", "code"}))
 class DictionaryTypeEntity {
     @Id
     @Column(length = 36, nullable = false, updatable = false)
     private String id;
-    @Column(length = 80, nullable = false, unique = true)
+    @Column(length = 80, nullable = false)
     private String code;
     @Column(name="tenant_id", nullable=false, length=80) private String tenantId;
     @Column(name="organization_id", length=64) private String organizationId;
@@ -30,10 +30,9 @@ class DictionaryTypeEntity {
 
     protected DictionaryTypeEntity() {}
 
-    DictionaryTypeEntity(String id, String code, String name, boolean published, boolean publicReadable, boolean enabled) { this(id, code, name, published, publicReadable, enabled, null, null, null); }
-    DictionaryTypeEntity(String id, String code, String name, boolean published, boolean publicReadable, boolean enabled, String organizationId, String createdBy, String ownerId) {
+    DictionaryTypeEntity(String tenantId, String id, String code, String name, boolean published, boolean publicReadable, boolean enabled, String organizationId, String createdBy, String ownerId) {
         this.id = id;
-        this.tenantId = "ent-acme"; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
+        this.tenantId = tenantId; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.code = code;
         this.name = name;
         this.published = published;

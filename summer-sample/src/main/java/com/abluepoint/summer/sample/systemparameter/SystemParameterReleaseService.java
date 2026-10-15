@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
@@ -46,7 +47,7 @@ class SystemParameterReleaseService {
     void recordInitial(SystemParameterEntity parameter, Authentication authentication) {
         if (versions.findByTenantIdAndParameterKeyAndRevision(parameter.tenantId(), parameter.key(), 0).isPresent()) return;
         try {
-            versions.saveAndFlush(new SystemParameterVersionEntity(parameter.key(), 0,
+            versions.saveAndFlush(new SystemParameterVersionEntity(parameter.tenantId(), parameter.key(), 0,
                     SystemParameterReleaseState.PUBLISHED, serialize(snapshot(parameter)), parameter.version(),
                     "initial:" + parameter.id(), principal(authentication)));
         } catch (DataIntegrityViolationException ignored) {
@@ -67,10 +68,10 @@ class SystemParameterReleaseService {
         SystemParameterSnapshot snapshot = merge(parameter, request);
         validate(snapshot);
         recordInitial(parameter, authentication);
-        SystemParameterVersionEntity saved = versions.saveAndFlush(new SystemParameterVersionEntity(key,
-                nextRevision(key), SystemParameterReleaseState.DRAFT, serialize(snapshot), parameter.version(),
+        SystemParameterVersionEntity saved = versions.saveAndFlush(new SystemParameterVersionEntity(parameter.tenantId(), key,
+                nextRevision(parameter.tenantId(), key), SystemParameterReleaseState.DRAFT, serialize(snapshot), parameter.version(),
                 idempotency, principal(authentication)));
-        audit.recordResourceSuccess("system-parameter:" + key, "SYSTEM_PARAMETER_DRAFT_SAVED", requestId, authentication);
+        audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + key, "SYSTEM_PARAMETER_DRAFT_SAVED", requestId, authentication);
         return result(parameter, saved);
     }
 
@@ -82,7 +83,7 @@ class SystemParameterReleaseService {
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
         checkExpected(parameter, command);
-        SystemParameterVersionEntity draft = version(key, command.revision());
+        SystemParameterVersionEntity draft = version(parameter.tenantId(), key, command.revision());
         if (draft.state() != SystemParameterReleaseState.DRAFT) throw new SystemParameterReleaseConflictException("Only a draft can be published");
         SystemParameterSnapshot snapshot = readSnapshot(draft.snapshotJson());
         validate(snapshot);
@@ -98,7 +99,7 @@ class SystemParameterReleaseService {
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
         checkExpected(parameter, command);
-        SystemParameterVersionEntity target = version(key, command.revision());
+        SystemParameterVersionEntity target = version(parameter.tenantId(), key, command.revision());
         if (target.state() == SystemParameterReleaseState.DRAFT) throw new SystemParameterReleaseConflictException("Draft versions cannot be rolled back to");
         SystemParameterSnapshot snapshot = readSnapshot(target.snapshotJson());
         validate(snapshot);
@@ -140,11 +141,11 @@ class SystemParameterReleaseService {
         try {
             SystemParameterEntity saved = parameters.saveAndFlush(parameter);
             SystemParameterVersionEntity release = versions.saveAndFlush(new SystemParameterVersionEntity(
-                    parameter.key(), nextRevision(parameter.key()), state, serialize(snapshot), parameter.version(),
+                    parameter.tenantId(), parameter.key(), nextRevision(parameter.tenantId(), parameter.key()), state, serialize(snapshot), parameter.version(),
                     idempotency, principal(authentication)));
             events.enqueue(saved, eventType, requestId);
-            cache.evictLocal(SystemParameterService.TENANT_ID, "system-parameter");
-            audit.recordResourceSuccess("system-parameter:" + parameter.key(), eventType, requestId, authentication);
+            cache.evictLocal(parameter.tenantId(), "system-parameter");
+            audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + parameter.key(), eventType, requestId, authentication);
             return result(saved, release);
         } catch (ObjectOptimisticLockingFailureException exception) {
             throw new SystemParameterVersionConflictException();
@@ -152,13 +153,13 @@ class SystemParameterReleaseService {
     }
 
     private SystemParameterEntity current(String key, Authentication authentication) {
-        return parameters.findScoped(key, dataScopes.filter(SystemParameterService.TENANT_ID, "system-parameters", authentication))
+        return parameters.findScoped(key, dataScopes.filter(resolve(authentication), "system-parameters", authentication))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
     }
 
-    private SystemParameterVersionEntity version(String key, Long revision) {
+    private SystemParameterVersionEntity version(String tenant, String key, Long revision) {
         if (revision == null || revision < 0) throw new SystemParameterReleaseValidationException("revision is required");
-        return versions.findByTenantIdAndParameterKeyAndRevision(SystemParameterService.TENANT_ID, key, revision)
+        return versions.findByTenantIdAndParameterKeyAndRevision(tenant, key, revision)
                 .orElseThrow(() -> new SystemParameterReleaseNotFoundException(key, revision));
     }
 
@@ -168,8 +169,8 @@ class SystemParameterReleaseService {
         }
     }
 
-    private long nextRevision(String key) {
-        return versions.findTopByTenantIdAndParameterKeyOrderByRevisionDesc(SystemParameterService.TENANT_ID, key)
+    private long nextRevision(String tenant, String key) {
+        return versions.findTopByTenantIdAndParameterKeyOrderByRevisionDesc(tenant, key)
                 .map(value -> value.revision() + 1).orElse(0L);
     }
 

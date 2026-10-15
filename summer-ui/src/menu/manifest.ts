@@ -46,5 +46,5 @@ export function createMenuManifest(routeTree: ManifestRoute[]): { manifestVersio
     });
   }
   visit(routeTree);
-  return { manifestVersion: 2, items };
+  return { manifestVersion: 5, items };
 }

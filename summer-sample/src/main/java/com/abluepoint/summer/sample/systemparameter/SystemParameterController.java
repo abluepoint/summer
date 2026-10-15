@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/system-parameters")
+@RequestMapping({"/api/system-parameters", "/api/v1/enterprises/{enterpriseId}/system-parameters"})
 class SystemParameterController {
     private final SystemParameterService service;
     private final SystemParameterReleaseService releases;
@@ -37,6 +38,7 @@ class SystemParameterController {
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
+    @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "page", required = false, style = "systemParameterPageStyle")
     @Field(param = "size", required = false, style = "systemParameterPageSizeStyle")
     @Field(param = "key", required = false, style = "systemParameterKeyStyle")
@@ -52,10 +54,7 @@ class SystemParameterController {
         try {
             int page = values.get("page", Integer.class) == null ? 0 : values.get("page", Integer.class);
             int size = values.get("size", Integer.class) == null ? 20 : values.get("size", Integer.class);
-            String tenantId = values.get("tenantId", String.class);
-            if (tenantId != null && !SystemParameterService.TENANT_ID.equals(tenantId)) {
-                return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", "System parameter tenant access denied", List.of());
-            }
+            String tenantId = resolve(authentication);
             String type = values.get("type", String.class);
             String status = values.get("status", String.class);
             String sort = values.get("sort", String.class);
@@ -69,7 +68,7 @@ class SystemParameterController {
                     sort == null ? SystemParameterListQuery.SortField.KEY : sortField(sort),
                     "desc".equals(direction) ? SystemParameterListQuery.SortDirection.DESC : SystemParameterListQuery.SortDirection.ASC,
                     "summary".equals(projection) ? SystemParameterListQuery.Projection.SUMMARY : SystemParameterListQuery.Projection.DETAIL,
-                    SystemParameterService.TENANT_ID, null);
+                    tenantId, null);
             return body(HttpStatus.OK, page(queryService.list(query, authentication)));
         } catch (IllegalArgumentException exception) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", "Invalid system parameter query", List.of());
@@ -80,6 +79,7 @@ class SystemParameterController {
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
+    @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> find(
             @PathVariable String key, Authentication authentication) {
@@ -133,6 +133,7 @@ class SystemParameterController {
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.publish")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_platform.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> enable(
             @PathVariable String key,
@@ -144,6 +145,7 @@ class SystemParameterController {
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.disable")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.disable','SCOPE_platform.parameter.disable','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> disable(
             @PathVariable String key,

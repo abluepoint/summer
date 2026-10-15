@@ -5,10 +5,15 @@ import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber } from
 import useLocale from '@/utils/useLocale';
 import { DictionaryOption, getPublicDictionary, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
 
-const enterpriseId = 'ent-acme';
+import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 const dictionaryCode = 'customer-segment';
 
 export default function DictionaryConsumerPage() {
+  const tenant = useActiveEnterprise();
+  return <><Select aria-label="活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240, marginBottom: 16 }} />
+    {tenant.enterpriseId ? <DictionaryContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} onDirtyChange={tenant.setDirty} onBusyChange={tenant.setBusy} /> : tenant.ready && <Alert type="info" content="请选择一个活动成员租户；没有可用租户时不会读取配置。" />}</>;
+}
+function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { enterpriseId: string; onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }) {
   const t = useLocale();
   const history = useHistory();
   const [options, setOptions] = useState<DictionaryOption[]>([]);
@@ -21,23 +26,29 @@ export default function DictionaryConsumerPage() {
   const [streamError, setStreamError] = useState(false);
   const valueRef = useRef('');
   const readRequest = useRef(0);
+  const alive = useRef(true);
+  const writing = useRef(false);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => onBusyChange(saving), [saving, onBusyChange]);
   const overrideDirty = useRef(false);
   const [overrideOrg, setOverrideOrg] = useState('_tenant');
   const [overrideJson, setOverrideJson] = useState('[]');
   const [overrideVersion, setOverrideVersion] = useState<number | undefined>();
+  useEffect(() => onDirtyChange(overrideDirty.current), [overrideJson, overrideOrg, overrideVersion, error, onDirtyChange]);
   useEffect(() => {
-    if (!overrideDirty.current) return undefined;
-    const unblock = history.block(() => isAuthRedirecting() ? undefined : '字典覆盖有未保存修改，确认离开？');
+    if (!overrideDirty.current && !saving) return undefined;
+    const unblock = history.block(() => isAuthRedirecting() ? undefined : saving ? false : '字典覆盖有未保存修改，确认离开？');
     const beforeUnload = (event: BeforeUnloadEvent) => { if (!isAuthRedirecting()) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', beforeUnload);
     return () => { unblock(); window.removeEventListener('beforeunload', beforeUnload); };
-  }, [overrideJson, overrideOrg, overrideVersion, history]);
+  }, [overrideJson, overrideOrg, overrideVersion, saving, history]);
 
   const load = useCallback((eventType?: string) => {
     const request = ++readRequest.current;
     setLoading(true);
     setError('');
-    return getPublicDictionary(dictionaryCode)
+    return getPublicDictionary(dictionaryCode, enterpriseId)
       .then((dictionary) => {
         if (request !== readRequest.current) return;
         setOptions(dictionary.items); if (!overrideDirty.current) setOverrideJson(JSON.stringify(dictionary.items, null, 2));
@@ -85,7 +96,7 @@ export default function DictionaryConsumerPage() {
           <Tag color={streamState === 'OPEN' ? 'green' : 'orange'} style={{ marginRight: 8 }}>
             {streamState}
           </Tag>
-          <Button size="small" loading={loading} onClick={() => load()}>{t['dictionary.refresh']}</Button>
+          <Button size="small" disabled={saving} loading={loading} onClick={() => load()}>{t['dictionary.refresh']}</Button>
         </span>
       )}
     >
@@ -103,10 +114,10 @@ export default function DictionaryConsumerPage() {
               options={options.map((item) => ({ label: item.label, value: item.value }))}
             />
           </Form.Item>
-          <Form.Item label="覆盖范围（_tenant 或组织 ID）"><Input value={overrideOrg} onChange={(v) => { overrideDirty.current = true; setOverrideOrg(v); setOverrideVersion(undefined); }} /></Form.Item>
-          <Form.Item label="覆盖版本（新建留空）"><InputNumber min={0} value={overrideVersion} onChange={(v) => { overrideDirty.current = true; setOverrideVersion(v); }} /></Form.Item>
-          <Form.Item label="覆盖选项 JSON"><Input.TextArea aria-label="覆盖选项 JSON" value={overrideJson} onChange={(text) => { overrideDirty.current = true; setOverrideJson(text); }} /></Form.Item>
-          <Button onClick={() => { try { saveDictionaryOverride(dictionaryCode, overrideOrg, JSON.parse(overrideJson), overrideVersion).then((result) => { setOverrideVersion(result.version); overrideDirty.current = false; load(); }).catch((e) => setError(`${e.status === 403 ? '无权发布字典覆盖' : e.message}${e.requestId ? ` (${e.requestId})` : ''}`)); } catch { setError('请输入有效选项 JSON'); } }}>发布字典覆盖</Button>
+          <Form.Item label="覆盖范围（_tenant 或组织 ID）"><Input disabled={saving} value={overrideOrg} onChange={(v) => { overrideDirty.current = true; setOverrideOrg(v); setOverrideVersion(undefined); }} /></Form.Item>
+          <Form.Item label="覆盖版本（新建留空）"><InputNumber disabled={saving} min={0} value={overrideVersion} onChange={(v) => { overrideDirty.current = true; setOverrideVersion(v); }} /></Form.Item>
+          <Form.Item label="覆盖选项 JSON"><Input.TextArea disabled={saving} aria-label="覆盖选项 JSON" value={overrideJson} onChange={(text) => { overrideDirty.current = true; setOverrideJson(text); }} /></Form.Item>
+          <Button disabled={saving} loading={saving} onClick={() => { if (writing.current) return; try { const items = JSON.parse(overrideJson); writing.current = true; setSaving(true); saveDictionaryOverride(dictionaryCode, overrideOrg, items, overrideVersion, enterpriseId).then((result) => { if (!alive.current) return; setOverrideVersion(result.version); overrideDirty.current = false; load(); }).catch((e) => { if (alive.current) setError(`${e.status === 403 ? '无权发布字典覆盖' : e.message}${e.requestId ? ` (${e.requestId})` : ''}`); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); }); } catch { setError('请输入有效选项 JSON'); } }}>发布字典覆盖</Button>
           {version !== undefined && <div data-testid="dictionary-version">{t['dictionary.version']}: {version}</div>}
         </Form>
       )}

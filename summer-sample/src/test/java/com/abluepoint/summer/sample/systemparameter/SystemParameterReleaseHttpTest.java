@@ -9,7 +9,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItem;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,6 +21,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class SystemParameterReleaseHttpTest {
+    // These legacy fixtures now declare their enterprise; production has no implicit sample tenant.
+    private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor jwt() {
+        return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+                .jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -112,12 +117,12 @@ class SystemParameterReleaseHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor reader() {
-        return jwt().jwt(token -> token.subject("reader"))
+        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("reader"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.read"));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor writer() {
-        return jwt().jwt(token -> token.subject("operator"))
+        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"));
     }
 }

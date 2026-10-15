@@ -24,7 +24,7 @@ class MenuManifestOverrideEntity {
     protected MenuManifestOverrideEntity() {}
     MenuManifestOverrideEntity(String enterpriseId, String menuId, MenuManifestOverrideRequest request) {
         this.overrideId = enterpriseId + ":" + menuId; this.enterpriseId = enterpriseId; this.menuId = menuId;
-        update(request, 1); this.createdAt = Instant.now(); this.updatedAt = this.createdAt;
+        update(request, 2); this.createdAt = Instant.now(); this.updatedAt = this.createdAt;
     }
     void update(MenuManifestOverrideRequest request, long nextVersion) {
         if (request.enabled() != null) enabled = request.enabled();

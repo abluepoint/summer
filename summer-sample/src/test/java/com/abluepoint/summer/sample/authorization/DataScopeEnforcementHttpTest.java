@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DataScopeEnforcementHttpTest {
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired AuthorizationRoleRepository roleRepository;
     @Autowired AuthorizationUserBindingRepository userRepository;
     @Autowired AuthorizationCapabilityRepository capabilityRepository;
@@ -48,7 +49,7 @@ class DataScopeEnforcementHttpTest {
     @Test
     void nestedValuesAndComparatorsHaveIdenticalPreviewListAndDetailResults() throws Exception {
         create("scope.allowed", "alice", "org-engineering");
-        create("scope.wrong.org", "alice", "org-sales");
+        create("scope.wrong.org", "alice", "org-operations");
         create("scope.wrong.creator", "bob", "org-engineering");
         policy("system-parameters", """
             {"operator":"AND","conditions":{"operator":"AND","children":[
@@ -64,7 +65,7 @@ class DataScopeEnforcementHttpTest {
         mvc.perform(get("/api/system-parameters/scope.allowed").with(member("alice"))).andExpect(status().isOk());
         mvc.perform(post("/api/v1/enterprises/ent-acme/data-scopes/system-parameters:preview").with(member("admin"))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"subject\":\"alice\",\"organizationId\":\"org-sales\",\"creatorId\":\"alice\",\"ownerId\":\"alice\"}"))
+                .content("{\"subject\":\"alice\",\"organizationId\":\"org-operations\",\"creatorId\":\"alice\",\"ownerId\":\"alice\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.allowed").value(false));
     }
 
@@ -88,12 +89,12 @@ class DataScopeEnforcementHttpTest {
     void nestedDenialKeepsItsBranchConditionsAndOverridesMatchingOrAllows() throws Exception {
         create("branch.allowed", "alice", "org-engineering");
         create("branch.denied", "bob", "org-engineering");
-        create("branch.other", "bob", "org-sales");
+        create("branch.other", "bob", "org-operations");
         policy("system-parameters", """
             {"conditions":{"operator":"OR","children":[
               {"operator":"AND","children":[{"field":"ORGANIZATION","value":"org-engineering"},
                 {"field":"CREATOR","value":"bob","effect":"DENY"}]},
-              {"field":"ORGANIZATION","value":"org-sales"},
+              {"field":"ORGANIZATION","value":"org-operations"},
               {"field":"CREATOR","value":"bob"}]}}
             """);
         mvc.perform(get("/api/system-parameters").with(member("alice"))).andExpect(status().isOk())
@@ -104,6 +105,7 @@ class DataScopeEnforcementHttpTest {
 
     @Test
     void organizationTreeIncludesDescendantsAndKeepsUnrelatedRowsOutsideTheQuery() throws Exception {
+        jdbc.update("insert into summer_organization_unit(unit_id,enterprise_id,unit_type,name,code,sort_order,status,created_at,updated_at) values('org-unrelated','ent-acme','COMPANY','Unrelated','UNRELATED',0,'ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         create("tree.root", "alice", "org-acme");
         create("tree.child", "bob", "org-engineering");
         create("tree.unrelated", "bob", "org-unrelated");
@@ -168,7 +170,7 @@ class DataScopeEnforcementHttpTest {
     @Test
     void persistedRoleRangesAreIntersectedWithPolicyAndUserDenialsWin() throws Exception {
         create("roles.alice", "alice", "org-engineering");
-        create("roles.bob", "bob", "org-sales");
+        create("roles.bob", "bob", "org-operations");
         capabilityRepository.saveAndFlush(new AuthorizationCapabilityEntity("cap-scope-test", "ent-acme", "ENTERPRISE",
                 "system.parameter.read", "system.parameter.read", "read", "LOW", "ACTIVE", 1));
         roleRepository.saveAndFlush(new AuthorizationRoleEntity("role-scope-test", "ent-acme", "Scoped", "scoped", false,

@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -57,15 +58,17 @@ class OAuthClientManagementController {
                     || body.scopes() == null || body.scopes().isEmpty()) throw new IllegalArgumentException("clientId, clientName, redirectUris and scopes are required");
             if (!Boolean.TRUE.equals(body.publicClient())) throw new IllegalArgumentException("only public PKCE clients are supported by this endpoint");
             RegisteredClient client = RegisteredClient.withId(UUID.randomUUID().toString())
-                    .clientId(body.clientId().trim()).clientName(body.clientName().trim())
+                    .clientId(clientId(body.clientId())).clientName(clientName(body.clientName()))
                     .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                     .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                     .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(false).build())
-                    .redirectUris(set -> set.addAll(values(body.redirectUris())))
-                    .scopes(set -> set.addAll(values(body.scopes()))).build();
-            clients.save(client);
+                    .redirectUris(set -> set.addAll(redirectUris(body.redirectUris())))
+                    .scopes(set -> set.addAll(scopes(body.scopes()))).build();
+            clients.register(client);
             audit.record("oauth_client_created", authentication.getName(), Map.of("clientId", client.getClientId(), "requestId", requestId.currentRequestId(), "publicClient", true));
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(Map.of("clientId", client.getClientId(), "status", "ACTIVE"), requestId.currentRequestId()));
+        } catch (JdbcSummerOAuthClientStore.DuplicateClientException e) {
+            return failure(HttpStatus.CONFLICT, "SUMMER_OAUTH_CLIENT_EXISTS", "Client ID already exists", authentication);
         } catch (IllegalArgumentException e) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_OAUTH_CLIENT_INVALID", e.getMessage(), authentication);
         }
@@ -74,13 +77,23 @@ class OAuthClientManagementController {
     @PatchMapping("/api/security/oauth-clients/{clientId}")
     @PreAuthorize("hasAuthority('SCOPE_security.oauth-client.write')")
     ResponseEntity<ApiResponse<Map<String, Object>>> changeStatus(@PathVariable String clientId,
-                                                                   @RequestBody StatusRequest body,
+                                                                   @RequestBody UpdateRequest body,
                                                                    Authentication authentication) {
         try {
-            if (blank(clientId) || body == null || blank(body.status()) || body.version() < 1) throw new IllegalArgumentException("status and version are required");
-            clients.setStatus(clientId, body.status().trim().toUpperCase(), body.version());
-            audit.record("oauth_client_status_changed", authentication.getName(), Map.of("clientId", clientId, "status", body.status().trim().toUpperCase(), "requestId", requestId.currentRequestId()));
-            return ok(Map.of("clientId", clientId, "status", body.status().trim().toUpperCase()));
+            if (blank(clientId) || body == null || body.version() < 1) throw new IllegalArgumentException("version is required");
+            if (body.status() == null && body.clientName() == null && body.redirectUris() == null && body.scopes() == null)
+                throw new IllegalArgumentException("at least one client field is required");
+            Map<String, Object> result = clients.updateManagement(clientId,
+                    body.status() == null ? null : body.status().trim().toUpperCase(java.util.Locale.ROOT),
+                    body.clientName() == null ? null : clientName(body.clientName()),
+                    body.redirectUris() == null ? null : redirectUris(body.redirectUris()),
+                    body.scopes() == null ? null : scopes(body.scopes()), body.version());
+            audit.record("oauth_client_updated", authentication.getName(), Map.of("clientId", clientId, "version", result.get("version"), "requestId", requestId.currentRequestId()));
+            return ok(result);
+        } catch (JdbcSummerOAuthClientStore.ClientVersionException e) {
+            return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_OAUTH_CLIENT_VERSION_CONFLICT", "Client version has changed; reload before retrying", authentication);
+        } catch (JdbcSummerOAuthClientStore.ClientNotFoundException e) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_OAUTH_CLIENT_NOT_FOUND", "Client was not found", authentication);
         } catch (IllegalArgumentException e) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_OAUTH_CLIENT_INVALID", e.getMessage(), authentication);
         }
@@ -120,8 +133,49 @@ class OAuthClientManagementController {
     }
 
     private static boolean blank(String value) { return value == null || value.isBlank(); }
-    private static List<String> values(List<String> value) { return value.stream().map(String::trim).filter(v -> !v.isBlank()).toList(); }
+    private static String clientId(String value) {
+        if (blank(value) || value.trim().length() > 100 || value.chars().anyMatch(Character::isISOControl))
+            throw new IllegalArgumentException("clientId must contain 1 to 100 characters without control characters");
+        return value.trim();
+    }
+
+    private static String clientName(String value) {
+        if (blank(value) || value.trim().length() > 200 || value.chars().anyMatch(Character::isISOControl))
+            throw new IllegalArgumentException("clientName must contain 1 to 200 characters without control characters");
+        return value.trim();
+    }
+
+    private static List<String> values(List<String> value, String field, int maxLength) {
+        if (value.isEmpty() || value.stream().anyMatch(v -> v == null || v.isBlank()))
+            throw new IllegalArgumentException(field + " must contain non-empty values");
+        List<String> result = value.stream().map(String::trim).distinct().toList();
+        if (String.join(",", result).length() > maxLength)
+            throw new IllegalArgumentException(field + " exceeds the storage limit");
+        return result;
+    }
+
+    private static List<String> redirectUris(List<String> values) {
+        List<String> result = values(values, "redirectUris", 2000);
+        for (String value : result) {
+            URI uri;
+            try { uri = URI.create(value); }
+            catch (IllegalArgumentException e) { throw new IllegalArgumentException("redirectUris must contain valid absolute URIs"); }
+            boolean loopback = java.util.Set.of("localhost", "127.0.0.1", "::1", "[::1]").contains(String.valueOf(uri.getHost()));
+            if (uri.getHost() == null || uri.getRawFragment() != null || uri.getRawUserInfo() != null
+                    || value.contains("*") || value.contains(",")
+                    || !("https".equalsIgnoreCase(uri.getScheme()) || (loopback && "http".equalsIgnoreCase(uri.getScheme()))))
+                throw new IllegalArgumentException("redirectUris require HTTPS (HTTP is allowed only for loopback), without fragments, user info, wildcards or commas");
+        }
+        return result;
+    }
+
+    private static List<String> scopes(List<String> values) {
+        List<String> result = values(values, "scopes", 1000);
+        if (result.stream().anyMatch(v -> v.chars().anyMatch(c -> c < 0x21 || c > 0x7e || c == '"' || c == 0x5c || c == ',')))
+            throw new IllegalArgumentException("scopes must be individual OAuth scope tokens without commas");
+        return result;
+    }
 
     record ClientRequest(String clientId, String clientName, Boolean publicClient, List<String> redirectUris, List<String> scopes) {}
-    record StatusRequest(String status, int version) {}
+    record UpdateRequest(String status, String clientName, List<String> redirectUris, List<String> scopes, int version) {}
 }

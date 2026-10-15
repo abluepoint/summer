@@ -4,7 +4,9 @@ import useLocale from '@/utils/useLocale';
 import { getRuntimeDiagnostics, RuntimeDiagnostics, RuntimeDiagnosticsError } from './api';
 
 function statusColor(status: string) {
-  return status === 'UP' ? 'green' : status === 'NOT_CONNECTED' ? 'gray' : 'orange';
+  if (status === 'UP') return 'green';
+  if (['NOT_CONNECTED', 'NOT_ENABLED', 'NOT_APPLIED'].includes(status)) return 'gray';
+  return ['DOWN', 'VALIDATION_FAILED', 'UNAVAILABLE'].includes(status) ? 'red' : 'orange';
 }
 
 export default function RuntimeDiagnosticsPage() {
@@ -42,7 +44,10 @@ export default function RuntimeDiagnosticsPage() {
       rowKey="name"
       style={{ marginTop: 20 }}
       pagination={false}
-      columns={[{ title: t['diagnostics.runtime.component'], dataIndex: 'name' }, { title: t['diagnostics.runtime.status'], dataIndex: 'status', render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag> }]}
+      columns={[
+        { title: t['diagnostics.runtime.component'], dataIndex: 'name', render: (value: string) => t[`diagnostics.runtime.component.${value}`] || value },
+        { title: t['diagnostics.runtime.status'], dataIndex: 'status', render: (value: string) => <Tag color={statusColor(value)}>{t[`diagnostics.runtime.status.${value}`] || value}</Tag> },
+      ]}
       data={data.components}
     />
     <Alert type="info" content={t['diagnostics.runtime.sanitized']} style={{ marginTop: 20 }} />

@@ -80,7 +80,7 @@ public class DataScopeService {
         Object conditions = request.conditions() != null ? request.conditions() : request.conditionTree();
         String rulesJson = write(rules);
         String conditionsJson = write(conditions == null ? null : conditions);
-        compile(enterpriseId, op, rulesJson, conditionsJson, principal(auth), organizationId(auth));
+        compile(enterpriseId, op, rulesJson, conditionsJson, principal(auth), organization(enterpriseId, auth));
         String checksum = checksum(op, rulesJson, conditionsJson);
         DataScopePolicyEntity entity = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
                 .orElseGet(() -> new DataScopePolicyEntity(UUID.randomUUID().toString(), enterpriseId, resource, op, rulesJson, conditionsJson, checksum));
@@ -88,7 +88,7 @@ public class DataScopeService {
         repository.saveAndFlush(entity);
         auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterpriseId, resource,
                 entity.version(), checksum, "DATA_SCOPE_POLICY_UPDATED", principal(auth), requestId));
-        audit.recordResourceSuccess("data-scope:" + enterpriseId + ":" + resource, "DATA_SCOPE_POLICY_UPDATED", null, auth);
+        audit.recordTenantResourceSuccess(enterpriseId, "data-scope:" + enterpriseId + ":" + resource, "DATA_SCOPE_POLICY_UPDATED", requestId, auth);
         changeEvents.enqueue(enterpriseId, "DATA_SCOPE", resource, "DATA_SCOPE_POLICY_UPDATED", entity.version(), requestId);
         return view(entity);
     }
@@ -108,7 +108,8 @@ public class DataScopeService {
                 .orElseThrow(() -> new NoSuchElementException("Data scope policy was not configured"));
         DataScopePreviewRequest input = request == null ? new DataScopePreviewRequest(null, null, null, null, List.of(), List.of(), List.of()) : request;
         String subject = blank(input.subject()) ? principal(auth) : input.subject();
-        String subjectOrganization = subject.equals(principal(auth)) ? organizationId(auth) : storedOrganization(enterpriseId, subject);
+        String subjectOrganization = subject.equals(principal(auth)) ? organization(enterpriseId, auth) : storedOrganization(enterpriseId, subject);
+        assertOrganization(enterpriseId, subjectOrganization);
         DataScopeExpression.Compiled policyExpression = compile(enterpriseId, policy.operator(), policy.rulesJson(),
                 policy.conditionsJson(), subject, subjectOrganization);
         DataScopeExpression.Row row = new DataScopeExpression.Row(enterpriseId, input.organizationId(),
@@ -136,13 +137,12 @@ public class DataScopeService {
     }
 
     public ScopeFilter filter(String enterpriseId, String resource, Authentication auth) {
-        if (!ENTERPRISE.equals(enterpriseId)) throw new AccessDeniedException("Enterprise context mismatch");
-        if (auth instanceof JwtAuthenticationToken jwt && jwt.getToken().hasClaim("enterprise_memberships") && !hasMembership(auth, enterpriseId))
-            throw new AccessDeniedException("Enterprise context mismatch");
+        if (auth != null && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken))
+            EnterpriseRequestContext.requireMembership(enterpriseId, auth);
         DataScopePolicyEntity policy = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
                 .orElseThrow(() -> new AccessDeniedException("Sensitive resource has no data scope policy"));
         try {
-            Effective expression = effective(policy, principal(auth), organizationId(auth));
+            Effective expression = effective(policy, principal(auth), organization(enterpriseId, auth));
             return new ScopeFilter(enterpriseId, expression.expression(), policy.checksum());
         } catch (IllegalArgumentException invalid) {
             throw new AccessDeniedException("Sensitive resource has an invalid data scope policy");
@@ -181,7 +181,7 @@ public class DataScopeService {
         bindings.saveAndFlush(entity);
         auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterprise, resource,
                 entity.version, entity.checksum, "DATA_SCOPE_BINDING_UPDATED", principal(auth), requestId));
-        audit.recordResourceSuccess("data-scope:" + enterprise + ":" + resource, "DATA_SCOPE_BINDING_UPDATED", requestId, auth);
+        audit.recordTenantResourceSuccess(enterprise, "data-scope:" + enterprise + ":" + resource, "DATA_SCOPE_BINDING_UPDATED", requestId, auth);
         changeEvents.enqueue(enterprise, "DATA_SCOPE", entity.id, "DATA_SCOPE_BINDING_UPDATED", entity.version, requestId);
         return bindingView(entity);
     }
@@ -264,7 +264,24 @@ public class DataScopeService {
 
     private record OrganizationLink(String id, String parent) {}
 
+    public String organization(String enterpriseId, Authentication auth) {
+        if (auth instanceof JwtAuthenticationToken jwt && jwt.getToken().getClaims().get("organization_context") instanceof Map<?, ?> context) {
+            Object owner = context.containsKey("enterpriseId") ? context.get("enterpriseId") : context.get("enterprise_id");
+            if (owner != null && !enterpriseId.equals(owner.toString())) throw new AccessDeniedException("Organization context belongs to another enterprise");
+        }
+        String org = organizationId(auth);
+        if (org == null && auth != null) org = storedOrganization(enterpriseId, principal(auth));
+        assertOrganization(enterpriseId, org);
+        return org;
+    }
+
+    public void assertOrganization(String enterpriseId, String organizationId) {
+        if (organizationId != null && jdbc.queryForObject("select count(*) from summer_organization_unit where enterprise_id=? and unit_id=? and status='ACTIVE'",
+                Long.class, enterpriseId, organizationId) != 1) throw new AccessDeniedException("Organization does not belong to the active enterprise");
+    }
+
     public void assertWrite(String enterpriseId, String resource, Authentication auth, String organizationId) {
+        assertOrganization(enterpriseId, organizationId);
         ScopeFilter f = filter(enterpriseId, resource, auth);
         if (!f.allows(organizationId, auth == null ? null : auth.getName(), auth == null ? null : auth.getName(), auth == null ? null : auth.getName())) {
             throw new AccessDeniedException("Write target is outside the data scope");
@@ -303,7 +320,7 @@ public class DataScopeService {
     private static String principal(Authentication auth) { return auth == null || auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken ? null : auth.getName(); }
 
     private void require(String enterpriseId, String capability, Authentication auth) {
-        if (!ENTERPRISE.equals(enterpriseId) || auth == null || !hasMembership(auth, enterpriseId) || !hasCapability(auth, enterpriseId, capability)) {
+        if (auth == null || !hasMembership(auth, enterpriseId) || !hasCapability(auth, enterpriseId, capability)) {
             throw new AccessDeniedException("The principal is not authorized for the enterprise data scope");
         }
     }

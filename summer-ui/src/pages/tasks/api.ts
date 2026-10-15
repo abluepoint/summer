@@ -35,14 +35,15 @@ export const listTrustedTaskTypes = (enterpriseId: string) => request<TrustedTas
 export const createTask = (enterpriseId: string, payload: Pick<Task, 'name' | 'taskType' | 'cronExpression' | 'parameters' | 'maxRetries' | 'timeoutMs'>) => request<Task>(() => axios.post(base(enterpriseId), payload));
 export const updateTask = (enterpriseId: string, task: Task, payload: Partial<Pick<Task, 'name' | 'cronExpression' | 'parameters' | 'maxRetries' | 'timeoutMs'>>) => request<Task>(() => axios.patch(`${base(enterpriseId)}/${encodeURIComponent(task.taskId)}`, payload, { headers: { 'If-Match': `"${task.version}"` } }));
 export const setTaskStatus = (enterpriseId: string, task: Task, status: Task['status']) => request<Task>(() => axios.post(`${base(enterpriseId)}/${encodeURIComponent(task.taskId)}:${status === 'ACTIVE' ? 'resume' : 'pause'}`, null, { headers: { 'If-Match': `"${task.version}"` } }));
-export const triggerTask = (enterpriseId: string, taskId: string) => request<{ taskId: string; status: string }>(() => axios.post(`${base(enterpriseId)}/${encodeURIComponent(taskId)}:trigger`, null, { headers: { 'Idempotency-Key': `ui-task-trigger-${taskId}-${Date.now()}` } }));
+export const newTaskTriggerKey = () => `ui-task-${Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) => value.toString(16).padStart(2, '0')).join('')}`;
+export const triggerTask = (enterpriseId: string, taskId: string, key = newTaskTriggerKey()) => request<{ taskId: string; status: string }>(() => axios.post(`${base(enterpriseId)}/${encodeURIComponent(taskId)}:trigger`, null, { headers: { 'Idempotency-Key': key } }));
 export const listExecutions = (enterpriseId: string, taskId: string) => request<{ items: TaskExecution[] }>(() => axios.get(`${base(enterpriseId)}/${encodeURIComponent(taskId)}/executions`));
 
 export function subscribeTaskProgress(enterpriseId: string, taskId: string,
                                        onEvent: (event: TaskProgressEvent) => void,
                                        onError: () => void): () => void {
   const source = new EventSource(`${base(enterpriseId)}/${encodeURIComponent(taskId)}/events`);
-  const eventTypes = ['execution.started', 'execution.attempt', 'execution.succeeded', 'execution.failed', 'execution.log', 'resync'];
+  const eventTypes = ['execution.started', 'execution.attempt', 'execution.progress', 'execution.succeeded', 'execution.failed', 'execution.log', 'resync'];
   const handle = (event: Event) => {
     const message = event as MessageEvent<string>;
     try {

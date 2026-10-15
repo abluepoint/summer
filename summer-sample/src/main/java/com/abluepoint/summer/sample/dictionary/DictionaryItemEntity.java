@@ -8,7 +8,7 @@ import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "summer_dictionary_item", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_summer_dictionary_item_value", columnNames = {"dictionary_code", "item_value"})
+        @UniqueConstraint(name = "uk_summer_dictionary_item_value", columnNames = {"tenant_id", "dictionary_code", "item_value"})
 })
 class DictionaryItemEntity {
     @Id
@@ -31,10 +31,9 @@ class DictionaryItemEntity {
 
     protected DictionaryItemEntity() {}
 
-    DictionaryItemEntity(String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled) { this(id, dictionaryCode, value, label, sortOrder, enabled, null, null, null); }
-    DictionaryItemEntity(String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled, String organizationId, String createdBy, String ownerId) {
+    DictionaryItemEntity(String tenantId, String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled, String organizationId, String createdBy, String ownerId) {
         this.id = id;
-        this.tenantId = "ent-acme"; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
+        this.tenantId = tenantId; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.dictionaryCode = dictionaryCode;
         this.value = value;
         this.label = label;

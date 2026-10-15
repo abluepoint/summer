@@ -28,6 +28,8 @@ class InvitationControllerTest {
 
     @Autowired
     MockMvc mockMvc;
+    @Autowired com.abluepoint.summer.sample.member.MemberDirectory directory;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test
     void createsInvitationBoundToEnterpriseOrganizationAndCapabilityBundle() throws Exception {
@@ -287,6 +289,24 @@ class InvitationControllerTest {
                         .header("Idempotency-Key", "join-cross-enterprise-approve")
                         .with(admin("ent-acme", "enterprise.join-application.review")))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+    }
+
+    @Test
+    void acceptingWithVerifiedEmailPersistsTheOpaqueSubjectAndOrganizationAssignment() throws Exception {
+        var created = createInvitation("opaque-invite", "opaque@example.test", "3600");
+        String token = JsonPath.read(created.getResponse().getContentAsString(), "$.data.token");
+        mockMvc.perform(post("/api/v1/invitations/{token}:accept", token).header("Idempotency-Key", "unverified")
+                .with(jwt().jwt(j -> j.subject("issuer-subject-123").claim("email", "opaque@example.test").claim("email_verified", false))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.invitation.accept"))))
+                .andExpect(status().isForbidden());
+        var accepted = mockMvc.perform(post("/api/v1/invitations/{token}:accept", token).header("Idempotency-Key", "verified")
+                .with(jwt().jwt(j -> j.subject("issuer-subject-123").claim("email", "opaque@example.test").claim("email_verified", true))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.invitation.accept"))))
+                .andExpect(status().isOk()).andReturn();
+        String memberId = JsonPath.read(accepted.getResponse().getContentAsString(), "$.data.memberId");
+        org.assertj.core.api.Assertions.assertThat(directory.forSubject("ent-acme", "issuer-subject-123").orElseThrow().memberId()).isEqualTo(memberId);
+        org.assertj.core.api.Assertions.assertThat(directory.forSubject("ent-acme", "opaque@example.test")).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select count(*) from summer_organization_membership where enterprise_id='ent-acme' and member_id=? and organization_id='org-engineering'", Integer.class, memberId)).isEqualTo(1);
     }
 
     private MvcResult createInvitation(String key, String email, String expiresInSeconds) throws Exception {

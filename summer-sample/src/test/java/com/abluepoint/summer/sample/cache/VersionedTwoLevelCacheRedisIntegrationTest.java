@@ -62,6 +62,19 @@ class VersionedTwoLevelCacheRedisIntegrationTest {
     }
 
     @Test
+    void invalidatingOneTenantLeavesTheOtherTenantsSameKeyWarmOnBothNodes() {
+        var a=new VersionedTwoLevelCache(redis,objectMapper,Duration.ofMinutes(1),"tenant-node-a");
+        var b=new VersionedTwoLevelCache(redis,objectMapper,Duration.ofMinutes(1),"tenant-node-b");
+        assertThat(a.get("ent-alpha","dictionary","same-key",String.class,()->"alpha")).isEqualTo("alpha");
+        assertThat(a.get("ent-beta","dictionary","same-key",String.class,()->"beta")).isEqualTo("beta");
+        assertThat(b.get("ent-alpha","dictionary","same-key",String.class,()->"wrong")).isEqualTo("alpha");
+        assertThat(b.get("ent-beta","dictionary","same-key",String.class,()->"wrong")).isEqualTo("beta");
+        a.invalidate("ent-alpha","dictionary");
+        assertThat(b.get("ent-alpha","dictionary","same-key",String.class,()->"new-alpha")).isEqualTo("new-alpha");
+        assertThat(b.get("ent-beta","dictionary","same-key",String.class,()->"wrong")).isEqualTo("beta");
+    }
+
+    @Test
     void l1AndL2ExpireAfterConfiguredTtl() throws InterruptedException {
         VersionedTwoLevelCache cache = new VersionedTwoLevelCache(
                 redis, objectMapper, Duration.ofMillis(50), "ttl-node");
