@@ -160,23 +160,23 @@ public class AuthorizationService {
         require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
         validateRole(req == null ? null : req.name(), req == null ? null : req.code()); if (req == null) throw new AuthorizationValidationException("Role is required"); List<String> ids = resolveCapabilities(e, req.capabilityIds(), req.bundleId());
         if (roles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw new AuthorizationConflictException("Role code already exists");
-        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); roles.put(r.id, r); persistRole(r); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); changeEvents.enqueue(e, "ROLE", r.id, "ROLE_CREATED", r.version, rid); return out;
+        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); changeEvents.enqueue(e, "ROLE", r.id, "ROLE_CREATED", r.version, rid); return out;
     }
 
     @Transactional
     synchronized RoleView updateRole(String e, String id, RoleUpdateRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = role(e, id); etag(r.version, ifm);
+        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = claimRoleVersion(e, id, ifm);
         if (req == null) throw new AuthorizationValidationException("Role update is required");
         if (req != null && req.name() != null) { if (blank(req.name())) throw new AuthorizationValidationException("name is required"); r.name = req.name().trim(); }
         if (req != null && req.code() != null) { if (blank(req.code())) throw new AuthorizationValidationException("code is required"); r.code = req.code().trim(); }
-        if (req != null && req.status() != null) r.status = req.status(); if (req != null && (req.capabilityIds() != null || req.bundleId() != null)) r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), req.bundleId()); if (req != null && req.bundleId() != null) r.bundleId = req.bundleId(); r.version++;
-        persistRole(r);
+        if (req != null && req.status() != null) r.status = req.status(); if (req != null && (req.capabilityIds() != null || req.bundleId() != null)) r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), req.bundleId()); if (req != null && req.bundleId() != null) r.bundleId = req.bundleId();
+        persistRole(r); committed(() -> roles.put(r.id, r));
         RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_UPDATED", rid, a); changeEvents.enqueue(e, "ROLE", id, "ROLE_UPDATED", r.version, rid); return out;
     }
 
     @Transactional
     synchronized RoleView setRoleCapabilities(String e, String id, RoleCapabilitiesRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = role(e, id); etag(r.version, ifm); if (req == null) throw new AuthorizationValidationException("Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; r.version++; persistRole(r); RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); changeEvents.enqueue(e, "ROLE", id, "ROLE_CAPABILITIES_UPDATED", r.version, rid); return out;
+        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = claimRoleVersion(e, id, ifm); if (req == null) throw new AuthorizationValidationException("Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); changeEvents.enqueue(e, "ROLE", id, "ROLE_CAPABILITIES_UPDATED", r.version, rid); return out;
     }
 
     synchronized List<BundleView> bundles(String e, Authentication a) { require(e, a, "enterprise.bundles.read"); return bundles.values().stream().filter(x -> e.equals(x.enterpriseId)).map(this::bundleView).toList(); }
@@ -209,23 +209,34 @@ public class AuthorizationService {
         String fingerprint = fingerprint(username, request, ifMatch);
         Receipt previous = receipts.get("user-assignment:" + assignmentKey + ":" + key);
         if (previous != null) return replay(previous, fingerprint);
-        UserAssignmentRecord current = userAssignments.get(assignmentKey);
-        long version = current == null ? 1 : current.version;
-        if (current != null) etag(current.version, ifMatch);
+        AuthorizationUserBindingEntity current = bindingRepository.findByEnterpriseIdAndUsername(enterpriseId, username).orElse(null);
+        long version = current == null ? 1 : current.version();
+        if (current != null) etag(current.version(), ifMatch);
         else if (ifMatch != null && !ifMatch.equals("\"1\"")) throw new AuthorizationPreconditionException("The resource has changed");
         if (request == null) throw new AuthorizationValidationException("Role assignment is required");
         List<String> roleIds = request.roleIds() == null ? List.of() : request.roleIds().stream().map(String::trim).filter(s -> !s.isBlank()).distinct().toList();
         for (String roleId : roleIds) role(enterpriseId, roleId);
         List<String> denied = request.deniedCapabilityCodes() == null ? List.of() : request.deniedCapabilityCodes().stream().map(String::trim).filter(s -> !s.isBlank()).distinct().toList();
         UserAssignmentRecord updated = new UserAssignmentRecord(username, enterpriseId, roleIds, denied, version);
-        if (current != null) updated.version = current.version + 1;
-        userAssignments.put(assignmentKey, updated);
-        AuthorizationUserBindingEntity entity = bindingRepository.findByEnterpriseIdAndUsername(enterpriseId, username)
-                .orElseGet(() -> new AuthorizationUserBindingEntity("binding-" + Integer.toUnsignedString(assignmentKey.hashCode()), enterpriseId, username, "", "", updated.version));
-        entity.update(jsonList(updated.roleIds), jsonList(updated.deniedCodes), updated.version);
-        bindingRepository.save(entity);
+        if (current == null) {
+            try {
+                bindingRepository.saveAndFlush(new AuthorizationUserBindingEntity("binding-" + UUID.randomUUID(),
+                        enterpriseId, username, jsonList(roleIds), jsonList(denied), 1));
+            } catch (org.springframework.dao.DataIntegrityViolationException concurrentCreate) {
+                throw new AuthorizationPreconditionException("The resource has changed");
+            }
+        } else {
+            updated.version = current.version() + 1;
+            if (bindingRepository.updateVersion(enterpriseId, username, jsonList(roleIds), jsonList(denied),
+                    current.version(), java.time.Instant.now()) != 1) {
+                throw new AuthorizationPreconditionException("The resource has changed");
+            }
+        }
         UserRoleAssignmentView view = userAssignmentView(updated);
-        receipts.put("user-assignment:" + assignmentKey + ":" + key, new Receipt(fingerprint, view));
+        committed(() -> {
+            userAssignments.put(assignmentKey, updated);
+            receipts.put("user-assignment:" + assignmentKey + ":" + key, new Receipt(fingerprint, view));
+        });
         record(enterpriseId, "user:" + username, "USER_ROLES_UPDATED", requestId, authentication);
         changeEvents.enqueue(enterpriseId, "USER_BINDING", username, "USER_ROLES_UPDATED", updated.version, requestId);
         return view;
@@ -327,7 +338,8 @@ public class AuthorizationService {
                         capability.scope, capability.code, capability.resource, capability.action,
                         capability.risk, capability.status, capability.version));
             }
-            capabilities.put(capability.id, capability);
+            CapabilityRecord selected = capability;
+            committed(() -> capabilities.put(selected.id, selected));
             resolved.add(capability.id);
         }
         return List.copyOf(resolved);
@@ -386,7 +398,7 @@ public class AuthorizationService {
     private static String op(String e, String k) { return e + ":" + k; }
     private static String fingerprint(Object... v) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Arrays.deepToString(v).getBytes(StandardCharsets.UTF_8))); } catch (Exception x) { throw new IllegalStateException(x); } }
     @SuppressWarnings("unchecked") private <T> T replay(Receipt p, String fp) { if (!p.fingerprint.equals(fp)) throw new AuthorizationIdempotencyConflictException("Idempotency key reused"); return (T) p.result; }
-    private void remember(String e, String k, String fp, Object result) { receipts.put(op(e, k), new Receipt(fp, result)); }
+    private void remember(String e, String k, String fp, Object result) { committed(() -> receipts.put(op(e, k), new Receipt(fp, result))); }
     private void record(String e, String id, String action, String rid, Authentication a) { auditStore.mutation(e, id, action, rid, a == null ? "" : a.getName()); }
     private void record(String e, String id, String action, String rid, Authentication a, Map<String, Object> details) { auditStore.decision(e, id, action, rid, a == null ? "" : a.getName(), details); }
     private void seed(String id, String code, String resource, String action, String risk) { seed(id, code, resource, action, risk, "ENTERPRISE"); }
@@ -399,7 +411,37 @@ public class AuthorizationService {
         entity.update(r.name, r.code, r.status, join(r.capabilityIds), capabilityCodes(r.capabilityIds), r.bundleId, r.version);
         roleRepository.save(entity);
     }
-    private String capabilityCodes(List<String> ids) { return ids.stream().map(capabilities::get).filter(Objects::nonNull).map(c -> c.code).collect(java.util.stream.Collectors.joining("\n")); }
+    private String capabilityCodes(List<String> ids) {
+        return ids.stream().map(id -> capabilityRepository.findById(id).map(AuthorizationCapabilityEntity::code)
+                .orElseGet(() -> capabilities.containsKey(id) ? capabilities.get(id).code : null))
+                .filter(Objects::nonNull).collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private RoleRecord claimRoleVersion(String enterpriseId, String id, String ifMatch) {
+        AuthorizationRoleEntity current = roleRepository.findById(id)
+                .filter(entity -> enterpriseId.equals(entity.enterpriseId()))
+                .orElseThrow(() -> new AuthorizationConflictException("Role not found"));
+        etag(current.version(), ifMatch);
+        RoleRecord updated = new RoleRecord(current.roleId(), current.enterpriseId(), current.name(), current.code(),
+                current.builtIn(), current.status(), split(current.capabilityIds()), current.version() + 1, current.bundleId());
+        // The database chooses the winner before any audit, outbox or local projection is changed.
+        if (roleRepository.claimVersion(id, enterpriseId, current.version()) != 1)
+            throw new AuthorizationPreconditionException("The resource has changed");
+        return updated;
+    }
+
+    private void committed(Runnable update) {
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            update.run();
+            return;
+        }
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() {
+                        synchronized (AuthorizationService.this) { update.run(); }
+                    }
+                });
+    }
 
     private static long revision(List<?> x) { return x.hashCode() & 0x7fffffffL; }
     private static final class CapabilityRecord { final String id, enterpriseId, scope, code, resource, action, risk; String status; long version; CapabilityRecord(String i, String e, String s, String c, String r, String a, String k, String st, long v) { id=i; enterpriseId=e; scope=s; code=c; resource=r; action=a; risk=k; status=st; version=v; } }

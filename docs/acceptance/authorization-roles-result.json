@@ -1,0 +1,1051 @@
+{
+  "issue": 123,
+  "status": "READY_FOR_COORDINATOR",
+  "source_state": "SOURCE_FROZEN",
+  "date": "2026-10-15",
+  "timezone": "Asia/Shanghai",
+  "candidate_sha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "runtime_pending": false,
+  "counting_policy": "Report independent batches; historical failing or interrupted processes are not rewritten as passing, and overlapping checks are not summed.",
+  "batches": {
+    "targeted_candidate_442e609f": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "process_exit_code": 0,
+      "checks": [
+        {
+          "name": "two_nodes_same_version_one_200_one_412",
+          "status": "passed"
+        },
+        {
+          "name": "conflict_contract_and_request_correlation",
+          "status": "passed"
+        },
+        {
+          "name": "both_nodes_read_only_winning_version",
+          "status": "passed"
+        },
+        {
+          "name": "one_persisted_mutation_audit_for_winner",
+          "status": "passed"
+        },
+        {
+          "name": "one_persisted_outbox_event_for_winner",
+          "status": "passed"
+        },
+        {
+          "name": "invalid_role_write_returns_domain_400",
+          "status": "passed"
+        },
+        {
+          "name": "failed_transaction_rolls_back_claimed_version_on_both_nodes",
+          "status": "passed"
+        },
+        {
+          "name": "failed_transaction_has_no_mutation_audit_or_outbox",
+          "status": "passed"
+        },
+        {
+          "name": "rolled_back_key_can_commit_without_ghost_receipt",
+          "status": "passed"
+        },
+        {
+          "name": "two_nodes_binding_same_version_one_200_one_412",
+          "status": "passed"
+        },
+        {
+          "name": "binding_conflict_contract_and_correlation",
+          "status": "passed"
+        },
+        {
+          "name": "both_nodes_read_only_winning_binding",
+          "status": "passed"
+        },
+        {
+          "name": "binding_only_winner_has_mutation_audit_and_outbox",
+          "status": "passed"
+        },
+        {
+          "name": "winning_role_and_audit_survive_node_restart",
+          "status": "passed"
+        },
+        {
+          "name": "winning_binding_survives_node_restart",
+          "status": "passed"
+        },
+        {
+          "name": "runtime_logs_no_known_secret_values",
+          "status": "passed"
+        }
+      ]
+    },
+    "baseline_candidate_9976bf12": {
+      "tests": 58,
+      "passed": 57,
+      "failures": 1,
+      "errors": 1,
+      "skipped": 0,
+      "status": "INCOMPLETE",
+      "failure": "Cross-node role lost update, now fixed and verified separately",
+      "error": "Browser orchestration missing receipt",
+      "checks": [
+        {
+          "name": "immutable_candidate_verified",
+          "status": "passed"
+        },
+        {
+          "name": "bootstrap_real_form_pkce_login",
+          "status": "passed"
+        },
+        {
+          "name": "real_mysql_authorization_migrations",
+          "status": "passed",
+          "versions": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "6.1",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "17",
+            "18",
+            "19",
+            "20",
+            "22",
+            "23",
+            "23.1",
+            "24",
+            "25",
+            "26",
+            "26.1",
+            "27",
+            "28",
+            "29",
+            "30",
+            "31",
+            "32",
+            "33",
+            "34",
+            "35",
+            "36",
+            "37"
+          ]
+        },
+        {
+          "name": "bootstrap_scanned_catalog_allowed",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "5f4b71af-1827-4174-b902-37426668d7f9"
+        },
+        {
+          "name": "customer_permission_obtained_from_scan",
+          "status": "passed"
+        },
+        {
+          "name": "bootstrap_business_is_default_denied",
+          "status": "passed",
+          "http_status": 403,
+          "expected": 403,
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "3bab3347-2e17-498e-9500-8fb21a76bc39"
+        },
+        {
+          "name": "managed_admin_bootstrap_via_real_apis",
+          "status": "passed"
+        },
+        {
+          "name": "managed_admin_can_still_manage_roles",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "30be8d4a-0ab7-4a26-b4df-e8cede91046b"
+        },
+        {
+          "name": "t15-member_identity_created",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "00071e7c-f047-4304-ac52-8dbafd647382"
+        },
+        {
+          "name": "t15-member_membership_created",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "a7dda782-5804-4ed2-bdf4-d6be2a06a64a"
+        },
+        {
+          "name": "t15-ui-member_identity_created",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "e94a2932-288b-4bf0-b888-f78046e66723"
+        },
+        {
+          "name": "t15-ui-member_membership_created",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "f679f72f-93b5-451f-a90b-b85cd6e65c7a"
+        },
+        {
+          "name": "t15-reader_identity_created",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "7c9dc871-877f-42db-9c7a-44811383e02f"
+        },
+        {
+          "name": "t15-reader_membership_created",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "c7780a2c-4876-4b2b-a362-5335ea7ef64d"
+        },
+        {
+          "name": "unassigned_member_default_deny",
+          "status": "passed",
+          "http_status": 403,
+          "expected": 403,
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "7044c16d-e16d-44d1-a374-d7ea269e23b3"
+        },
+        {
+          "name": "anonymous_business_denied",
+          "status": "passed",
+          "http_status": 401,
+          "expected": 401,
+          "code": "SUMMER_UNAUTHORIZED",
+          "requestId": "3d4d3041-4b3d-490b-bab1-0471e6a2671e"
+        },
+        {
+          "name": "role_created_from_scanned_permission",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "330da6f3-cde0-4494-bd2d-95d2856f03ab"
+        },
+        {
+          "name": "role_read_versioned",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "cda77a66-1900-4487-9cd2-5756e80bb14a"
+        },
+        {
+          "name": "role_etag_matches_version",
+          "status": "passed"
+        },
+        {
+          "name": "real_user_role_assignment",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "8091f4e9-d6a4-46c6-b9a7-67d24fa4b299"
+        },
+        {
+          "name": "role_allows_real_business_http",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "fad83767-d494-4dfc-9f36-855735c268a2"
+        },
+        {
+          "name": "explicit_deny_saved",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "08ad8eea-de2d-43f0-aac9-908018719d6a"
+        },
+        {
+          "name": "explicit_deny_overrides_role_allow",
+          "status": "passed",
+          "http_status": 403,
+          "expected": 403,
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "10089150-96f4-4fbb-90ee-eb6519b3ed41"
+        },
+        {
+          "name": "explicit_deny_removed",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "56a145f0-98c9-4746-9b48-188311e20228"
+        },
+        {
+          "name": "removing_deny_restores_role_allow",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "49d07384-d757-49aa-b358-866b31f85148"
+        },
+        {
+          "name": "role_assignment_cleared",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "3bb4c793-4e78-4c44-aa31-4cf1ea3d444c"
+        },
+        {
+          "name": "clearing_roles_restores_default_deny",
+          "status": "passed",
+          "http_status": 403,
+          "expected": 403,
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "baa88a57-5187-48c1-898c-f13704fb8d15"
+        },
+        {
+          "name": "role_assignment_restored",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "561d214a-149a-470f-82c6-0eeee51bea4a"
+        },
+        {
+          "name": "invalid_role_name_rejected",
+          "status": "passed",
+          "http_status": 400,
+          "expected": 400,
+          "code": "SUMMER_AUTHORIZATION_INVALID",
+          "requestId": "a4aed35c-c3be-438a-9c54-c541ca1ff5fd"
+        },
+        {
+          "name": "missing_idempotency_key_rejected",
+          "status": "passed",
+          "http_status": 400,
+          "expected": 400,
+          "code": "SUMMER_AUTHORIZATION_INVALID",
+          "requestId": "ae11c591-0400-4be9-8d93-5cb41e198a20"
+        },
+        {
+          "name": "duplicate_role_code_rejected",
+          "status": "passed",
+          "http_status": 409,
+          "expected": 409,
+          "code": "SUMMER_AUTHORIZATION_CONFLICT",
+          "requestId": "97ebcfad-6e00-47bb-8859-5c71f72b705e"
+        },
+        {
+          "name": "unknown_role_assignment_rejected",
+          "status": "passed",
+          "http_status": 409,
+          "expected": 409,
+          "code": "SUMMER_AUTHORIZATION_CONFLICT",
+          "requestId": "74d9deb8-4bf7-4bd3-ab48-cee4050855d1"
+        },
+        {
+          "name": "role_update_with_current_version",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "2dd6929d-30cd-4bcb-9071-c8de0f990b27"
+        },
+        {
+          "name": "stale_role_version_rejected",
+          "status": "passed",
+          "http_status": 412,
+          "expected": 412,
+          "code": "SUMMER_PRECONDITION_FAILED",
+          "requestId": "dd557e14-aa80-485f-814c-cdde9480dd22"
+        },
+        {
+          "name": "idempotent_role_initial_create",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "fa9c8eb7-3cc9-4038-b854-38f86b3853fc"
+        },
+        {
+          "name": "idempotent_role_replay",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "fa9c8eb7-3cc9-4038-b854-38f86b3853fc"
+        },
+        {
+          "name": "idempotent_replay_same_role",
+          "status": "passed"
+        },
+        {
+          "name": "idempotency_key_reuse_rejected",
+          "status": "passed",
+          "http_status": 409,
+          "expected": 409,
+          "code": "SUMMER_IDEMPOTENCY_CONFLICT",
+          "requestId": "fa9c8eb7-3cc9-4038-b854-38f86b3853fc"
+        },
+        {
+          "name": "audit_role_allow",
+          "status": "passed"
+        },
+        {
+          "name": "audit_user_explicit_deny",
+          "status": "passed"
+        },
+        {
+          "name": "audit_default_deny",
+          "status": "passed"
+        },
+        {
+          "name": "role_mutation_audited",
+          "status": "passed"
+        },
+        {
+          "name": "role_persisted_on_second_node",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "7ffc160f-13be-4826-a245-b608dccede24"
+        },
+        {
+          "name": "role_versions_match_across_nodes",
+          "status": "passed"
+        },
+        {
+          "name": "second_node_real_business_allow",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "7a44c488-0ffc-453b-991f-75fa35a9a943"
+        },
+        {
+          "name": "cross_node_deny_saved",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "9c812288-dce2-4c9f-9734-18862967aa46"
+        },
+        {
+          "name": "second_node_observes_deny",
+          "status": "passed",
+          "http_status": 403,
+          "expected": 403,
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "ae27ee9f-e3dd-4009-a640-46be7179a3cb"
+        },
+        {
+          "name": "cross_node_deny_removed",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "fc69c531-4f94-473e-9246-36780a591857"
+        },
+        {
+          "name": "second_node_observes_allow",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "c6e3f853-ea45-41cb-97c3-346d228114f4"
+        },
+        {
+          "name": "concurrent_role_created",
+          "status": "passed",
+          "http_status": 201,
+          "expected": 201,
+          "code": null,
+          "requestId": "ee31c8a8-696c-40cc-83d7-d2dca35a6f25"
+        },
+        {
+          "name": "concurrent_role_readback",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "01db1d6e-d1a5-4457-a50b-3e5d2fb34e10"
+        },
+        {
+          "name": "cross_node_concurrent_version_rejects_one_writer",
+          "status": "failed",
+          "writes": [
+            {
+              "node": 23081,
+              "status": 200,
+              "submitted_version": 1,
+              "returned_version": 2,
+              "requestId": "a4b007ee-d2b7-42cf-b19b-b6abf2d49c36",
+              "code": null
+            },
+            {
+              "node": 23082,
+              "status": 200,
+              "submitted_version": 1,
+              "returned_version": 2,
+              "requestId": "24715f0b-8e6e-479c-a19d-cd99240a50ca",
+              "code": null
+            }
+          ],
+          "final_version": 2,
+          "final_name": "T15 writer B"
+        },
+        {
+          "name": "assignment_survives_mysql_restart",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "d0f9ea60-c71d-4ece-a636-6b022c3da6bc"
+        },
+        {
+          "name": "assignment_after_restart_matches",
+          "status": "passed"
+        },
+        {
+          "name": "allow_survives_node_restart",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "3982fe26-00de-48e6-a6fa-3c67991a4482"
+        },
+        {
+          "name": "decision_audit_survives_restart",
+          "status": "passed"
+        },
+        {
+          "name": "explicitly_exposed_infrastructure_is_public",
+          "status": "passed",
+          "http_status": 200,
+          "expected": 200,
+          "code": null,
+          "requestId": "a6c2e821-26eb-4f28-981b-4524b976f756"
+        },
+        {
+          "name": "explicit_configuration_can_protect_infrastructure",
+          "status": "passed",
+          "http_status": 401,
+          "expected": 401,
+          "code": "SUMMER_UNAUTHORIZED",
+          "requestId": "1648aeda-f285-46a4-bbf3-ac6e65d143a3"
+        }
+      ]
+    },
+    "chrome_fixed_ui_candidate_9976bf12": {
+      "tests": 8,
+      "passed": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "checks": [
+        {
+          "name": "roles_page_real_admin_login",
+          "status": "passed"
+        },
+        {
+          "name": "ui_create_role_from_scanned_resource",
+          "status": "passed",
+          "http_status": 201
+        },
+        {
+          "name": "ui_assign_role_and_allow_actual_api",
+          "status": "passed",
+          "binding_version": 1,
+          "actual_business_status": 200
+        },
+        {
+          "name": "ui_add_explicit_deny_and_deny_actual_api",
+          "status": "passed",
+          "binding_version": 2,
+          "actual_business_status": 403
+        },
+        {
+          "name": "ui_remove_deny_using_latest_assignment_version",
+          "status": "passed",
+          "binding_version": 3,
+          "actual_business_status": 200
+        },
+        {
+          "name": "ui_invalid_role_is_rejected",
+          "status": "passed",
+          "http_status": 400
+        },
+        {
+          "name": "ui_unauthorized_user_cannot_read_roles",
+          "status": "passed",
+          "ui_route_denied": true,
+          "http_status": 403,
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "cc44539c-0072-43c9-bbf6-7947855e0065"
+        },
+        {
+          "name": "ui_real_outage_and_recovery",
+          "status": "passed",
+          "outage_status": 502,
+          "recovered_status": 200
+        }
+      ],
+      "assignment_attempts": [
+        {
+          "status": 200,
+          "submittedIfMatch": "\"1\"",
+          "returnedVersion": 1,
+          "requestId": "ad66e314-b04f-4251-ad26-cab2ae850160"
+        },
+        {
+          "status": 200,
+          "submittedIfMatch": "\"1\"",
+          "returnedVersion": 2,
+          "requestId": "48efb449-7f07-4df4-bb6e-5759f647115a"
+        },
+        {
+          "status": 200,
+          "submittedIfMatch": "\"2\"",
+          "returnedVersion": 3,
+          "requestId": "cadb89da-cff2-44eb-92ad-f18a6b26ae22"
+        }
+      ],
+      "process_exit_code": -15,
+      "execution_status": "Interrupted during browser shutdown after eight passing checks; owned resources cleaned. New shutdown path separately verified; functional flows not repeated."
+    },
+    "junit_regression": {
+      "tests": 34,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ui_component": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "mode": "Real React/Arco component with explicit HTTP adapter; supplements live Chrome"
+    },
+    "browser_lifecycle": {
+      "mode": "browser_lifecycle_only_not_business_acceptance",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "assertions": [
+        "real Chrome launch and bounded shutdown completed"
+      ],
+      "business_checks_executed": 0,
+      "owned_browser_harnesses_remaining": 0,
+      "chrome_browser_processes_observed": 0,
+      "reserved_port_listeners": {
+        "23081": false,
+        "23082": false,
+        "23083": false,
+        "23573": false,
+        "23580": false
+      }
+    },
+    "ui_typecheck": {
+      "exit_code": 0
+    }
+  },
+  "targeted_evidence": {
+    "writes": [
+      {
+        "node": 23081,
+        "name": "Writer A",
+        "status": 412,
+        "ifMatch": "\"1\"",
+        "returnedVersion": null,
+        "code": "SUMMER_PRECONDITION_FAILED",
+        "requestId": "71f3045c-7bfb-483f-a0a7-930de4f7989f",
+        "headerRequestId": "71f3045c-7bfb-483f-a0a7-930de4f7989f"
+      },
+      {
+        "node": 23082,
+        "name": "Writer B",
+        "status": 200,
+        "ifMatch": "\"1\"",
+        "returnedVersion": 2,
+        "code": null,
+        "requestId": "daf111c8-0df3-4f5c-a622-2d2978f51188",
+        "headerRequestId": "daf111c8-0df3-4f5c-a622-2d2978f51188"
+      }
+    ],
+    "readback": {
+      "name": "Writer B",
+      "version": 2
+    },
+    "mutation_audit": [
+      {
+        "at": "2026-10-15T11:04:49.196011Z",
+        "requestId": "daf111c8-0df3-4f5c-a622-2d2978f51188",
+        "principal": "t15-admin",
+        "action": "ROLE_UPDATED"
+      }
+    ],
+    "outbox": [
+      {
+        "eventId": "6f85d784-8029-4b96-b44c-cb6eba342025",
+        "resourceId": "role-6b52f270",
+        "eventType": "ROLE_UPDATED",
+        "version": 2,
+        "requestId": "daf111c8-0df3-4f5c-a622-2d2978f51188",
+        "status": "PENDING"
+      }
+    ],
+    "rollback": {
+      "invalid_status": 400,
+      "invalid_requestId": "f6257f5d-f812-4265-8c49-e0689c03acf5",
+      "version_after_invalid": 2,
+      "retry_status": 200,
+      "retry_requestId": "d15bb510-728d-4aa3-b233-af8ce403b6ce",
+      "version_after_retry": 3
+    },
+    "binding_writes": [
+      {
+        "node": 23081,
+        "status": 200,
+        "submitted_version": 1,
+        "denied": "GET:/api/customers",
+        "returned_version": 2,
+        "code": null,
+        "requestId": "baaebcfb-fe2c-41bf-ab18-5bab805d0ebc",
+        "headerRequestId": "baaebcfb-fe2c-41bf-ab18-5bab805d0ebc"
+      },
+      {
+        "node": 23082,
+        "status": 412,
+        "submitted_version": 1,
+        "denied": "POST:/api/customers",
+        "returned_version": null,
+        "code": "SUMMER_PRECONDITION_FAILED",
+        "requestId": "b99a4745-54c5-4a52-9418-a8ee421c121a",
+        "headerRequestId": "b99a4745-54c5-4a52-9418-a8ee421c121a"
+      }
+    ],
+    "binding_audit": [
+      {
+        "at": "2026-10-15T11:04:49.931857Z",
+        "requestId": "baaebcfb-fe2c-41bf-ab18-5bab805d0ebc",
+        "principal": "t15-admin",
+        "action": "USER_ROLES_UPDATED"
+      }
+    ],
+    "binding_outbox": [
+      {
+        "eventId": "0554de77-fc02-4260-a1d9-0e06719dc58d",
+        "resourceId": "t15-concurrent-member",
+        "eventType": "USER_ROLES_UPDATED",
+        "version": 2,
+        "requestId": "baaebcfb-fe2c-41bf-ab18-5bab805d0ebc",
+        "status": "PENDING"
+      }
+    ]
+  },
+  "defects": [
+    {
+      "id": "T15-CONCURRENT-ROLE-VERSION",
+      "before": "Two JVMs submitted version1; both returned200/version2, silently overwriting one update.",
+      "fix": "Database conditional version claim/update; mutation audit/outbox share the transaction; local projection and receipts publish only after commit.",
+      "verified": "New candidate role and binding each one200/one412; only winning mutation persisted; invalid write rolls claimed version back; retry and node restart pass."
+    },
+    {
+      "id": "T15-UI-ASSIGNMENT-VERSION",
+      "before": "Third assignment save still sent If-Match1 after version2 and returned412.",
+      "fix": "Load current assignment, retain returned version, reload version on412 while keeping user edits for explicit retry.",
+      "verified": "Chrome requests If-Match1,1,2 returned versions1,2,3 and business HTTP200,403,200; conflict preservation covered by component test."
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": 1,
+      "criterion": "管理员可创建角色并绑定扫描出的接口资源。",
+      "stories": [
+        17
+      ],
+      "status": "VERIFIED",
+      "evidence": "真实管理API引导后创建角色，资源来自扫描目录；真实Chrome创建成功201。",
+      "references": [
+        "baseline.role_created_from_scanned_permission",
+        "chrome.ui_create_role_from_scanned_resource"
+      ]
+    },
+    {
+      "id": 2,
+      "criterion": "业务接口未配置权限时默认拒绝，公开接口必须显式配置。",
+      "stories": [
+        22,
+        23,
+        28
+      ],
+      "status": "VERIFIED",
+      "evidence": "真实未分配用户及管理员业务接口默认403，匿名401；Actuator info公开暴露200，显式加入保护路径后401。",
+      "references": [
+        "baseline.unassigned_member_default_deny",
+        "baseline.bootstrap_business_is_default_denied",
+        "baseline.explicitly_exposed_infrastructure_is_public",
+        "baseline.explicit_configuration_can_protect_infrastructure"
+      ]
+    },
+    {
+      "id": 3,
+      "criterion": "用户角色允许、用户显式拒绝和平台默认策略的优先级可验证。",
+      "stories": [
+        18,
+        22,
+        28
+      ],
+      "status": "VERIFIED",
+      "evidence": "真实业务HTTP角色允许200、显式拒绝403、撤销拒绝200、清空角色403；页面连续保存版本1→2→3并实际恢复访问。",
+      "references": [
+        "baseline.explicit_deny_overrides_role_allow",
+        "baseline.clearing_roles_restores_default_deny",
+        "chrome.ui_remove_deny_using_latest_assignment_version"
+      ]
+    },
+    {
+      "id": 4,
+      "criterion": "用真实HTTP请求验证允许、拒绝、未登录和审计结果。",
+      "stories": [
+        18,
+        28
+      ],
+      "status": "VERIFIED",
+      "evidence": "实际HTTP及持久化审计可解释ROLE_ALLOW/USER_EXPLICIT_DENY/DEFAULT_DENY；新候选角色和绑定跨JVM竞争只产生胜者的mutation审计与outbox。",
+      "references": [
+        "baseline.role_allows_real_business_http",
+        "baseline.anonymous_business_denied",
+        "baseline.audit_role_allow",
+        "baseline.audit_user_explicit_deny",
+        "baseline.audit_default_deny",
+        "targeted.one_persisted_mutation_audit_for_winner",
+        "targeted.binding_only_winner_has_mutation_audit_and_outbox"
+      ]
+    },
+    {
+      "id": 5,
+      "criterion": "验证所需迁移、后端真实HTTP行为和Summer UI流程；含成功、无权限、无效输入或故障路径，不以mock或零用例通过替代验收。",
+      "stories": [
+        17,
+        18,
+        28
+      ],
+      "status": "VERIFIED",
+      "evidence": "真实MySQL迁移、双JVM/重启通过；Chrome8项有真实登录、创建/分配、拒绝、400输入、停服502→恢复200。组件测试仅作补充。",
+      "references": [
+        "baseline.real_mysql_authorization_migrations",
+        "targeted.winning_role_and_audit_survive_node_restart",
+        "targeted.winning_binding_survives_node_restart",
+        "chrome.ui_invalid_role_is_rejected",
+        "chrome.ui_unauthorized_user_cannot_read_roles",
+        "chrome.ui_real_outage_and_recovery"
+      ]
+    },
+    {
+      "id": 6,
+      "criterion": "复用Parameter contract、Unified/Raw response、Request correlation与领域术语；框架错误使用SUMMER_命名空间，敏感值不得进入日志、Issue或测试快照。",
+      "stories": [
+        17,
+        18,
+        28
+      ],
+      "status": "VERIFIED",
+      "evidence": "If-Match与幂等契约有实际400/409/412证据；新候选角色/绑定412错误码SUMMER_PRECONDITION_FAILED且正文/响应头requestId一致；已知运行凭据日志扫描无命中，收据仅保留元数据。",
+      "references": [
+        "baseline.missing_idempotency_key_rejected",
+        "baseline.idempotency_key_reuse_rejected",
+        "targeted.conflict_contract_and_request_correlation",
+        "targeted.binding_conflict_contract_and_correlation",
+        "targeted.runtime_logs_no_known_secret_values"
+      ]
+    },
+    {
+      "id": 7,
+      "criterion": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际tests/failures/errors/skipped，保留既有用户改动。",
+      "stories": [
+        17,
+        18,
+        22,
+        23,
+        28
+      ],
+      "status": "VERIFIED",
+      "evidence": "ADR0030及下述映射覆盖两处原始红灯、生产修复、不同层级真实计数和清理；主源7文件SHA保持冻结，白名单包含此前未提交验收脚本。",
+      "references": [
+        "traceability",
+        "batches",
+        "defects",
+        "source_sha256",
+        "cleanup"
+      ]
+    }
+  ],
+  "traceability": [
+    {
+      "stories": [
+        17,
+        18
+      ],
+      "design": "ADR0030; versioned role/user binding contract",
+      "implementation": [
+        "AuthorizationService",
+        "AuthorizationRoleRepository",
+        "AuthorizationUserBindingRepository",
+        "roles/api.ts",
+        "roles/index.tsx"
+      ],
+      "tests": [
+        "role_created_from_scanned_permission",
+        "real_user_role_assignment",
+        "AuthorizationVersionConcurrencyTest",
+        "verify-roles-component.mjs",
+        "Chrome continuous three assignment saves"
+      ],
+      "defects": [
+        "T15-CONCURRENT-ROLE-VERSION",
+        "T15-UI-ASSIGNMENT-VERSION"
+      ],
+      "acceptance_criteria": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "status": "Verified by targeted candidate 442e609f runtime plus preserved baseline/UI evidence"
+    },
+    {
+      "stories": [
+        22,
+        23,
+        28
+      ],
+      "design": "ADR0030 deny unassigned users; explicit infrastructure exposure and protected-path configuration",
+      "implementation": [
+        "AuthorizationRequestInterceptor",
+        "AuthorizationService.decision",
+        "configured resource-server protected paths"
+      ],
+      "tests": [
+        "bootstrap_business_is_default_denied",
+        "unassigned_member_default_deny",
+        "anonymous_business_denied",
+        "explicit_deny_overrides_role_allow",
+        "removing_deny_restores_role_allow",
+        "explicitly_exposed_infrastructure_is_public",
+        "explicit_configuration_can_protect_infrastructure"
+      ],
+      "acceptance_criteria": [
+        2,
+        3,
+        4
+      ],
+      "status": "original candidate passed; preserved as baseline"
+    },
+    {
+      "stories": [
+        17,
+        18,
+        28
+      ],
+      "design": "durable mutation audit and authorization outbox share business transaction; decision facts remain independent",
+      "implementation": [
+        "AuthorizationAuditStore",
+        "AuthorizationChangeEventService",
+        "AuthorizationService.committed"
+      ],
+      "tests": [
+        "audit_role_allow",
+        "audit_user_explicit_deny",
+        "audit_default_deny",
+        "AuthorizationAuditPersistenceTest",
+        "AuthorizationVersionConcurrencyTest",
+        "node restart persistence"
+      ],
+      "acceptance_criteria": [
+        4,
+        6,
+        7
+      ],
+      "status": "34 regression checks passed; live winner audit/outbox awaits new candidate"
+    },
+    {
+      "stories": [
+        17,
+        18,
+        28
+      ],
+      "design": "Unified/Raw envelope, If-Match and SUMMER_ errors, request correlation",
+      "implementation": [
+        "AuthorizationController",
+        "roles/api.ts"
+      ],
+      "tests": [
+        "invalid_role_name_rejected",
+        "stale_role_version_rejected",
+        "idempotency_key_reuse_rejected",
+        "Chrome invalid input/forbidden/outage",
+        "concurrency_probe correlation assertions"
+      ],
+      "acceptance_criteria": [
+        5,
+        6,
+        7
+      ],
+      "status": "Verified by targeted candidate 442e609f runtime plus preserved baseline/UI evidence"
+    }
+  ],
+  "source_sha256": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java": "add2d36d62f9b99804ea48fd8f2ab9c55dbc653369e4d25655a9cb53baebe51a",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationRoleRepository.java": "bdf4a620951c9d994cd38daea37e5600c9d467b74b0a20c0e42769af7d5222e0",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationUserBindingRepository.java": "38f8cc9cba1dfc7fa93231009f38dad029def88de9fbbc026694e0ccab7e08ff",
+    "summer-ui/src/pages/roles/api.ts": "3240b60e52a2dd12e6b405efc47f52ffe850e3dc4fc74913a3b645ed9f6d98c2",
+    "summer-ui/src/pages/roles/index.tsx": "77506066b1e8847eab361e62e7f085c455441dc39212eb5768f4cc115c9b8867",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/authorization/AuthorizationVersionConcurrencyTest.java": "2bb6cd066ce0220da1a7308039c17cd88924bf9326beae56ad847d0c3b755582",
+    "summer-ui/scripts/verify-roles-component.mjs": "c70f598c22a52dcf92042bd861afec482cefad91ac03b4fdd384abc4c3b7e041"
+  },
+  "cleanup": {
+    "schema_absent": true,
+    "container_absent": true,
+    "redis_isolated_container_destroyed": true,
+    "listeners": {
+      "23081": false,
+      "23082": false,
+      "23083": false,
+      "23573": false,
+      "23580": false
+    },
+    "app_account_absent": true
+  },
+  "scope_notes": [
+    "Decision audits remain independent facts; the no-failed-audit guarantee here concerns mutation audit and outbox.",
+    "Restart tests restart JVM nodes against persistent MySQL, not the MySQL server.",
+    "Public-interface checks cover explicitly exposed/protected infrastructure, not anonymous grants to business endpoints.",
+    "Production and JUnit files stayed frozen during candidate verification; no index, commit, push or Issue mutation was performed."
+  ],
+  "reproduction": "scripts/acceptance/authorization-roles/README.md",
+  "private_evidence_directory": ".git/summer4-closeout-20261015/t15-live/attempt-06-candidate-442e609f"
+}
