@@ -1,0 +1,195 @@
+{
+  "issue": 135,
+  "scope": "T27 retry and cluster recovery",
+  "dependency": {
+    "issue": 134,
+    "requiredState": "CLOSED/COMPLETED"
+  },
+  "batches": {
+    "currentCandidateActualHttp": {
+      "candidateSha256": "e1a0380ffd187f95c4e517a92412f23d429c828647b7b4f5e4a498b856f4057d",
+      "counts": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "checks": [
+        {
+          "name": "configured_two_retries_produce_exactly_three_attempts",
+          "passed": true
+        },
+        {
+          "name": "each_failed_attempt_has_persistent_result_timestamps_and_owner",
+          "passed": true
+        },
+        {
+          "name": "real_handler_timeout_has_final_failed_state_and_single_attempt",
+          "passed": true
+        },
+        {
+          "name": "retry_and_timeout_histories_survive_actual_jvm_restart",
+          "passed": true
+        },
+        {
+          "name": "terminal_histories_remain_stable_without_extra_retry",
+          "passed": true
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false
+    },
+    "retainedBusinessRecovery": {
+      "candidateSha256": "2859eaad1029a271db4e44e11911b322af1374b2adaf9dad539dc9c69307872c",
+      "scenarios": [
+        {
+          "name": "committed_business_effect_is_not_repeated_by_retry",
+          "attempts": 2,
+          "effects": 1,
+          "reserved_context_cannot_be_spoofed": true
+        },
+        {
+          "name": "two_nodes_compete_for_one_counted_business_effect",
+          "executions": 1,
+          "effects": 1
+        },
+        {
+          "name": "actual_owner_killed_after_commit_survivor_deduplicates_effect",
+          "killed_port": 19081,
+          "survivor_port": 19082,
+          "attempts": 2,
+          "effects": 1
+        }
+      ],
+      "businessScenarioCounts": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "actualChrome": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "actualRecoveryChrome": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED"
+    },
+    "retainedTaskConfiguration134": {
+      "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+      "actualHttp": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "actualChrome": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "retainedJUnit": {
+      "suites": [
+        {
+          "name": "com.abluepoint.summer.sample.task.TaskBusinessIdempotencyMySqlTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.abluepoint.summer.sample.task.TaskBusinessIdempotencyTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.abluepoint.summer.sample.task.TaskExecutionRecoveryTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.abluepoint.summer.sample.task.TaskRetryRecoveryHttpTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.abluepoint.summer.sample.task.TaskSchedulerHttpTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.abluepoint.summer.sample.task.TaskTriggerDispatchRecoveryTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "counts": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "retainedInputApplicability": {
+    "taskJavaFiles": 21,
+    "migrationFiles": 4,
+    "matchedInputs": {
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/QuartzTaskJob.java": "7f0e4ec9d710c9fc0fef54c4bb9cab8b2d337859309ae805f60c9c7ea6657dce",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/RegisteredTaskHandler.java": "06718e6b42582b6b5f31d88a69407693d43a8760f9b3857a501b82e764a7231e",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskAttemptEntity.java": "4a1ea830a0f5dd7cbaa0b17e01ab0a08725b0e4d5fe49296714fae63e7991f9a",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskDefinitionEntity.java": "c751d02bb6602b98f55d36500742c989ce4bce9cf9cdcce4ca31190415b74b7a",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskExceptions.java": "61af78187df80b6b99db9512478c49f690298af7bf8875936806b6c0a3356c98",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskExecutionEntity.java": "da82adaab8ea126a5298803c6980358c246728f975c2ef26cb1f82930713606c",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskExecutionService.java": "5744925c9126e3e6fd4f65e51bca3bf8465ba4dcffc2cda15c7618ef8131e217",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskModels.java": "7cf421ae458dfe23d15520ac721f7da17ff2a3a8beb015b846a7a1f89a43b4a7",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressAccess.java": "8c967c76debddcdb79ec7fa6a41120dfdc8d2023f6ac4b83886cef38674e4d9e",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressController.java": "7b8e502a7ac1082fe3c72e1940025c6119f18ea2e2a7f3aeb5c50806485ba4b9",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventEntity.java": "1e79f60789072f49e8d1bd4bd457b75a74b46862a6f6fdae7cb3a371398408b8",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventRepository.java": "8c6c266a9ceaeb09ddd1d624278110b69e0441afee7bf98afbe31bd851449eb7",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventService.java": "f8c99b6ee0a4515ba0cee3c839618761a5bb85638b301e24665f8ae3661ebc6e",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskQuartzConfiguration.java": "712dfbbe64754f9f2f41495a7bfce4be3de53c69cfefed81d51558ed4ab83660",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskRepositories.java": "1befb3ee1357b818826e0db1cb2dbcfff041b02f1c0fffc20e8910f02d81bcb1",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskSchedulerController.java": "3380e47946a32a368f3f74921c1f3b9be6c2f4a85d7ac6fe9f81da2540e6096b",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskSchedulerService.java": "96738471412a2898246b9e18bee95e03d74bd7b7c56c651c2054268b6eccfc9a",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskStatus.java": "b16a289e6747338ec51d777977d4cb1dde4dbfc7458376de16c84512348e27b4",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskTriggerReceiptEntity.java": "57a142ba410207faad3981e6b6960bb573cde9c6babe291958cc566bc24da85b",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskTriggerRecoveryJob.java": "b46ce74fdfd091def0a6c92e7c3d665236e8821822df790d8251d45ebac273ee",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TrustedTaskRegistry.java": "9541740d1b183303ad53d65c25b079786a25b7d32f6ef13a3d87921435c36bfa",
+      "summer-sample/src/main/resources/db/migration/mysql/V17__quartz_cluster.sql": "1736ced46d29ce6f6d0f942da7591e36e4659df22324757e98b4acdc9808425a",
+      "summer-sample/src/main/resources/db/migration/mysql/V18__task_scheduler.sql": "74eb1836486ae4add1e3cba52e20b33ceaffe736b48c1f383264dc805be45dd6",
+      "summer-sample/src/main/resources/db/migration/mysql/V20__task_retry_recovery.sql": "13ce07f28ae7be8e3c1761e86b625c411138f37630617e9a96d9543a06da89e3",
+      "summer-sample/src/main/resources/db/migration/mysql/V26__task_progress_events.sql": "c4b99219a4d26e64d9d2acc2f7e3525a118b9bd937e39b98ab23978b3b70e0b9"
+    },
+    "allMatchCurrentCandidateAndWorktree": true
+  },
+  "claims": {
+    "externalExactlyOnce": false,
+    "testOnlyBusinessPluginIncludedInProduction": false,
+    "newFullRepositoryCheckPerformed": false
+  },
+  "privateEvidencePaths": [
+    ".git/summer4-closeout-20261015/t27-live/attempt-01",
+    ".git/summer4-closeout-20261015/runtime/snapshot-integrated-task-2859",
+    ".git/summer4-closeout-20261015/task/junit-integration-final-442",
+    ".git/summer4-closeout-20261015/t26-live/attempt-05"
+  ]
+}
