@@ -1,0 +1,730 @@
+{
+  "status": "READY_FOR_COORDINATOR_CLOSEOUT",
+  "issue": 130,
+  "dependency": {
+    "number": 129,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "commitReportedByCoordinator": "c88eb236da12e4c95a634ce0483c308b29d87012"
+  },
+  "recorded_at": "2026-10-15T21:37:48.254172+08:00",
+  "candidate_sha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "runtime": {
+    "checks": [
+      {
+        "name": "environment_initial_starts",
+        "passed": true,
+        "case": "environment_initial",
+        "outcome": "ready",
+        "exitCode": null,
+        "elapsedSeconds": 20.85,
+        "codes": [],
+        "exceptionClasses": [],
+        "health": {
+          "transportFailureType": "URLError",
+          "httpStatus": 503,
+          "status": "DOWN"
+        }
+      },
+      {
+        "name": "environment_starts",
+        "passed": true,
+        "case": "environment",
+        "outcome": "ready",
+        "exitCode": null,
+        "elapsedSeconds": 16.1,
+        "codes": [],
+        "exceptionClasses": [],
+        "health": {
+          "transportFailureType": "URLError",
+          "httpStatus": 503,
+          "status": "DOWN"
+        }
+      },
+      {
+        "name": "environment_actual_sign_and_verify",
+        "passed": true
+      },
+      {
+        "name": "environment_public_jwk_only",
+        "passed": true
+      },
+      {
+        "name": "environment_management_metadata",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "environment_metadata_value_separation",
+        "passed": true
+      },
+      {
+        "name": "environment_request_correlation",
+        "passed": true
+      },
+      {
+        "name": "anonymous_reference_metadata_denied",
+        "passed": true
+      },
+      {
+        "name": "ungranted_reference_metadata_denied",
+        "passed": true
+      },
+      {
+        "name": "denied_unified_error_and_correlation",
+        "passed": true
+      },
+      {
+        "name": "file_starts",
+        "passed": true,
+        "case": "file",
+        "outcome": "ready",
+        "exitCode": null,
+        "elapsedSeconds": 8.82,
+        "codes": [],
+        "exceptionClasses": [],
+        "health": {
+          "transportFailureType": "URLError",
+          "httpStatus": 503,
+          "status": "DOWN"
+        }
+      },
+      {
+        "name": "file_actual_sign_and_verify",
+        "passed": true
+      },
+      {
+        "name": "file_public_jwk_only",
+        "passed": true
+      },
+      {
+        "name": "file_management_metadata",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "file_metadata_value_separation",
+        "passed": true
+      },
+      {
+        "name": "file_request_correlation",
+        "passed": true
+      },
+      {
+        "name": "actual_kubernetes_env_and_volume_injection",
+        "passed": true
+      },
+      {
+        "name": "secret_environment_starts",
+        "passed": true,
+        "case": "secret_environment",
+        "outcome": "ready",
+        "exitCode": null,
+        "elapsedSeconds": 11.25,
+        "codes": [],
+        "exceptionClasses": [],
+        "health": {
+          "transportFailureType": "URLError",
+          "httpStatus": 503,
+          "status": "OUT_OF_SERVICE"
+        }
+      },
+      {
+        "name": "secret_environment_actual_sign_and_verify",
+        "passed": true
+      },
+      {
+        "name": "secret_environment_public_jwk_only",
+        "passed": true
+      },
+      {
+        "name": "secret_environment_management_metadata",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "secret_environment_metadata_value_separation",
+        "passed": true
+      },
+      {
+        "name": "secret_environment_request_correlation",
+        "passed": true
+      },
+      {
+        "name": "secret_file_starts",
+        "passed": true,
+        "case": "secret_file",
+        "outcome": "ready",
+        "exitCode": null,
+        "elapsedSeconds": 8.83,
+        "codes": [],
+        "exceptionClasses": [],
+        "health": {
+          "transportFailureType": "URLError",
+          "httpStatus": 503,
+          "status": "DOWN"
+        }
+      },
+      {
+        "name": "secret_file_actual_sign_and_verify",
+        "passed": true
+      },
+      {
+        "name": "secret_file_public_jwk_only",
+        "passed": true
+      },
+      {
+        "name": "secret_file_management_metadata",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "secret_file_metadata_value_separation",
+        "passed": true
+      },
+      {
+        "name": "secret_file_request_correlation",
+        "passed": true
+      },
+      {
+        "name": "environment_missing_fails_closed",
+        "passed": true,
+        "case": "environment_missing",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.62,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_UNAVAILABLE"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "environment_bad_name_fails_closed",
+        "passed": true,
+        "case": "environment_bad_name",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 7.87,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "inline_key_as_reference_name_fails_closed",
+        "passed": true,
+        "case": "inline_key_as_reference_name",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.39,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "environment_invalid_material_fails_closed",
+        "passed": true,
+        "case": "environment_invalid_material",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.14,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "file_missing_fails_closed",
+        "passed": true,
+        "case": "file_missing",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 7.89,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_UNAVAILABLE"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "file_absolute_path_fails_closed",
+        "passed": true,
+        "case": "file_absolute_path",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 9.95,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "file_parent_escape_fails_closed",
+        "passed": true,
+        "case": "file_parent_escape",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.89,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "file_symlink_escape_fails_closed",
+        "passed": true,
+        "case": "file_symlink_escape",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 7.87,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "file_allowed_directory_missing_fails_closed",
+        "passed": true,
+        "case": "file_allowed_directory_missing",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.13,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "unreadable_fixture_has_no_read_access",
+        "passed": true
+      },
+      {
+        "name": "file_permission_denied_fails_closed",
+        "passed": true,
+        "case": "file_permission_denied",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.62,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "file_invalid_material_fails_closed",
+        "passed": true,
+        "case": "file_invalid_material",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.63,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "secret_missing_fails_closed",
+        "passed": true,
+        "case": "secret_missing",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 12.5,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_UNAVAILABLE"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "secret_invalid_material_fails_closed",
+        "passed": true,
+        "case": "secret_invalid_material",
+        "outcome": "exited",
+        "exitCode": 1,
+        "elapsedSeconds": 8.37,
+        "codes": [
+          "SUMMER_KEY_REFERENCE_INVALID"
+        ],
+        "exceptionClasses": [
+          "com.abluepoint.summer.sample.key.ReferenceKeyMaterialResolver$ReferenceKeyResolutionException",
+          "org.springframework.beans.BeanInstantiationException",
+          "org.springframework.beans.factory.BeanCreationException",
+          "org.springframework.beans.factory.UnsatisfiedDependencyException"
+        ],
+        "health": {
+          "transportFailureType": "URLError"
+        }
+      },
+      {
+        "name": "reference_modes_never_generated_database_key",
+        "passed": true
+      },
+      {
+        "name": "no_sensitive_runtime_output",
+        "passed": true
+      }
+    ],
+    "counts": {
+      "checks": 45,
+      "passed": 45,
+      "failed": 0
+    },
+    "stage": "complete",
+    "process_exit": 0,
+    "network_mocking": false,
+    "business_authorization_sql_writes": false,
+    "execution_counts": {
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "kind": "named real runtime assertions, not JUnit"
+    }
+  },
+  "real_chrome": {
+    "checks": [
+      {
+        "name": "real_reference_admin_chrome_pkce",
+        "passed": true
+      },
+      {
+        "name": "reference_metadata_real_http_success",
+        "passed": true
+      },
+      {
+        "name": "reference_source_algorithm_kid_visible",
+        "passed": true
+      },
+      {
+        "name": "reference_exists_and_readiness",
+        "passed": true
+      },
+      {
+        "name": "no_private_key_value_or_editor",
+        "passed": true
+      },
+      {
+        "name": "real_ungranted_user_reference_page_denied",
+        "passed": true
+      }
+    ],
+    "counts": {
+      "checks": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "process_exit": 0,
+    "page_errors": 0,
+    "network_mocking": false,
+    "visual_review": "Metadata and denial screenshots inspected; source, kid, algorithm, READY state and absence of private material confirmed.",
+    "execution_counts": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "invalid_reference_startups": [
+    {
+      "case": "environment_missing",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.62,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_UNAVAILABLE"
+      ]
+    },
+    {
+      "case": "environment_bad_name",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 7.87,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "inline_key_as_reference_name",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.39,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "environment_invalid_material",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.14,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "file_missing",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 7.89,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_UNAVAILABLE"
+      ]
+    },
+    {
+      "case": "file_absolute_path",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 9.95,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "file_parent_escape",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.89,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "file_symlink_escape",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 7.87,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "file_allowed_directory_missing",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.13,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "file_permission_denied",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.62,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "file_invalid_material",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.63,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    },
+    {
+      "case": "secret_missing",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 12.5,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_UNAVAILABLE"
+      ]
+    },
+    {
+      "case": "secret_invalid_material",
+      "outcome": "exited",
+      "exitCode": 1,
+      "elapsedSeconds": 8.37,
+      "codes": [
+        "SUMMER_KEY_REFERENCE_INVALID"
+      ]
+    }
+  ],
+  "invalid_reference_timing_seconds": {
+    "min": 7.87,
+    "max": 12.5
+  },
+  "secret_injection_boundary": "An owned Kubernetes Secret was injected into an owned temporary Pod using env.valueFrom and a mounted Secret volume. The resolved values were captured only in memory and injected into the local candidate JVM environment or a controlled0600 file. The JVM itself was not deployed into Kubernetes.",
+  "private_material_handling": "Fresh RSA PKCS8 generated in process. File-mode material temporarily in owned0700 directory/0600 files; permission-denied fixture set000. All private files, Kubernetes Secret and Pod removed and absence verified. No raw JVM logs, tokens or private values archived.",
+  "sensitive_findings": [],
+  "cleanup": {
+    "schema_absent": true,
+    "container_absent": true,
+    "redis_isolated_container_destroyed": true,
+    "listeners": {
+      "21081": false,
+      "21082": false,
+      "21083": false,
+      "21573": false,
+      "21580": false
+    },
+    "app_account_absent": true,
+    "secret_absent": true,
+    "injection_pod_absent": true,
+    "private_runtime_directory_absent": true
+  },
+  "source_integrity": {
+    "key_main_inputs_matched": 15,
+    "key_main_and_key_ui_unchanged": true,
+    "global_observed_inputs_stable": false,
+    "changed_unrelated_paths": [
+      "summer-ui/src/pages/system-parameters/index.tsx"
+    ],
+    "note": "Only unrelated system-parameters page changed externally; no key source or key UI drift. No rerun for this unrelated change."
+  },
+  "acceptance_clauses": [
+    {
+      "clause": 1,
+      "status": "PASS",
+      "evidence": "Reference name separated from value; valid uppercase environment name works. Missing, invalid name, inline private material used as name, and invalid key format fail with SUMMER_KEY_REFERENCE_INVALID/UNAVAILABLE."
+    },
+    {
+      "clause": 2,
+      "status": "PASS",
+      "evidence": "Environment, controlled file, actualSecret-derived environment and actualSecret-derived file each complete realPKCE signing and publicJWK verification.13 invalid cases exit1 within7.87–12.5s; no generated database key fallback."
+    },
+    {
+      "clause": 3,
+      "status": "PASS",
+      "evidence": "Actual management HTTP allowlisted metadata includes source/algorithm/kid/exists and lifecycle/readiness only; realChrome shows source/algorithm/kid/READY, no key editor/value. Anonymous and ungranted users denied."
+    },
+    {
+      "clause": 4,
+      "status": "PASS",
+      "evidence": "Real JVM startup cases cover absent/invalid environment; missing/absolute/traversing/symlink/out-of-root/no-allowed-directory/unreadable/invalid files; missing or invalid Secret-injected reference. No mocks or zero-test pass."
+    },
+    {
+      "clause": 5,
+      "status": "PASS",
+      "evidence": "Uses production candidate/migrations and real MySQL; reference mode adds no new migration, reuses T21 validated foundations.45 actual runtime/API/configuration checks plus6 realChrome checks; success/denial/invalid/fault represented."
+    },
+    {
+      "clause": 6,
+      "status": "PASS",
+      "evidence": "Management Unified response and matchingrequestId; publicJWKS Raw; denied response SUMMER_FORBIDDEN; startup reference failures fixedSUMMER_KEY_REFERENCE codes. Sensitive scanner zero findings; raw runtime logs discarded."
+    },
+    {
+      "clause": 7,
+      "status": "PASS",
+      "evidence": "Stories3/35, original issue, implementation paths, controlled scripts, initial incomplete attempt, finalchecks/cleanup/source hashes and public md/JSON receipt retained. Main/JUnit/UI unchanged by this task."
+    }
+  ],
+  "ui_scope_note": "Shared page still displays generic rotation controls and UNKNOWN rotation schedule for reference sources. This run validates reference metadata and denial, not a reference-key rotation operation; rotation capability is not claimed.",
+  "historical_attempt": {
+    "directory": "attempt-01-442e609f",
+    "counts": {
+      "checks": 1,
+      "passed": 0,
+      "failed": 1
+    },
+    "stage": "setup",
+    "outcome": "Initial health readiness timeout at100s while JVM remained alive; no reference error code observed. Cause not established. Diagnostic-only runner enhancement preceded a complete successful run; no product fix was made.",
+    "cleanup": "VERIFIED"
+  },
+  "counting": "45 runtime checks and6 Chrome checks are separate, disjoint assertions. Startup process attempts are not additional tests. No JUnit/Gradle run in this phase; prior failed/incomplete attempt not overwritten.",
+  "evidence_root": ".git/summer4-closeout-20261015/t22-live",
+  "final_directory": ".git/summer4-closeout-20261015/t22-live/attempt-02-442e609f-diagnostics",
+  "documentation": "docs/acceptance/key-references-130.md",
+  "issue_mutated_by_this_task": false,
+  "index_mutated_by_this_task": false,
+  "release_gate": "Coordinator owns repository-wide check, commit, push and Issue closure.",
+  "file_manifest": ".git/summer4-closeout-20261015/t22-live/FILES.json"
+}
