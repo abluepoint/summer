@@ -1,0 +1,805 @@
+{
+  "issue": 115,
+  "title": "T07｜增强查询与参数筛选",
+  "status": "READY_FOR_ROOT_REVIEW",
+  "dependency": {
+    "issue": 113,
+    "closedConfirmedByRoot": true
+  },
+  "stories": [
+    10,
+    14,
+    29,
+    31,
+    32
+  ],
+  "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+  "counting": {
+    "unit": "named actual API/environment and Chrome assertions, not JUnit cases or HTTP request count",
+    "actualApiChecks": 375,
+    "actualChromeChecks": 19,
+    "composedCounts": {
+      "tests": 394,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "singleExecution": false,
+    "composition": "attempt02 API check array + attempt05-ui Chrome check array",
+    "excludedRepeatedFixtureChecks": 112,
+    "rawAttempt02CompleteRunCountsUnchanged": {
+      "tests": 375,
+      "failures": 0,
+      "errors": 1,
+      "skipped": 0
+    },
+    "rawFinalUiRunCounts": {
+      "tests": 131,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "rawFinalUiRunExit": 0,
+    "independentCountSupplementCounts": {
+      "tests": 294,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "independentCountSupplementCandidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+    "independentCountSupplementRunnerExit": 0,
+    "compositionNote": "Historical375API+19Chrome=394 retained; new294 count supplement reported separately, no combined total across overlapping setup"
+  },
+  "coverage": {
+    "fixtures": 24,
+    "actualTenants": 2,
+    "filters": [
+      "key",
+      "type",
+      "status",
+      "public"
+    ],
+    "sortFields": [
+      "key",
+      "type",
+      "status",
+      "createdAt",
+      "updatedAt",
+      "version"
+    ],
+    "sortDirections": [
+      "asc",
+      "desc"
+    ],
+    "projections": [
+      "summary",
+      "detail"
+    ],
+    "readOnlyMysqlCountComparisons": 9,
+    "columnOrderTest": "Same production JAR and MySQL using external reordered SQL resource; both projections unchanged",
+    "aliasCollisionTest": "Both projections return 400 SUMMER_PARAMETER_INVALID for duplicate normalized alias; no overwrite",
+    "realUi": [
+      "explicit tenant selection",
+      "combined filters",
+      "pagination",
+      "sorting",
+      "projection transitions",
+      "invalid input and requestId",
+      "real read denial",
+      "real backend stop/restart and recovery"
+    ]
+  },
+  "criteria": [
+    {
+      "number": 1,
+      "original": "参数查询支持白名单字段的组合过滤、排序、分页和投影。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "filter_*",
+        "sort_*",
+        "page_*",
+        "summary_projection",
+        "chrome_combined_*"
+      ]
+    },
+    {
+      "number": 2,
+      "original": "未知字段、非法排序和越权租户条件被拒绝。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "invalid_*",
+        "conflicting_*",
+        "reader_other_real_tenant_*",
+        "explicit_denied_*"
+      ]
+    },
+    {
+      "number": 3,
+      "original": "查询结果不依赖固定列顺序或隐式别名覆盖。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "reordered_columns_*",
+        "duplicate_alias_*"
+      ]
+    },
+    {
+      "number": 4,
+      "original": "通过真实 HTTP API 验证查询契约和数据隔离。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "same_key_detail_stays_in_selected_tenant",
+        "other_tenant_list_and_count_isolated",
+        "detail_*",
+        "filter_*_http_count_matches_mysql"
+      ],
+      "independentCountEvidence": {
+        "evidence": "count-actual-attempt01/result.json",
+        "counts": {
+          "tests": 294,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+        "matrix": [
+          "10 filter/empty groups: count=list total=fixture and read-onlyMySQL count",
+          "8 paired detail identities; additional literal count key remains detail",
+          "page0/1/8/99 do not alter count",
+          "2 real tenants same key different records",
+          "unknown/invalid12cases400SUMMER_INVALID_ARGUMENT",
+          "conflicting/repeated/header tenant and real cross-tenant403",
+          "explicit read deny403, authorized reader succeeds",
+          "DataScope DENY count/list0/detail404, restored scope count8",
+          "success and failure requestId/body/header correlation"
+        ]
+      }
+    },
+    {
+      "number": 5,
+      "original": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "real_mysql_migrations_applied",
+        "chrome_*"
+      ]
+    },
+    {
+      "number": 6,
+      "original": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "*_envelope_correlation",
+        "*_stable_error",
+        "chrome_invalid_query_rejected_with_request_id"
+      ]
+    },
+    {
+      "number": 7,
+      "original": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+      "status": "SUPPORTED",
+      "evidence": [
+        "composed-actual-checks.json",
+        "original-issue.json",
+        "ui-fix/component-red.log",
+        "FILES.json"
+      ]
+    }
+  ],
+  "countInterfaceScopeReview": {
+    "original": "查询条件必须在数据库查询范围内生效，并通过真实列表、详情和计数接口验证一致性。",
+    "implementedHttpCount": "GET /api/v1/enterprises/{enterpriseId}/system-parameters:count",
+    "separateCountRouteObserved": true,
+    "realListDetailCountMetadataConsistent": true,
+    "rootScopeReviewPending": false,
+    "originalWordingChanged": false,
+    "newBackendCountEndpointAdded": true,
+    "rootDecision": "Original scope explicitly required independent count; authorized implementation and dedicated realHTTP supplement now complete on993ad757",
+    "actualIndependentCountRun": true,
+    "realIndependentCountListDetailConsistent": true
+  },
+  "uiFix": {
+    "productionFiles": 1,
+    "change": "Omitted summary value/version render as display placeholder —; backend fields remain absent; detail false/zero/null/empty values preserved",
+    "actualRed": "attempt04-ui chrome_summary_omitted_values_render_cleanly failed",
+    "componentRed": {
+      "tests": 3,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "componentGreen": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "typecheckExit": 0,
+    "buildExit": 0,
+    "uiBuildInputs": {
+      "files": 241,
+      "stable": true
+    },
+    "sourceAndDistBackedUpBeforeEditAndBuild": true
+  },
+  "sourceProtection": {
+    "countProductionFiles": 5,
+    "mainJavaAndJunitChanged": true,
+    "changesAuthorizedForIndependentCount": true,
+    "countProductionInputsStable": true,
+    "countProductionInputsMatchCandidate": true,
+    "actualRunAllInputs": {
+      "files": 926,
+      "stable": false,
+      "changes": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java"
+      ]
+    },
+    "unrelatedDriftObservedWithoutAttribution": [
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java"
+    ],
+    "customerControllerSha256": "d6a830964d63ee8e60f2b32c1a4561000a76f86488f6ca35330c9e1dbd94b416",
+    "UIFilesChangedDuringCountSupplement": false,
+    "UIFixAlreadyCommittedByRoot": "9c278d6"
+  },
+  "files": [
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterController.java",
+      "sha256": "67cc801b14d64273b123be864857e7b5e92c6fffb31f348e3624a3cdc7f2d744"
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterQueryService.java",
+      "sha256": "dd9274b41689b39d4c766eaeb2e87a0d8e47767ea83a20732d3788bb71ef3f1e"
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterQueryModels.java",
+      "sha256": "b62388926211f2c59269810c75190eb4f9f666d6254f29b143ca86b2b8526f25"
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterQueryParser.java",
+      "sha256": "2b3f4cae9d3f46c7ac8c03609fadcddfbf2791f4730b256e0c2ac05329dfd938"
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterCountController.java",
+      "sha256": "cc77bb188aafa8101b8e5937b5ed66233b09ddffe3f23144c5a210c2fc30ce87"
+    },
+    {
+      "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/systemparameter/SystemParameterCountHttpTest.java",
+      "sha256": "3d10db1433abe0a6cb0461c8fcf811e71f375f3016b0048a14971ab41f59b690"
+    },
+    {
+      "path": "scripts/acceptance/t07/run-t07-count.py",
+      "sha256": "cd31248098a1a41993484b3e165e99c09aa2dbf19adf1c0d263498cbdaf8ac84"
+    },
+    {
+      "path": "scripts/acceptance/t07/run-t07.py",
+      "sha256": "283080c586204997648fa9e8a42ed698f0bac324e1c8e99a7a1e9c9537dba440"
+    },
+    {
+      "path": "scripts/acceptance/t07/t07-browser.mjs",
+      "sha256": "f7704466780b13db054b4e5f72843980dd549f47f6a0f9eb45049576208121a4"
+    }
+  ],
+  "redHistory": [
+    {
+      "attempt": "attempt01",
+      "counts": {
+        "tests": 111,
+        "failures": 2,
+        "errors": 1,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "reason": "Second real tenant lacked a data-scope policy; failed fixture precondition and subsequent TypeError. Configured via real data-scope API."
+    },
+    {
+      "attempt": "attempt02",
+      "counts": {
+        "tests": 375,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "reason": "All375 API/environment checks passed; browser zero-check timeout from missing explicit tenant selection. Original complete-run error remains."
+    },
+    {
+      "attempt": "attempt03-ui",
+      "counts": {
+        "tests": 130,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "reason": "Chrome flow completed; three assertions counted the Arco empty-state row as business data. Corrected locator semantics."
+    },
+    {
+      "attempt": "attempt04-ui",
+      "counts": {
+        "tests": 125,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "reason": "Actual summary undefined assertion red; later screenshot timeout left flow incomplete. Preserved, then disabled animations for captures."
+    }
+  ],
+  "componentHarnessHistory": {
+    "firstCombinedRun": {
+      "tests": 5,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "reason": "Vite default port collision between parallel test files; dedicated projection cases passed"
+    },
+    "finalRun": "Serial test files on allocated20573; five cases passed"
+  },
+  "cleanup": {
+    "allAttempts": "VERIFIED",
+    "ownSchemaAndDatabaseAccountAbsent": true,
+    "ownJvmUiChromePortsFree": true,
+    "redis": "Only exact random namespace cleaned in DB15; shared Stream/group keys were not deleted",
+    "allRedisClearedClaimed": false
+  },
+  "screenshots": {
+    "directory": ".git/summer4-closeout-20261015/frontend/t07-115/attempt05-ui",
+    "files": [
+      "query-combination-summary.png",
+      "query-invalid.png",
+      "query-recovered.png",
+      "query-denied.png"
+    ],
+    "nativelyViewed": true
+  },
+  "evidenceDirectory": ".git/summer4-closeout-20261015/frontend/t07-115",
+  "networkMockingForActualAcceptance": false,
+  "businessSqlWrites": false,
+  "componentIdentityAndHttp": "synthetic; separately counted",
+  "gradleRunHere": true,
+  "indexWrites": false,
+  "issueClosedHere": false,
+  "issueReadyForClosureWithoutRootScopeReview": true,
+  "T08CompletedOrClaimed": false,
+  "independentCountSupplement": {
+    "route": "GET /api/v1/enterprises/{enterpriseId}/system-parameters:count",
+    "legacyRoute": "GET /api/system-parameters:count",
+    "responseData": {
+      "totalElements": "long"
+    },
+    "implementation": "Common query parser, same Field/OAuth/ResourcePermission whitelist; common DataScope application; existing named count SQL only, no list fetch",
+    "dedicatedAndListJUnit": {
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "evidence": "green-attempt06.json"
+    },
+    "validRed": {
+      "tests": 5,
+      "failures": 5,
+      "errors": 0,
+      "skipped": 0,
+      "evidence": "red-attempt02.json"
+    },
+    "actualIndependentCountRun": true,
+    "requiresNewUnifiedCandidate": false,
+    "sourceFiles": [
+      {
+        "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterController.java",
+        "sha256": "67cc801b14d64273b123be864857e7b5e92c6fffb31f348e3624a3cdc7f2d744"
+      },
+      {
+        "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterQueryService.java",
+        "sha256": "dd9274b41689b39d4c766eaeb2e87a0d8e47767ea83a20732d3788bb71ef3f1e"
+      },
+      {
+        "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterQueryModels.java",
+        "sha256": "b62388926211f2c59269810c75190eb4f9f666d6254f29b143ca86b2b8526f25"
+      },
+      {
+        "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterQueryParser.java",
+        "sha256": "2b3f4cae9d3f46c7ac8c03609fadcddfbf2791f4730b256e0c2ac05329dfd938"
+      },
+      {
+        "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterCountController.java",
+        "sha256": "cc77bb188aafa8101b8e5937b5ed66233b09ddffe3f23144c5a210c2fc30ce87"
+      },
+      {
+        "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/systemparameter/SystemParameterCountHttpTest.java",
+        "sha256": "3d10db1433abe0a6cb0461c8fcf811e71f375f3016b0048a14971ab41f59b690"
+      },
+      {
+        "path": "scripts/acceptance/t07/run-t07-count.py",
+        "sha256": "cd31248098a1a41993484b3e165e99c09aa2dbf19adf1c0d263498cbdaf8ac84"
+      }
+    ],
+    "fixtureDiagnostics": {
+      "originalProfileTimeout": "200ms",
+      "finalTimeoutOverride": false,
+      "RedisCredentials": "Kubernetes Secret decoded in memory and passed only to Gradle process environment",
+      "fixtureReadiness": "Asserts configured password is present without displaying it, then real Redis PING=PONG before contract assertions",
+      "diagnosticCauseChain": [
+        "DependencyDegradedException",
+        "CompletionException",
+        "TimeoutException"
+      ],
+      "history": "green-attempt01/02: detail503; green-attempt03/04: intermediate test-only5s green; green-attempt05: credentials injected with original200ms, detail still503; green-attempt06: original200ms plus dependency readiness, seven green",
+      "productionResilienceOrDetailChanged": false
+    },
+    "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+    "evidence": "count-actual-attempt01/result.json",
+    "runnerExit": 0,
+    "counts": {
+      "tests": 294,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "unit": "Named actual API/environment assertions including real authorization fixture setup; not JUnit or HTTP request count",
+    "networkMocking": false,
+    "businessSqlWrites": false,
+    "realMysql": true,
+    "realPKCE": true,
+    "actualTenants": 2,
+    "ownTenantFilteredFixtures": 8,
+    "foreignTenantSameKeyFixtures": 1,
+    "additionalLegalLiteralCountKey": true,
+    "filterGroups": 10,
+    "readOnlyMysqlCountComparisons": 10,
+    "pageWindows": [
+      0,
+      1,
+      8,
+      99
+    ],
+    "invalidParameterCases": 12,
+    "countRoute": "GET /api/v1/enterprises/{enterpriseId}/system-parameters:count",
+    "legalDetailRoutePreserved": "GET /api/v1/enterprises/ent-acme/system-parameters/count",
+    "checks": [
+      "candidate_contains_independent_count_endpoint",
+      "capability_catalog_real_api",
+      "capability_catalog_real_api_envelope_correlation",
+      "register_system.parameter.read",
+      "register_system.parameter.read_envelope_correlation",
+      "register_system.parameter.create",
+      "register_system.parameter.create_envelope_correlation",
+      "register_system.parameter.update",
+      "register_system.parameter.update_envelope_correlation",
+      "register_system.parameter.publish",
+      "register_system.parameter.publish_envelope_correlation",
+      "register_system.parameter.disable",
+      "register_system.parameter.disable_envelope_correlation",
+      "register_system.parameter.rollback",
+      "register_system.parameter.rollback_envelope_correlation",
+      "register_system.parameter.write",
+      "register_system.parameter.write_envelope_correlation",
+      "register_menu.systemParameters.read",
+      "register_menu.systemParameters.read_envelope_correlation",
+      "read_admin_binding",
+      "read_admin_binding_envelope_correlation",
+      "extend_admin_binding",
+      "extend_admin_binding_envelope_correlation",
+      "create_reader_identity",
+      "create_reader_identity_envelope_correlation",
+      "create_reader_membership",
+      "create_reader_membership_envelope_correlation",
+      "authorization_only_real_business_endpoints",
+      "create_query_row_0",
+      "create_query_row_0_envelope_correlation",
+      "deactivate_row_0",
+      "deactivate_row_0_envelope_correlation",
+      "version_row_0",
+      "version_row_0_envelope_correlation",
+      "create_query_row_1",
+      "create_query_row_1_envelope_correlation",
+      "create_query_row_2",
+      "create_query_row_2_envelope_correlation",
+      "create_query_row_3",
+      "create_query_row_3_envelope_correlation",
+      "deactivate_row_3",
+      "deactivate_row_3_envelope_correlation",
+      "create_query_row_4",
+      "create_query_row_4_envelope_correlation",
+      "create_query_row_5",
+      "create_query_row_5_envelope_correlation",
+      "version_row_5",
+      "version_row_5_envelope_correlation",
+      "create_query_row_6",
+      "create_query_row_6_envelope_correlation",
+      "deactivate_row_6",
+      "deactivate_row_6_envelope_correlation",
+      "create_query_row_7",
+      "create_query_row_7_envelope_correlation",
+      "independent_count_0",
+      "independent_count_0_envelope_correlation",
+      "paired_list_0",
+      "paired_list_0_envelope_correlation",
+      "count_0_exact_response_shape",
+      "count_0_agrees_with_list_and_fixtures",
+      "count_0_matches_read_only_mysql",
+      "independent_count_1",
+      "independent_count_1_envelope_correlation",
+      "paired_list_1",
+      "paired_list_1_envelope_correlation",
+      "count_1_exact_response_shape",
+      "count_1_agrees_with_list_and_fixtures",
+      "count_1_matches_read_only_mysql",
+      "independent_count_2",
+      "independent_count_2_envelope_correlation",
+      "paired_list_2",
+      "paired_list_2_envelope_correlation",
+      "count_2_exact_response_shape",
+      "count_2_agrees_with_list_and_fixtures",
+      "count_2_matches_read_only_mysql",
+      "independent_count_3",
+      "independent_count_3_envelope_correlation",
+      "paired_list_3",
+      "paired_list_3_envelope_correlation",
+      "count_3_exact_response_shape",
+      "count_3_agrees_with_list_and_fixtures",
+      "count_3_matches_read_only_mysql",
+      "independent_count_4",
+      "independent_count_4_envelope_correlation",
+      "paired_list_4",
+      "paired_list_4_envelope_correlation",
+      "count_4_exact_response_shape",
+      "count_4_agrees_with_list_and_fixtures",
+      "count_4_matches_read_only_mysql",
+      "independent_count_5",
+      "independent_count_5_envelope_correlation",
+      "paired_list_5",
+      "paired_list_5_envelope_correlation",
+      "count_5_exact_response_shape",
+      "count_5_agrees_with_list_and_fixtures",
+      "count_5_matches_read_only_mysql",
+      "independent_count_6",
+      "independent_count_6_envelope_correlation",
+      "paired_list_6",
+      "paired_list_6_envelope_correlation",
+      "count_6_exact_response_shape",
+      "count_6_agrees_with_list_and_fixtures",
+      "count_6_matches_read_only_mysql",
+      "independent_count_7",
+      "independent_count_7_envelope_correlation",
+      "paired_list_7",
+      "paired_list_7_envelope_correlation",
+      "count_7_exact_response_shape",
+      "count_7_agrees_with_list_and_fixtures",
+      "count_7_matches_read_only_mysql",
+      "independent_count_8",
+      "independent_count_8_envelope_correlation",
+      "paired_list_8",
+      "paired_list_8_envelope_correlation",
+      "count_8_exact_response_shape",
+      "count_8_agrees_with_list_and_fixtures",
+      "count_8_matches_read_only_mysql",
+      "independent_count_9",
+      "independent_count_9_envelope_correlation",
+      "paired_list_9",
+      "paired_list_9_envelope_correlation",
+      "count_9_exact_response_shape",
+      "count_9_agrees_with_list_and_fixtures",
+      "count_9_matches_read_only_mysql",
+      "window_independent_count_0",
+      "window_independent_count_0_envelope_correlation",
+      "window_list_0",
+      "window_list_0_envelope_correlation",
+      "window_0_count_not_page_length",
+      "window_independent_count_1",
+      "window_independent_count_1_envelope_correlation",
+      "window_list_1",
+      "window_list_1_envelope_correlation",
+      "window_1_count_not_page_length",
+      "window_independent_count_8",
+      "window_independent_count_8_envelope_correlation",
+      "window_list_8",
+      "window_list_8_envelope_correlation",
+      "window_8_count_not_page_length",
+      "window_independent_count_99",
+      "window_independent_count_99_envelope_correlation",
+      "window_list_99",
+      "window_list_99_envelope_correlation",
+      "window_99_count_not_page_length",
+      "legacy_count_alias",
+      "legacy_count_alias_envelope_correlation",
+      "legacy_alias_count_equal",
+      "create_legal_count_key",
+      "create_legal_count_key_envelope_correlation",
+      "legal_count_key_detail",
+      "legal_count_key_detail_envelope_correlation",
+      "count_action_preserves_legal_detail_key",
+      "paired_detail_0",
+      "paired_detail_0_envelope_correlation",
+      "paired_detail_0_same_identity",
+      "paired_detail_1",
+      "paired_detail_1_envelope_correlation",
+      "paired_detail_1_same_identity",
+      "paired_detail_2",
+      "paired_detail_2_envelope_correlation",
+      "paired_detail_2_same_identity",
+      "paired_detail_3",
+      "paired_detail_3_envelope_correlation",
+      "paired_detail_3_same_identity",
+      "paired_detail_4",
+      "paired_detail_4_envelope_correlation",
+      "paired_detail_4_same_identity",
+      "paired_detail_5",
+      "paired_detail_5_envelope_correlation",
+      "paired_detail_5_same_identity",
+      "paired_detail_6",
+      "paired_detail_6_envelope_correlation",
+      "paired_detail_6_same_identity",
+      "paired_detail_7",
+      "paired_detail_7_envelope_correlation",
+      "paired_detail_7_same_identity",
+      "create_isolated_enterprise",
+      "create_isolated_enterprise_envelope_correlation",
+      "second_tenant_creator_binding",
+      "second_tenant_creator_binding_envelope_correlation",
+      "second_tenant_parameter_grant",
+      "second_tenant_parameter_grant_envelope_correlation",
+      "second_tenant_scope",
+      "second_tenant_scope_envelope_correlation",
+      "same_key_other_tenant",
+      "same_key_other_tenant_envelope_correlation",
+      "own_tenant_count",
+      "own_tenant_count_envelope_correlation",
+      "foreign_tenant_own_count",
+      "foreign_tenant_own_count_envelope_correlation",
+      "foreign_tenant_own_list",
+      "foreign_tenant_own_list_envelope_correlation",
+      "own_same_key_detail",
+      "own_same_key_detail_envelope_correlation",
+      "foreign_same_key_detail",
+      "foreign_same_key_detail_envelope_correlation",
+      "real_tenant_count_list_detail_isolated",
+      "reader_cross_tenant_system-parameters:count",
+      "reader_cross_tenant_system-parameters:count_envelope_correlation",
+      "reader_cross_tenant_system-parameters:count_stable_error",
+      "reader_cross_tenant_system-parameters",
+      "reader_cross_tenant_system-parameters_envelope_correlation",
+      "reader_cross_tenant_system-parameters_stable_error",
+      "reader_cross_tenant_count.697fcd1b5f.00",
+      "reader_cross_tenant_count.697fcd1b5f.00_envelope_correlation",
+      "reader_cross_tenant_count.697fcd1b5f.00_stable_error",
+      "count_invalid_unknown",
+      "count_invalid_unknown_envelope_correlation",
+      "count_invalid_unknown_stable_error",
+      "count_invalid_sort",
+      "count_invalid_sort_envelope_correlation",
+      "count_invalid_sort_stable_error",
+      "count_invalid_sort_field_violation",
+      "count_invalid_direction",
+      "count_invalid_direction_envelope_correlation",
+      "count_invalid_direction_stable_error",
+      "count_invalid_direction_field_violation",
+      "count_invalid_projection",
+      "count_invalid_projection_envelope_correlation",
+      "count_invalid_projection_stable_error",
+      "count_invalid_projection_field_violation",
+      "count_invalid_negative_page",
+      "count_invalid_negative_page_envelope_correlation",
+      "count_invalid_negative_page_stable_error",
+      "count_invalid_negative_page_field_violation",
+      "count_invalid_huge_page",
+      "count_invalid_huge_page_envelope_correlation",
+      "count_invalid_huge_page_stable_error",
+      "count_invalid_huge_page_field_violation",
+      "count_invalid_size_zero",
+      "count_invalid_size_zero_envelope_correlation",
+      "count_invalid_size_zero_stable_error",
+      "count_invalid_size_zero_field_violation",
+      "count_invalid_size_over",
+      "count_invalid_size_over_envelope_correlation",
+      "count_invalid_size_over_stable_error",
+      "count_invalid_size_over_field_violation",
+      "count_invalid_type",
+      "count_invalid_type_envelope_correlation",
+      "count_invalid_type_stable_error",
+      "count_invalid_type_field_violation",
+      "count_invalid_status",
+      "count_invalid_status_envelope_correlation",
+      "count_invalid_status_stable_error",
+      "count_invalid_status_field_violation",
+      "count_invalid_public",
+      "count_invalid_public_envelope_correlation",
+      "count_invalid_public_stable_error",
+      "count_invalid_public_field_violation",
+      "count_invalid_key",
+      "count_invalid_key_envelope_correlation",
+      "count_invalid_key_stable_error",
+      "count_invalid_key_field_violation",
+      "count_conflicting_tenant",
+      "count_conflicting_tenant_envelope_correlation",
+      "count_conflicting_tenant_stable_error",
+      "count_duplicate_tenant",
+      "count_duplicate_tenant_envelope_correlation",
+      "count_duplicate_tenant_stable_error",
+      "count_conflicting_header",
+      "count_conflicting_header_envelope_correlation",
+      "count_conflicting_header_stable_error",
+      "authorized_reader_count",
+      "authorized_reader_count_envelope_correlation",
+      "authorized_reader_count_equal",
+      "reader_binding_before_deny",
+      "reader_binding_before_deny_envelope_correlation",
+      "reader_explicit_deny",
+      "reader_explicit_deny_envelope_correlation",
+      "explicit_denied_system-parameters:count",
+      "explicit_denied_system-parameters:count_envelope_correlation",
+      "explicit_denied_system-parameters:count_stable_error",
+      "explicit_denied_system-parameters",
+      "explicit_denied_system-parameters_envelope_correlation",
+      "explicit_denied_system-parameters_stable_error",
+      "explicit_denied_count.697fcd1b5f.00",
+      "explicit_denied_count.697fcd1b5f.00_envelope_correlation",
+      "explicit_denied_count.697fcd1b5f.00_stable_error",
+      "scope_deny_by_real_api",
+      "scope_deny_by_real_api_envelope_correlation",
+      "deny_scope_count",
+      "deny_scope_count_envelope_correlation",
+      "deny_scope_list",
+      "deny_scope_list_envelope_correlation",
+      "deny_scope_detail",
+      "deny_scope_detail_envelope_correlation",
+      "deny_scope_detail_stable_error",
+      "count_and_list_same_database_scope",
+      "restore_scope_by_real_api",
+      "restore_scope_by_real_api_envelope_correlation",
+      "restored_scope_count",
+      "restored_scope_count_envelope_correlation",
+      "restored_scope_returns_original_count",
+      "real_mysql_migrations_present"
+    ],
+    "cleanup": "VERIFIED",
+    "sourceInputs": {
+      "files": 926,
+      "stable": false,
+      "changes": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java"
+      ]
+    },
+    "countProductionInputsStable": true,
+    "candidateBuildInputs": 534,
+    "fiveProductionInputsMatchCandidateAndBeforeAfter": true,
+    "executedScriptStable": true,
+    "unrelatedDriftObservedWithoutAttribution": [
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java"
+    ],
+    "retainedOriginalApi375AndChrome19Replayed": false
+  },
+  "retainedUiEvidenceSourceNote": "Historical T07 page hash belongs to retained acceptance; root separately validated and froze subsequent T10 history fix at 2e8304b8cecb5c452f50be45a96fa00e5e23bad1e374ef61d039e1ca1b6ef8e5",
+  "retainedOriginalCandidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "retainedOriginalSourceProtection": {
+    "frozenInputFiles": 919,
+    "baselineDifferences": [
+      "summer-ui/src/pages/system-parameters/index.tsx"
+    ],
+    "finalRunInputsStable": true,
+    "mainJavaAndJunitChanged": false,
+    "customerControllerSha256": "d6a830964d63ee8e60f2b32c1a4561000a76f86488f6ca35330c9e1dbd94b416"
+  },
+  "retainedHistoricalUiAndHarnessFiles": [
+    {
+      "path": "summer-ui/src/pages/system-parameters/index.tsx",
+      "sha256": "0ecce019c219a33451a4b7ee69608ba4d9796e9fe7119de641f0286918900b6a"
+    },
+    {
+      "path": "summer-ui/scripts/verify-system-parameter-projection-browser.mjs",
+      "sha256": "1314486da417fa4f014341b3fa409f334068a426a6e5b6253571cf1bfcad6b71"
+    },
+    {
+      "path": "scripts/acceptance/t07/run-t07.py",
+      "sha256": "283080c586204997648fa9e8a42ed698f0bac324e1c8e99a7a1e9c9537dba440"
+    },
+    {
+      "path": "scripts/acceptance/t07/t07-browser.mjs",
+      "sha256": "f7704466780b13db054b4e5f72843980dd549f47f6a0f9eb45049576208121a4"
+    }
+  ],
+  "issueReadyForRootClosureReview": true
+}

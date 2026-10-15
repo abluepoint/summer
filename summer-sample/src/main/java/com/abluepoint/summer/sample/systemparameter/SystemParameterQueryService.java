@@ -23,9 +23,7 @@ class SystemParameterQueryService {
 
     @Transactional(readOnly = true)
     SystemParameterQueryPage list(SystemParameterListQuery request, Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(request.tenantId(), "system-parameters", authentication);
-        request = request.withScope(scope);
-        final SystemParameterListQuery scopedRequest = request;
+        final SystemParameterListQuery scopedRequest = scoped(request, authentication);
         long total = query.count(scopedRequest);
         List<?> items = query.list(scopedRequest).stream()
                 .map(value -> scopedRequest.projection() == SystemParameterListQuery.Projection.SUMMARY
@@ -38,6 +36,15 @@ class SystemParameterQueryService {
     }
 
     SystemParameterQueryPage list(SystemParameterListQuery request) { return list(request, null); }
+
+    @Transactional(readOnly = true)
+    SystemParameterQueryCount count(SystemParameterListQuery request, Authentication authentication) {
+        return new SystemParameterQueryCount(query.count(scoped(request, authentication)));
+    }
+
+    private SystemParameterListQuery scoped(SystemParameterListQuery request, Authentication authentication) {
+        return request.withScope(dataScopes.filter(request.tenantId(), "system-parameters", authentication));
+    }
 
     private SystemParameterView detail(SystemParameterDetailRow row) {
         return new SystemParameterView(row.id(), row.parameterKey(), SystemParameterType.valueOf(row.valueType()),

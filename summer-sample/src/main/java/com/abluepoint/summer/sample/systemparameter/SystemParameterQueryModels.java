@@ -14,6 +14,9 @@ record SystemParameterQueryPage(
 ) {
 }
 
+record SystemParameterQueryCount(long totalElements) {
+}
+
 record SystemParameterSummaryView(
         String id,
         String key,

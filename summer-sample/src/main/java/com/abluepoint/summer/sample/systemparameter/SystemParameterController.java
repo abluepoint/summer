@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
@@ -52,23 +51,7 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<Map<String, Object>>> list(
             FieldValues values, Authentication authentication) {
         try {
-            int page = values.get("page", Integer.class) == null ? 0 : values.get("page", Integer.class);
-            int size = values.get("size", Integer.class) == null ? 20 : values.get("size", Integer.class);
-            String tenantId = resolve(authentication);
-            String type = values.get("type", String.class);
-            String status = values.get("status", String.class);
-            String sort = values.get("sort", String.class);
-            String direction = values.get("direction", String.class);
-            String projection = values.get("projection", String.class);
-            SystemParameterListQuery query = new SystemParameterListQuery(
-                    page, size, values.get("key", String.class),
-                    type == null ? null : SystemParameterType.valueOf(type),
-                    status == null ? null : SystemParameterStatus.valueOf(status),
-                    values.get("public", Boolean.class),
-                    sort == null ? SystemParameterListQuery.SortField.KEY : sortField(sort),
-                    "desc".equals(direction) ? SystemParameterListQuery.SortDirection.DESC : SystemParameterListQuery.SortDirection.ASC,
-                    "summary".equals(projection) ? SystemParameterListQuery.Projection.SUMMARY : SystemParameterListQuery.Projection.DETAIL,
-                    tenantId, null);
+            SystemParameterListQuery query = SystemParameterQueryParser.parse(values, authentication);
             return body(HttpStatus.OK, page(queryService.list(query, authentication)));
         } catch (IllegalArgumentException exception) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", "Invalid system parameter query", List.of());
@@ -305,18 +288,6 @@ class SystemParameterController {
             return result;
         }
         return parameter((SystemParameterView) value);
-    }
-
-    private static SystemParameterListQuery.SortField sortField(String value) {
-        return switch (value) {
-            case "key" -> SystemParameterListQuery.SortField.KEY;
-            case "type" -> SystemParameterListQuery.SortField.TYPE;
-            case "status" -> SystemParameterListQuery.SortField.STATUS;
-            case "createdAt" -> SystemParameterListQuery.SortField.CREATED_AT;
-            case "updatedAt" -> SystemParameterListQuery.SortField.UPDATED_AT;
-            case "version" -> SystemParameterListQuery.SortField.VERSION;
-            default -> throw new IllegalArgumentException("Invalid system parameter sort field");
-        };
     }
 
     private static Map<String, Object> parameter(SystemParameterView value) {
