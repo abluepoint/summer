@@ -1,0 +1,289 @@
+{
+  "issue": 127,
+  "title": "参数与字典的授权读取",
+  "status": "READY_FOR_ROOT_REVIEW",
+  "date": "2026-10-16",
+  "timezone": "Asia/Shanghai",
+  "dependencies": [
+    {
+      "issue": 118,
+      "state": "CLOSED"
+    },
+    {
+      "issue": 119,
+      "state": "CLOSED"
+    },
+    {
+      "issue": 126,
+      "state": "CLOSED"
+    }
+  ],
+  "stories": [
+    5,
+    6,
+    7,
+    8,
+    29,
+    33
+  ],
+  "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+  "productionChanges": false,
+  "newJUnitRun": false,
+  "newBuildRun": false,
+  "networkMocking": false,
+  "businessSqlWrites": false,
+  "batches": [
+    {
+      "name": "attempt-01",
+      "counts": {
+        "tests": 76,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "override_lifecycle",
+      "cleanup": "VERIFIED",
+      "errorType": "KeyError",
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "attempt-02",
+      "counts": {
+        "tests": 156,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "cleanup": "VERIFIED",
+      "errorType": null,
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "browser-attempt-01",
+      "counts": {
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "cleanup": "VERIFIED",
+      "errorType": null,
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "tenant-attempt-01",
+      "counts": {
+        "tests": 38,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "arbitrary_tenants",
+      "cleanup": "VERIFIED",
+      "errorType": "AssertionError",
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "tenant-attempt-02",
+      "counts": {
+        "tests": 65,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "arbitrary_tenants",
+      "cleanup": "VERIFIED",
+      "errorType": "AssertionError",
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "tenant-attempt-03-diagnostic",
+      "counts": {
+        "tests": 65,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "arbitrary_tenants",
+      "cleanup": "VERIFIED",
+      "errorType": "AssertionError",
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "tenant-attempt-04",
+      "counts": {
+        "tests": 117,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "additional_visibility_edges",
+      "cleanup": "VERIFIED",
+      "errorType": "AssertionError",
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    },
+    {
+      "name": "tenant-attempt-05",
+      "counts": {
+        "tests": 149,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "cleanup": "VERIFIED",
+      "errorType": null,
+      "sensitiveLogDetected": false,
+      "changedSourcePaths": []
+    }
+  ],
+  "realChrome": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "pageErrors": 0,
+    "shutdown": {
+      "processExited": true,
+      "forced": false
+    },
+    "checks": [
+      {
+        "name": "actual_admin_login_and_public_snapshot",
+        "passed": true
+      },
+      {
+        "name": "actual_authorized_override_publish_and_reread",
+        "passed": true
+      },
+      {
+        "name": "invalid_json_preserved_without_request",
+        "passed": true
+      },
+      {
+        "name": "real_mysql_audit_failure_keeps_draft_and_request_id",
+        "passed": true
+      },
+      {
+        "name": "same_page_retry_succeeds_after_fault_removed",
+        "passed": true
+      },
+      {
+        "name": "persisted_publish_denial_shown_by_real_reader",
+        "passed": true
+      },
+      {
+        "name": "persisted_read_denial_clears_consumer_and_draft",
+        "passed": true
+      }
+    ]
+  },
+  "uiInputsDuringChrome": {
+    "count": 242,
+    "changed": []
+  },
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS",
+      "evidence": [
+        "attempt-01: twelve persisted per-action denials plus public read denial",
+        "attempt-02: database list/detail/history/item scope filtering and override lifecycle",
+        "reused T07/T10/T11/T17/T18 matched inputs"
+      ]
+    },
+    {
+      "id": 2,
+      "status": "PASS",
+      "evidence": [
+        "attempt-02: published scope-hidden/private/disabled override blocks fallback; item projection and selected-item404",
+        "tenant-attempt-05: base private blocks published override; anonymous OWNER denied; explicit tenant anonymous public reads"
+      ]
+    },
+    {
+      "id": 3,
+      "status": "PASS",
+      "evidence": [
+        "attempt-02: organization > tenant > base; four immutable override revisions; audit request/principal/actions; MySQL trigger rollback",
+        "tenant-attempt-05: two provisioned tenants, same keys/codes with independent values/history/version/audit; disabled organization no fallback"
+      ]
+    },
+    {
+      "id": 4,
+      "status": "PASS",
+      "evidence": [
+        "browser-attempt-01: actual Chrome persisted write/read denial, correlated error and state clearing; server denies without relying on hidden fields",
+        "reused T10/T11: base drafts and history UI"
+      ]
+    },
+    {
+      "id": 5,
+      "status": "PASS",
+      "evidence": [
+        "fixed9f real MySQL migrations/isolated Redis/JVM/PKCE/HTTP; actual Chrome7; success,403,404,400,409,500 and recovery",
+        "tenant-attempt-05 verifies V29/V30/V32/V33 applied"
+      ]
+    },
+    {
+      "id": 6,
+      "status": "PASS",
+      "evidence": [
+        "Unified success/error envelope, SUMMER codes, exact X-Request-Id/body correlation; secrets compared in memory only; per-batch sensitive scan clear",
+        "Parameter contract and public selected-item errors retained"
+      ]
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "evidence": [
+        "public Markdown/JSON; frozen executed scripts and per-batch counts; original failure attempts retained; cleanup verified; source SHA manifests; no production edits or index-writing commands"
+      ]
+    }
+  ],
+  "counting": "Counts are named assertions including setup. Each batch is separate; no totals across repeated setup. attempt-01 remains76/0/1/0; its 12 per-action and3 public denial checks are reused, with later field-name error corrected in attempt-02.",
+  "reuse": {
+    "t07MainFiles": 5,
+    "t17MainFiles": 16,
+    "t10t11WholeFilesMatching": 41,
+    "t10Controller": "whole file differs due T07 list parser extraction; detail/write/lifecycle/override section byte-identical",
+    "t10t11UiFiles": 5,
+    "candidateRelevantInputs": 114,
+    "reports": [
+      "query-115.md",
+      "system-parameter-release-118.md",
+      "dictionary-release-119.md",
+      "data-scopes.md",
+      "composed-data-scopes-126.md"
+    ]
+  },
+  "originalFailures": {
+    "attempt-01": "Script read latestRevision instead of revision; not a product failure.",
+    "tenant-attempt-01": "Fixture omitted mandatory item sortOrder; correct400.",
+    "tenant-attempt-02": "Fixture reused ent-acme-owned dictionary read capability ID in new tenants; correct403.",
+    "tenant-attempt-03-diagnostic": "Confirmed missing capability in claims and DEFAULT_DENY; no production change.",
+    "tenant-attempt-04": "Fixture parameter PATCH omitted current version; correct409. Later fixture also corrected publicValue field."
+  },
+  "evidenceDirectory": ".git/summer4-closeout-20261015/t19-live",
+  "screenshotsReviewed": [
+    "override-published.png",
+    "override-fault.png",
+    "override-write-denied.png",
+    "override-read-denied.png"
+  ],
+  "limits": [
+    "Audit fault checks cover override row state and configuration-override audit count; do not claim every outbox or business table was compared.",
+    "Prior task acceptance reused by input identity; not rerun as a new full matrix.",
+    "Shared T20 menu/authorization event and T33 trace changes are outside this scope."
+  ],
+  "issueClosedHere": false,
+  "committedHere": false
+}
