@@ -9,15 +9,16 @@ record StatisticsScope(String enterpriseId, String organizationId, String subjec
 record StatisticsView(
         StatisticsWindow window,
         StatisticsScope scope,
-        long userCount,
-        long roleCount,
-        long interfaceCount,
-        long accessibleInterfaceCount,
-        long dictionaryCount,
-        long taskCount,
-        long taskExecutionCount,
-        long successfulTaskExecutionCount,
-        long failedTaskExecutionCount,
-        double taskSuccessRate,
-        long auditEventCount
+        Long userCount,
+        Long roleCount,
+        Long interfaceCount,
+        Long accessibleInterfaceCount,
+        Long dictionaryCount,
+        Long taskCount,
+        Long taskExecutionCount,
+        Long successfulTaskExecutionCount,
+        Long failedTaskExecutionCount,
+        Double taskSuccessRate,
+        Long auditEventCount,
+        Instant asOf
 ) {}

@@ -1,0 +1,545 @@
+{
+  "issue": 142,
+  "date": "2026-10-16",
+  "status": "READY",
+  "issueReady": true,
+  "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+  "candidateInputCount": 541,
+  "successfulMigrations": 39,
+  "countsPolicy": "tests/failures/errors/skipped; runtime named assertions are not JUnit; batches are not added together",
+  "junit": {
+    "counts": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/green-02/result.json",
+    "xml": ".git/summer4-closeout-20261015/frontend/t34-142/green-02/xml/TEST-com.abluepoint.summer.sample.statistics.StatisticsHttpTest.xml",
+    "xmlCapturedUnderBuildLock": true,
+    "capturedOutputRemoved": true
+  },
+  "component": {
+    "counts": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "syntheticIdentityAndHttp": true,
+    "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/ui-green-01.log"
+  },
+  "typecheckExit": 0,
+  "uiBuildExit": 0,
+  "uiBuildStableInputCount": 244,
+  "batches": [
+    {
+      "name": "attempt-01",
+      "counts": {
+        "tests": 24,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "7e2298fab9e8b215657e816199ab9e5cf64f9e1df4e06bade15b2461a1a1507d",
+      "explanation": "旧7e候选有权请求500；提前终止。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-01/result.json",
+      "resultSha256": "df8cea3b3d110734347a65d875e596344dc19529cecbe0c418ebd505dca35548",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "name": "attempt-02-query-failure",
+      "counts": {
+        "tests": 7,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "7e2298fab9e8b215657e816199ab9e5cf64f9e1df4e06bade15b2461a1a1507d",
+      "explanation": "旧7e候选缺AICT表且有权请求500；内含真实Chrome失败页4项通过。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-02-query-failure/result.json",
+      "resultSha256": "1f9c02511bc2e97d542e7d16b58d340ef8727324b9e6956e48a2c1549f7dc8b0",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 4,
+        "failures": 0,
+        "complete": true,
+        "exit": 0,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-03-fixed",
+      "counts": {
+        "tests": 80,
+        "failures": 2,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "夹具错误：MySQL会话+08时间误标UTC；未初始化角色绑定GET409误要求200。保留原批。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-03-fixed/result.json",
+      "resultSha256": "3f17a34609068e7922c532cdd6bf49dac0889b63abea7447402688b07a06ed4a",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "name": "attempt-04-fixed",
+      "counts": {
+        "tests": 162,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "真实后端162项全部通过；Chrome首请求超时，0项完成，整批保留error。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-04-fixed/result.json",
+      "resultSha256": "2318af8f931043a140cba2e2e0fba023dfa07941962b518bc1ce0c731a302490",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 0,
+        "failures": 0,
+        "complete": false,
+        "exit": 1,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-05-ui",
+      "counts": {
+        "tests": 35,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "配套35项通过；无活动租户上下文时选择器不可达，浏览器0项完成。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-05-ui/result.json",
+      "resultSha256": "862b8771fb8481bd5c44c354f402adcf9662f80158cf4d919ecb19ce1f25a266",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 0,
+        "failures": 0,
+        "complete": false,
+        "exit": 1,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-06-ui-context",
+      "counts": {
+        "tests": 47,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "配套43项与正常Chrome4项通过；仅REVOKE未使既有连接产生预期故障，故障等待超时。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-06-ui-context/result.json",
+      "resultSha256": "e5245413e35f05de9239b498e9fabd78c674708646b7d96c8d6e78f2c4c1d1b3",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 4,
+        "failures": 0,
+        "complete": false,
+        "exit": 1,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-07-ui-fault",
+      "counts": {
+        "tests": 46,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "配套46项通过；登录前故障注入后浏览器停在OAuth回调，0项完成；具体根因未证实。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-07-ui-fault/result.json",
+      "resultSha256": "fded2ee1eae97b4e5cec15b6cfc24fe761ded57014bd98940a1d2c5386bd9c24",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 0,
+        "failures": 0,
+        "complete": false,
+        "exit": 1,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-08-ui-connected",
+      "counts": {
+        "tests": 57,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "配套49项与正常/故障/恢复Chrome8项通过；随后reader POST /oauth2/token 500造成回调超时，整批保留error。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-08-ui-connected/result.json",
+      "resultSha256": "59a4ef58dcf850756d4337dcaef8989b246876e30e5a732ff4f965af264afd1d",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 8,
+        "failures": 0,
+        "complete": false,
+        "exit": 1,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-09-ui-empty",
+      "counts": {
+        "tests": 54,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": true,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "配套49项与空数据/拒绝Chrome5项通过，exit0；另行context探针确认共享入口缺陷，不计为功能绿灯。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-09-ui-empty/result.json",
+      "resultSha256": "ec227538d5cd4f3b058efacca3fee5a700e6764dbd19b809dfd513477190b98d",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": 5,
+        "failures": 0,
+        "complete": true,
+        "exit": 0,
+        "closed": true
+      }
+    },
+    {
+      "name": "attempt-10-context-retest",
+      "counts": {
+        "tests": 43,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "运行时32绿、Chrome11项10绿/1夹具失败，后续Fetch status数值误当函数引发Error；整批43/1/1/0原样保留。有效跨企业/跨页/清旧数据/换用户隔离证据保留。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-10-context-retest/result.json",
+      "resultSha256": "36155e2e2c3d559ec7b0a86cd14d9a5b6f95dca3082285df33cfc463fe94dae3",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "runtimeChecks": 32,
+      "browser": {
+        "checks": 11,
+        "failures": 1,
+        "complete": false,
+        "exit": 1,
+        "closed": true
+      },
+      "changedInputs": []
+    },
+    {
+      "name": "attempt-11-context-supplement",
+      "counts": {
+        "tests": 35,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": true,
+      "candidateSha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18",
+      "explanation": "只补初始无预选、真实foreign403、无页面异常3项Chrome；配套32项，整批35/0/0/0，exit0。未重跑第10批已绿跨页矩阵。",
+      "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-11-context-supplement/result.json",
+      "resultSha256": "48af121eb110711a1a3a89d4fa7c584fcc837ee7d01c3bca6d9dcef59a56505a",
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "runtimeChecks": 32,
+      "browser": {
+        "checks": 3,
+        "failures": 0,
+        "complete": true,
+        "exit": 0,
+        "closed": true
+      },
+      "changedInputs": []
+    }
+  ],
+  "sharedUxBlocker": {
+    "status": "resolved_and_verified_in_separate_batches",
+    "probe": {
+      "networkMocking": false,
+      "menuRequests": [
+        {
+          "method": "PUT",
+          "path": "/api/v1/platform/menu-manifest",
+          "status": 200
+        }
+      ],
+      "complete": true,
+      "claims": {
+        "multipleActiveMemberships": true,
+        "hasActiveEnterprise": false,
+        "hasOrganizationContext": false,
+        "hasStatisticsGrant": true
+      },
+      "tenantSelectorVisible": false,
+      "sharedUxBlocked": true,
+      "browserClosed": true
+    },
+    "evidence": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-09-ui-empty/context-probe-result.json",
+    "evidenceSha256": "f90376db0cbd2992ca26b062bdc345fa87321f8b2f71abf2848ff07b1ac84e9b",
+    "screenshot": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-09-ui-empty/statistics-no-active-context.png",
+    "screenshotSha256": "9d18ce3fceebe64fa6c6925df16c7534f9dc94c63b3578050d2450b604f18f1d",
+    "visuallyInspected": true,
+    "fixOwner": "root coordinated shared UI owner",
+    "requiredRetest": null,
+    "defectId": "T34-CTX-01",
+    "sharedProductionFreeze": {
+      "manifest": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/shared-enterprise-entry/MAIN_SOURCE_FROZEN.json",
+      "manifestSha256": "667cde827b59d2cee835b57757819561e384bad83fef5ecb778c2058f4f9080a",
+      "files": {
+        "summer-ui/src/main.tsx": "ef74d19bad367dfe8d522e0c0b8199aee77617065dd298c86f06c384440aa741",
+        "summer-ui/src/components/NavBar/index.tsx": "ef42e4a0525a80b7ecca3fa3ad9157bcc04cf478178a41bb1c1479680c25272d",
+        "summer-ui/src/pages/data-scopes/useActiveEnterprise.ts": "0837c1769ed9f2f258a38c7f4467a72ef36f8ed6c53f061aa71ea8fc616fc895"
+      }
+    },
+    "sharedTests": {
+      "ownerEvidence": ".git/summer4-closeout-20261015/shared-enterprise-entry/RESULT.json",
+      "red": "red-01 1/1/0/0; guard-red-01 9/1/0/0",
+      "green": "guard-green-01 9/0/0/0",
+      "kind": "Native Node real React custom-host lifecycle tests, not Chrome; existing transitive reconciler dependency",
+      "typecheckExit": 0,
+      "lintExit": 0
+    },
+    "positiveEvidence": {
+      "attempt10BrowserPassed": 10,
+      "attempt10BrowserTotal": 11,
+      "attempt10CountsUnchanged": true,
+      "attempt11BrowserCounts": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "attempt11Exit": 0,
+      "noNetworkMocking": true,
+      "selectionPersistence": "UI memory only; no JWT or server organization context mutation",
+      "screenshots": [
+        {
+          "path": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-10-context-retest/context-choice.png",
+          "sha256": "748d666c9e13d2574441c16bd33b1b89e38c6141273cf206acd8ecc8c0f34f97",
+          "visuallyInspected": true
+        },
+        {
+          "path": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-10-context-retest/context-second-tenant.png",
+          "sha256": "6871906f06ad26437f4e693f9ceb71e0429abeebdaa357eee36a3a92a61cbfe6",
+          "visuallyInspected": true
+        },
+        {
+          "path": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-10-context-retest/context-returned-acme.png",
+          "sha256": "7e537c979834f565f50997d6a41d7399f940babfdd85286a37d1428188c5caa1",
+          "visuallyInspected": true
+        },
+        {
+          "path": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-11-context-supplement/context-choice.png",
+          "sha256": "748d666c9e13d2574441c16bd33b1b89e38c6141273cf206acd8ecc8c0f34f97",
+          "visuallyInspected": true
+        },
+        {
+          "path": ".git/summer4-closeout-20261015/frontend/t34-142/attempt-11-context-supplement/context-reader-isolation.png",
+          "sha256": "909a792d2636410553d5654f0253c6922bfb6d4543928cc091ac7b99b1fd8ea3",
+          "visuallyInspected": true
+        }
+      ]
+    }
+  },
+  "boundaries": {
+    "businessSqlWrites": false,
+    "networkMockingInRuntime": false,
+    "mainFrozen": true,
+    "sharedUiEditedByThisTask": false,
+    "noCommitPushIssueMutation": true
+  },
+  "preparedContextRetest": {
+    "runner": "scripts/acceptance/business-statistics/context-run.py",
+    "executed": true,
+    "method": ".git/summer4-closeout-20261015/frontend/t34-142/CONTEXT-RETEST-HANDOFF.md",
+    "pending": null,
+    "browser": "scripts/acceptance/business-statistics/context-retest-browser.mjs",
+    "syntaxChecked": true,
+    "fullAttempt": "attempt-10-context-retest",
+    "supplementAttempt": "attempt-11-context-supplement",
+    "supplementEnv": "SUMMER_T34_CONTEXT_SUPPLEMENT=1"
+  },
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "verified",
+      "basis": "Current user/enterprise/organization real authorization and DataScope: runtime162; T34-CTX-01 shared UI fixed and narrowly verified"
+    },
+    {
+      "id": 2,
+      "status": "verified",
+      "basis": "Metric definitions, inventory asOf, [from,to) boundaries and retry deduplication"
+    },
+    {
+      "id": 3,
+      "status": "verified",
+      "basis": "Real persisted task and business audit rows, successful migrations, JVM restart"
+    },
+    {
+      "id": 4,
+      "status": "verified",
+      "basis": "Distinct loading/failure/denied/empty states: component3 and real Chrome8/5 in separate batches"
+    },
+    {
+      "id": 5,
+      "status": "verified",
+      "basis": "Real MySQL/PKCE/HTTP/Chrome normal/invalid/forbidden/fault/recovery; context fix from actual red to scoped retests"
+    },
+    {
+      "id": 6,
+      "status": "verified",
+      "basis": "FieldContract, RawResponse envelope, SUMMER errors and request correlation; sensitive scan"
+    },
+    {
+      "id": 7,
+      "status": "verified",
+      "basis": "Stories46/52, changes, defect chain, original errors, exact counts, snapshots and cleanup"
+    }
+  ]
+}

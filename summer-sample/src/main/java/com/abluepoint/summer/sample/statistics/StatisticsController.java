@@ -28,6 +28,11 @@ final class StatisticsController {
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/statistics")
     @RawResponse
+    @com.abluepoint.summer.mvc.annotation.FieldContract
+    @com.abluepoint.summer.mvc.annotation.Field(param="enterpriseId", style="statisticsIdentifierStyle")
+    @com.abluepoint.summer.mvc.annotation.Field(param="organizationId", required=false, style="statisticsIdentifierStyle")
+    @com.abluepoint.summer.mvc.annotation.Field(param="from", required=false, style="statisticsInstantStyle")
+    @com.abluepoint.summer.mvc.annotation.Field(param="to", required=false, style="statisticsInstantStyle")
     ResponseEntity<ApiResponse<StatisticsView>> read(
             @PathVariable String enterpriseId,
             @RequestParam(required = false) String from,
@@ -45,6 +50,16 @@ final class StatisticsController {
         } catch (RuntimeException exception) {
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "SUMMER_INTERNAL_ERROR", "Statistics query failed");
         }
+    }
+
+    @org.springframework.context.annotation.Bean
+    static com.abluepoint.summer.mvc.validate.Style statisticsIdentifierStyle() {
+        return com.abluepoint.summer.mvc.validate.Styles.string().matches(java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,80}"), "a valid enterprise or organization id").build();
+    }
+
+    @org.springframework.context.annotation.Bean
+    static com.abluepoint.summer.mvc.validate.Style statisticsInstantStyle() {
+        return com.abluepoint.summer.mvc.validate.Styles.string().matches(java.util.regex.Pattern.compile(".{1,64}"), "an ISO-8601 instant").build();
     }
 
     private Instant parse(String value) {

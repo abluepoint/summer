@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { createStore } from 'redux';
 import { Provider } from 'react-redux';
-import { Alert, ConfigProvider, Message, Spin } from '@arco-design/web-react';
+import { Alert, Card, ConfigProvider, Message, Select, Spin } from '@arco-design/web-react';
 import zhCN from '@arco-design/web-react/es/locale/zh-CN';
 import enUS from '@arco-design/web-react/es/locale/en-US';
 import { BrowserRouter, Switch, Route } from 'react-router-dom';
@@ -26,7 +26,7 @@ import { getVisibleMenuManifest, syncMenuManifest } from './menu/api';
 import { loadMenuPermissions } from './menu/permissions';
 import { MenuAccessContext } from './menu/access';
 import { VisibleMenuItem } from './menu/api';
-import useActiveEnterprise from './pages/data-scopes/useActiveEnterprise';
+import useActiveEnterprise, { activeEnterpriseSelection } from './pages/data-scopes/useActiveEnterprise';
 import useLocale from './utils/useLocale';
 import changeTheme from './utils/changeTheme';
 import useStorage from './utils/useStorage';
@@ -44,6 +44,7 @@ configureBusinessApiAuth();
 function AuthenticatedLayout() {
   const tenant = useActiveEnterprise();
   const [menuItems, setMenuItems] = useState<VisibleMenuItem[]>([]);
+  const [settledContext, setSettledContext] = useState(-1);
   const t = useLocale();
   const [status, setStatus] = useState<
     'loading' | 'ready' | 'failed' | 'limited'
@@ -51,25 +52,38 @@ function AuthenticatedLayout() {
   useEffect(() => {
     if (!tenant.ready) return;
     let alive = true;
+    const isCurrent = () => alive && activeEnterpriseSelection.getSnapshot().contextVersion === tenant.contextVersion;
     let stopPermissionRefresh: (() => void) | undefined;
     let visibleSignature = '';
     setStatus('loading');
     setMenuItems([]);
     getAuthenticatedUser()
       .then(async (user) => {
+        if (!isCurrent()) return;
         if (!user) {
           return authenticationStatus()
             .then((reason) =>
-              startLoginForUnavailable(
+              isCurrent() ? startLoginForUnavailable(
                 reason === 'expired' ? 'expired' : 'missing',
                 { notify: false }
-              )
+              ) : false
             )
             .then((started) => {
-              if (!started && !isAuthRedirecting()) setStatus('limited');
+              if (isCurrent() && !started && !isAuthRedirecting()) {
+                setStatus('limited');
+                setSettledContext(tenant.contextVersion);
+              }
             });
         }
         const profile = user.profile;
+        if (!tenant.enterpriseId) {
+          store.dispatch({ type: 'update-userInfo', payload: {
+            userInfo: { name: String(profile.name || profile.preferred_username || profile.sub), permissions: {} }, userLoading: false,
+          } });
+          setStatus('ready');
+          setSettledContext(tenant.contextVersion);
+          return;
+        }
         const permissions = await loadMenuPermissions(
           () => syncMenuManifest(menuManifest),
           () =>
@@ -77,13 +91,13 @@ function AuthenticatedLayout() {
               ? getVisibleMenuManifest(tenant.enterpriseId)
               : Promise.resolve({ manifestVersion: 0, items: [] }),
           (items) => {
-            if (alive) {
+            if (isCurrent()) {
               visibleSignature = JSON.stringify(items);
               setMenuItems(items);
             }
           }
         );
-        if (!alive) return;
+        if (!isCurrent()) return;
         store.dispatch({
           type: 'update-userInfo',
           payload: {
@@ -97,11 +111,12 @@ function AuthenticatedLayout() {
           },
         });
         setStatus('ready');
+        setSettledContext(tenant.contextVersion);
         // Notifications can be lost. Re-read the server's effective actions while
         // this page is visible, including when returning from a background tab.
         let refreshing = false;
         const refreshPermissions = async () => {
-          if (!alive || refreshing || document.visibilityState === 'hidden')
+          if (!isCurrent() || refreshing || document.visibilityState === 'hidden')
             return;
           refreshing = true;
           try {
@@ -114,13 +129,13 @@ function AuthenticatedLayout() {
                   : Promise.resolve({ manifestVersion: 0, items: [] }),
               (items) => {
                 const signature = JSON.stringify(items);
-                if (!alive || signature === visibleSignature) return;
+                if (!isCurrent() || signature === visibleSignature) return;
                 visibleSignature = signature;
                 changed = true;
                 setMenuItems(items);
               }
             );
-            if (alive && changed)
+            if (isCurrent() && changed)
               store.dispatch({
                 type: 'update-userInfo',
                 payload: {
@@ -150,20 +165,30 @@ function AuthenticatedLayout() {
           Message.info(authText('auth.reauthenticated'));
       })
       .catch(() => {
-        if (alive) setStatus('failed');
+        if (isCurrent()) {
+          setStatus('failed');
+          setSettledContext(tenant.contextVersion);
+        }
       });
     return () => {
       alive = false;
       stopPermissionRefresh?.();
     };
-  }, [tenant.ready, tenant.enterpriseId]);
+  }, [tenant.ready, tenant.enterpriseId, tenant.contextVersion]);
+  // Unmount old tenant pages in this render, before passive-effect cleanup.
+  if (!tenant.ready || settledContext !== tenant.contextVersion) return <Spin />;
   if (status === 'failed')
     return <Alert type="error" content={t['auth.startFailed']} />;
   if (status === 'limited')
     return <Alert type="error" content={t['auth.restartLimit']} />;
+  if (!tenant.enterpriseId)
+    return <Card title="选择活动租户">
+      <Select aria-label="活动租户" placeholder="选择活动租户" options={tenant.options} value={undefined} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240 }} />
+      <Alert type="info" content={tenant.options.length ? '请选择一个活动成员租户以加载可用菜单。' : '当前身份没有可用的活动成员租户。'} />
+    </Card>;
   return status === 'ready' ? (
     <MenuAccessContext.Provider value={menuItems}>
-      <PageLayout />
+      <PageLayout key={tenant.contextVersion} />
     </MenuAccessContext.Provider>
   ) : (
     <Spin />

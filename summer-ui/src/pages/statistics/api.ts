@@ -4,17 +4,18 @@ import { readEnvelope, readFailure } from '../customer/contract.mjs';
 export type Statistics = {
   window: { from: string; to: string };
   scope: { enterpriseId: string; organizationId: string | null; subject: string };
-  userCount: number;
-  roleCount: number;
-  interfaceCount: number;
-  accessibleInterfaceCount: number;
-  dictionaryCount: number;
-  taskCount: number;
-  taskExecutionCount: number;
-  successfulTaskExecutionCount: number;
-  failedTaskExecutionCount: number;
-  taskSuccessRate: number;
-  auditEventCount: number;
+  userCount: number | null;
+  roleCount: number | null;
+  interfaceCount: number | null;
+  accessibleInterfaceCount: number | null;
+  dictionaryCount: number | null;
+  taskCount: number | null;
+  taskExecutionCount: number | null;
+  successfulTaskExecutionCount: number | null;
+  failedTaskExecutionCount: number | null;
+  taskSuccessRate: number | null;
+  auditEventCount: number | null;
+  asOf: string;
 };
 
 export class StatisticsError extends Error {
