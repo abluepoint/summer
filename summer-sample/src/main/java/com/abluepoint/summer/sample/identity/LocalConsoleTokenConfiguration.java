@@ -15,7 +15,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 @Configuration(proxyBeanMethods = false)
 class LocalConsoleTokenConfiguration {
     private static final List<String> BUSINESS_CLAIMS = List.of("enterprise_memberships", "enterprise_capabilities",
-            "platform_capabilities", "organization_id", "release_operator", "summer_identity_source", "summer_managed_grants", "principal_type");
+            "platform_capabilities", "organization_id", "active_enterprise_id", "organization_context",
+            "release_operator", "summer_identity_source", "summer_managed_grants", "principal_type");
 
     @Bean OAuth2TokenCustomizer<JwtEncodingContext> localConsoleTokenCustomizer(LocalConsoleIdentityClaims identities) {
         return context -> {

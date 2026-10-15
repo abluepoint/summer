@@ -1,0 +1,303 @@
+{
+  "issue": 126,
+  "status": "READY",
+  "stories": [
+    30,
+    31,
+    32,
+    33
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS",
+      "evidence": "attempt-01 version/checksum/audit; attempt-04 audit fault rollback"
+    },
+    {
+      "id": 2,
+      "status": "PASS",
+      "evidence": "attempt-01 seven invalid condition forms and unchanged metadata"
+    },
+    {
+      "id": 3,
+      "status": "PASS",
+      "evidence": "attempt-01 two-role union/user deny/SQL/JPA/preview; attempt-04 UI deny"
+    },
+    {
+      "id": 4,
+      "status": "PASS",
+      "evidence": "attempt-05 real context/token/menu/two tenants/target subject/switch back"
+    },
+    {
+      "id": 5,
+      "status": "PASS",
+      "evidence": "T17 migrations reused; five actual batches preserved"
+    },
+    {
+      "id": 6,
+      "status": "PASS",
+      "evidence": "correlated Unified SUMMER_ failures; credential scan; unit scope/identity/client guards"
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "evidence": "public md/JSON, original red, source/artifact provenance, exact FILES"
+    }
+  ],
+  "candidateBefore": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+  "candidateFinal": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+  "build": {
+    "status": "ready",
+    "buildWindowClosed": true,
+    "candidatePath": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t18-live/frozen-build-01/candidate.jar",
+    "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+    "inputsPath": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t18-live/frozen-build-01/candidate-inputs.json",
+    "inputCount": 534,
+    "changedDuringBuild": [],
+    "migrationsMatch": true,
+    "deltaFromA9": [
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventService.java",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/LocalConsoleTokenConfiguration.java"
+    ],
+    "consumers": [
+      "T18",
+      "T29"
+    ]
+  },
+  "batches": [
+    {
+      "id": "attempt-01-a9a6d65d",
+      "candidateSha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+      "counts": {
+        "tests": 123,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "real_chrome",
+      "errorType": "AssertionError",
+      "browsers": [
+        {
+          "file": "attempt-01-a9a6d65d/browser-normal.json",
+          "mode": "normal",
+          "tests": 1,
+          "failures": 1,
+          "errors": 1,
+          "skipped": 0,
+          "pageErrors": 0,
+          "shutdown": {
+            "processExited": true,
+            "forced": true
+          }
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "sourceChanges": []
+    },
+    {
+      "id": "attempt-02-ui-a9a6d65d",
+      "candidateSha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+      "counts": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "real_chrome",
+      "errorType": "AssertionError",
+      "browsers": [
+        {
+          "file": "attempt-02-ui-a9a6d65d/browser-normal.json",
+          "mode": "normal",
+          "tests": 1,
+          "failures": 1,
+          "errors": 1,
+          "skipped": 0,
+          "pageErrors": 0,
+          "shutdown": {
+            "processExited": true,
+            "forced": true
+          }
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "sourceChanges": []
+    },
+    {
+      "id": "attempt-03-ui-diagnostic",
+      "candidateSha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+      "counts": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "real_chrome",
+      "errorType": "AssertionError",
+      "browsers": [
+        {
+          "file": "attempt-03-ui-diagnostic/browser-normal.json",
+          "mode": "normal",
+          "tests": 1,
+          "failures": 1,
+          "errors": 1,
+          "skipped": 0,
+          "pageErrors": 0,
+          "shutdown": {
+            "processExited": true,
+            "forced": true
+          }
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "sourceChanges": []
+    },
+    {
+      "id": "attempt-04-single-tenant-ui",
+      "candidateSha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+      "counts": {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "errorType": null,
+      "browsers": [
+        {
+          "file": "attempt-04-single-tenant-ui/browser-fault.json",
+          "mode": "fault",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "pageErrors": 0,
+          "shutdown": {
+            "processExited": true,
+            "forced": false
+          }
+        },
+        {
+          "file": "attempt-04-single-tenant-ui/browser-normal.json",
+          "mode": "normal",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "pageErrors": 0,
+          "shutdown": {
+            "processExited": true,
+            "forced": false
+          }
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "sourceChanges": []
+    },
+    {
+      "id": "attempt-05-multi-tenant-fixed",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "counts": {
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "errorType": null,
+      "browsers": [
+        {
+          "file": "attempt-05-multi-tenant-fixed/browser-multi.json",
+          "mode": "multi",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "pageErrors": 0,
+          "shutdown": {
+            "processExited": true,
+            "forced": false
+          }
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "sourceChanges": []
+    }
+  ],
+  "junit": {
+    "initialCompileFailure": {
+      "exit": 1,
+      "results": []
+    },
+    "validRed": {
+      "exit": 1,
+      "results": [
+        {
+          "class": "com.abluepoint.summer.sample.identity.LocalConsoleTokenContextTest",
+          "tests": 4,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "results": [
+        {
+          "class": "com.abluepoint.summer.sample.identity.LocalConsoleTokenContextTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "kind": "Real JwtEncodingContext with mocked authoritative resolver; separate actual PKCE/Chrome receipts"
+  },
+  "productChanges": [
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/LocalConsoleTokenConfiguration.java"
+  ],
+  "dedicatedTest": "summer-sample/src/test/java/com/abluepoint/summer/sample/identity/LocalConsoleTokenContextTest.java",
+  "uiChanged": false,
+  "dataScopeProductionChanged": false,
+  "migrationsChanged": false,
+  "t17Reused": {
+    "report": "docs/acceptance/data-scopes.md",
+    "inputCount": 16,
+    "inputsMatchBothCandidates": true
+  },
+  "relatedUnchangedInputs": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopeBindingRepository.java": "ee4a83d00c156912bc6feb15a932c0ccdf924b1a63ff770ef884df3f400e3367",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopePolicyRepository.java": "a8846f5d73ae9ed48a0bfb3858fb7f796199c0b816634578b8af03cdfe9bda51",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopeService.java": "14a67a3dde1ed38d1e2cd529f1444c280f41bd554f771d6f20787eea0254bd2a",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopeExpression.java": "17298c9197a81305ce81465b7462ad495bb7236a8db2c462e2edd17d8c34bfb2",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopeBindingEntity.java": "373dde63b1b0945d5bacfd9eb8d9ae7904b8b43067491ef3c5ac913acb5bede0",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopePolicyEntity.java": "187d084e979b4b00d8ef1f2302ff205414948890ee83eceb0aa7c277c18d2e32",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopeController.java": "cd5a22555dc70f9653b705ea3562aa947811df44ab4fe0c0819f0153351a44cb",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopePolicyAuditRepository.java": "0a1eafc37a67c94a9a979a6a265ca7f4b018c8c6a95066a5862008f03dc8c851",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopeModels.java": "06bb3ff20164b518091d79773bc2de67174b29e558f1f3840cab4a270ecd6b2b",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/DataScopePolicyAuditEntity.java": "e8896418a46f17a41f346d16dfa310af313c8d479c5ccfc7797185072fa099e3",
+    "summer-ui/src/pages/data-scopes/index.tsx": "a84f74bfee0971334699b5b0c4bf1f5dd69c16494d9a26b02a7349f1b56fdab5",
+    "summer-ui/src/pages/data-scopes/useActiveEnterprise.ts": "26e490c1650791a3fa484a503140b0a3b8844ad21b7c357616ef50adeaa13273",
+    "summer-ui/src/pages/data-scopes/api.ts": "f7c855113ab11db079922f329932718ee3f244fdff60e67ddec2f9d15d172c97"
+  },
+  "networkMocking": false,
+  "sensitiveFindings": [],
+  "cleanup": "VERIFIED",
+  "scopeNote": "No repeat of 123 green backend assertions. New artifact also contains T29 SSE change; not this ticket change. Per-batch counts not summed across duplicate setup.",
+  "visualEvidence": {
+    "reviewed": [
+      "attempt-04-single-tenant-ui/preview-management-denied.png",
+      "attempt-04-single-tenant-ui/preview-audit-fault.png",
+      "attempt-05-multi-tenant-fixed/multi-first-tenant-deny.png",
+      "attempt-05-multi-tenant-fixed/multi-second-tenant-allow.png"
+    ],
+    "limitations": "Original single-tenant preview viewport omitted detail; final full-page images show outcome, with fixed-header/closing-dropdown rendering artifacts."
+  }
+}
