@@ -1,0 +1,1314 @@
+{
+  "issue": 116,
+  "status": "READY_FOR_ROOT_REVIEW",
+  "stories": [
+    9,
+    15,
+    49
+  ],
+  "candidateSha256": "b96d929682d48d2f0a548072f170d7dc9390f0d45eb0809fda0864340561d647",
+  "baseCandidate": "e1a0380ffd187f95c4e517a92412f23d429c828647b7b4f5e4a498b856f4057d",
+  "build": {
+    "changes_from_e1": [
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventConsumer.java",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventStreamListener.java"
+    ],
+    "returncode": 0,
+    "input_count": 534,
+    "changed_during_build": [],
+    "elapsed_seconds": 4.5,
+    "migration_resources_match_source": true,
+    "jar_sha256": "b96d929682d48d2f0a548072f170d7dc9390f0d45eb0809fda0864340561d647"
+  },
+  "acceptanceCriteria": [
+    {
+      "id": "AC1",
+      "status": "PASS",
+      "evidence": "Real HTTP writes commit parameter and outbox together; candidate 993 full acceptance, native create checks."
+    },
+    {
+      "id": "AC2",
+      "status": "PASS",
+      "evidence": "Own-schema outbox table fault causes real HTTP 500; parameter and outbox absent after rollback; Stream length unchanged."
+    },
+    {
+      "id": "AC3",
+      "status": "PASS",
+      "evidence": "61/6 to 61/0 with identical frozen scripts; own pending, JVM restart, retired-consumer claim, joining node; six new real-Redis/persisted-receipt regression tests cover idempotence, retry and terminal dead letter."
+    },
+    {
+      "id": "AC4",
+      "status": "PASS",
+      "evidence": "Real API/UI delivery status and permission-controlled retry; metadata has only six contract fields and no sensitive canary."
+    },
+    {
+      "id": "AC5",
+      "status": "PASS",
+      "evidence": "V10/V11 applied on new MySQL schema; real HTTP/PKCE/Redis/JVM and 17 Chrome checks; no network mocks in native acceptance."
+    },
+    {
+      "id": "AC6",
+      "status": "PASS",
+      "evidence": "Existing parameter/event MVC and RawResponse/ApiResponse contract retained; real success/error request correlation and SUMMER_ failures; runtime sensitive-value scan clean."
+    },
+    {
+      "id": "AC7",
+      "status": "PASS",
+      "evidence": "Stories 9/15/49, design, implementation, defect, actual counts, immutable red/green artifacts and source/dist backups recorded; protected paths preserved."
+    }
+  ],
+  "nativeFullBaseline": {
+    "counts": {
+      "tests": 117,
+      "failures": 6,
+      "errors": 0,
+      "skipped": 0
+    },
+    "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+    "checks": [
+      {
+        "name": "capability_catalog",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "capability_catalog_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.read",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.read_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.create",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.create_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.update",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.update_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.publish",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.publish_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.disable",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.disable_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.rollback",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.rollback_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.write",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.write_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_menu.systemParameters.read",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_menu.systemParameters.read_correlation",
+        "passed": true
+      },
+      {
+        "name": "admin_binding",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "admin_binding_correlation",
+        "passed": true
+      },
+      {
+        "name": "grant_admin",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "grant_admin_correlation",
+        "passed": true
+      },
+      {
+        "name": "create_reader",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "create_reader_correlation",
+        "passed": true
+      },
+      {
+        "name": "reader_membership",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "reader_membership_correlation",
+        "passed": true
+      },
+      {
+        "name": "real_flyway_event_migrations",
+        "passed": true
+      },
+      {
+        "name": "create_first",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_first_correlation",
+        "passed": true
+      },
+      {
+        "name": "first_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "first_published",
+        "passed": true
+      },
+      {
+        "name": "cold_stream_first_event_consumed",
+        "passed": true,
+        "eventId": "01a14007-91d7-776e-8f13-c76864a80e4f"
+      },
+      {
+        "name": "create_second",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_second_correlation",
+        "passed": true
+      },
+      {
+        "name": "second_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "second_published",
+        "passed": true
+      },
+      {
+        "name": "subsequent_event_consumed",
+        "passed": true
+      },
+      {
+        "name": "create_receipt-fault",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_receipt-fault_correlation",
+        "passed": true
+      },
+      {
+        "name": "receipt-fault_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "receipt-fault_published",
+        "passed": true
+      },
+      {
+        "name": "consumer_failure_is_pending",
+        "passed": true
+      },
+      {
+        "name": "consumer_pending_recovers_after_database_restore",
+        "passed": false,
+        "eventId": "01a14007-994e-77ce-abd3-fbc703458efd"
+      },
+      {
+        "name": "consumer_pending_recovers_after_jvm_restart",
+        "passed": false,
+        "eventId": "01a14007-994e-77ce-abd3-fbc703458efd"
+      },
+      {
+        "name": "pending_queue_drained_after_recovery",
+        "passed": false
+      },
+      {
+        "name": "pending_event_metadata_valid_and_reachable",
+        "passed": true
+      },
+      {
+        "name": "create_orphan-consumer",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_orphan-consumer_correlation",
+        "passed": true
+      },
+      {
+        "name": "orphan-consumer_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "orphan-consumer_published",
+        "passed": true
+      },
+      {
+        "name": "orphan_fixture_is_real_native_pending",
+        "passed": true
+      },
+      {
+        "name": "orphan_fixture_has_retired_owner_and_expired_idle",
+        "passed": true
+      },
+      {
+        "name": "native_listener_claims_retired_consumer_pending",
+        "passed": false,
+        "eventId": "01a14008-031a-772e-a444-271689020b5f"
+      },
+      {
+        "name": "claimed_orphan_is_acknowledged",
+        "passed": false
+      },
+      {
+        "name": "create_joining-node",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_joining-node_correlation",
+        "passed": true
+      },
+      {
+        "name": "joining-node_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "joining-node_published",
+        "passed": true
+      },
+      {
+        "name": "joining_fixture_is_real_native_pending",
+        "passed": true
+      },
+      {
+        "name": "joining_node_consumes_unprocessed_stream_backlog",
+        "passed": false,
+        "eventId": "01a14008-4beb-75f6-bbd2-e2af15895401"
+      },
+      {
+        "name": "create_outbox_database_failure",
+        "passed": true,
+        "status": 500,
+        "expected": 500
+      },
+      {
+        "name": "create_outbox_database_failure_correlation",
+        "passed": true
+      },
+      {
+        "name": "create_outbox_database_failure_summer_error",
+        "passed": true
+      },
+      {
+        "name": "failed_outbox_rolls_back_parameter",
+        "passed": true
+      },
+      {
+        "name": "rolled_back_write_has_no_outbox",
+        "passed": true
+      },
+      {
+        "name": "rolled_back_write_has_no_stream_event",
+        "passed": true
+      },
+      {
+        "name": "admin_event_details",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "admin_event_details_correlation",
+        "passed": true
+      },
+      {
+        "name": "event_body_metadata_only",
+        "passed": true
+      },
+      {
+        "name": "event_details_exclude_sensitive_canary",
+        "passed": true
+      },
+      {
+        "name": "reader_event_details",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "reader_event_details_correlation",
+        "passed": true
+      },
+      {
+        "name": "reader_cannot_retry",
+        "passed": true,
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "name": "reader_cannot_retry_correlation",
+        "passed": true
+      },
+      {
+        "name": "reader_cannot_retry_summer_error",
+        "passed": true
+      },
+      {
+        "name": "missing_event_retry",
+        "passed": true,
+        "status": 404,
+        "expected": 404
+      },
+      {
+        "name": "missing_event_retry_correlation",
+        "passed": true
+      },
+      {
+        "name": "missing_event_retry_summer_error",
+        "passed": true
+      },
+      {
+        "name": "admin_duplicate_retry",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "admin_duplicate_retry_correlation",
+        "passed": true
+      },
+      {
+        "name": "retry_republishes_same_event",
+        "passed": true
+      },
+      {
+        "name": "duplicate_has_single_receipt",
+        "passed": true
+      },
+      {
+        "name": "reader_cannot_access_other_tenant",
+        "passed": true,
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "name": "reader_cannot_access_other_tenant_correlation",
+        "passed": true
+      },
+      {
+        "name": "reader_cannot_access_other_tenant_summer_error",
+        "passed": true
+      },
+      {
+        "name": "write_commits_during_redis_publish_fault",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "write_commits_during_redis_publish_fault_correlation",
+        "passed": true
+      },
+      {
+        "name": "publisher_fault_keeps_committed_outbox",
+        "passed": true
+      },
+      {
+        "name": "publisher_fault_reaches_three_attempt_dead_letter",
+        "passed": true
+      },
+      {
+        "name": "dead_letter_observable",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "dead_letter_observable_correlation",
+        "passed": true
+      },
+      {
+        "name": "dead_letter_has_safe_error_and_attempts",
+        "passed": true
+      },
+      {
+        "name": "dead_letter_excludes_sensitive_canary",
+        "passed": true
+      },
+      {
+        "name": "browser_retry_republishes_dead_letter",
+        "passed": true
+      },
+      {
+        "name": "browser_retry_consumed",
+        "passed": true
+      },
+      {
+        "name": "reader_binding_before_deny",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "reader_binding_before_deny_correlation",
+        "passed": true
+      },
+      {
+        "name": "reader_explicit_read_deny",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "reader_explicit_read_deny_correlation",
+        "passed": true
+      },
+      {
+        "name": "no_sensitive_values_in_runtime_logs",
+        "passed": true
+      }
+    ],
+    "browser": {
+      "checks": [
+        {
+          "name": "chrome_admin_initializes_real_menu_and_pkce_page",
+          "passed": true
+        },
+        {
+          "name": "chrome_reader_sees_real_dead_letter",
+          "passed": true
+        },
+        {
+          "name": "chrome_delivery_metadata_visible",
+          "passed": true
+        },
+        {
+          "name": "chrome_retry_denied_by_real_grant",
+          "passed": true
+        },
+        {
+          "name": "chrome_retry_denial_has_correlation",
+          "passed": true
+        },
+        {
+          "name": "chrome_denied_retry_keeps_dead_letter",
+          "passed": true
+        },
+        {
+          "name": "chrome_admin_sees_delivery_details",
+          "passed": true
+        },
+        {
+          "name": "chrome_admin_retry_success",
+          "passed": true
+        },
+        {
+          "name": "chrome_success_retry_has_correlation",
+          "passed": true
+        },
+        {
+          "name": "chrome_retried_event_shows_published",
+          "passed": true
+        },
+        {
+          "name": "chrome_real_event_database_fault_visible",
+          "passed": true
+        },
+        {
+          "name": "chrome_fault_clears_delivery_rows",
+          "passed": true
+        },
+        {
+          "name": "chrome_event_list_recovers_after_database_restore",
+          "passed": true
+        },
+        {
+          "name": "chrome_event_read_denied_by_real_grant",
+          "passed": true
+        },
+        {
+          "name": "chrome_read_denial_clears_delivery_rows",
+          "passed": true
+        },
+        {
+          "name": "chrome_read_denial_shows_request_id",
+          "passed": true
+        },
+        {
+          "name": "chrome_no_unhandled_errors",
+          "passed": true
+        }
+      ],
+      "httpErrors": [
+        {
+          "path": "/api/v1/platform/menu-manifest",
+          "status": 403,
+          "requestId": "30dc9adb-dc75-4eb3-9289-c0e97a5ff613"
+        },
+        {
+          "path": "/api/v1/enterprises/ent-acme/system-parameter-events/01a14008-bdf3-7ab0-9c0e-54bf3317aab9/retry",
+          "status": 403,
+          "requestId": "696bccf6-2b36-443f-91af-1629a4d57bac"
+        },
+        {
+          "path": "/api/v1/enterprises/ent-acme/system-parameter-events",
+          "status": 500,
+          "requestId": "c17831c0-9f37-4cd0-9f96-2ba4d1244ae1"
+        },
+        {
+          "path": "/api/v1/platform/menu-manifest",
+          "status": 403,
+          "requestId": "3765ff2f-e29d-4ae1-b156-77d534bc67ce"
+        },
+        {
+          "path": "/api/v1/enterprises/ent-acme/system-parameter-events",
+          "status": 403,
+          "requestId": "28f998a7-273f-4736-81a8-8681d97d459b"
+        },
+        {
+          "path": "/api/v1/enterprises/ent-acme/system-parameters",
+          "status": 403,
+          "requestId": "25bf9844-706e-4ce6-8ba1-3fecbfc793fa"
+        }
+      ],
+      "networkMocking": false,
+      "pageErrors": 0,
+      "complete": true
+    }
+  },
+  "nativeRecoveryRed": {
+    "counts": {
+      "tests": 61,
+      "failures": 6,
+      "errors": 0,
+      "skipped": 0
+    },
+    "failedChecks": [
+      {
+        "name": "consumer_pending_recovers_after_database_restore",
+        "passed": false,
+        "eventId": "01a14017-88f9-754b-9702-b6993ba2c51b"
+      },
+      {
+        "name": "consumer_pending_recovers_after_jvm_restart",
+        "passed": false,
+        "eventId": "01a14017-88f9-754b-9702-b6993ba2c51b"
+      },
+      {
+        "name": "pending_queue_drained_after_recovery",
+        "passed": false
+      },
+      {
+        "name": "native_listener_claims_retired_consumer_pending",
+        "passed": false,
+        "eventId": "01a14017-f348-76b6-a26b-95e7c6717d32"
+      },
+      {
+        "name": "claimed_orphan_is_acknowledged",
+        "passed": false
+      },
+      {
+        "name": "joining_node_consumes_unprocessed_stream_backlog",
+        "passed": false,
+        "eventId": "01a14018-3c35-7c24-b284-2d01c690f10b"
+      }
+    ]
+  },
+  "nativeRecoveryGreen": {
+    "counts": {
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "checks": [
+      {
+        "name": "capability_catalog",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "capability_catalog_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.read",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.read_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.create",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.create_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.update",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.update_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.publish",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.publish_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.disable",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.disable_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.rollback",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.rollback_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_system.parameter.write",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_system.parameter.write_correlation",
+        "passed": true
+      },
+      {
+        "name": "register_menu.systemParameters.read",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "register_menu.systemParameters.read_correlation",
+        "passed": true
+      },
+      {
+        "name": "admin_binding",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "admin_binding_correlation",
+        "passed": true
+      },
+      {
+        "name": "grant_admin",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "grant_admin_correlation",
+        "passed": true
+      },
+      {
+        "name": "create_reader",
+        "passed": true,
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "name": "create_reader_correlation",
+        "passed": true
+      },
+      {
+        "name": "reader_membership",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "reader_membership_correlation",
+        "passed": true
+      },
+      {
+        "name": "real_flyway_event_migrations",
+        "passed": true
+      },
+      {
+        "name": "create_first",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_first_correlation",
+        "passed": true
+      },
+      {
+        "name": "first_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "first_published",
+        "passed": true
+      },
+      {
+        "name": "cold_stream_first_event_consumed",
+        "passed": true,
+        "eventId": "01a1401a-76ac-741e-a76d-853f969a9cff"
+      },
+      {
+        "name": "create_second",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_second_correlation",
+        "passed": true
+      },
+      {
+        "name": "second_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "second_published",
+        "passed": true
+      },
+      {
+        "name": "subsequent_event_consumed",
+        "passed": true
+      },
+      {
+        "name": "create_receipt-fault",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_receipt-fault_correlation",
+        "passed": true
+      },
+      {
+        "name": "receipt-fault_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "receipt-fault_published",
+        "passed": true
+      },
+      {
+        "name": "consumer_failure_is_pending",
+        "passed": true
+      },
+      {
+        "name": "consumer_pending_recovers_after_database_restore",
+        "passed": true,
+        "eventId": "01a1401a-7c6d-77f3-ba3e-8368e8e5896d"
+      },
+      {
+        "name": "consumer_pending_recovers_after_jvm_restart",
+        "passed": true,
+        "eventId": "01a1401a-7c6d-77f3-ba3e-8368e8e5896d"
+      },
+      {
+        "name": "pending_queue_drained_after_recovery",
+        "passed": true
+      },
+      {
+        "name": "recovery_event_metadata_valid",
+        "passed": true
+      },
+      {
+        "name": "create_orphan-consumer",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_orphan-consumer_correlation",
+        "passed": true
+      },
+      {
+        "name": "orphan-consumer_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "orphan-consumer_published",
+        "passed": true
+      },
+      {
+        "name": "orphan_fixture_is_real_native_pending",
+        "passed": true
+      },
+      {
+        "name": "orphan_fixture_has_retired_owner_and_expired_idle",
+        "passed": true
+      },
+      {
+        "name": "native_listener_claims_retired_consumer_pending",
+        "passed": true,
+        "eventId": "01a1401a-a80f-7944-b0aa-19e88c95af8c"
+      },
+      {
+        "name": "claimed_orphan_is_acknowledged",
+        "passed": true
+      },
+      {
+        "name": "create_joining-node",
+        "passed": true,
+        "status": 201,
+        "expected": 201
+      },
+      {
+        "name": "create_joining-node_correlation",
+        "passed": true
+      },
+      {
+        "name": "joining-node_outbox_committed_with_parameter",
+        "passed": true
+      },
+      {
+        "name": "joining-node_published",
+        "passed": true
+      },
+      {
+        "name": "joining_fixture_is_real_native_pending",
+        "passed": true
+      },
+      {
+        "name": "joining_node_consumes_unprocessed_stream_backlog",
+        "passed": true,
+        "eventId": "01a1401a-d18a-75fe-a05f-4a243e0f3d2e"
+      },
+      {
+        "name": "no_sensitive_values_in_runtime_logs",
+        "passed": true
+      }
+    ],
+    "cleanup": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "20081": false,
+        "20082": false,
+        "20083": false,
+        "20573": false,
+        "20580": false
+      },
+      "app_account_absent": true
+    }
+  },
+  "sameRecoveryScripts": true,
+  "junit": {
+    "exit": 0,
+    "reports": [
+      {
+        "name": "com.abluepoint.summer.sample.systemparameter.SystemParameterEventRedisIntegrationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "publishesPendingOutboxToRedisStream()",
+            "passed": true,
+            "failure": null
+          }
+        ]
+      },
+      {
+        "name": "com.abluepoint.summer.sample.systemparameter.SystemParameterEventConsumerTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "failedDeliveryRetriesThenMovesToDeadLetter()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "repeatedDeliveryIsIdempotent()",
+            "passed": true,
+            "failure": null
+          }
+        ]
+      },
+      {
+        "name": "com.abluepoint.summer.sample.systemparameter.ParameterEventHttpTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "committedParameterChangeHasQueryableValueFreeDelivery()",
+            "passed": true,
+            "failure": null
+          }
+        ]
+      },
+      {
+        "name": "com.abluepoint.summer.sample.systemparameter.SystemParameterEventDeliveryServiceTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "publishesContractWithoutValueAndMarksOutboxPublished()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "failedRedisDeliveryUsesRetryThenDeadLetter()",
+            "passed": true,
+            "failure": null
+          }
+        ]
+      },
+      {
+        "name": "com.abluepoint.summer.sample.systemparameter.SystemParameterEventStreamRecoveryIntegrationTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          {
+            "name": "claimsIdlePendingOwnedByRetiredConsumer()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "duplicateStreamRecordsInvokeRealHandlerOnlyOnce()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "deadLetterReceiptRemainsTerminalOnDuplicateAndJoiningNodeReplay()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "retriesFailingHandlerToPersistedDeadLetterAndAcknowledgesTerminalEntry()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "joiningNodeConsumesUnprocessedStreamBacklog()",
+            "passed": true,
+            "failure": null
+          },
+          {
+            "name": "retriesOwnPendingAfterAcknowledgementFailureAndListenerRestart()",
+            "passed": true,
+            "failure": null
+          }
+        ]
+      }
+    ],
+    "inputsChanged": [],
+    "counts": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "attempts": [
+    {
+      "directory": "native-audit-attempt01",
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 69,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "directory": "native-audit-attempt02",
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 80,
+        "failures": 3,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "directory": "native-audit-attempt03",
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 103,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "directory": "native-audit-attempt04",
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 117,
+        "failures": 6,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "directory": "native-recovery-red05",
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 61,
+        "failures": 6,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    },
+    {
+      "directory": "native-recovery-green01",
+      "candidateSha256": "b96d929682d48d2f0a548072f170d7dc9390f0d45eb0809fda0864340561d647",
+      "counts": {
+        "tests": 61,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      }
+    }
+  ],
+  "counting": "Counts are separate executions, not additive. The 17 browser checks are included in the 117 full-baseline checks. JUnit includes existing mocked unit/MockMvc tests; native HTTP/Chrome uses no network mocks.",
+  "harnessCorrections": [
+    "Attempt01 incorrectly expected an absent Stream before first event; Spring group initialization materialized an empty Stream. Actual first event consumed successfully.",
+    "Attempt02 started the reader before an administrator had published the initial menu manifest. Zero Chrome assertions; one harness timeout. Corrected by real admin login before reader flow.",
+    "Focused recovery diagnostic checks stored event metadata even after successful processing; six failure assertions and recovery scenarios remain unchanged. Identical corrected scripts were run red and green."
+  ],
+  "scope": {
+    "productionFiles": [
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventConsumer.java",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventStreamListener.java"
+    ],
+    "newMigration": false,
+    "newDependencies": false,
+    "gitIndexWritesByTask": false,
+    "commitsByTask": false,
+    "issueMutationByTask": false,
+    "uiPageSha256": "2e8304b8cecb5c452f50be45a96fa00e5e23bad1e374ef61d039e1ca1b6ef8e5",
+    "uiMatchesRootT10Commit": "9c278d6",
+    "customerControllerSha256": "d6a830964d63ee8e60f2b32c1a4561000a76f86488f6ca35330c9e1dbd94b416"
+  },
+  "limits": [
+    "Retired-owner idle age is a real Redis XCLAIM IDLE 31000 fixture, not a claim of naturally waiting 31 seconds.",
+    "New-node replay covers retained Stream records. Delivery remains at least once; no exactly-once guarantee.",
+    "The production listener currently uses a no-op business handler. Consumer handler failure/dead-letter behavior is exercised with a controlled handler through the real consumer, Redis and persisted H2 receipts; native failure recovery uses real MySQL.",
+    "UI retry resets outbox delivery; terminal consumer receipts are not implicitly revived by duplicate delivery.",
+    "Screenshots crop the event table to exclude parameter values; visible error/request IDs are validated by DOM and actual HTTP receipts."
+  ],
+  "rawEvidenceDirectory": ".git/summer4-closeout-20261015/frontend/t08-116",
+  "screenshotVisualReview": [
+    "event-retry-published.png",
+    "event-retry-denied.png",
+    "event-database-fault.png"
+  ]
+}

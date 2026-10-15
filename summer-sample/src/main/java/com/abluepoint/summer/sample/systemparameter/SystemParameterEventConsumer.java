@@ -22,6 +22,9 @@ class SystemParameterEventConsumer {
         if (existing != null && existing.status() == SystemParameterEventReceiptStatus.PROCESSED) {
             return SystemParameterEventConsumeResult.DUPLICATE;
         }
+        if (existing != null && existing.status() == SystemParameterEventReceiptStatus.DEAD_LETTER) {
+            return SystemParameterEventConsumeResult.DEAD_LETTER;
+        }
         try {
             handler.accept(event);
             if (existing == null) existing = new SystemParameterEventReceiptEntity(event.eventId(), Instant.now());
