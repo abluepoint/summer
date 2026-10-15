@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class MysqlSummerKeyStore implements SummerKeyStore {
     private final KeyMaterialRepository repository;
@@ -192,6 +194,12 @@ class MysqlSummerKeyStore implements SummerKeyStore {
             if (completed != null) return completed;
         }
         if (retentionDays < 1 || retentionDays > 365) throw new KeyRotationValidationException("retentionDays must be between 1 and 365");
+        if (rotationStates != null && TransactionSynchronizationManager.isActualTransactionActive()) {
+            // Every ready instance has initialized this shared row. Serialize the
+            // version check across nodes before reading or changing key material.
+            rotationStates.lockForRotation().orElseThrow(
+                    () -> new IllegalStateException("SUMMER_KEY_ROTATION_STATE_MISSING"));
+        }
         List<KeyMaterialEntity> before = repository.findAll();
         int currentVersion = before.stream().mapToInt(KeyMaterialEntity::version).max().orElse(0);
         if (currentVersion != expectedVersion) throw new KeyRotationPreconditionException("The signing key version has changed");
@@ -210,10 +218,21 @@ class MysqlSummerKeyStore implements SummerKeyStore {
             List<JWK> rotatedKeys = new ArrayList<>(current.getKeys());
             rotatedKeys.add(generated);
             JWKSet nextSet = new JWKSet(rotatedKeys);
-            current = nextSet;
             Rotation result = new Rotation(next.kid(), next.version(), retentionDays);
-            if (idempotencyKey != null && !idempotencyKey.isBlank()) completedRotations.putIfAbsent(idempotencyKey, result);
             markManualRotation();
+            Runnable publish = () -> {
+                current = nextSet;
+                if (idempotencyKey != null && !idempotencyKey.isBlank()) completedRotations.putIfAbsent(idempotencyKey, result);
+            };
+            if (TransactionSynchronizationManager.isSynchronizationActive()
+                    && TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() { publish.run(); }
+                });
+            } else {
+                publish.run();
+            }
             return result;
         } catch (Exception exception) {
             throw new IllegalStateException("SUMMER_KEY_ROTATION_FAILED", exception);

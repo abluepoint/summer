@@ -127,7 +127,14 @@ export default function SecurityKeysPage() {
               ? t['securityKeys.stale']
               : t['securityKeys.rotateError']
           }
-          content={rotationError.message}
+          content={
+            <>
+              <Typography.Text>{rotationError.message}</Typography.Text>
+              {rotationError.requestId && (
+                <Typography.Text> requestId: {rotationError.requestId}</Typography.Text>
+              )}
+            </>
+          }
           style={{ marginBottom: 16 }}
         />
       )}

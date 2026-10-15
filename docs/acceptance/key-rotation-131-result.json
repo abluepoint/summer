@@ -1,0 +1,589 @@
+{
+  "issue": 131,
+  "title": "T23｜手动密钥轮换",
+  "status": "READY",
+  "issueReady": true,
+  "stories": [
+    35,
+    37
+  ],
+  "dependency": {
+    "issue": 129,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED"
+  },
+  "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+  "networkMocking": false,
+  "productionJavaInputsMatchCandidate": 15,
+  "runtimeInputsUnchanged": 262,
+  "originalRuns": [
+    {
+      "attempt": "attempt-01-442e609f",
+      "runtime": {
+        "tests": 31,
+        "failures": 4,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserNormal": {
+        "tests": 9,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserFault": {
+        "tests": 2,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "cleanup": "VERIFIED"
+    },
+    {
+      "attempt": "attempt-02-harness-corrections",
+      "runtime": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browser": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "cleanup": "VERIFIED"
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "runtime": {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserConflict": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browserFault": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "cleanup": "VERIFIED",
+      "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2"
+    }
+  ],
+  "latestByUniqueCheck": {
+    "runtime": {
+      "tests": 35,
+      "failures": 0
+    },
+    "browser": {
+      "tests": 11,
+      "failures": 0
+    },
+    "note": "分批、跨候选的最新有效检查索引；不是在917候选重跑全矩阵。原始失败和编排错误不改写。"
+  },
+  "runtimeChecks": [
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "production_mysql_key_migration",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "invalid_retention_rejected",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "invalid_response_contract",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "invalid_audit_operator_result",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "ungranted_rotation_denied",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "denied_response_contract",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "admin_creates_and_switches_active_key",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "successful_rotation_audit_operator_result",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21081_signs_new_kid",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21081_new_token_verifies",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21081_old_valid_token_still_verifies",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21081_jwks_public_only",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21082_signs_new_kid",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21082_new_token_verifies",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21082_old_valid_token_still_verifies",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "node_21082_jwks_public_only",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "old_key_grace_metadata_and_version",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "stale_version_conflict",
+      "passed": true,
+      "httpStatus": 412
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "conflict_response_contract",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "conflict_audit_operator_result",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "database_insert_fault_returns_failure",
+      "passed": true,
+      "httpStatus": 500
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "database_insert_fault_contract",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "failed_rotation_database_state_unchanged",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "failed_rotation_audit_operator_result",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "failed_rotation_preserves_effective_signing_key",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "same_idempotency_key_retry_commits_reported_key",
+      "passed": true,
+      "httpStatus": 200,
+      "reportedKeyRowCount": 1,
+      "reportedKeyIsActive": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "dual_node_same_version_one_success_one_conflict",
+      "passed": true,
+      "httpStatuses": [
+        200,
+        412
+      ]
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "dual_node_rotation_has_exactly_one_active_key",
+      "passed": true,
+      "activeKeyCount": 1
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "concurrent_publication_samples_verify_both_tokens",
+      "passed": true,
+      "samples": 5,
+      "failedSamples": 0
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "concurrent_loser_has_conflict_audit",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "name": "expired_grace_public_key_filtered_time_fixture",
+      "passed": true,
+      "fixture": "owned_schema_graceUntil_past_not_natural_token_expiry"
+    },
+    {
+      "attempt": "attempt-02-harness-corrections",
+      "name": "expired_grace_metadata_filtered_time_fixture",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "no_sensitive_runtime_output",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "recovered_retry_key_signs_verifiable_token_on_other_node",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "name": "concurrent_conflict_response_contract",
+      "passed": true
+    }
+  ],
+  "browserChecks": [
+    {
+      "attempt": "attempt-01-442e609f",
+      "mode": "normal",
+      "name": "invalid_zero_retention_clamped",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "mode": "normal",
+      "name": "invalid_excess_retention_clamped",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "mode": "normal",
+      "name": "real_ui_rotation_success",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "mode": "normal",
+      "name": "current_active_version_changes",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-02-harness-corrections",
+      "mode": "retention",
+      "name": "old_public_key_grace_retention_visible",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "mode": "conflict-replay",
+      "name": "stale_page_real_conflict",
+      "passed": true,
+      "httpStatus": 412
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "mode": "normal",
+      "name": "stale_page_retains_form",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "mode": "conflict-replay",
+      "name": "conflict_request_id_visible",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-01-442e609f",
+      "mode": "normal",
+      "name": "ungranted_user_rotation_control_absent",
+      "passed": true
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "mode": "fault",
+      "name": "real_database_failure_visible",
+      "passed": true,
+      "httpStatus": 500
+    },
+    {
+      "attempt": "attempt-03-91730781-replay",
+      "mode": "fault",
+      "name": "database_failure_request_id_visible",
+      "passed": true
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS",
+      "evidence": [
+        "admin_creates_and_switches_active_key",
+        "real_ui_rotation_success",
+        "dual_node_same_version_one_success_one_conflict"
+      ],
+      "note": "正常创建和签发原绿证据保留；新917候选真实双节点同版本已一200一412。"
+    },
+    {
+      "id": 2,
+      "status": "PASS_WITH_TIME_FIXTURE",
+      "evidence": [
+        "node_21081_old_valid_token_still_verifies",
+        "node_21082_old_valid_token_still_verifies",
+        "expired_grace_public_key_filtered_time_fixture",
+        "expired_grace_metadata_filtered_time_fixture"
+      ],
+      "note": "有效旧token与新token真实验签；GRACE截止过滤使用独立schema时间夹具，无自然等待。原AC未指定独立人工停用按钮，不额外新增门禁。"
+    },
+    {
+      "id": 3,
+      "status": "PASS",
+      "evidence": [
+        "failed_rotation_database_state_unchanged",
+        "failed_rotation_preserves_effective_signing_key",
+        "same_idempotency_key_retry_commits_reported_key"
+      ],
+      "note": "新917候选故障回滚保留原状态，同幂等键重试实际落库为ACTIVE且另一节点真实签发验签。"
+    },
+    {
+      "id": 4,
+      "status": "PASS",
+      "evidence": [
+        "successful_rotation_audit_operator_result",
+        "invalid_audit_operator_result",
+        "conflict_audit_operator_result",
+        "failed_rotation_audit_operator_result",
+        "concurrent_loser_has_conflict_audit"
+      ],
+      "note": "真实成功、非法、过时版本、故障审计原证据保留；新候选并发落败产生SUMMER_PRECONDITION_FAILED关联审计。"
+    },
+    {
+      "id": 5,
+      "status": "PASS",
+      "evidence": [
+        "production_mysql_key_migration",
+        "real_ui_rotation_success",
+        "ungranted_user_rotation_control_absent",
+        "invalid_zero_retention_clamped",
+        "real_database_failure_visible"
+      ],
+      "note": "生产迁移、实际HTTP/Chrome成功/拒绝/非法/故障原证据保留；三缺陷新候选10运行时+4Chrome通过。"
+    },
+    {
+      "id": 6,
+      "status": "PASS",
+      "evidence": [
+        "invalid_response_contract",
+        "denied_response_contract",
+        "conflict_response_contract",
+        "database_insert_fault_contract",
+        "no_sensitive_runtime_output",
+        "conflict_request_id_visible",
+        "database_failure_request_id_visible"
+      ],
+      "note": "HTTP SUMMER错误与correlation通过；新Chrome412/500均显示requestId，敏感扫描0。"
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "evidence": [
+        "this document",
+        "raw receipts",
+        "source-baseline.json"
+      ],
+      "note": "原红灯、夹具修正、19项JUnit、2项组件、候选重放和清理分别记录；用户/外部改动保留。"
+    }
+  ],
+  "defects": [
+    {
+      "id": "T23-D1",
+      "title": "失败事务提前缓存幂等回执",
+      "paths": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java"
+      ],
+      "observed": "500故障恢复后同幂等键返回200，但响应kid不等于数据库ACTIVE kid。原字段reportedKeyPersisted实际只比较ACTIVE kid，不能独立证明所有行中不存在该kid。",
+      "status": "RESOLVED",
+      "verifiedCandidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+      "evidenceAttempt": "attempt-03-91730781-replay"
+    },
+    {
+      "id": "T23-D2",
+      "title": "双节点相同版本竞争返回500",
+      "paths": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/KeyMaterialRepository.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/KeyRotationStateRepository.java"
+      ],
+      "httpStatuses": [
+        200,
+        500
+      ],
+      "activeKeyCount": 1,
+      "newKeyRows": 1,
+      "status": "RESOLVED",
+      "verifiedCandidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+      "evidenceAttempt": "attempt-03-91730781-replay"
+    },
+    {
+      "id": "T23-D3",
+      "title": "轮换错误UI缺少requestId",
+      "paths": [
+        "summer-ui/src/pages/security-keys/index.tsx"
+      ],
+      "httpStatuses": [
+        412,
+        500
+      ],
+      "status": "RESOLVED",
+      "verifiedCandidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+      "evidenceAttempt": "attempt-03-91730781-replay"
+    }
+  ],
+  "harnessCorrections": [
+    "通用异常审计结果实际为FAILED，非SUMMER_INTERNAL_ERROR。",
+    "Arco保留期表头改按真实文本定位，截图已显示该列。",
+    "过期夹具前换用新活动key签发的admin token，避免已淘汰旧token造成401。"
+  ],
+  "limitations": [
+    "5次并发发布验签采样不能证明全部交错顺序。",
+    "过期过滤使用明确的graceUntil时间夹具，非自然时间推进或管理员停用接口。",
+    "并发夹具在独立schema的INSERT延时2秒，不修改生产源码。"
+  ],
+  "sensitiveFindings": [],
+  "cleanup": [
+    {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "21081": false,
+        "21082": false,
+        "21083": false,
+        "21573": false,
+        "21580": false
+      },
+      "app_account_absent": true
+    },
+    {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "21081": false,
+        "21082": false,
+        "21083": false,
+        "21573": false,
+        "21580": false
+      },
+      "app_account_absent": true
+    },
+    {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "21081": false,
+        "21082": false,
+        "21083": false,
+        "21573": false,
+        "21580": false
+      },
+      "app_account_absent": true
+    }
+  ],
+  "evidenceRoot": ".git/summer4-closeout-20261015/t23-live",
+  "sourceRepairs": {
+    "files": {
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/key/MysqlSummerKeyStore.java": "d46eac19cd7ff9b408cf2337909e664d248afe756cc70c67ef6483d5585bc851",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/key/KeyRotationStateRepository.java": "51cff249d98ed9dc7643886b5eb1372168718377ce43557f4860a40fcd8b04e5",
+      "summer-sample/src/test/java/com/abluepoint/summer/sample/key/ManualKeyRotationTransactionTest.java": "e1a3eee5649b309c37958e8a3de52f2cb2cb329d01e8916521ffb73e591e51ab",
+      "summer-ui/src/pages/security-keys/index.tsx": "f479be814075b83765f9fbc05d4faa930aa392dd110228aa7c06e2084f8dde6d",
+      "summer-ui/scripts/key-rotation-browser-fixture.tsx": "1850998ddfeebfb12597dcc8d96e3328f9aa600924830637c1310a0dd2bd5cd1",
+      "summer-ui/scripts/verify-key-rotation-errors-browser.mjs": "9faff4aea2d9829b42720f6ac293d76091883eed3710e1225bd9248f8e77e66e"
+    },
+    "junit": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "component": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "typecheckExitCode": 0,
+    "runtimeReplay": {
+      "status": "PASS",
+      "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+      "runtime": {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browser": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "sourceInputs": {
+        "inputs": 262,
+        "changedPaths": [],
+        "stable": true
+      }
+    },
+    "newMigration": false,
+    "sharedAuthorizationChanged": false,
+    "scopeConclusion": "Existing GRACE expiry filtering supplies expiry disable semantics; verified with an explicit time fixture. No natural waiting, no new administrator-disable endpoint required by the original text."
+  },
+  "originalCandidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "candidateScope": "New candidate replay covers only T23-D1/D2/D3. Previous unrelated green cases remain attributed to 442e609f.",
+  "initialRuntimeKeyInputsUnchanged": 17
+}
