@@ -528,6 +528,29 @@
       "--max-workers=2",
       "--console=plain",
       "-I",
+      "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/task/integration-final-442.init.gradle"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 5429.9,
+    "head": "9da9e0091669eb94ee6de700f1c890be8e7a914b",
+    "source_input_count": 696,
+    "source_changes_during_run": [],
+    "junit_totals": {
+      "tests": 688,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "previousFullRepositoryCheck": {
+    "command": [
+      "./gradlew",
+      "check",
+      "--no-configuration-cache",
+      "--no-parallel",
+      "--max-workers=2",
+      "--console=plain",
+      "-I",
       "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/task/integration-h2-composite.init.gradle"
     ],
     "returncode": 0,
@@ -541,5 +564,30 @@
       "errors": 0,
       "skipped": 0
     }
+  },
+  "issueCloseoutLatest": {
+    "closedCount": 14,
+    "totalTickets": 36,
+    "closedThisBatch": [
+      114,
+      123,
+      129,
+      138
+    ],
+    "allFourReadBackState": "CLOSED",
+    "allFourReadBackReason": "COMPLETED",
+    "pushedCommits": [
+      "c88eb236da12e4c95a634ce0483c308b29d87012",
+      "49c10c71041db48a0b7ed9902218133c1d51f7e0",
+      "9da9e0091669eb94ee6de700f1c890be8e7a914b"
+    ],
+    "openCount": 22,
+    "parent108": "OPEN",
+    "nextActive": [
+      115,
+      124,
+      130
+    ],
+    "notes": "后续T07 UI修复不属于本次已冻结后端check，不把688项扩大为所有前端/所有票完成。"
   }
 }
