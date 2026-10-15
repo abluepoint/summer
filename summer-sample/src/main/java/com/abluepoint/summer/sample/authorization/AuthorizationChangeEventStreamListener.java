@@ -72,7 +72,9 @@ class AuthorizationChangeEventStreamListener {
     }
 
     private void ensureGroup() {
-        try { redis.opsForStream().createGroup(AuthorizationChangeEventService.STREAM, ReadOffset.latest(), group); }
+        // A publisher can recreate the stream before this node recreates its group.
+        // Start at the retained beginning; durable receipts make replay idempotent.
+        try { redis.opsForStream().createGroup(AuthorizationChangeEventService.STREAM, ReadOffset.from("0-0"), group); }
         catch (RuntimeException ignored) { /* BUSYGROUP */ }
     }
 

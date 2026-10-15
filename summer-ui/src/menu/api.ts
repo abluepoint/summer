@@ -25,7 +25,8 @@ export function syncMenuManifest(manifest: { manifestVersion: number; items: Men
 }
 
 export function getVisibleMenuManifest(enterpriseId: string) {
-  return request<MenuManifest>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/menu-manifest`));
+  // A stalled read must expire the previous UI grants and allow the next refresh.
+  return request<MenuManifest>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/menu-manifest`, { timeout: 10000 }));
 }
 
 export function updateMenuManifestOverride(enterpriseId: string, item: string, patch: Partial<Pick<VisibleMenuItem, 'enabled' | 'parentMenuId' | 'sortOrder' | 'capabilityCode'>>, version: number) {

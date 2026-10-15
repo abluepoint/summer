@@ -51,6 +51,8 @@ function AuthenticatedLayout() {
   useEffect(() => {
     if (!tenant.ready) return;
     let alive = true;
+    let stopPermissionRefresh: (() => void) | undefined;
+    let visibleSignature = '';
     setStatus('loading');
     setMenuItems([]);
     getAuthenticatedUser()
@@ -75,7 +77,10 @@ function AuthenticatedLayout() {
               ? getVisibleMenuManifest(tenant.enterpriseId)
               : Promise.resolve({ manifestVersion: 0, items: [] }),
           (items) => {
-            if (alive) setMenuItems(items);
+            if (alive) {
+              visibleSignature = JSON.stringify(items);
+              setMenuItems(items);
+            }
           }
         );
         if (!alive) return;
@@ -92,6 +97,52 @@ function AuthenticatedLayout() {
           },
         });
         setStatus('ready');
+        // Notifications can be lost. Re-read the server's effective actions while
+        // this page is visible, including when returning from a background tab.
+        let refreshing = false;
+        const refreshPermissions = async () => {
+          if (!alive || refreshing || document.visibilityState === 'hidden')
+            return;
+          refreshing = true;
+          try {
+            let changed = false;
+            const nextPermissions = await loadMenuPermissions(
+              () => Promise.resolve(),
+              () =>
+                tenant.enterpriseId
+                  ? getVisibleMenuManifest(tenant.enterpriseId)
+                  : Promise.resolve({ manifestVersion: 0, items: [] }),
+              (items) => {
+                const signature = JSON.stringify(items);
+                if (!alive || signature === visibleSignature) return;
+                visibleSignature = signature;
+                changed = true;
+                setMenuItems(items);
+              }
+            );
+            if (alive && changed)
+              store.dispatch({
+                type: 'update-userInfo',
+                payload: {
+                  userInfo: {
+                    ...store.getState().userInfo,
+                    permissions: nextPermissions,
+                  },
+                  userLoading: false,
+                },
+              });
+          } finally {
+            refreshing = false;
+          }
+        };
+        const interval = window.setInterval(refreshPermissions, 10000);
+        window.addEventListener('focus', refreshPermissions);
+        document.addEventListener('visibilitychange', refreshPermissions);
+        stopPermissionRefresh = () => {
+          window.clearInterval(interval);
+          window.removeEventListener('focus', refreshPermissions);
+          document.removeEventListener('visibilitychange', refreshPermissions);
+        };
         const notice = consumeAuthNotice();
         if (notice === 'expired') Message.info(authText('auth.expired'));
         if (notice === 'missing') Message.info(authText('auth.missing'));
@@ -103,6 +154,7 @@ function AuthenticatedLayout() {
       });
     return () => {
       alive = false;
+      stopPermissionRefresh?.();
     };
   }, [tenant.ready, tenant.enterpriseId]);
   if (status === 'failed')

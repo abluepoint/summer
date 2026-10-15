@@ -1,0 +1,349 @@
+{
+  "issue": 128,
+  "status": "READY_FOR_ROOT_INTEGRATION",
+  "date": "2026-10-16",
+  "stories": [
+    15,
+    17,
+    18,
+    27,
+    28,
+    32
+  ],
+  "dependencies": [
+    117,
+    124,
+    126
+  ],
+  "batches": [
+    {
+      "name": "attempt-01",
+      "counts": {
+        "tests": 9,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "setup",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": "AssertionError",
+      "failedChecks": [
+        "initial_reader_binding_read"
+      ]
+    },
+    {
+      "name": "attempt-02",
+      "counts": {
+        "tests": 38,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": "ConnectionRefusedError",
+      "failedChecks": []
+    },
+    {
+      "name": "attempt-03-remainder",
+      "counts": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": "ConnectionRefusedError",
+      "failedChecks": []
+    },
+    {
+      "name": "attempt-04-ui-red",
+      "counts": {
+        "tests": 19,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "browser",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": [
+        "real_chrome_live_capability_refresh"
+      ],
+      "realChrome": {
+        "tests": 6,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "name": "attempt-05-ui-fixed",
+      "counts": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "browser",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": [],
+      "realChrome": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "name": "attempt-06-backend",
+      "counts": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": "CalledProcessError",
+      "failedChecks": []
+    },
+    {
+      "name": "attempt-07-backend",
+      "counts": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": "RuntimeError",
+      "failedChecks": []
+    },
+    {
+      "name": "attempt-08-backend",
+      "counts": {
+        "tests": 42,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "transaction_fault",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": [
+        "outbox_delivery_recovers_after_redis_restart"
+      ]
+    },
+    {
+      "name": "attempt-09-redis-diagnostic",
+      "counts": {
+        "tests": 21,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": [
+        "outbox_delivery_recovers_after_redis_restart"
+      ]
+    },
+    {
+      "name": "attempt-10-transport-red",
+      "counts": {
+        "tests": 11,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "browser",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": [
+        "real_chrome_live_capability_refresh"
+      ],
+      "realChrome": {
+        "tests": 5,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "name": "attempt-11-transport-fixed",
+      "counts": {
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "browser",
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": [],
+      "realChrome": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "name": "attempt-12-redis-fixed",
+      "counts": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": []
+    },
+    {
+      "name": "attempt-13-redis-both-nodes",
+      "counts": {
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "redis_restart",
+      "candidateSha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "errorType": null,
+      "failedChecks": []
+    }
+  ],
+  "junit": {
+    "junit-red-01": {
+      "tests": 3,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "junit-green-01": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "counting": "Separate named assertions including setup; no cross-batch totals. Retained errors/failures are not green batches.",
+  "productionChanges": [
+    "AuthorizationChangeEventStreamListener: create missing group from0-0",
+    "main.tsx: visible permission refresh10s+focus; unchanged manifest preserves mounted form",
+    "menu/api.ts: effective menu read timeout10s"
+  ],
+  "limits": [
+    "Backend reloads authoritative authorization on each HTTP decision; Redis delivery is additional cache invalidation, not the sole revocation boundary.",
+    "Browser polling interval is not a hard guarantee in background/throttled tabs. Failure clears old access; draft retention only applies when effective rights remain unchanged.",
+    "Outbox failure assertion compares affected role version/content and resource audit count, not all business tables.",
+    "Final whole-repository gate has not run."
+  ],
+  "issueClosedHere": false,
+  "newCandidate": {
+    "sha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+    "inputCount": 541,
+    "changedDuringBuild": [],
+    "migrationsMatchSource": true,
+    "newRelativeTo9f": [
+      "T20 consumer group0-0",
+      "T33 observability/metrics/audit traceV38 and persisted monitoring authorization"
+    ],
+    "buildReceipt": ".git/summer4-closeout-20261015/t20-live/frozen-build-01/candidate-build.json"
+  },
+  "provenance": {
+    "relevantAuthorizationMenuResourceInputsMatchingCurrentCandidate": 67,
+    "oldNetworkCandidate": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+    "newCandidate": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+    "oldActualCoverageReuse": "Earlier38 cross-node/duplicate/pending/loss, later role/data-policy/rollback pass checks retained in whole non-green batches; not rerun as a full matrix.",
+    "uiMainExecutedMatchesCurrent": true,
+    "uiMenuApiExecutedMatchesCurrent": true,
+    "earlyUiMenuApiSnapshot": "Not captured independently; no retroactive execution-time snapshot claimed."
+  },
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS",
+      "evidence": "attempt-02 mutation outbox/metadata/duplicate ACK+single receipt"
+    },
+    {
+      "id": 2,
+      "status": "PASS",
+      "evidence": "attempt-02 old JWT nodeB deny; attempt-08 interface role and real parameter data scope; Chrome6"
+    },
+    {
+      "id": 3,
+      "status": "PASS",
+      "evidence": "attempt-02 pending same-node restart+deleted real stream; attempt-13 both node group ACK after actual Redis data loss22/0/0/0"
+    },
+    {
+      "id": 4,
+      "status": "PASS",
+      "evidence": "attempt-02 real cache version/audit order; attempt-08 affected role content/version/audit rollback; current realRedis JUnit6/0/0/0"
+    },
+    {
+      "id": 5,
+      "status": "PASS",
+      "evidence": "actual MySQL migrations+2JVM+realPKCE+Chrome6 and5; invalid/denied/fault paths"
+    },
+    {
+      "id": 6,
+      "status": "PASS",
+      "evidence": "per-call unified envelope/SUMMER codes/requestId; stream metadata-only;13 runtime log scans clear"
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "evidence": "Chinese report/script snapshots/XML/source fingerprints/per-batch counts/original reds/all13 cleanup verified/user index preserved at integration"
+    }
+  ]
+}
