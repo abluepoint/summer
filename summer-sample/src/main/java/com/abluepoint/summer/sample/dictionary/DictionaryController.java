@@ -13,11 +13,13 @@ import java.util.List;
 class DictionaryController {
     private final DictionaryService service;
     private final DictionaryVersionService versions;
+    private final PublishedDictionaryReader published;
     private final RequestIdAccessor requestId;
 
-    DictionaryController(DictionaryService service, DictionaryVersionService versions, RequestIdAccessor requestId) {
+    DictionaryController(DictionaryService service, DictionaryVersionService versions, PublishedDictionaryReader published, RequestIdAccessor requestId) {
         this.service = service;
         this.versions = versions;
+        this.published = published;
         this.requestId = requestId;
     }
 
@@ -105,4 +107,10 @@ class DictionaryController {
     @GetMapping({"/public/dictionaries/{code}", "/public/enterprises/{enterpriseId}/dictionaries/{code}"})
     @PreAuthorize("permitAll()")
     PublicDictionaryView publicRead(@PathVariable String code, Authentication authentication) { return versions.publicRead(code, authentication); }
+
+    @GetMapping({"/public/dictionaries/{code}/items/{value}", "/public/enterprises/{enterpriseId}/dictionaries/{code}/items/{value}"})
+    @PreAuthorize("permitAll()")
+    DictionaryItemView publicItem(@PathVariable String code, @PathVariable String value, Authentication authentication) {
+        return published.readItem(code, value, authentication);
+    }
 }

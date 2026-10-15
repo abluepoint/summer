@@ -1,6 +1,8 @@
 package com.abluepoint.summer.sample.key;
 
 import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
+import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
+import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;
@@ -30,6 +32,7 @@ class MysqlSummerKeyStore implements SummerKeyStore {
     private final byte[] masterKey;
     private final int rotationPeriodDays;
     private final int rotationRetentionDays;
+    private final KeyFailureAudit failureAudit;
     private volatile JWKSet current;
     private final ConcurrentMap<String, Rotation> completedRotations = new ConcurrentHashMap<>();
 
@@ -39,18 +42,44 @@ class MysqlSummerKeyStore implements SummerKeyStore {
 
     MysqlSummerKeyStore(KeyMaterialRepository repository, KeyRotationStateRepository rotationStates,
                         String masterKey, int rotationPeriodDays, int rotationRetentionDays) {
+        this(repository, rotationStates, masterKey, rotationPeriodDays, rotationRetentionDays,
+                new KeyFailureAudit(new Slf4jSecurityAuditLogger(), new ServletRequestIdAccessor()));
+    }
+
+    MysqlSummerKeyStore(KeyMaterialRepository repository, KeyRotationStateRepository rotationStates,
+                        String masterKey, int rotationPeriodDays, int rotationRetentionDays, KeyFailureAudit failureAudit) {
         this.repository = repository;
+        this.failureAudit = failureAudit;
         this.rotationStates = rotationStates;
         this.rotationPeriodDays = checkedPeriod(rotationPeriodDays);
         this.rotationRetentionDays = checkedRetention(rotationRetentionDays);
         if (masterKey == null || masterKey.isBlank()) throw new IllegalStateException("SUMMER_SECURITY_MASTER_KEY is required");
         this.masterKey = digest(masterKey);
-        this.current = loadOrCreate();
+        try {
+            this.current = loadOrCreate();
+        } catch (RuntimeException exception) {
+            failureAudit.readFailed(null);
+            throw exception;
+        }
         ensureRotationState();
     }
 
     @Override
     public List<JWK> get(JWKSelector selector, SecurityContext context) throws KeySourceException {
+        try {
+            return selectKeys(selector);
+        } catch (RuntimeException exception) {
+            failureAudit.readFailed(cachedKeyId());
+            throw exception;
+        }
+    }
+
+    private String cachedKeyId() {
+        JWKSet snapshot = current;
+        return snapshot != null && snapshot.getKeys().size() == 1 ? snapshot.getKeys().getFirst().getKeyID() : null;
+    }
+
+    private List<JWK> selectKeys(JWKSelector selector) {
         refreshCurrent();
         List<JWK> selected = selector.select(current);
         JWKMatcher matcher = selector.getMatcher();
@@ -81,6 +110,15 @@ class MysqlSummerKeyStore implements SummerKeyStore {
     }
 
     List<Map<String, Object>> metadata() {
+        try {
+            return readMetadata();
+        } catch (RuntimeException exception) {
+            failureAudit.readFailed(cachedKeyId());
+            throw exception;
+        }
+    }
+
+    private List<Map<String, Object>> readMetadata() {
         Instant now = Instant.now();
         return repository.findAll().stream()
                 .filter(value -> "ACTIVE".equals(value.status()) || ("GRACE".equals(value.status())
@@ -100,7 +138,12 @@ class MysqlSummerKeyStore implements SummerKeyStore {
     }
 
     int currentVersion() {
-        return repository.findAll().stream().mapToInt(KeyMaterialEntity::version).max().orElse(0);
+        try {
+            return repository.findAll().stream().mapToInt(KeyMaterialEntity::version).max().orElse(0);
+        } catch (RuntimeException exception) {
+            failureAudit.readFailed(cachedKeyId());
+            throw exception;
+        }
     }
 
     private KeyRotationStateEntity ensureRotationState() {

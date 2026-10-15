@@ -2,22 +2,40 @@ package com.abluepoint.summer.sample.key;
 
 import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
+import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 @Configuration(proxyBeanMethods = false)
 class KeyCapabilityConfiguration {
+    @Bean
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "keys", havingValue = "mysql")
+    KeyFailureAudit keyFailureAudit(SecurityAuditLogger audit, RequestIdAccessor requestId) {
+        return new KeyFailureAudit(audit, requestId);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(JwtEncoder.class)
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "keys", havingValue = "mysql")
+    JwtEncoder mysqlKeyJwtEncoder(MysqlSummerKeyStore store, KeyFailureAudit failureAudit) {
+        return new AuditedKeyJwtEncoder(new NimbusJwtEncoder(store), failureAudit);
+    }
+
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.storage", name = "keys", havingValue = "mysql")
     MysqlSummerKeyStore mysqlSummerKeyStore(KeyMaterialRepository repository,
                                             KeyRotationStateRepository rotationStates,
                                             @Value("${SUMMER_SECURITY_MASTER_KEY:${summer.sample.security.master-key:}}") String masterKey,
                                             @Value("${summer.sample.security.key-rotation.period-days:${SUMMER_SECURITY_KEY_ROTATION_PERIOD_DAYS:90}}") int periodDays,
-                                            @Value("${summer.sample.security.key-rotation.retention-days:${SUMMER_SECURITY_KEY_ROTATION_RETENTION_DAYS:30}}") int retentionDays) {
-        return new MysqlSummerKeyStore(repository, rotationStates, masterKey, periodDays, retentionDays);
+                                            @Value("${summer.sample.security.key-rotation.retention-days:${SUMMER_SECURITY_KEY_ROTATION_RETENTION_DAYS:30}}") int retentionDays,
+                                            KeyFailureAudit failureAudit) {
+        return new MysqlSummerKeyStore(repository, rotationStates, masterKey, periodDays, retentionDays, failureAudit);
     }
 
     @Bean

@@ -25,11 +25,13 @@ export type DictionaryNotification = {
 
 export type DictionaryStreamState = 'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CLOSED';
 
-export async function getPublicDictionary(code: string, enterpriseId?: string): Promise<PublicDictionary> {
+const publicDictionaryPath = (code: string, enterpriseId?: string) => enterpriseId ? `/public/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}` : `/public/dictionaries/${encodeURIComponent(code)}`;
+
+async function readPublicDictionary<T>(path: string): Promise<T> {
   try {
     const token = await getAccessTokenFromMemory();
-    const response = await axios.get(enterpriseId ? `/public/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}` : `/public/dictionaries/${encodeURIComponent(code)}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-    return readEnvelope(response.data, response.status) as PublicDictionary;
+    const response = await axios.get(path, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+    return readEnvelope(response.data, response.status) as T;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
     const status = error.response?.status || 0;
@@ -41,6 +43,12 @@ export async function getPublicDictionary(code: string, enterpriseId?: string): 
     throw Object.assign(new Error(failure.message || `HTTP ${status || 'network'}`), { status, code: failure.code, requestId: failure.requestId });
   }
 }
+
+export const getPublicDictionary = (code: string, enterpriseId?: string) =>
+  readPublicDictionary<PublicDictionary>(publicDictionaryPath(code, enterpriseId));
+
+export const getPublicDictionaryItem = (code: string, value: string, enterpriseId?: string) =>
+  readPublicDictionary<DictionaryOption>(`${publicDictionaryPath(code, enterpriseId)}/items/${encodeURIComponent(value)}`);
 
 export function subscribeDictionaryNotifications(
   enterpriseId: string,

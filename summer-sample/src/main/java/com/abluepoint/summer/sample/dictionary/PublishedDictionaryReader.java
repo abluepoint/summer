@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.error.ErrorCategory;
+import com.abluepoint.summer.common.error.CommonErrorCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -12,6 +13,16 @@ import java.util.Map;
 public class PublishedDictionaryReader {
     private final DictionaryVersionService dictionaries;
     PublishedDictionaryReader(DictionaryVersionService dictionaries) { this.dictionaries = dictionaries; }
+    DictionaryItemView readItem(String code, String value, Authentication auth) {
+        PublicDictionaryView published = dictionaries.publicRead(code, auth);
+        if (value == null || !value.matches("[a-z0-9][a-z0-9._-]{0,78}[a-z0-9]")) {
+            throw new SummerException(DictionaryErrorCode.INVALID,
+                    List.of(new SummerException.Violation("value", "is invalid")));
+        }
+        return published.items().stream()
+                .filter(item -> item.enabled() && value.equals(item.value()))
+                .findFirst().orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+    }
     public List<Map<String, Object>> read(String code, Authentication auth) { return read(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), code, auth); }
     public List<Map<String, Object>> read(String tenant, String code, Authentication auth) {
         com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(tenant, auth);

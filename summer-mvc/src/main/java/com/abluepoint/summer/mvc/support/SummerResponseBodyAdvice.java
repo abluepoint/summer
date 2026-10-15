@@ -3,6 +3,8 @@ package com.abluepoint.summer.mvc.support;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.core.MethodParameter;
@@ -14,6 +16,7 @@ import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
@@ -65,6 +68,17 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     private static boolean isFrameworkEndpoint(ServerHttpRequest request) {
         String path = request.getURI().getPath();
+        if (request instanceof ServletServerHttpRequest servletRequest) {
+            var originalRequest = servletRequest.getServletRequest();
+            if (originalRequest.getDispatcherType() == DispatcherType.ERROR
+                    && originalRequest.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) instanceof String originalPath) {
+                path = originalPath;
+            }
+            String contextPath = originalRequest.getContextPath();
+            if (!contextPath.isEmpty() && path.startsWith(contextPath + "/")) {
+                path = path.substring(contextPath.length());
+            }
+        }
         return path.equals("/csrf")
                 || path.startsWith("/oauth2/")
                 || path.startsWith("/.well-known/")

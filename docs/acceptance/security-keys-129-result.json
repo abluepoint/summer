@@ -1,0 +1,325 @@
+{
+  "status": "READY_FOR_COORDINATOR_CLOSEOUT",
+  "issue": 129,
+  "recorded_at": "2026-10-15T19:04:17.246240+08:00",
+  "latest_candidate_sha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "evidence_root": ".git/summer4-closeout-20261015/t21-live",
+  "latest_fault_directory": ".git/summer4-closeout-20261015/t21-live/attempt-06-442e609f-three-fixes",
+  "runner": "scripts/acceptance/keys/fault.py",
+  "latest_real_fault_replay": {
+    "checks": [
+      {
+        "name": "actual_pkce_token_obtained",
+        "passed": true
+      },
+      {
+        "name": "jwk_fault_fails_closed",
+        "passed": true
+      },
+      {
+        "name": "jwk_failure_not_wrapped_as_success",
+        "passed": true
+      },
+      {
+        "name": "bearer_fault_fails_closed",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "actual_signing_fault_fails_closed",
+        "passed": true
+      },
+      {
+        "name": "raw_bearer_not_written_to_security_audit",
+        "passed": true
+      },
+      {
+        "name": "key_failure_has_specific_audit",
+        "passed": true,
+        "events": [
+          "authentication_failure",
+          "authentication_success",
+          "key_read_failure",
+          "key_sign_failure"
+        ]
+      },
+      {
+        "name": "signing_failure_has_specific_audit",
+        "passed": true
+      },
+      {
+        "name": "actual_pkce_recovers_after_fault_removed",
+        "passed": true
+      }
+    ],
+    "counts": {
+      "checks": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    "stage": "complete",
+    "passed": true,
+    "network_mocking": false,
+    "database": "isolated MySQL schema using production migrations",
+    "authentication": "real form login and OAuth2 authorization-code PKCE",
+    "fault": "temporarily rename the owned signing-key table; restore before recovery login",
+    "public_jwk_failure": {
+      "status": 500,
+      "bodyType": "dict",
+      "errorType": "str",
+      "errorCode": null,
+      "success": null,
+      "bodyRequestIdPresent": false,
+      "headerRequestIdPresent": true,
+      "correlationMatches": false
+    },
+    "sensitive_log_findings": [],
+    "cleanup": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "21081": false,
+        "21082": false,
+        "21083": false,
+        "21573": false,
+        "21580": false
+      },
+      "app_account_absent": true
+    }
+  },
+  "protocol_contract_note": "JWK HTTP500 retains its raw protocol/error body and X-Request-Id header. No Unified success:true wrapper; body requestId and SUMMER application error code are not required for this Raw endpoint.",
+  "retained_evidence": {
+    "candidate_sha256": "9976bf12e231e8ebd5ff2641bd9c67039fac97d334ee7384622e6525914e924c",
+    "source": "attempt-04-menu-diagnostic",
+    "functional_counts": {
+      "checks": 23,
+      "passed": 23,
+      "failed": 0
+    },
+    "functional_checks": [
+      {
+        "name": "real_role_api_grants_in_fresh_pkce_claims",
+        "passed": true
+      },
+      {
+        "name": "authorized_key_metadata_read",
+        "passed": true
+      },
+      {
+        "name": "metadata_contains_no_private_material",
+        "passed": true
+      },
+      {
+        "name": "invalid_generate_input_rejected",
+        "passed": true
+      },
+      {
+        "name": "invalid_error_contract",
+        "passed": true
+      },
+      {
+        "name": "anonymous_key_management_denied",
+        "passed": true
+      },
+      {
+        "name": "ungranted_key_management_denied",
+        "passed": true
+      },
+      {
+        "name": "denied_error_contract",
+        "passed": true
+      },
+      {
+        "name": "public_jwks_available",
+        "passed": true
+      },
+      {
+        "name": "jwks_contains_only_public_material",
+        "passed": true
+      },
+      {
+        "name": "actual_pkce_token_verifies_with_jwk",
+        "passed": true
+      },
+      {
+        "name": "mysql_single_active_key_matches_signing_kid",
+        "passed": true
+      },
+      {
+        "name": "mysql_ciphertext_decrypts_to_matching_private_key_in_memory",
+        "passed": true
+      },
+      {
+        "name": "mysql_ciphertext_is_not_plain_key_or_master",
+        "passed": true
+      },
+      {
+        "name": "mysql_key_schema_has_no_master_or_plain_private_column",
+        "passed": true
+      },
+      {
+        "name": "real_mysql_key_migration_applied",
+        "passed": true
+      },
+      {
+        "name": "second_node_issues_same_kid",
+        "passed": true
+      },
+      {
+        "name": "second_node_token_verifies",
+        "passed": true
+      },
+      {
+        "name": "restart_issues_same_effective_kid",
+        "passed": true
+      },
+      {
+        "name": "restart_token_verifies",
+        "passed": true
+      },
+      {
+        "name": "restart_does_not_regenerate_database_key",
+        "passed": true
+      },
+      {
+        "name": "ui_generated_key_used_for_real_token_on_other_node",
+        "passed": true
+      },
+      {
+        "name": "ui_generated_token_verifies_against_public_jwk",
+        "passed": true
+      }
+    ],
+    "real_chrome_counts": {
+      "checks": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "real_chrome_checks": [
+      {
+        "name": "real_admin_chrome_pkce",
+        "passed": true
+      },
+      {
+        "name": "authorized_key_page_real_metadata",
+        "passed": true
+      },
+      {
+        "name": "metadata_source_algorithm_health_visible",
+        "passed": true
+      },
+      {
+        "name": "page_has_no_private_key_editor",
+        "passed": true
+      },
+      {
+        "name": "restricted_ui_key_generation_real_http",
+        "passed": true
+      },
+      {
+        "name": "ungranted_real_user_page_denied",
+        "passed": true
+      }
+    ],
+    "ui_inputs_stable": true,
+    "cleanup": "VERIFIED",
+    "scope_note": "Retained original passed success/denied/invalid, MySQL ciphertext, two-JVM/restart and Chrome evidence per coordinator. Excludes the original initial login setup and historical faulty checks. These were not rerun on442e609f."
+  },
+  "acceptance_clauses": [
+    {
+      "clause": 1,
+      "status": "PASS",
+      "evidence": "Retained MySQL migration/schema and in-memory decryption-to-public-JWK checks; master key not a persisted column; no plaintext key exposure."
+    },
+    {
+      "clause": 2,
+      "status": "PASS",
+      "evidence": "Retained HTTP metadata whitelist, public-only JWKS and Chrome no-private-key-editor checks; no private-key read HTTP API."
+    },
+    {
+      "clause": 3,
+      "status": "PASS",
+      "evidence": "Retained two-JVM and restart same-kid signing/verification; UI-generated key used for fresh token on another node."
+    },
+    {
+      "clause": 4,
+      "status": "PASS",
+      "evidence": "Latest actual table failure: JWK500 raw failure, protected metadata401, no new token, key_read_failure and key_sign_failure, zero sensitive findings, recovery realPKCE success. Local tests validate safe event fields and sink outage fallback."
+    },
+    {
+      "clause": 5,
+      "status": "PASS",
+      "evidence": "Retained actual migrations/HTTP/Chrome success, denial and invalid input; latest actual failure and recovery. No mocked network; counts listed per evidence batch."
+    },
+    {
+      "clause": 6,
+      "status": "PASS",
+      "evidence": "Retained application error contracts/requestId and normalRaw JWK; latest500 no success wrapper, correlation header retained, no Bearer leak; local audit requestId/metadata tests."
+    },
+    {
+      "clause": 7,
+      "status": "PASS",
+      "evidence": "Stories3/34/35/36/37 mapped in AC-MATRIX; scripts, frozen source hashes, original red receipts, local red/green and new actual run retained. User/parallel work preserved; coordinator owns commit/push/Issue actions."
+    }
+  ],
+  "local_regressions": {
+    "prior_authentication_and_mvc": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "new_key_failure_audit": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "existing_key_compatibility": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "counting": "Independent suites; red and intermediate subset runs excluded. Separate from actual runtime/Chrome counts."
+  },
+  "candidate_integrity": {
+    "jar_digest_verified": true,
+    "own_main_inputs_matched": 6,
+    "candidate_main_inputs": 532,
+    "changed_during_build": [],
+    "migrations_match": true,
+    "frozen_source_paths_verified": 15
+  },
+  "historical_failures_preserved": {
+    "attempt_04_runtime": {
+      "checks": 31,
+      "passed": 28,
+      "failed": 3
+    },
+    "attempt_05_fault": {
+      "checks": 6,
+      "passed": 4,
+      "failed": 2
+    },
+    "offline_error_envelope_red": {
+      "checks": 1,
+      "passed": 0,
+      "failed": 1
+    },
+    "note": "Original failures are not rewritten. One attempt04 assertion wrongly required500 instead of legitimate401/403 fail-closed; the three actual defects are closed by latest9-check replay."
+  },
+  "issue_mutated_by_this_task": false,
+  "git_index_mutated_by_this_task": false,
+  "release_gate_note": "This is scoped T21 acceptance. Repository-wide final check and integration/release remain coordinator responsibilities.",
+  "documentation": "docs/acceptance/security-keys-129.md",
+  "joint_file_manifest": {
+    "path": ".git/summer4-closeout-20261015/t21-live/FILES.json",
+    "files": 17,
+    "production": 6,
+    "junit": 4,
+    "scripts": 5,
+    "public_receipts": 2
+  }
+}

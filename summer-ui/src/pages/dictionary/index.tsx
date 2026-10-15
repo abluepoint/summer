@@ -3,7 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
 import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { DictionaryOption, getPublicDictionary, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
+import { DictionaryOption, getPublicDictionary, getPublicDictionaryItem, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
 
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 const dictionaryCode = 'customer-segment';
@@ -44,7 +44,29 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
     return () => { unblock(); window.removeEventListener('beforeunload', beforeUnload); };
   }, [overrideJson, overrideOrg, overrideVersion, saving, history]);
 
-  const load = useCallback((eventType?: string) => {
+  function readFailure(failure: Error & { status?: number; requestId?: string }, selectedItem = false) {
+    setSelectedUnavailable(true);
+    if (!selectedItem || [401, 403].includes(failure.status || 0)) { setOptions([]); setVersion(undefined); }
+    if ([401, 403].includes(failure.status || 0) || (!selectedItem && failure.status === 404)) {
+      valueRef.current = ''; setValue(''); setOverrideJson('[]'); overrideDirty.current = false;
+    } else if (!selectedItem && !overrideDirty.current) setOverrideJson('[]');
+    const message = failure.status === 403 ? '无权读取此字典' : failure.status === 404 ? (selectedItem ? '所选字典项不可用，请重新选择' : '字典不可用或不在授权范围内') : failure.message || t['dictionary.error'];
+    setError(`${message}${failure.requestId ? ` (${failure.requestId})` : ''}`);
+  }
+
+  function validateSelection(next: string, request: number) {
+    return getPublicDictionaryItem(dictionaryCode, next, enterpriseId)
+      .then(() => { if (request === readRequest.current) setSelectedUnavailable(false); })
+      .catch((failure) => { if (request === readRequest.current) readFailure(failure, true); });
+  }
+
+  function selectValue(next: string) {
+    const request = ++readRequest.current;
+    valueRef.current = next; setValue(next); setError(''); setSelectedUnavailable(false); setLoading(true);
+    validateSelection(next, request).finally(() => { if (request === readRequest.current) setLoading(false); });
+  }
+
+  const load = useCallback(() => {
     const request = ++readRequest.current;
     setLoading(true);
     setError('');
@@ -58,17 +80,11 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
         setSelectedUnavailable(Boolean(current && !dictionary.items.some((item) => item.value === current)));
         valueRef.current = next;
         setValue(next);
+        if (next) return validateSelection(next, request);
       })
       .catch((failure) => {
         if (request !== readRequest.current) return;
-        setOptions([]); setVersion(undefined); setSelectedUnavailable(true);
-        if ([401, 403, 404].includes((failure as { status?: number }).status || 0)) { valueRef.current = ''; setValue(''); setOverrideJson('[]'); overrideDirty.current = false; }
-        else if (!overrideDirty.current) setOverrideJson('[]');
-        const denied = failure as Error & { status?: number; requestId?: string };
-        setError(`${denied.status === 403 ? '无权读取此字典' : denied.status === 404 ? '字典不可用或不在授权范围内' : denied.message || t['dictionary.error']}${denied.requestId ? ` (${denied.requestId})` : ''}`);
-        if (eventType === 'DICTIONARY_DISABLED' || eventType === 'dictionary.disabled') {
-          setSelectedUnavailable(Boolean(valueRef.current));
-        }
+        readFailure(failure);
       })
       .finally(() => { if (request === readRequest.current) setLoading(false); });
   }, [t]);
@@ -78,9 +94,9 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
     const unsubscribe = subscribeDictionaryNotifications(
       enterpriseId,
       dictionaryCode,
-      (event) => {
+      () => {
         setStreamError(false);
-        load(event.eventType);
+        load();
       },
       setStreamState,
       () => setStreamError(true),
@@ -109,7 +125,7 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
           <Form.Item label={t['dictionary.segment']}>
             <Select
               value={value}
-              onChange={(next) => { valueRef.current = next; setValue(next); setSelectedUnavailable(false); }}
+              onChange={selectValue}
               placeholder={t['dictionary.choose']}
               options={options.map((item) => ({ label: item.label, value: item.value }))}
             />

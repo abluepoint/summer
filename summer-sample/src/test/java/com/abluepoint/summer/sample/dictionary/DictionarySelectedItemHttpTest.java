@@ -1,0 +1,114 @@
+package com.abluepoint.summer.sample.dictionary;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+class DictionarySelectedItemHttpTest {
+    private static final String PUBLIC = "/public/enterprises/ent-acme/dictionaries/selected-item";
+    @Autowired MockMvc http;
+
+    @Test
+    void aPreviouslySelectedItemBecomesUnavailableWithoutBreakingTheOptionListOrManagement() throws Exception {
+        create();
+        http.perform(get(PUBLIC + "/items/selected")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.value").value("selected"));
+        http.perform(patch("/api/dictionaries/selected-item/items/selected").with(writer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":false}"))
+                .andExpect(status().isOk());
+        http.perform(get(PUBLIC)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(0)));
+        http.perform(get(PUBLIC + "/items/selected").header("X-Request-Id", "selected-disabled"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"))
+                .andExpect(jsonPath("$.requestId").value("selected-disabled"));
+        http.perform(get("/api/dictionaries").with(identity("SCOPE_platform.dictionary.read"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].items[0].enabled").value(false));
+    }
+
+    @Test
+    void malformedAndUnknownValuesUseTheExistingUnifiedErrors() throws Exception {
+        create();
+        http.perform(get(PUBLIC + "/items/INVALID").header("X-Request-Id", "selected-invalid"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SUMMER_DICTIONARY_INVALID"))
+                .andExpect(jsonPath("$.error.violations[0].field").value("value"))
+                .andExpect(jsonPath("$.requestId").value("selected-invalid"));
+        http.perform(get(PUBLIC + "/items/unknown")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+    }
+
+    @Test
+    void consumptionUsesTheExistingReadPermissionAndTenantBoundary() throws Exception {
+        create();
+        http.perform(get(PUBLIC + "/items/selected").with(identity("dictionary-reader", "SCOPE_customer.read")))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+        http.perform(get("/public/enterprises/ent-other/dictionaries/selected-item/items/selected"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+    }
+
+    @Test
+    void privateUnpublishedAndDisabledTypesCannotExposeASelectedItem() throws Exception {
+        create();
+        for (String flag : List.of("publicReadable", "published", "enabled")) {
+            changeFlag(flag, false);
+            http.perform(get(PUBLIC + "/items/selected")).andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+            changeFlag(flag, true);
+        }
+    }
+
+    @Test
+    void selectedItemComesFromThePublishedSnapshotInsteadOfTheLatestDraft() throws Exception {
+        create();
+        http.perform(post("/api/dictionaries/selected-item/publish").with(writer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .andExpect(status().isOk());
+        http.perform(post("/api/dictionaries/selected-item/items").with(writer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"new-draft\",\"label\":\"Draft\",\"sortOrder\":1,\"enabled\":true}"))
+                .andExpect(status().isOk());
+        http.perform(get(PUBLIC + "/items/selected")).andExpect(status().isOk());
+        http.perform(get(PUBLIC + "/items/new-draft")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
+    }
+
+    private void create() throws Exception {
+        http.perform(post("/api/dictionaries").with(writer()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"selected-item\",\"name\":\"Selected item\",\"published\":true,\"publicReadable\":true,\"enabled\":true}"))
+                .andExpect(status().isOk());
+        http.perform(post("/api/dictionaries/selected-item/items").with(writer()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"value\":\"selected\",\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":true}"))
+                .andExpect(status().isOk());
+    }
+
+    private void changeFlag(String flag, boolean value) throws Exception {
+        http.perform(patch("/api/dictionaries/selected-item").with(writer()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Selected item\",\"" + flag + "\":" + value + "}"))
+                .andExpect(status().isOk());
+    }
+
+    private static RequestPostProcessor writer() { return identity("SCOPE_platform.dictionary.write"); }
+    private static RequestPostProcessor identity(String authority) {
+        return identity("dictionary-operator", authority);
+    }
+    private static RequestPostProcessor identity(String subject, String authority) {
+        return jwt().jwt(token -> token.subject(subject)
+                .claim("summer_managed_grants", !"dictionary-operator".equals(subject))
+                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
+                .authorities(new SimpleGrantedAuthority(authority));
+    }
+}
