@@ -1,0 +1,92 @@
+{
+  "issue": 113,
+  "status": "ACCEPTED",
+  "candidate_sha256": "9976bf12e231e8ebd5ff2641bd9c67039fac97d334ee7384622e6525914e924c",
+  "counts": {
+    "tests": 135,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "counting": "120个真实后端命名检查与15个最终Chrome命名检查；非JUnit，不重复加入46项页面补验的设置检查",
+  "uiReplay": {
+    "tests": 46,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "component": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "backendChanges": false,
+  "files": [
+    {
+      "path": "summer-ui/src/pages/system-parameters/api.ts",
+      "sha256": "742dc71795d430ea1b34a6383d5d91f62742c5497b9a34016f28ac94e3d8870c"
+    },
+    {
+      "path": "summer-ui/src/pages/system-parameters/index.tsx",
+      "sha256": "873382dd6d0469168c349b493b01d83a0325a99f9769462a6981c2ec2af9f970"
+    },
+    {
+      "path": "summer-ui/scripts/verify-system-parameter-errors-browser.mjs",
+      "sha256": "648e0374813bb62d965b4a22eafbd29b8004fe1bec73e76234b4bfeaacc6027e"
+    },
+    {
+      "path": "scripts/acceptance/t05-t06/run-t05.py",
+      "sha256": "345aebfb9169c497f9af661c0c9905b560837a69abfbe886e7bedbcb5e51b6b7"
+    },
+    {
+      "path": "scripts/acceptance/t05-t06/t05-browser.mjs",
+      "sha256": "ce571ec5fb8d09397bbcaa3b161ada077cca29776f272e5c2ff964ef8c60b5df"
+    }
+  ],
+  "cleanup": "VERIFIED",
+  "criteria": [
+    {
+      "id": "AC1",
+      "requirement": "管理员创建、修改、查询、启停",
+      "status": "SUPPORTED",
+      "evidence": "typed_http and chrome CRUD/status checks"
+    },
+    {
+      "id": "AC2",
+      "requirement": "后端类型、必填、范围、格式校验；字段错误显示",
+      "status": "SUPPORTED",
+      "evidence": "10 invalid HTTP cases and chrome_displays_backend_field_violation; UI fix + dedicated component 2/2 + attempt04-ui Chrome15/15; field and requestId visible inside Drawer"
+    },
+    {
+      "id": "AC3",
+      "requirement": "稳定冲突码/requestId和成功审计",
+      "status": "SUPPORTED",
+      "evidence": "stale/duplicate conflicts, actual audit query and Chrome stale conflict"
+    },
+    {
+      "id": "AC4",
+      "requirement": "真实Summer UI API，无mock",
+      "status": "SUPPORTED",
+      "evidence": "Chrome15 actual HTTP assertions; networkMocking=false"
+    },
+    {
+      "id": "AC5",
+      "requirement": "迁移、真实HTTP/Chrome及成功拒绝无效故障",
+      "status": "SUPPORTED",
+      "evidence": "MySQL/Flyway, actual permission denial, bad input, real JVM outage/recovery; UI fix + dedicated component 2/2 + attempt04-ui Chrome15/15; field and requestId visible inside Drawer"
+    },
+    {
+      "id": "AC6",
+      "requirement": "框架契约、SUMMER_错误码、关联与敏感值边界",
+      "status": "SUPPORTED",
+      "evidence": "status/envelope/field violations/correlation; credentials only memory/env/stdin; UI fix + dedicated component 2/2 + attempt04-ui Chrome15/15; field and requestId visible inside Drawer"
+    },
+    {
+      "id": "AC7",
+      "requirement": "故事—实现—测试—缺陷追踪及真实计数",
+      "status": "SUPPORTED",
+      "evidence": "original-issue.json, RED.json, attempt01/02 evidence and two reusable scripts"
+    }
+  ]
+}

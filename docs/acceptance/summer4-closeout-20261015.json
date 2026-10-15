@@ -110,8 +110,8 @@
     "scripts/acceptance/interface-resources/run.py"
   ],
   "limitations": [
-    "仓库级check及其他真实页面验收另行记录，不能由定向用例推定全部通过。",
-    "T02/T03/T04在2859固定候选完成独立验收，提交后按依赖关闭；仓库级H2隔离后完整重跑仍待执行。",
+    "906e549基线的仓库check已完成651/0/0/0，684 main/test输入无漂移；后续新修复按各自定向与实际验收记录，不能直接把该基线结果冒称后续工作树的全量结果。",
+    "T02/T03/T04/T12/T13/T14已按依赖完成验收并关闭；原H2隔离问题已由651项全仓重跑证明修复。",
     "T12/T13与T14已完成各自固定候选真实验收；T14为9976bf12、27/27，无未知映射误放行；全仓check与其他票据的剩余验收独立记录。",
     "T24实际客户端修改、禁用重启及协议行为还需独立验收。",
     "真实测试运行于随机隔离schema/会话namespace；不代表生产部署或微服务拆分验收。"
@@ -518,5 +518,28 @@
       "management-completeness-red.json"
     ],
     "release_gate_note": "This is T14 acceptance on the pinned candidate. Repository-wide check is owned by the coordinator and is not represented by these counts."
+  },
+  "fullRepositoryCheck": {
+    "command": [
+      "./gradlew",
+      "check",
+      "--no-configuration-cache",
+      "--no-parallel",
+      "--max-workers=2",
+      "--console=plain",
+      "-I",
+      "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/task/integration-h2-composite.init.gradle"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 1093.2,
+    "head": "906e5498399c05ae4f180213373117482fe09c54",
+    "source_input_count": 684,
+    "source_changes_during_run": [],
+    "junit_totals": {
+      "tests": 651,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
   }
 }

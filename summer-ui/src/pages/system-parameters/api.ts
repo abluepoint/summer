@@ -24,10 +24,16 @@ export type ParameterListQuery = {
   direction: 'asc' | 'desc'; projection: 'summary' | 'detail';
 };
 
+export type ParameterViolation = { field: string; message: string };
 export class ParameterApiError extends Error {
-  status: number; code: string; requestId: string;
-  constructor(status: number, code: string, message: string, requestId: string) {
+  status: number; code: string; requestId: string; violations: ParameterViolation[];
+  constructor(status: number, code: string, message: string, requestId: string, violations: unknown[] = []) {
     super(message); this.name = 'ParameterApiError'; this.status = status; this.code = code; this.requestId = requestId;
+    this.violations = violations.flatMap((violation) => {
+      if (!violation || typeof violation !== 'object') return [];
+      const { field, message: detail } = violation as Record<string, unknown>;
+      return typeof field === 'string' && typeof detail === 'string' ? [{ field, message: detail }] : [];
+    });
   }
 }
 
@@ -37,7 +43,7 @@ async function request<T>(call: () => Promise<{ data: unknown; status: number }>
     if (!axios.isAxiosError(error)) throw error;
     const status = error.response?.status || 0;
     const failure = readFailure(error.response?.data, status, String(error.response?.headers?.['x-request-id'] || ''));
-    throw new ParameterApiError(failure.status, failure.code, failure.message, failure.requestId);
+    throw new ParameterApiError(failure.status, failure.code, failure.message, failure.requestId, failure.violations);
   }
 }
 

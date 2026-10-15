@@ -71,6 +71,12 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
   function publish(version: ParameterVersion) { if (!historyKey || !history) return; write(() => publishParameterVersion(historyKey, { revision: version.revision, expectedVersion: history.currentVersion, idempotencyKey: `ui-publish-${version.revision}-${Date.now()}` }), () => { load(); loadHistory(historyKey); loadEvents(); }); }
   function rollback(version: ParameterVersion) { if (!historyKey || !history) return; write(() => rollbackParameterVersion(historyKey, { revision: version.revision, expectedVersion: history.currentVersion, idempotencyKey: `ui-rollback-${version.revision}-${Date.now()}` }), () => { load(); loadHistory(historyKey); loadEvents(); }); }
   const updateQuery = (change: Partial<ParameterListQuery>) => setQuery({ ...query, ...change, page: 0 });
+  const errorMessage = error ? `${error.status === 403 ? '无权执行此配置操作' : error.message || t['systemParameters.error']}${error.requestId ? ` (${error.requestId})` : ''}` : '';
+  const fieldFeedback = (...names: string[]) => {
+    const messages = error?.violations?.filter((violation) => names.includes(violation.field)).map((violation) => violation.message);
+    return messages?.length ? { validateStatus: 'error' as const, help: messages.join('；') } : {};
+  };
+  const otherViolations = error?.violations?.filter((violation) => !['key', 'type', 'value', 'required', 'public', 'publicValue', 'min', 'max', 'description'].includes(violation.field));
   return <Card title={t['systemParameters.title']} extra={<Button disabled={saving} type="primary" onClick={() => open()}>{t['systemParameters.create']}</Button>}>
     <Alert type="info" content="覆盖优先级：组织 > 租户 > 基础值。选中的高优先级覆盖不可访问时不会回退；各项写操作由服务端分别授权。" style={{ marginBottom: 16 }} />
     <Space wrap style={{ marginBottom: 16 }}>
@@ -94,7 +100,7 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
         <Select.Option value="detail">detail</Select.Option><Select.Option value="summary">summary</Select.Option>
       </Select>
     </Space>
-    {error && <Alert type="error" content={`${error.status === 403 ? '无权执行此配置操作' : error.message || t['systemParameters.error']}${error.requestId ? ` (${error.requestId})` : ''}`} style={{ marginBottom: 16 }} />}
+    {error && editor === false && <Alert type="error" content={errorMessage} style={{ marginBottom: 16 }} />}
     {page?.projection === 'summary' && <Alert type="info" content="当前仅展示摘要；切换到 detail 查看完整配置后，才能编辑或变更状态。" style={{ marginBottom: 16 }} />}
     <Table<Parameter> rowKey="key" loading={loading} data={(page?.items || []) as Parameter[]} pagination={{ current: (page?.page || 0) + 1, pageSize: page?.size || query.size, total: page?.totalElements || 0, onChange: (current, size) => setQuery({ ...query, page: current - 1, size }) }} columns={[
       { title: t['systemParameters.key'], dataIndex: 'key' }, { title: t['systemParameters.type'], dataIndex: 'type' }, { title: t['systemParameters.value'], dataIndex: 'value', render: (v) => String(v) },
@@ -115,12 +121,13 @@ function SystemParametersContent({ enterpriseId, onDirtyChange, onBusyChange }: 
       { title: t['systemParameters.actions'], render: (_, row) => <Space>{row.state === 'DRAFT' && <Button disabled={saving} size="small" type="primary" onClick={() => publish(row)}>{t['systemParameters.publish']}</Button>}{row.state !== 'DRAFT' && <Button disabled={saving} size="small" onClick={() => rollback(row)}>{t['systemParameters.rollback']}</Button>}</Space> },
     ]} /></Card>}
     <Drawer title={editor ? t['systemParameters.edit'] : t['systemParameters.create']} visible={editor !== false} onCancel={closeEditor} onOk={save} okButtonProps={{ loading: saving, disabled: saving }} width={520}>
-      <Form layout="vertical"><Item label={t['systemParameters.key']}><Input value={form.key} disabled={saving || Boolean(editor)} onChange={(v) => setForm({ ...form, key: v })} /></Item>
-        <Item label={t['systemParameters.type']}><Select value={form.type} disabled={saving || Boolean(editor)} onChange={(v) => setForm({ ...form, type: v as Parameter['type'] })}><Select.Option value="STRING">STRING</Select.Option><Select.Option value="INTEGER">INTEGER</Select.Option><Select.Option value="DECIMAL">DECIMAL</Select.Option><Select.Option value="BOOLEAN">BOOLEAN</Select.Option></Select></Item>
-        <Item label={t['systemParameters.value']}><Input disabled={saving} value={String(form.value)} onChange={(v) => setForm({ ...form, value: v })} /></Item>
-        <Space><Item label={t['systemParameters.required']}><Switch disabled={saving} checked={form.required} onChange={(v) => setForm({ ...form, required: v })} /></Item><Item label={t['systemParameters.public']}><Switch disabled={saving} checked={form.public} onChange={(v) => setForm({ ...form, public: v })} /></Item></Space>
-        <Space><Item label={t['systemParameters.min']}><InputNumber disabled={saving} value={form.min} onChange={(v) => setForm({ ...form, min: v })} /></Item><Item label={t['systemParameters.max']}><InputNumber disabled={saving} value={form.max} onChange={(v) => setForm({ ...form, max: v })} /></Item></Space>
-        <Item label={t['systemParameters.description']}><Input.TextArea disabled={saving} value={form.description} onChange={(v) => setForm({ ...form, description: v })} /></Item>
+      {error && <Alert type="error" content={<>{errorMessage}{otherViolations?.map((violation, index) => <div key={index}>{violation.field}: {violation.message}</div>)}</>} style={{ marginBottom: 16 }} />}
+      <Form layout="vertical"><Item label={t['systemParameters.key']} {...fieldFeedback('key')}><Input value={form.key} disabled={saving || Boolean(editor)} onChange={(v) => setForm({ ...form, key: v })} /></Item>
+        <Item label={t['systemParameters.type']} {...fieldFeedback('type')}><Select value={form.type} disabled={saving || Boolean(editor)} onChange={(v) => setForm({ ...form, type: v as Parameter['type'] })}><Select.Option value="STRING">STRING</Select.Option><Select.Option value="INTEGER">INTEGER</Select.Option><Select.Option value="DECIMAL">DECIMAL</Select.Option><Select.Option value="BOOLEAN">BOOLEAN</Select.Option></Select></Item>
+        <Item label={t['systemParameters.value']} {...fieldFeedback('value')}><Input disabled={saving} value={String(form.value)} onChange={(v) => setForm({ ...form, value: v })} /></Item>
+        <Space><Item label={t['systemParameters.required']} {...fieldFeedback('required')}><Switch disabled={saving} checked={form.required} onChange={(v) => setForm({ ...form, required: v })} /></Item><Item label={t['systemParameters.public']} {...fieldFeedback('public', 'publicValue')}><Switch disabled={saving} checked={form.public} onChange={(v) => setForm({ ...form, public: v })} /></Item></Space>
+        <Space><Item label={t['systemParameters.min']} {...fieldFeedback('min')}><InputNumber disabled={saving} value={form.min} onChange={(v) => setForm({ ...form, min: v })} /></Item><Item label={t['systemParameters.max']} {...fieldFeedback('max')}><InputNumber disabled={saving} value={form.max} onChange={(v) => setForm({ ...form, max: v })} /></Item></Space>
+        <Item label={t['systemParameters.description']} {...fieldFeedback('description')}><Input.TextArea disabled={saving} value={form.description} onChange={(v) => setForm({ ...form, description: v })} /></Item>
         {editor && <><Button disabled={saving} onClick={saveDraft} loading={saving}>{t['systemParameters.saveDraft']}</Button>
           <Item label="覆盖范围（_tenant 为租户，或组织 ID）"><Input disabled={saving} value={overrideOrg} onChange={(v) => { setOverrideOrg(v); setOverrideVersion(undefined); }} /></Item>
           <Item label="覆盖版本（新建留空，修改填写已有版本）"><InputNumber disabled={saving} min={0} value={overrideVersion} onChange={setOverrideVersion} /></Item>
