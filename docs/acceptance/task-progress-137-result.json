@@ -1,0 +1,460 @@
+{
+  "issue": 137,
+  "stories": [
+    41,
+    42
+  ],
+  "status": "READY_FOR_COORDINATOR_REVIEW_NOT_ISSUE_CLOSED",
+  "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+  "productionChange": "Bounded direct-handoff SSE delivery pool; core 4, max 256, extra-worker idle timeout 30 seconds. Admission and protocol semantics unchanged.",
+  "unit": {
+    "exit": 0,
+    "counts": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      "com.abluepoint.summer.sample.task.TaskProgressLiveExecutionTest",
+      "com.abluepoint.summer.sample.task.TaskProgressAccessTest",
+      "com.abluepoint.summer.sample.task.TaskProgressSseHttpTest",
+      "com.abluepoint.summer.sample.task.TaskProgressBackpressureTest"
+    ]
+  },
+  "actualNetwork": {
+    "protocol-9f0b-01": {
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "counts": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "evidence": ".git/summer4-closeout-20261015/t29-live/protocol-9f0b-01/runtime-result.json",
+      "checks": [
+        {
+          "name": "real_cookie_sse_raw_correlated",
+          "passed": true,
+          "status": 200,
+          "contentType": "text/event-stream",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": null
+        },
+        {
+          "name": "anonymous_cannot_subscribe",
+          "passed": true,
+          "status": 401,
+          "contentType": "application/json;charset=UTF-8",
+          "cookiePresent": false,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_UNAUTHORIZED"
+        },
+        {
+          "name": "real_member_without_read_capability_denied",
+          "passed": true,
+          "status": 403,
+          "contentType": "application/json;charset=UTF-8",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_FORBIDDEN"
+        },
+        {
+          "name": "real_foreign_tenant_cookie_denied",
+          "passed": true,
+          "status": 403,
+          "contentType": "application/json;charset=UTF-8",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_FORBIDDEN"
+        },
+        {
+          "name": "invalid_cursor_-1",
+          "passed": true,
+          "status": 400,
+          "contentType": "application/json",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_TASK_SSE_LAST_EVENT_ID"
+        },
+        {
+          "name": "invalid_cursor_invalid",
+          "passed": true,
+          "status": 400,
+          "contentType": "application/json",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_TASK_SSE_LAST_EVENT_ID"
+        },
+        {
+          "name": "invalid_cursor_9223372036854775808",
+          "passed": true,
+          "status": 400,
+          "contentType": "application/json",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_TASK_SSE_LAST_EVENT_ID"
+        },
+        {
+          "name": "live_quartz_events_match_persisted_order",
+          "passed": true,
+          "eventCount": 8
+        },
+        {
+          "name": "actual_progress_and_safe_log_events",
+          "passed": true
+        },
+        {
+          "name": "last_event_id_replays_only_missing_events",
+          "passed": true,
+          "cursor": 5,
+          "replayedIds": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "name": "real_idle_heartbeat_within_eighteen_seconds",
+          "passed": true,
+          "elapsedSeconds": 15.179
+        },
+        {
+          "name": "reconnect_does_not_repeat_business_execution",
+          "passed": true
+        },
+        {
+          "name": "window_generated_by_actual_quartz_handler",
+          "passed": true,
+          "persistedEvents": 706
+        },
+        {
+          "name": "initial_replay_is_bounded_to_latest_500",
+          "passed": true
+        },
+        {
+          "name": "expired_window_requires_resync_without_old_event_replay",
+          "passed": true
+        },
+        {
+          "name": "future_cursor_returns_explicit_resync",
+          "passed": true
+        },
+        {
+          "name": "within_window_replay_uses_last_event_id",
+          "passed": true
+        }
+      ]
+    },
+    "backpressure-9f0b-01": {
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "counts": {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "evidence": ".git/summer4-closeout-20261015/t29-live/backpressure-9f0b-01/runtime-result.json",
+      "checks": [
+        {
+          "name": "four_actual_unread_cookie_tcp_streams",
+          "passed": true
+        },
+        {
+          "name": "real_socket_write_backpressure_observed",
+          "passed": true,
+          "blockedWorkers": 4
+        },
+        {
+          "name": "slow_readers_do_not_block_quartz_database_completion",
+          "passed": true,
+          "elapsedSeconds": 0.381
+        },
+        {
+          "name": "healthy_stream_progress_survives_four_slow_readers",
+          "passed": true,
+          "executionEvents": [
+            "execution.started",
+            "execution.log",
+            "execution.attempt",
+            "execution.log",
+            "execution.succeeded",
+            "execution.log"
+          ]
+        },
+        {
+          "name": "delivery_recovers_when_slow_sockets_close",
+          "passed": true
+        },
+        {
+          "name": "closed_streams_release_all_active_delivery_calls",
+          "passed": true,
+          "activeCalls": 0,
+          "blockedWorkers": 0
+        },
+        {
+          "name": "burst_handler_completes_after_socket_release",
+          "passed": true
+        },
+        {
+          "name": "extra_delivery_threads_retire_to_core_bound",
+          "passed": true,
+          "remainingWorkers": 4
+        }
+      ]
+    },
+    "global-capacity-9f0b-02": {
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "counts": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "evidence": ".git/summer4-closeout-20261015/t29-live/global-capacity-9f0b-02/runtime-result.json",
+      "checks": [
+        {
+          "name": "per_tenant_33rd_connection_rejected_before_global_limit",
+          "passed": true,
+          "status": 429,
+          "contentType": "application/json",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_TASK_SSE_LIMIT"
+        },
+        {
+          "name": "eight_real_tenants_admit_256_cookie_streams",
+          "passed": true,
+          "accepted": 256
+        },
+        {
+          "name": "global_257th_connection_rejected_even_in_empty_tenant",
+          "passed": true,
+          "status": 429,
+          "contentType": "application/json",
+          "cookiePresent": true,
+          "bearerPresent": false,
+          "urlHasQuery": false,
+          "correlated": true,
+          "errorCode": "SUMMER_TASK_SSE_LIMIT"
+        },
+        {
+          "name": "closed_tenant_releases_32_global_slots_within_two_heartbeats_and_margin",
+          "passed": true,
+          "accepted": 32,
+          "elapsedSeconds": 21.291,
+          "transientRejections": 32
+        },
+        {
+          "name": "all_256_connection_slots_can_be_reused_after_close",
+          "passed": true,
+          "accepted": 256,
+          "elapsedSeconds": 40.635
+        }
+      ]
+    }
+  },
+  "migrations": [
+    "18\t1",
+    "20\t1",
+    "26\t1"
+  ],
+  "failedBatches": {
+    "protocol-993-01": {
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 21,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "cleanup": "VERIFIED"
+    },
+    "backpressure-993-01": {
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 6,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "cleanup": "VERIFIED"
+    },
+    "capacity-993-01": {
+      "candidateSha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+      "counts": {
+        "tests": 4,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "stage": "complete",
+      "cleanup": "VERIFIED"
+    },
+    "global-capacity-9f0b-01": {
+      "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "stage": "global_capacity_setup",
+      "cleanup": "VERIFIED",
+      "failureType": "AssertionError",
+      "safeAssertion": "http_status_403_expected_201"
+    },
+    "junit-red-01": {
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": [
+        "com.abluepoint.summer.sample.task.TaskProgressBackpressureTest"
+      ]
+    }
+  },
+  "reused": [
+    {
+      "evidence": "../runtime/task-session-green-result.json",
+      "candidatePrefix": "2859eaad",
+      "claim": "After revocation and triggering a task, the real Cookie stream closes within six seconds and receives zero execution events; not an idle-revocation timing claim.",
+      "checksArrayEmpty": true,
+      "counting": "Do not invent a tests count for this older observation."
+    },
+    {
+      "evidence": "../t26-live/attempt-05/runtime-result.json",
+      "httpSqlChecks": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "chrome": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "taskUiFilesMatchCurrent": true
+    },
+    {
+      "evidence": "../runtime/task-recovery-ui-result.json",
+      "chrome": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "evidence": "../t27-live/attempt-01/runtime-result.json",
+      "httpSqlChecks": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "sourceBoundary": {
+    "candidateSha256": "9f0b3632cb7aa099beeb9900e8301312cb280a31977cd575efa0b31e581aa0af",
+    "productionSource": {
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventService.java": "3e92d93407d1eeff93009878ce776d47135febe9b64a6b6e9679ce6000ba8acc"
+    },
+    "candidateMatchesCurrent": true,
+    "onlyExecutorAndImportChanged": true,
+    "unchangedSemantics": [
+      "admission 32 per enterprise / 256 total",
+      "Last-Event-ID parser and replay",
+      "500-event window and resync",
+      "15-second heartbeat",
+      "Cookie session and live authorization checks",
+      "per-connection in-flight guard",
+      "cursor advances after successful send",
+      "disconnect callbacks and removal"
+    ],
+    "importsRemoved": [
+      "import java.util.concurrent.ArrayBlockingQueue;"
+    ],
+    "importsAdded": [
+      "import java.util.concurrent.SynchronousQueue;"
+    ]
+  },
+  "networkMocking": false,
+  "syntheticIdentity": false,
+  "businessSqlWrites": false,
+  "externalHandlerFixture": "Only RegisteredTaskHandler using actual Quartz and the normal progress callback; no controller, event SQL insertion or auth override.",
+  "globalCapacityFixture": "Real administrator with nine tenant memberships; request-header ceiling 64KiB only; SSE opaque Cookie and original 32/256 admission limits.",
+  "counting": "Each batch separately; no combined full-suite claim. Legacy revocation observation has no test count.",
+  "retainedEvidenceRoot": ".git/summer4-closeout-20261015/t29-live",
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    },
+    {
+      "id": 2,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    },
+    {
+      "id": 3,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    },
+    {
+      "id": 4,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    },
+    {
+      "id": 5,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    },
+    {
+      "id": 6,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    },
+    {
+      "id": 7,
+      "status": "EVIDENCE_READY",
+      "reference": "task-progress-137.md"
+    }
+  ],
+  "sourceSha256": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventService.java": "3e92d93407d1eeff93009878ce776d47135febe9b64a6b6e9679ce6000ba8acc",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/task/TaskProgressBackpressureTest.java": "b952040db08e0603ad2a7b1a90d0a16e8a08bc119910fa34006ecc0674a519b3"
+  }
+}

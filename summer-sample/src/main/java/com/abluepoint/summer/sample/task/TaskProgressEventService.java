@@ -17,8 +17,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +38,10 @@ class TaskProgressEventService {
         thread.setDaemon(true);
         return thread;
     });
-    private final ThreadPoolExecutor delivery = new ThreadPoolExecutor(4, 4, 0, TimeUnit.SECONDS,
-            new ArrayBlockingQueue<>(64), runnable -> {
+    // Admission and the per-connection delivery guard bound simultaneous writes.
+    // No queued healthy stream should wait behind blocked socket writes.
+    private final ThreadPoolExecutor delivery = new ThreadPoolExecutor(4, MAX_CONNECTIONS,
+            30, TimeUnit.SECONDS, new SynchronousQueue<>(), runnable -> {
                 Thread thread = new Thread(runnable, "summer-task-sse-delivery");
                 thread.setDaemon(true);
                 return thread;

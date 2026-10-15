@@ -61,6 +61,50 @@ class TaskProgressBackpressureTest {
     }
 
     @Test
+    void fourBlockedSubscribersCannotStarveAHealthySubscriber() throws Exception {
+        var definitions = mock(TaskDefinitionRepository.class);
+        var events = mock(TaskProgressEventRepository.class);
+        when(definitions.findById("task")).thenReturn(Optional.of(new TaskDefinitionEntity(
+                "task", "ent-acme", "delivery isolation", "system.noop", "0 0 0 1 1 ? 2099", "{}", 0)));
+        var event = mock(TaskProgressEventEntity.class);
+        when(event.eventId()).thenReturn(1L);
+        when(event.taskId()).thenReturn("task");
+        when(event.eventType()).thenReturn("execution.progress");
+        when(event.payloadJson()).thenReturn("{}");
+        when(events.findTop500ByEnterpriseIdAndTaskIdAndEventIdGreaterThanOrderByEventIdAsc(
+                anyString(), anyString(), anyLong())).thenReturn(List.of(event));
+        var blocked = new CountDownLatch(4);
+        var release = new CountDownLatch(1);
+        var healthy = new CountDownLatch(1);
+        var created = new java.util.concurrent.atomic.AtomicInteger();
+        try (var sockets = mockConstruction(SseEmitter.class, (socket, context) -> {
+            boolean slow = created.incrementAndGet() <= 4;
+            var calls = new java.util.concurrent.atomic.AtomicInteger();
+            doAnswer(invocation -> {
+                if (calls.incrementAndGet() > 1) {
+                    if (slow) {
+                        blocked.countDown();
+                        release.await(10, TimeUnit.SECONDS);
+                    } else healthy.countDown();
+                }
+                return null;
+            }).when(socket).send(any(SseEmitter.SseEventBuilder.class));
+        })) {
+            var service = new TaskProgressEventService(definitions, events, new ObjectMapper(), mock(TaskProgressAccess.class));
+            try {
+                for (int i = 0; i < 4; i++) service.subscribe("ent-acme", "task", 0, null);
+                assertThat(blocked.await(3, TimeUnit.SECONDS)).isTrue();
+                service.subscribe("ent-acme", "task", 0, null);
+                assertThat(healthy.await(2, TimeUnit.SECONDS))
+                        .as("healthy stream must receive progress while all four slow streams remain blocked").isTrue();
+            } finally {
+                release.countDown();
+                service.shutdown();
+            }
+        }
+    }
+
+    @Test
     void slowSubscriberDoesNotBlockPersistingExecutionProgress() throws Exception {
         var definitions = mock(TaskDefinitionRepository.class);
         var events = mock(TaskProgressEventRepository.class);
