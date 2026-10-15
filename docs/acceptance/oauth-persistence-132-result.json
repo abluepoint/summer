@@ -1,0 +1,495 @@
+{
+  "issue": 132,
+  "stories": [
+    1,
+    34
+  ],
+  "status": "READY",
+  "candidateSha256": "917307813cd8d81476b3e28f36c9b9c0f7465185d55ba053cebb893dfbdbc0d2",
+  "networkMocking": false,
+  "batches": [
+    {
+      "id": "attempt-01-91730781",
+      "counts": {
+        "tests": 48,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false,
+      "failureClassification": "invalid_expiry_fixture",
+      "evidence": ".git/summer4-closeout-20261015/t24-live/attempt-01-91730781/result.json"
+    },
+    {
+      "id": "attempt-02-seed-expiry",
+      "counts": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": true,
+      "evidence": ".git/summer4-closeout-20261015/t24-live/attempt-02-seed-expiry/result.json"
+    }
+  ],
+  "browserBatches": [
+    {
+      "mode": "normal",
+      "counts": {
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "pageErrors": 0
+    },
+    {
+      "mode": "fault",
+      "counts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "pageErrors": 0
+    }
+  ],
+  "runtimeLatestDistinctChecks": {
+    "tests": 59,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "aggregation": "latest_result_by_check_name_across_batches_not_full_rerun"
+  },
+  "browserTotal": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "offlineConsentAuditValidation": {
+    "source": "result.json audit from actual browser DELETE",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "actionOperatorAndRequestIdVerified": true
+  },
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS",
+      "evidence": [
+        "client_configuration_persists_across_both_jvm_restarts",
+        "configured_disabled_seed_not_overwritten_on_restart",
+        "configured_disabled_seed_consistent_on_new_node",
+        "configured_seed_reenable_restores_actual_pkce"
+      ]
+    },
+    {
+      "id": 2,
+      "status": "PASS",
+      "evidence": [
+        "client_registration_real_http",
+        "client_edit_audit",
+        "disable_audit_and_status",
+        "dual_node_client_edit_single_winner",
+        "ungranted_client_disable_denied",
+        "consent-audit-validation.json"
+      ]
+    },
+    {
+      "id": 3,
+      "status": "PASS",
+      "evidence": [
+        "consent_survives_restart",
+        "authorization_code_exchange_survives_restart",
+        "authorization_code_single_use",
+        "expired_code_rejected_time_fixture",
+        "access_and_id_token_fifteen_minute_ttl",
+        "browser_consent_revoked"
+      ]
+    },
+    {
+      "id": 4,
+      "status": "PASS",
+      "evidence": [
+        "real_s256_authorization_code_and_state",
+        "wrong_pkce_verifier_rejected",
+        "issuer_scope_and_id_token_nonce",
+        "new_redirect_scope_protocol_effect",
+        "public_client_refresh_token_grant_rejected"
+      ]
+    },
+    {
+      "id": 5,
+      "status": "PASS",
+      "evidence": [
+        "mysql_oauth_migration_applied",
+        "browser-normal.json",
+        "browser-fault.json"
+      ]
+    },
+    {
+      "id": 6,
+      "status": "PASS",
+      "evidence": [
+        "oauth_token_response_raw",
+        "invalid_client_case_0",
+        "management_projection_no_secrets",
+        "browser_tokens_not_in_web_storage",
+        "no_sensitive_runtime_output"
+      ]
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "evidence": [
+        "source-baseline.json",
+        "supplement-inputs.json",
+        "harness-correction.json",
+        "cleanup.json",
+        "oauth-persistence-132.md"
+      ]
+    }
+  ],
+  "sourceInputs": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/OAuthClientManagementController.java": "f19c6bfe0f283f88ccf0e902c1322ab97797c557b0dfdc30fcc5488c1ff43531",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/JdbcSummerOAuthClientStore.java": "2b8ff5e51c43c46ce0dadd23317cecec9a40abb3234b402c2a923b598572a69c",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/JdbcOAuthStorageConfiguration.java": "c4fe8c1cbc7bd98d81e0abdb8c552090631d5b7122c878e6f81b35c8deb8d155",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/JdbcSummerAuthorizationStore.java": "0f522a7b2b305ecadae4989e1cc8d21c9eb826fb3f5269de0e6716cfc69df8e3",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/JdbcSummerConsentStore.java": "9125b87d2ab372fed4d6301b6583b9d573bb60e3358dc4ba3e019331f7b19f12",
+    "summer-ui/src/pages/oauth-clients/index.tsx": "a8bb62b13918fae4b9177472c68fa3f61246f89ffb3e39cef6439f4d64df2ee0",
+    "summer-ui/src/pages/oauth-clients/locale.ts": "a3fbc9629107412cf80f120eef18ebeee4a01de14cf280b750b511b8b03e824d",
+    "summer-ui/src/pages/oauth-clients/api.ts": "d3d40414f2d481d427d0f02cc532638a5e1107f17bb78609794200da9ed97d2c"
+  },
+  "ownerSourceInputsStable": true,
+  "broaderInputCount": 251,
+  "broaderInputsStable": false,
+  "broaderChangedPaths": [
+    "summer-ui/src/pages/data-scopes/index.tsx"
+  ],
+  "fixtures": {
+    "consent": "Only isolated test client policy changed; actual protocol creates consent",
+    "expiry": "issuedAt six minutes ago, expiresAt one minute ago; valid expired five-minute interval",
+    "databaseFailure": "Isolated schema UPDATE trigger; actual browser HTTP 500"
+  },
+  "productChanges": [],
+  "junitExecutedThisPhase": false,
+  "sensitiveFindings": [],
+  "cleanup": "VERIFIED",
+  "cleanupReceipts": [
+    {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "21081": false,
+        "21082": false,
+        "21083": false,
+        "21573": false,
+        "21580": false
+      },
+      "app_account_absent": true
+    },
+    {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "21081": false,
+        "21082": false,
+        "21083": false,
+        "21573": false,
+        "21580": false
+      },
+      "app_account_absent": true
+    }
+  ],
+  "latestRuntimeChecks": [
+    {
+      "name": "mysql_oauth_migration_applied",
+      "passed": true
+    },
+    {
+      "name": "summer_ui_public_client_metadata",
+      "passed": true
+    },
+    {
+      "name": "management_projection_no_secrets",
+      "passed": true
+    },
+    {
+      "name": "ungranted_GET_oauth-clients",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "ungranted_GET_oauth-consents",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "ungranted_POST_oauth-clients",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "client_registration_real_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "client_registration_audit",
+      "passed": true
+    },
+    {
+      "name": "duplicate_client_conflict",
+      "passed": true,
+      "httpStatus": 409
+    },
+    {
+      "name": "invalid_client_case_0",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_case_1",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_case_2",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_case_3",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_case_4",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_case_5",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_case_6",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "invalid_client_failure_audit",
+      "passed": true
+    },
+    {
+      "name": "client_edit_real_http_and_version",
+      "passed": true
+    },
+    {
+      "name": "client_edit_audit",
+      "passed": true
+    },
+    {
+      "name": "client_edit_visible_on_other_node",
+      "passed": true
+    },
+    {
+      "name": "stale_client_version_conflict",
+      "passed": true,
+      "httpStatus": 412
+    },
+    {
+      "name": "dual_node_client_edit_single_winner",
+      "passed": true,
+      "httpStatuses": [
+        200,
+        412
+      ]
+    },
+    {
+      "name": "real_s256_authorization_code_and_state",
+      "passed": true
+    },
+    {
+      "name": "oauth_token_response_raw",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "public_client_no_refresh_token",
+      "passed": true
+    },
+    {
+      "name": "issuer_scope_and_id_token_nonce",
+      "passed": true
+    },
+    {
+      "name": "access_and_id_token_fifteen_minute_ttl",
+      "passed": true
+    },
+    {
+      "name": "summer_ui_code_five_minute_ttl",
+      "passed": true
+    },
+    {
+      "name": "authorization_code_single_use",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "wrong_pkce_verifier_rejected",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "missing_pkce_rejected",
+      "passed": true,
+      "httpStatus": 302,
+      "oauthError": "invalid_request"
+    },
+    {
+      "name": "plain_pkce_rejected",
+      "passed": true,
+      "httpStatus": 302,
+      "oauthError": "invalid_request"
+    },
+    {
+      "name": "unknown_scope_rejected",
+      "passed": true,
+      "httpStatus": 302,
+      "oauthError": "invalid_scope"
+    },
+    {
+      "name": "wrong_redirect_rejected",
+      "passed": true,
+      "httpStatus": 400,
+      "oauthError": null
+    },
+    {
+      "name": "new_redirect_scope_protocol_effect",
+      "passed": true,
+      "httpStatus": 302,
+      "oauthError": null
+    },
+    {
+      "name": "old_redirect_protocol_effect",
+      "passed": true,
+      "httpStatus": 400,
+      "oauthError": null
+    },
+    {
+      "name": "unregistered_scope_protocol_effect",
+      "passed": true,
+      "httpStatus": 302,
+      "oauthError": "invalid_scope"
+    },
+    {
+      "name": "disable_audit_and_status",
+      "passed": true
+    },
+    {
+      "name": "disabled_client_protocol_denied",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "real_consent_prompt_and_authorization",
+      "passed": true,
+      "httpStatus": 302
+    },
+    {
+      "name": "consent_generated_by_real_protocol_visible_in_management",
+      "passed": true,
+      "recordCount": 1
+    },
+    {
+      "name": "client_configuration_persists_across_both_jvm_restarts",
+      "passed": true
+    },
+    {
+      "name": "authorization_code_exchange_survives_restart",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "consent_survives_restart",
+      "passed": true
+    },
+    {
+      "name": "disabled_client_not_reseeded_after_restart",
+      "passed": true
+    },
+    {
+      "name": "reenabled_client_protocol_restored",
+      "passed": true
+    },
+    {
+      "name": "expired_code_rejected_time_fixture",
+      "passed": true,
+      "httpStatus": 400,
+      "fixture": "valid_five_minute_interval_entirely_in_past"
+    },
+    {
+      "name": "no_sensitive_runtime_output",
+      "passed": true
+    },
+    {
+      "name": "ungranted_client_metadata_denied",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "ungranted_client_disable_denied",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "denied_updates_leave_seed_unchanged",
+      "passed": true
+    },
+    {
+      "name": "ungranted_consent_revoke_denied_before_lookup",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "public_client_refresh_token_grant_rejected",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "public_client_client_credentials_grant_rejected",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "configured_seed_disabled_and_metadata_changed",
+      "passed": true
+    },
+    {
+      "name": "configured_disabled_seed_not_overwritten_on_restart",
+      "passed": true
+    },
+    {
+      "name": "configured_disabled_seed_consistent_on_new_node",
+      "passed": true
+    },
+    {
+      "name": "configured_disabled_seed_protocol_rejected_after_restart",
+      "passed": true,
+      "httpStatus": 400
+    },
+    {
+      "name": "configured_seed_reenable_restores_actual_pkce",
+      "passed": true
+    }
+  ]
+}
