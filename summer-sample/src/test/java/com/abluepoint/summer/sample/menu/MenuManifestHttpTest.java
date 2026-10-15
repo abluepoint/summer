@@ -186,6 +186,48 @@ class MenuManifestHttpTest {
                 .andExpect(jsonPath("$.data.items[0].sortOrder").value(50));
     }
 
+    @Test
+    void customerActionsUsePersistedOperationGrantsInsteadOfRequestedWriteScope() throws Exception {
+        customerActions("[\"GET:/api/customers\"]", "[]", "read");
+    }
+
+    @Test
+    void explicitDenyRemovesCreateEvenWhenTheRoleAllowsIt() throws Exception {
+        customerActions("[\"GET:/api/customers\",\"POST:/api/customers\"]", "[\"POST:/api/customers\"]", "read");
+    }
+
+    @Test
+    void allowedCreateIsProjectedButUnassignedUpdateAndDeleteAreNot() throws Exception {
+        customerActions("[\"GET:/api/customers\",\"POST:/api/customers\"]", "[]", "read", "create");
+    }
+
+    private void customerActions(String operations, String denied, String... expected) throws Exception {
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"manifestVersion\":1,\"items\":[{\"menuId\":\"customer/drawer\",\"path\":\"/customer/drawer\",\"titleKey\":\"menu.customer\",\"iconKey\":\"customer\",\"sortOrder\":1}]}")
+                        .header("Idempotency-Key", "customer-actions-manifest").with(platformAdmin("platform.menu.write")))
+                .andExpect(status().isOk());
+        String capabilities = operations.replace("[", "[\"enterprise.menu.read\",");
+        MvcResult role = mockMvc.perform(post("/api/v1/enterprises/ent-acme/roles").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Actions\",\"code\":\"actions\",\"capabilityIds\":" + capabilities + "}")
+                        .header("Idempotency-Key", "action-role").with(enterpriseAdmin("enterprise.roles.write")))
+                .andExpect(status().isCreated()).andReturn();
+        String roleId = JsonPath.read(role.getResponse().getContentAsString(), "$.data.roleId");
+        mockMvc.perform(put("/api/v1/enterprises/ent-acme/users/action-reader/roles").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roleIds\":[\"" + roleId + "\"],\"deniedCapabilityCodes\":" + denied + "}")
+                        .header("If-Match", "\"1\"").header("Idempotency-Key", "action-binding").with(enterpriseAdmin("enterprise.roles.write")))
+                .andExpect(status().isOk());
+        var user = jwt().jwt(token -> token.subject("action-reader").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
+                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_customer.read"),
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_customer.write"));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(user)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].actions").value(org.hamcrest.Matchers.contains(expected)));
+        mockMvc.perform(get("/api/v1/enterprises/ent-other/menu-manifest").with(user)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(jwt().jwt(token -> token.subject("action-reader")
+                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "SUSPENDED"))))
+                        .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_customer.read"))))
+                .andExpect(status().isForbidden());
+    }
+
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platformAdmin(String capability) {
         return jwt().jwt(token -> token.subject("platform-admin").claim("platform_capabilities", List.of(capability)))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));

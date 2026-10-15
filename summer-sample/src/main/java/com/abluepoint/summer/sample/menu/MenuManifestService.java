@@ -7,6 +7,10 @@ import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import java.time.Instant;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -20,7 +24,7 @@ class MenuManifestService {
     private final AuthorizationChangeEventService changeEvents;
     private final RequestIdAccessor requestId;
     private final AuthorizationAuditStore auditStore;
-    private final Map<String, Receipt> receipts = new HashMap<>();
+    private final Map<String, Receipt> receipts = new ConcurrentHashMap<>();
 
     MenuManifestService(MenuManifestRepository manifestRepository, MenuManifestOverrideRepository overrideRepository,
                         AuthorizationService authorizationService, AuthorizationChangeEventService changeEvents,
@@ -64,7 +68,7 @@ class MenuManifestService {
         List<MenuManifestEntity> entities = request.items().stream().map(item -> new MenuManifestEntity(item, request.manifestVersion())).toList();
         manifestRepository.saveAll(entities);
         MenuManifestView result = view(request.manifestVersion(), entities, Map.of(), null);
-        receipts.put(key, new Receipt(fingerprint, result));
+        rememberAfterCommit(key, new Receipt(fingerprint, result));
         auditStore.mutation("ent-acme", "manifest", "MENU_MANIFEST_SYNCED", requestId.currentRequestId(), authentication.getName());
         changeEvents.enqueue("ent-acme", "MENU_MANIFEST", "manifest", "MENU_MANIFEST_SYNCED", request.manifestVersion(), requestId.currentRequestId());
         return result;
@@ -81,7 +85,8 @@ class MenuManifestService {
             MenuManifestOverrideEntity override = overrides.get(item.menuId());
             Effective effective = effective(item, override);
             if (!effective.enabled || !allowed(effective.capabilityCode, authentication, enterpriseId)) continue;
-            List<String> actions = action(effective.capabilityCode);
+            List<String> actions = actions(item.menuId(), effective.capabilityCode, authentication, enterpriseId);
+            if (customerMenu(item.menuId()) && !actions.contains("read")) continue;
             visible.add(new MenuManifestItemView(item.menuId(), effective.parentMenuId, item.path(), item.titleKey(),
                     item.iconKey(), effective.sortOrder, effective.capabilityCode, true, actions,
                     override == null ? 1 : override.version()));
@@ -105,7 +110,7 @@ class MenuManifestService {
             Effective effective = effective(item, override);
             managed.add(new MenuManifestItemView(item.menuId(), effective.parentMenuId, item.path(), item.titleKey(), item.iconKey(),
                     effective.sortOrder, effective.capabilityCode, effective.enabled,
-                    effective.enabled && allowed(effective.capabilityCode, authentication, enterpriseId) ? action(effective.capabilityCode) : List.of(),
+                    effective.enabled && allowed(effective.capabilityCode, authentication, enterpriseId) ? actions(item.menuId(), effective.capabilityCode, authentication, enterpriseId) : List.of(),
                     override == null ? 1 : override.version()));
         }
         managed.sort(Comparator.comparingInt(MenuManifestItemView::sortOrder).thenComparing(MenuManifestItemView::menuId));
@@ -118,7 +123,9 @@ class MenuManifestService {
         authorizationService.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.menu.write");
         if (key == null || key.isBlank()) throw new MenuManifestValidationException("Idempotency-Key is required");
         if (request == null) throw new MenuManifestValidationException("Menu override is required");
-        MenuManifestEntity item = manifestRepository.findById(menuId).orElseThrow(() -> new MenuManifestConflictException("Menu item not found"));
+        MenuManifestEntity item = manifestRepository.lockMenu(menuId).orElseThrow(() -> new MenuManifestConflictException("Menu item not found"));
+        // A locking/current read avoids an older MySQL repeatable-read snapshot after waiting.
+        MenuManifestOverrideEntity current = overrideRepository.findByEnterpriseIdAndMenuId(enterpriseId, menuId).orElse(null);
         validateOverride(request, menuId);
         if (request.parentMenuId() != null && !request.parentMenuId().isBlank()
                 && !manifestRepository.existsById(request.parentMenuId())) {
@@ -131,19 +138,35 @@ class MenuManifestService {
             if (!previous.fingerprint.equals(fingerprint)) throw new MenuManifestConflictException("Idempotency key reused");
             return (MenuManifestItemView) previous.result;
         }
-        MenuManifestOverrideEntity current = overrideRepository.findByEnterpriseIdAndMenuId(enterpriseId, menuId).orElse(null);
         long currentVersion = current == null ? 1 : current.version();
         if (ifMatch == null || !ifMatch.equals("\"" + currentVersion + "\"")) throw new MenuManifestPreconditionException("The resource has changed");
-        if (current == null) current = new MenuManifestOverrideEntity(enterpriseId, menuId, request);
-        else current.update(request, current.version() + 1);
-        overrideRepository.save(current);
+        if (current == null) {
+            current = new MenuManifestOverrideEntity(enterpriseId, menuId, request);
+            overrideRepository.saveAndFlush(current);
+        } else {
+            int changed = overrideRepository.compareAndSet(current.overrideId(), currentVersion, request.enabled(),
+                    request.parentMenuId(), request.sortOrder(), request.capabilityCode(), Instant.now());
+            if (changed != 1) throw new MenuManifestPreconditionException("The resource has changed");
+            // compareAndSet clears the persistence context; this is only the response snapshot.
+            current.update(request, currentVersion + 1);
+        }
         Effective effective = effective(item, current);
         MenuManifestItemView result = new MenuManifestItemView(item.menuId(), effective.parentMenuId, item.path(), item.titleKey(), item.iconKey(),
-                effective.sortOrder, effective.capabilityCode, effective.enabled, action(effective.capabilityCode), current.version());
-        receipts.put("override:" + enterpriseId + ":" + menuId + ":" + key, new Receipt(fingerprint, result));
+                effective.sortOrder, effective.capabilityCode, effective.enabled,
+                effective.enabled ? actions(item.menuId(), effective.capabilityCode, authentication, enterpriseId) : List.of(), current.version());
+        rememberAfterCommit("override:" + enterpriseId + ":" + menuId + ":" + key, new Receipt(fingerprint, result));
         auditStore.mutation(enterpriseId, menuId, "MENU_OVERRIDE_UPDATED", requestId.currentRequestId(), authentication.getName());
         changeEvents.enqueue(enterpriseId, "MENU_MANIFEST", menuId, "MENU_OVERRIDE_UPDATED", current.version(), requestId.currentRequestId());
         return result;
+    }
+
+    private void rememberAfterCommit(String key, Receipt receipt) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            throw new IllegalStateException("Menu mutations require a transaction");
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() { receipts.put(key, receipt); }
+        });
     }
 
     private static boolean visibleAncestors(MenuManifestItemView item, Map<String, String> parents, Set<String> visibleIds) {
@@ -166,6 +189,26 @@ class MenuManifestService {
         return enterpriseMenuReader || authentication.getAuthorities().stream()
                 .anyMatch(authority -> ("SCOPE_" + capability).equals(authority.getAuthority()));
     }
+    private static boolean customerMenu(String menuId) {
+        return Set.of("customer", "customer/drawer", "customer/modal", "customer/page").contains(menuId);
+    }
+
+    // Safe action names map to the same operation permissions enforced on the business APIs.
+    // This projection never grants a role or substitutes for backend authorization.
+    private List<String> actions(String menuId, String capability, Authentication authentication, String enterpriseId) {
+        if (!customerMenu(menuId)) return action(capability);
+        List<String> result = new ArrayList<>();
+        for (String[] operation : List.of(
+                new String[]{"read", "GET:/api/customers", "customer.read"},
+                new String[]{"create", "POST:/api/customers", "customer.write"},
+                new String[]{"update", "PATCH:/api/customers/{username}", "customer.write"},
+                new String[]{"delete", "DELETE:/api/customers/{username}", "customer.write"})) {
+            boolean scope = authentication.getAuthorities().stream().anyMatch(a -> ("SCOPE_" + operation[2]).equals(a.getAuthority()));
+            if (scope && authorizationService.decision(authentication, enterpriseId, operation[1], null).allowed()) result.add(operation[0]);
+        }
+        return List.copyOf(result);
+    }
+
     private static List<String> action(String capability) {
         if (capability == null || capability.isBlank()) return List.of();
         int dot = capability.lastIndexOf('.');

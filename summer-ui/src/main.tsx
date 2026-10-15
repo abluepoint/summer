@@ -24,6 +24,9 @@ import { authText, configureBusinessApiAuth } from './auth/requests';
 import { menuManifest } from './routes';
 import { getVisibleMenuManifest, syncMenuManifest } from './menu/api';
 import { loadMenuPermissions } from './menu/permissions';
+import { MenuAccessContext } from './menu/access';
+import { VisibleMenuItem } from './menu/api';
+import useActiveEnterprise from './pages/data-scopes/useActiveEnterprise';
 import useLocale from './utils/useLocale';
 import changeTheme from './utils/changeTheme';
 import useStorage from './utils/useStorage';
@@ -39,11 +42,17 @@ onAuthenticatedUiClear(() => {
 configureBusinessApiAuth();
 
 function AuthenticatedLayout() {
+  const tenant = useActiveEnterprise();
+  const [menuItems, setMenuItems] = useState<VisibleMenuItem[]>([]);
   const t = useLocale();
   const [status, setStatus] = useState<
     'loading' | 'ready' | 'failed' | 'limited'
   >('loading');
   useEffect(() => {
+    if (!tenant.ready) return;
+    let alive = true;
+    setStatus('loading');
+    setMenuItems([]);
     getAuthenticatedUser()
       .then(async (user) => {
         if (!user) {
@@ -61,8 +70,15 @@ function AuthenticatedLayout() {
         const profile = user.profile;
         const permissions = await loadMenuPermissions(
           () => syncMenuManifest(menuManifest),
-          () => getVisibleMenuManifest('ent-acme')
+          () =>
+            tenant.enterpriseId
+              ? getVisibleMenuManifest(tenant.enterpriseId)
+              : Promise.resolve({ manifestVersion: 0, items: [] }),
+          (items) => {
+            if (alive) setMenuItems(items);
+          }
         );
+        if (!alive) return;
         store.dispatch({
           type: 'update-userInfo',
           payload: {
@@ -82,13 +98,24 @@ function AuthenticatedLayout() {
         if (notice === 'unauthorized')
           Message.info(authText('auth.reauthenticated'));
       })
-      .catch(() => setStatus('failed'));
-  }, []);
+      .catch(() => {
+        if (alive) setStatus('failed');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tenant.ready, tenant.enterpriseId]);
   if (status === 'failed')
     return <Alert type="error" content={t['auth.startFailed']} />;
   if (status === 'limited')
     return <Alert type="error" content={t['auth.restartLimit']} />;
-  return status === 'ready' ? <PageLayout /> : <Spin />;
+  return status === 'ready' ? (
+    <MenuAccessContext.Provider value={menuItems}>
+      <PageLayout />
+    </MenuAccessContext.Provider>
+  ) : (
+    <Spin />
+  );
 }
 
 function Index() {

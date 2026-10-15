@@ -1,10 +1,13 @@
-import auth, { AuthParams } from '@/utils/authentication';
-import { useEffect, useMemo, useState } from 'react';
+import { AuthParams } from '@/utils/authentication';
+import { useMemo } from 'react';
 import { createMenuManifest } from '@/menu/manifest';
+import { resolveMenuRoutes, useMenuItems } from '@/menu/access';
 
 export type IRoute = AuthParams & {
   name: string;
   key: string;
+  // Local group routes must not prefix-match disabled descendants.
+  exact?: boolean;
   iconKey?: string;
   capabilityCode?: string;
   // 当前页是否展示面包屑
@@ -210,18 +213,24 @@ export const routes: IRoute[] = [
   {
     name: 'menu.systemParameters',
     key: 'system-parameters',
-    requiredPermissions: [{ resource: 'menu.systemParameters', actions: ['read'] }],
+    requiredPermissions: [
+      { resource: 'menu.systemParameters', actions: ['read'] },
+    ],
   },
   {
     name: 'menu.authUsers',
     key: 'auth-users',
-    requiredPermissions: [{ resource: 'enterprise.members', actions: ['read'] }],
+    requiredPermissions: [
+      { resource: 'enterprise.members', actions: ['read'] },
+    ],
     capabilityCode: 'enterprise.members.read',
   },
   {
     name: 'menu.organization',
     key: 'organization',
-    requiredPermissions: [{ resource: 'enterprise.organization', actions: ['read'] }],
+    requiredPermissions: [
+      { resource: 'enterprise.organization', actions: ['read'] },
+    ],
     capabilityCode: 'enterprise.organization.read',
   },
   {
@@ -233,7 +242,9 @@ export const routes: IRoute[] = [
   {
     name: 'menu.authorizationEvents',
     key: 'authorization-events',
-    requiredPermissions: [{ resource: 'menu.authorizationEvents', actions: ['read'] }],
+    requiredPermissions: [
+      { resource: 'menu.authorizationEvents', actions: ['read'] },
+    ],
     capabilityCode: 'enterprise.roles.read',
   },
   {
@@ -245,7 +256,9 @@ export const routes: IRoute[] = [
   {
     name: 'menu.messages',
     key: 'messages',
-    requiredPermissions: [{ resource: 'enterprise.messages', actions: ['read'] }],
+    requiredPermissions: [
+      { resource: 'enterprise.messages', actions: ['read'] },
+    ],
     capabilityCode: 'enterprise.messages.read',
   },
   {
@@ -364,40 +377,11 @@ export const generatePermission = (role: string) => {
 };
 
 const useRoute = (userPermission): [IRoute[], string] => {
-  const filterRoute = (routes: IRoute[], arr = []): IRoute[] => {
-    if (!routes.length) {
-      return [];
-    }
-    for (const route of routes) {
-      const { requiredPermissions, oneOfPerm } = route;
-      let visible = true;
-      if (requiredPermissions) {
-        visible = auth({ requiredPermissions, oneOfPerm }, userPermission);
-      }
-
-      if (!visible) {
-        continue;
-      }
-      if (route.children && route.children.length) {
-        const newRoute = { ...route, children: [] };
-        filterRoute(route.children, newRoute.children);
-        if (newRoute.children.length) {
-          arr.push(newRoute);
-        }
-      } else {
-        arr.push({ ...route });
-      }
-    }
-
-    return arr;
-  };
-
-  const [permissionRoute, setPermissionRoute] = useState(routes);
-
-  useEffect(() => {
-    const newRoutes = filterRoute(routes);
-    setPermissionRoute(newRoutes);
-  }, [JSON.stringify(userPermission)]);
+  const menuItems = useMenuItems();
+  const permissionRoute = useMemo(
+    () => resolveMenuRoutes(routes, menuItems),
+    [menuItems]
+  );
 
   const defaultRoute = useMemo(() => {
     const first = permissionRoute[0];

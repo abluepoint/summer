@@ -19,10 +19,10 @@ import {
 } from '@arco-design/web-react';
 import { useHistory, useLocation } from 'react-router-dom';
 import useLocale from '@/utils/useLocale';
+import { useCustomerActions } from '@/menu/access';
 import clipboard from '@/utils/clipboard';
 import {
   DRAFT_KEY,
-  getAuthenticatedUser,
   isAuthRedirecting,
   readCustomerDraft,
   registerCustomerDraftProvider,
@@ -119,7 +119,10 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   const [error, setError] = useState<SummerApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
-  const [canWrite, setCanWrite] = useState(false);
+  const actions = useCustomerActions(location.pathname.startsWith('/customer/detail') ? 'customer/detail' : `customer/${mode}`);
+  const canCreate = actions.includes('create');
+  const canUpdate = actions.includes('update');
+  const canDelete = actions.includes('delete');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [typedUsername, setTypedUsername] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -153,19 +156,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   );
   const [editBusy, setEditBusy] = useState(false);
 
-  useEffect(() => {
-    let live = true;
-    getAuthenticatedUser()
-      .then((user) => {
-        if (live) setCanWrite(Boolean(user?.scopes.includes('customer.write')));
-      })
-      .catch(() => {
-        if (live) setCanWrite(false);
-      });
-    return () => {
-      live = false;
-    };
-  }, [location.pathname, revision]);
+
 
   useEffect(() => {
     if (!createOpen) return undefined;
@@ -226,6 +217,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   );
 
   function openCreate() {
+    if (!canCreate) return;
     if (focusTimer.current !== null) window.clearTimeout(focusTimer.current);
     focusTimer.current = null;
     setEditOriginal(null);
@@ -233,6 +225,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   }
 
   function openEdit(record: Customer) {
+    if (!canUpdate) return;
     if (mode === 'page') {
       history.push({
         pathname: `/customer/page/edit/${encodeURIComponent(record.username)}`,
@@ -374,6 +367,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   }, [mode, location.pathname, location.search, revision]);
 
   function beginDelete(username: string) {
+    if (!canDelete) return;
     setDeleteTarget(username);
     setTypedUsername('');
     setDeleteError(null);
@@ -387,6 +381,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   }
 
   async function confirmDelete() {
+    if (!canDelete) return;
     if (
       !deleteTarget ||
       !canConfirmDeletion(typedUsername, deleteTarget) ||
@@ -432,7 +427,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   }
 
   function requestActiveChange(record: Customer) {
-    if (!canWrite || actionBusy) return;
+    if (!canUpdate || actionBusy) return;
     Modal.confirm({
       title:
         t[
@@ -501,6 +496,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
   }
 
   function openPageCreate() {
+    if (!canCreate) return;
     history.push({
       pathname: '/customer/page/create',
       search: pageFormSearch(
@@ -533,7 +529,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
         </Tag>
       ),
     },
-    ...(canWrite
+    ...((canUpdate || canDelete)
       ? [
           {
             title: t['customer.actions'],
@@ -541,20 +537,20 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
             dataIndex: 'username',
             render: (username: string, record: Customer) => (
               <Space>
-                <Button
+                {canUpdate && (<Button
                   id={`customer-edit-trigger-${username}`}
                   type="text"
                   onClick={() => openEdit(record)}
                 >
                   {t['customer.edit']}
-                </Button>
-                <Button
+                </Button>)}
+                {canDelete && (<Button
                   status="danger"
                   type="text"
                   onClick={() => beginDelete(username)}
                 >
                   {t['customer.delete']}
-                </Button>
+                </Button>)}
               </Space>
             ),
           },
@@ -719,15 +715,15 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               },
             ]}
           />
-          {canWrite && (
+          {(canUpdate || canDelete) && (
             <Space style={{ marginTop: 16 }}>
-              <Button
+              {canUpdate && (<Button
                 id={`customer-edit-trigger-${customer.username}`}
                 onClick={() => openEdit(customer)}
               >
                 {t['customer.edit']}
-              </Button>
-              <Button
+              </Button>)}
+              {canUpdate && (<Button
                 disabled={actionBusy}
                 onClick={() => requestActiveChange(customer)}
               >
@@ -738,20 +734,20 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
                       : 'customer.activate'
                   ]
                 }
-              </Button>
-              <Button
+              </Button>)}
+              {canDelete && (<Button
                 status="danger"
                 onClick={() => beginDelete(customer.username)}
               >
                 {t['customer.delete']}
-              </Button>
+              </Button>)}
             </Space>
           )}
         </>
       )}
       {!isDetailRoute && !error && (
         <>
-          {mode !== 'page' && canWrite && (
+          {mode !== 'page' && canCreate && (
             <Button
               id="customer-create-trigger"
               type="primary"
@@ -761,7 +757,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               {t['customer.create.open']}
             </Button>
           )}
-          {mode === 'page' && canWrite && (
+          {mode === 'page' && canCreate && (
             <Button
               id="customer-create-trigger"
               type="primary"
@@ -849,26 +845,26 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
                           </Tag>
                         ),
                       },
-                      ...(canWrite
+                      ...((canUpdate || canDelete)
                         ? [
                             {
                               label: t['customer.actions'],
                               value: (
                                 <Space>
-                                  <Button
+                                  {canUpdate && (<Button
                                     id={`customer-edit-trigger-${item.username}`}
                                     type="text"
                                     onClick={() => openEdit(item)}
                                   >
                                     {t['customer.edit']}
-                                  </Button>
-                                  <Button
+                                  </Button>)}
+                                  {canDelete && (<Button
                                     status="danger"
                                     type="text"
                                     onClick={() => beginDelete(item.username)}
                                   >
                                     {t['customer.delete']}
-                                  </Button>
+                                  </Button>)}
                                 </Space>
                               ),
                             },
@@ -926,7 +922,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               type="primary"
               loading={deleteBusy}
               disabled={
-                !canWrite ||
+                !canDelete ||
                 !canConfirmDeletion(typedUsername, deleteTarget) ||
                 [401, 403, 404].includes(deleteError?.status || 0)
               }
@@ -1024,7 +1020,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               onCancel={requestCloseEdit}
               onBusyChange={setEditBusy}
               onSuccess={edited}
-              canWrite={canWrite}
+              canWrite={canUpdate}
             />
           )}
         </Drawer>
@@ -1053,7 +1049,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               onCancel={requestCloseEdit}
               onBusyChange={setEditBusy}
               onSuccess={edited}
-              canWrite={canWrite}
+              canWrite={canUpdate}
             />
           )}
         </Modal>
@@ -1074,7 +1070,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               onCancel={requestCloseCreate}
               onBusyChange={setCreateBusy}
               onSuccess={created}
-              canWrite={canWrite}
+              canWrite={canCreate}
             />
           )}
         </Drawer>
@@ -1102,7 +1098,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
               onCancel={requestCloseCreate}
               onBusyChange={setCreateBusy}
               onSuccess={created}
-              canWrite={canWrite}
+              canWrite={canCreate}
             />
           )}
         </Modal>

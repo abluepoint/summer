@@ -1,0 +1,827 @@
+{
+  "issue": 124,
+  "title": "T16 菜单 manifest 与动作权限验收",
+  "status": "READY_FOR_COORDINATOR_COMMIT_AND_CLOSE",
+  "candidate_sha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a",
+  "candidate_build": {
+    "returncode": 0,
+    "input_count": 534,
+    "changed_during_build": [],
+    "elapsed_seconds": 4.3,
+    "migration_resources_match_source": true,
+    "jar_sha256": "993ad757888f39802a7c03c1509d20a2f191a8616c5025eaff2712cf2eff320a"
+  },
+  "dependency": {
+    "issue": 123,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED"
+  },
+  "acceptance_criteria": [
+    {
+      "ac": 1,
+      "status": "PASSED",
+      "evidence": "实际路由生成52项安全manifest；不包含组件导入引用、可执行显示表达式；初始HTTP安全字段和非法路径400验证保留。"
+    },
+    {
+      "ac": 2,
+      "status": "PASSED",
+      "evidence": "管理员启用、父级、排序、Capability四项HTTP/Chrome成功。新候选首次及既有覆盖竞争均200/412，胜者各一条mutation audit/outbox。"
+    },
+    {
+      "ac": 3,
+      "status": "PASSED",
+      "evidence": "最终真实Chrome只读写按钮0，允许新增按钮1；停用客户菜单导航/直达都拒绝；父组存在时停用子路由也拒绝。"
+    },
+    {
+      "ac": 4,
+      "status": "PASSED",
+      "evidence": "同一只读主体真实POST客户403 SUMMER_FORBIDDEN；菜单管理/发布/覆盖403、匿名401和跨租户403初始证据保留；新投影调用既有AuthorizationService.decision。"
+    },
+    {
+      "ac": 5,
+      "status": "PASSED",
+      "evidence": "真实MySQL迁移、HTTP、双JVM、第三JVM事务尾部故障、Chrome和502恢复；组件adapter单列，不替代真实验收。"
+    },
+    {
+      "ac": 6,
+      "status": "PASSED",
+      "evidence": "If-Match/Idempotency-Key、Unified/ETag/requestId、SUMMER_PRECONDITION_FAILED/SUMMER_FORBIDDEN/SUMMER_INTERNAL_ERROR；已知运行秘密值扫描无命中。"
+    },
+    {
+      "ac": 7,
+      "status": "PASSED",
+      "evidence": "故事24至28、ADR0026、修复和红绿分批记录。最终11源码/测试文件摘要在UI实测前后稳定；不写真实index、不提交推送或关闭Issue。"
+    }
+  ],
+  "stories": [
+    {
+      "id": 24,
+      "design": "docs/adr/0026-use-versioned-route-menu-manifest.md",
+      "implementation": [
+        "summer-ui/src/menu/manifest.ts",
+        "summer-ui/src/routes.ts"
+      ],
+      "evidence": "actual-route-manifest.json，52项"
+    },
+    {
+      "id": 25,
+      "implementation": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestModels.java",
+        "summer-ui/src/menu/access.ts"
+      ],
+      "evidence": "安全元数据；组件仅本地解析；未知路由组件回归"
+    },
+    {
+      "id": 26,
+      "implementation": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestService.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestRepositories.java"
+      ],
+      "evidence": "四项菜单配置、CAS、首次创建锁、事务提交后回执"
+    },
+    {
+      "id": 27,
+      "implementation": [
+        "summer-ui/src/menu/access.ts",
+        "summer-ui/src/main.tsx",
+        "summer-ui/src/routes.ts",
+        "summer-ui/src/layout.tsx",
+        "summer-ui/src/pages/customer/CustomerScreen.tsx"
+      ],
+      "evidence": "服务端可见项与独立create/update/delete动作；父分组精确匹配"
+    },
+    {
+      "id": 28,
+      "implementation": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestService.java"
+      ],
+      "evidence": "调用既有授权决策；显式拒绝和活动成员仍生效，后端业务API未放宽"
+    }
+  ],
+  "batches": {
+    "original_full": {
+      "api": {
+        "tests": 38,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browser": {
+        "tests": 9,
+        "failures": 2,
+        "errors": 1,
+        "skipped": 0
+      },
+      "combined": {
+        "tests": 47,
+        "failures": 3,
+        "errors": 1,
+        "skipped": 0
+      },
+      "status": "INCOMPLETE",
+      "browser_shutdown_error": "browser_shutdown_timeout",
+      "exit_code": 1
+    },
+    "new_candidate_targeted": {
+      "api": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browser": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "runner_exit_code": 0,
+      "browser_exit_code": 0,
+      "cleanup": "VERIFIED",
+      "shutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    "final_ui": {
+      "http_and_provenance": {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "browser": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "runner_exit_code": 0,
+      "browser_exit_code": 0,
+      "cleanup": "VERIFIED",
+      "shutdown": {
+        "processExited": true,
+        "forced": true
+      }
+    },
+    "junit_history": {
+      "red": {
+        "tests": 3,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "green1": {
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "actions-red": {
+        "tests": 3,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "green2": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "green3": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "customer_component_red": {
+      "mode": "component-http-adapter",
+      "tests": 4,
+      "failures": 4,
+      "errors": 0,
+      "skipped": 0,
+      "checks": [
+        {
+          "name": "read_only_hides_all_mutations_despite_write_scope",
+          "status": "failed",
+          "detail": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   1,\n+   1,\n+   1\n-   0,\n-   0,\n-   0\n  ]\n"
+        },
+        {
+          "name": "create_permission_only_shows_create",
+          "status": "failed",
+          "detail": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    1,\n+   1,\n+   1\n-   0,\n-   0\n  ]\n"
+        },
+        {
+          "name": "delete_permission_only_shows_delete",
+          "status": "failed",
+          "detail": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n-   0,\n-   0,\n    1,\n+   1,\n+   1\n  ]\n"
+        },
+        {
+          "name": "update_permission_only_shows_edit",
+          "status": "failed",
+          "detail": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n-   0,\n    1,\n+   1,\n+   1\n-   0\n  ]\n"
+        }
+      ],
+      "shutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    "customer_component_green": {
+      "mode": "component-http-adapter",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "checks": [
+        {
+          "name": "read_only_hides_all_mutations_despite_write_scope",
+          "status": "passed",
+          "actual": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "create_permission_only_shows_create",
+          "status": "passed",
+          "actual": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "delete_permission_only_shows_delete",
+          "status": "passed",
+          "actual": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "name": "update_permission_only_shows_edit",
+          "status": "passed",
+          "actual": [
+            0,
+            1,
+            0
+          ]
+        }
+      ],
+      "shutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    "route_original_red": {
+      "mode": "route-hook-component",
+      "tests": 6,
+      "failures": 5,
+      "errors": 0,
+      "skipped": 0,
+      "checks": [
+        {
+          "name": "empty_manifest_blocks_all_business_routes",
+          "status": "failed",
+          "detail": "Expected values to be strictly equal:\n\n5 !== 0\n"
+        },
+        {
+          "name": "safe_menu_without_action_capability_remains_visible",
+          "status": "failed",
+          "detail": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'dictionary/form'\n- 'customer/drawer'\n"
+        },
+        {
+          "name": "disabled_customer_menu_cannot_resolve_a_route",
+          "status": "failed",
+          "detail": "The expression evaluated to a falsy value:\n\n  assert.ok(!r.some(x=>x.key==='customer/drawer'||x.children?.some(c=>c.key==='customer/drawer')))\n"
+        },
+        {
+          "name": "server_parent_sort_and_title_drive_navigation",
+          "status": "failed",
+          "detail": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   'dictionary',\n+   'customer',\n+   'customer/detail',\n+   'oauth2/callback',\n+   'arco-examples'\n-   'menu-manifest',\n-   'roles'\n  ]\n"
+        },
+        {
+          "name": "unknown_server_path_never_creates_local_component",
+          "status": "failed",
+          "detail": "Expected values to be strictly equal:\n\n5 !== 0\n"
+        },
+        {
+          "name": "page_create_and_edit_routes_require_specific_actions",
+          "status": "passed"
+        }
+      ],
+      "shutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    "parent_route_red": {
+      "mode": "route-hook-component",
+      "tests": 7,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "checks": [
+        {
+          "name": "empty_manifest_blocks_all_business_routes",
+          "status": "passed"
+        },
+        {
+          "name": "safe_menu_without_action_capability_remains_visible",
+          "status": "passed"
+        },
+        {
+          "name": "disabled_customer_menu_cannot_resolve_a_route",
+          "status": "passed"
+        },
+        {
+          "name": "server_parent_sort_and_title_drive_navigation",
+          "status": "passed"
+        },
+        {
+          "name": "group_component_cannot_prefix_match_a_disabled_child",
+          "status": "failed",
+          "detail": "Expected values to be strictly equal:\n\ntrue !== false\n"
+        },
+        {
+          "name": "unknown_server_path_never_creates_local_component",
+          "status": "passed"
+        },
+        {
+          "name": "page_create_and_edit_routes_require_specific_actions",
+          "status": "passed"
+        }
+      ],
+      "shutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    "route_final_green": {
+      "mode": "route-hook-component",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "checks": [
+        {
+          "name": "empty_manifest_blocks_all_business_routes",
+          "status": "passed"
+        },
+        {
+          "name": "safe_menu_without_action_capability_remains_visible",
+          "status": "passed"
+        },
+        {
+          "name": "disabled_customer_menu_cannot_resolve_a_route",
+          "status": "passed"
+        },
+        {
+          "name": "server_parent_sort_and_title_drive_navigation",
+          "status": "passed"
+        },
+        {
+          "name": "group_component_cannot_prefix_match_a_disabled_child",
+          "status": "passed"
+        },
+        {
+          "name": "unknown_server_path_never_creates_local_component",
+          "status": "passed"
+        },
+        {
+          "name": "page_create_and_edit_routes_require_specific_actions",
+          "status": "passed"
+        }
+      ],
+      "shutdown": {
+        "processExited": true,
+        "forced": false
+      }
+    },
+    "customer_contracts": {
+      "exit_code": 0,
+      "summary": [
+        "# tests 12",
+        "# pass 12",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# duration_ms 152.698042"
+      ]
+    },
+    "ui_typecheck_build": {
+      "typecheck": {
+        "exit_code": 0,
+        "elapsed_seconds": 5.57
+      },
+      "build": {
+        "exit_code": 0,
+        "elapsed_seconds": 46.81
+      }
+    },
+    "lifecycle_only": {
+      "mode": "real-chrome-lifecycle-only",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "businessChecks": 0,
+      "checks": [
+        {
+          "name": "normal_contexts_and_chrome_closed",
+          "status": "passed",
+          "processExited": true,
+          "forced": false,
+          "elapsedMs": 175
+        },
+        {
+          "name": "stalled_owned_chrome_forcibly_reaped",
+          "status": "passed",
+          "processExited": true,
+          "forced": true,
+          "elapsedMs": 1026
+        }
+      ]
+    }
+  },
+  "final_http_checks": [
+    {
+      "name": "frozen_worktree_matches_published_inputs",
+      "status": "passed"
+    },
+    {
+      "name": "real_mysql_manifest_and_api_grants_ready",
+      "status": "passed"
+    },
+    {
+      "name": "initial_cross_jvm_override_has_one_winner",
+      "status": "passed",
+      "responses": [
+        {
+          "node": 23081,
+          "submittedVersion": 1,
+          "sortOrder": 101,
+          "httpStatus": 200,
+          "response": {
+            "success": true,
+            "data": {
+              "menuId": "security-keys",
+              "parentMenuId": null,
+              "path": "/security-keys",
+              "titleKey": "menu.securityKeys",
+              "iconKey": "security-keys",
+              "sortOrder": 101,
+              "capabilityCode": "menu.securityKeys.read",
+              "enabled": true,
+              "actions": [
+                "read"
+              ],
+              "version": 2
+            },
+            "error": null,
+            "requestId": "df42d2d5-2afa-4de2-870a-0ca3f6ec73ba",
+            "timestamp": "2026-10-15T14:13:50.420853Z"
+          },
+          "requestId": "df42d2d5-2afa-4de2-870a-0ca3f6ec73ba"
+        },
+        {
+          "node": 23082,
+          "submittedVersion": 1,
+          "sortOrder": 102,
+          "httpStatus": 412,
+          "response": {
+            "success": false,
+            "data": null,
+            "error": {
+              "code": "SUMMER_PRECONDITION_FAILED",
+              "message": "The resource has changed",
+              "violations": []
+            },
+            "requestId": "1f8395b8-f05d-4ba2-85f3-f751b480a697",
+            "timestamp": "2026-10-15T14:13:50.447943Z"
+          },
+          "requestId": "1f8395b8-f05d-4ba2-85f3-f751b480a697"
+        }
+      ]
+    },
+    {
+      "name": "initial_only_winner_has_mutation_audit_and_outbox",
+      "status": "passed",
+      "delta": [
+        1,
+        1
+      ]
+    },
+    {
+      "name": "initial_persisted_version_advanced_once",
+      "status": "passed",
+      "version": 2
+    },
+    {
+      "name": "existing_cross_jvm_override_has_one_winner",
+      "status": "passed",
+      "responses": [
+        {
+          "node": 23081,
+          "submittedVersion": 2,
+          "sortOrder": 101,
+          "httpStatus": 200,
+          "response": {
+            "success": true,
+            "data": {
+              "menuId": "security-keys",
+              "parentMenuId": null,
+              "path": "/security-keys",
+              "titleKey": "menu.securityKeys",
+              "iconKey": "security-keys",
+              "sortOrder": 101,
+              "capabilityCode": "menu.securityKeys.read",
+              "enabled": true,
+              "actions": [
+                "read"
+              ],
+              "version": 3
+            },
+            "error": null,
+            "requestId": "178bb95f-379c-4adc-a643-563ba74053ed",
+            "timestamp": "2026-10-15T14:13:51.879643Z"
+          },
+          "requestId": "178bb95f-379c-4adc-a643-563ba74053ed"
+        },
+        {
+          "node": 23082,
+          "submittedVersion": 2,
+          "sortOrder": 102,
+          "httpStatus": 412,
+          "response": {
+            "success": false,
+            "data": null,
+            "error": {
+              "code": "SUMMER_PRECONDITION_FAILED",
+              "message": "The resource has changed",
+              "violations": []
+            },
+            "requestId": "9b862cdf-e2a9-4b45-8823-730a5590799d",
+            "timestamp": "2026-10-15T14:13:51.883864Z"
+          },
+          "requestId": "9b862cdf-e2a9-4b45-8823-730a5590799d"
+        }
+      ]
+    },
+    {
+      "name": "existing_only_winner_has_mutation_audit_and_outbox",
+      "status": "passed",
+      "delta": [
+        1,
+        1
+      ]
+    },
+    {
+      "name": "existing_persisted_version_advanced_once",
+      "status": "passed",
+      "version": 3
+    },
+    {
+      "name": "new_node_reads_committed_menu_state",
+      "status": "passed"
+    },
+    {
+      "name": "transaction_tail_outbox_fault_returns_failure",
+      "status": "passed",
+      "httpStatus": 500,
+      "response": {
+        "success": false,
+        "data": null,
+        "error": {
+          "code": "SUMMER_INTERNAL_ERROR",
+          "message": "could not execute statement [INSERT command denied to user 't16f_1ecba7e4c3'@'10.244.0.1' for table 'summer_authorization_change_outbox'] [insert into summer_authorization_change_outbox (attempts,created_at,enterprise_id,event_type,last_error,next_attempt_at,payload_json,request_id,resource_id,resource_type,resource_version,status,updated_at,event_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)]; SQL [insert into summer_authorization_change_outbox (attempts,created_at,enterprise_id,event_type,last_error,next_attempt_at,payload_json,request_id,resource_id,resource_type,resource_version,status,updated_at,event_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)]",
+          "violations": []
+        },
+        "requestId": "d6fe944d-1f51-43a6-9710-9fa5bb7ce006",
+        "timestamp": "2026-10-15T14:14:23.723696Z"
+      }
+    },
+    {
+      "name": "failed_transaction_keeps_version_metadata_audit_outbox",
+      "status": "passed"
+    },
+    {
+      "name": "same_jvm_same_idempotency_key_retries_after_rollback",
+      "status": "passed",
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "data": {
+          "menuId": "security-keys",
+          "parentMenuId": null,
+          "path": "/security-keys",
+          "titleKey": "menu.securityKeys",
+          "iconKey": "security-keys",
+          "sortOrder": 333,
+          "capabilityCode": "menu.securityKeys.read",
+          "enabled": true,
+          "actions": [
+            "read"
+          ],
+          "version": 4
+        },
+        "error": null,
+        "requestId": "d6fe944d-1f51-43a6-9710-9fa5bb7ce006",
+        "timestamp": "2026-10-15T14:14:24.574476Z"
+      }
+    },
+    {
+      "name": "retried_transaction_persists_once_with_one_audit_outbox",
+      "status": "passed",
+      "version": 4,
+      "delta": [
+        1,
+        1
+      ]
+    },
+    {
+      "name": "explicit_deny_projects_only_read_action",
+      "status": "passed",
+      "menu": {
+        "menuId": "customer/drawer",
+        "parentMenuId": "customer",
+        "path": "/customer/drawer",
+        "titleKey": "menu.customer.drawer",
+        "iconKey": "customer/drawer",
+        "sortOrder": 220,
+        "capabilityCode": null,
+        "enabled": true,
+        "actions": [
+          "read"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "name": "business_api_independently_rejects_denied_write",
+      "status": "passed",
+      "httpStatus": 403,
+      "response": {
+        "success": false,
+        "data": null,
+        "error": {
+          "code": "SUMMER_FORBIDDEN",
+          "message": "Access is denied",
+          "violations": []
+        },
+        "requestId": "6f0fde53-7295-49f1-9b78-142036b8d716",
+        "timestamp": "2026-10-15T14:14:26.448926Z"
+      }
+    },
+    {
+      "name": "allowed_post_projects_create_action",
+      "status": "passed"
+    },
+    {
+      "name": "frozen_sources_unchanged_after_real_run",
+      "status": "passed"
+    },
+    {
+      "name": "isolated_fault_account_removed",
+      "status": "passed"
+    },
+    {
+      "name": "runtime_logs_exclude_known_secrets",
+      "status": "passed"
+    }
+  ],
+  "final_browser_checks": [
+    {
+      "name": "explicit_deny_hides_customer_write_buttons",
+      "status": "passed",
+      "mutationButtons": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "real_allowed_create_action_shows_create_button",
+      "status": "passed",
+      "createButtons": 1
+    },
+    {
+      "name": "disabled_menu_disappears_from_navigation_and_direct_route",
+      "status": "passed",
+      "serverVisible": false,
+      "menuEntries": 0,
+      "customerTables": 0
+    },
+    {
+      "name": "disabled_child_is_not_served_by_parent_prefix",
+      "status": "passed",
+      "childVisible": false,
+      "parentVisible": true,
+      "routeDenied": true
+    }
+  ],
+  "disabled_menu_responses": {
+    "customer/drawer": {
+      "success": true,
+      "data": {
+        "menuId": "customer/drawer",
+        "parentMenuId": "customer",
+        "path": "/customer/drawer",
+        "titleKey": "menu.customer.drawer",
+        "iconKey": "customer/drawer",
+        "sortOrder": 220,
+        "capabilityCode": null,
+        "enabled": false,
+        "actions": [],
+        "version": 2
+      },
+      "error": null,
+      "requestId": "0830afb7-0b58-4680-aa39-be254dcbc86e",
+      "timestamp": "2026-10-15T14:19:01.938680Z"
+    },
+    "dictionary/form": {
+      "success": true,
+      "data": {
+        "menuId": "dictionary/form",
+        "parentMenuId": "dictionary",
+        "path": "/dictionary/form",
+        "titleKey": "menu.dictionary.form",
+        "iconKey": "dictionary/form",
+        "sortOrder": 160,
+        "capabilityCode": null,
+        "enabled": false,
+        "actions": [],
+        "version": 2
+      },
+      "error": null,
+      "requestId": "2672c282-1d40-420d-acd5-2643543cb8ae",
+      "timestamp": "2026-10-15T14:19:05.662256Z"
+    }
+  },
+  "source_frozen": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestService.java": "567554df7f40d323f8e954833d2e0bf18382ecbe0c6333b0395a8deba5b997a7",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestRepositories.java": "29f7423f509cc2ee8531bb9468be60082fa2d267dd19e7db2bbbf40255e8dc8a",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/menu/MenuManifestHttpTest.java": "aa61ad05e0b6ae377c73f819b8cba244ff465f844df1d10e9d2acc3f5ec5371e",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/menu/MenuManifestConcurrencyTest.java": "f9a4d98de16a0a9524d9a93723839f6d66507fc8be807c90733e4e606015ee04",
+    "summer-ui/src/menu/access.ts": "c24942a3792383fff676895911db9e5125222e585d4d8c6350e8ec54171fbb5e",
+    "summer-ui/src/menu/permissions.ts": "5b61a41df7381ecc26341cf53bfbc453cdcdcf97226b14c1e00b12e3786d9db0",
+    "summer-ui/src/main.tsx": "493961bee765cec978c7ae3dd615762a405fb4d80ac6c5e2252733af86a45db7",
+    "summer-ui/src/routes.ts": "f53b367f1f3147f634b468d7bdb63f1a318ee2580a5c1df8e8434e14c876b13e",
+    "summer-ui/src/layout.tsx": "12af47d519e616b9fa82f57a3888b2efb0274ee50d2c024f6d67b60b92c0cf68",
+    "summer-ui/src/pages/customer/CustomerScreen.tsx": "00efcaf590a27881bc09889a94004fe0f41b25a3e163c088f5101d1541f5baef",
+    "summer-ui/scripts/verify-menu-permissions.mjs": "3a0ec644fc0d7064b3e0d090e44e5a8dcb2be647e7556f8268de73def30b744f"
+  },
+  "cleanup": {
+    "targeted": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "23081": false,
+        "23082": false,
+        "23083": false,
+        "23573": false,
+        "23580": false
+      },
+      "app_account_absent": true
+    },
+    "final_ui": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "23081": false,
+        "23082": false,
+        "23083": false,
+        "23573": false,
+        "23580": false
+      },
+      "app_account_absent": true
+    }
+  },
+  "scope_notes": [
+    "原47/3/1/0不重写；各批次存在重复断言，不累计作覆盖量。",
+    "最终UI确实触发Chrome关闭超时后的自有进程强制回收，processExited=true且exit0；未把强制回收描述为正常优雅关闭。",
+    "回滚故障通过专用账号缺少outbox INSERT权限注入，恢复权限后在同一JVM重试同键；无mock，无业务SQL写。",
+    "原18个T16输入稳定；其他owner系统参数/字典/密钥页面漂移与本票输入区分，不声称全仓稳定。",
+    "对未知JSON属性拒绝、跨进程幂等回执持久化没有额外通过声明。",
+    "全仓check由协调方管理，本票结果不替代全仓门禁。"
+  ],
+  "artifacts": {
+    "initial": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t16-live/attempt-01",
+    "targeted": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t16-live/targeted-993ad757-01",
+    "final_ui": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t16-live/ui-final-993ad757-01",
+    "frozen": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t16-fix/source-frozen.json",
+    "source_backups": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t16-fix/before"
+  },
+  "visual_review": [
+    "customer-reader.png：客户表格仍可读，新增/编辑/删除控件均无。",
+    "customer-disabled-route.png：抽屉菜单消失，直达页面403。",
+    "disabled-child-exact-route.png：字典父菜单仍在，停用子路径403。"
+  ]
+}

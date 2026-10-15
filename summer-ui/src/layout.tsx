@@ -20,6 +20,7 @@ import NProgress from 'nprogress';
 import Navbar from './components/NavBar';
 import Footer from './components/Footer';
 import useRoute, { IRoute } from '@/routes';
+import { customerRouteAllowed, useMenuItems } from '@/menu/access';
 import { isArray } from './utils/is';
 import useLocale from './utils/useLocale';
 import getUrlParams from './utils/getUrlParams';
@@ -108,10 +109,7 @@ function getFlattenRoutes(routes) {
   const res = [];
   function travel(_routes) {
     _routes.forEach((route) => {
-      const visibleChildren = (route.children || []).filter(
-        (child) => !child.ignore
-      );
-      if (route.key && (!route.children || !visibleChildren.length)) {
+      if (route.key && mod[`./pages/${route.key}/index.tsx`]) {
         try {
           route.component = lazyload(mod[`./pages/${route.key}/index.tsx`]);
           res.push(route);
@@ -140,6 +138,7 @@ function PageLayout() {
     (state: GlobalState) => state
   );
 
+  const menuItems = useMenuItems();
   const [routes, defaultRoute] = useRoute(userInfo?.permissions);
   const defaultSelectedKeys = [currentComponent || defaultRoute];
   const paths = (currentComponent || defaultRoute).split('/');
@@ -189,7 +188,7 @@ function PageLayout() {
     return function travel(_routes: IRoute[], level, parentNode = []) {
       return _routes.map((route) => {
         const { breadcrumb = true, ignore } = route;
-        const iconDom = getIconFromKey(route.key);
+        const iconDom = getIconFromKey(route.iconKey || route.key);
         const titleDom = (
           <>
             {iconDom} {locale[route.name] || route.name}
@@ -328,8 +327,18 @@ function PageLayout() {
                       <Route
                         key={index}
                         path={`/${route.key}`}
+                        exact={route.exact}
                         render={(props) =>
-                          route.key.startsWith('customer/') ? (
+                          route.key.startsWith('customer/') &&
+                          !customerRouteAllowed(
+                            props.location.pathname,
+                            menuItems
+                          ) ? (
+                            <Alert
+                              type="error"
+                              content="对不起，您没有访问该资源的权限"
+                            />
+                          ) : route.key.startsWith('customer/') ? (
                             <CustomerReadRoute>
                               <Component {...props} />
                             </CustomerReadRoute>

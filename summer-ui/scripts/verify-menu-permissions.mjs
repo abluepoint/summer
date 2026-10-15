@@ -36,9 +36,11 @@ function evaluateModule(path, dependencies = {}) {
 }
 const authentication = evaluateModule('../src/utils/authentication.ts');
 const menu = evaluateModule('../src/menu/manifest.ts');
+const access = evaluateModule('../src/menu/access.ts', { react: { createContext: () => ({}) } });
 const routes = evaluateModule('../src/routes.ts', {
   '@/utils/authentication': authentication,
   '@/menu/manifest': menu,
+  '@/menu/access': access,
   react: {},
 });
 assert.equal(routes.menuManifest.manifestVersion, 5, 'changed metadata must have a new version');

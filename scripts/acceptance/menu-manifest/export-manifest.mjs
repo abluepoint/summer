@@ -1,0 +1,14 @@
+import {createRequire} from 'node:module';
+import {writeFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import path from 'node:path';
+const root=path.resolve(process.cwd());
+const require=createRequire(root+'/package.json');
+const {build}=require('esbuild');
+const output=await build({entryPoints:[root+'/src/routes.ts'],bundle:true,platform:'node',format:'cjs',target:'es2020',write:false,tsconfig:root+'/tsconfig.json'});
+const module={exports:{}};
+vm.runInNewContext(output.outputFiles[0].text,{module,exports:module.exports,require,console,process},{filename:'actual-route-manifest.cjs'});
+const manifest=module.exports.menuManifest;
+if(!manifest?.items?.length)throw new Error('actual_route_manifest_missing');
+await writeFile(process.env.MENU_MANIFEST_EXPORT,JSON.stringify(manifest,null,2)+'\n');
+console.log(JSON.stringify({manifestVersion:manifest.manifestVersion,items:manifest.items.length}));
