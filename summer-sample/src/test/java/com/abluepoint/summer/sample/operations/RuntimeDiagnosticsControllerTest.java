@@ -37,7 +37,8 @@ class RuntimeDiagnosticsControllerTest {
     void returnsHealthMetersAndRequestCorrelationWithoutSecrets() throws Exception {
         mockMvc.perform(get("/internal/v1/diagnostics/runtime")
                         .header("X-Request-Id", "runtime-diagnostic-request")
-                        .with(jwt().jwt(token -> token.subject("operator"))
+                        .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "runtime-diagnostic-request"))
@@ -53,7 +54,8 @@ class RuntimeDiagnosticsControllerTest {
     @Test
     void reportsMigrationsNotEnabledInsteadOfHealthyWhenFlywayIsDisabled() throws Exception {
         mockMvc.perform(get("/internal/v1/diagnostics/runtime")
-                        .with(jwt().jwt(token -> token.subject("operator"))
+                        .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.components[?(@.name == 'migrations')].status")
@@ -67,7 +69,8 @@ class RuntimeDiagnosticsControllerTest {
                 Map.of("spring.flyway.enabled", true)));
         try {
             mockMvc.perform(get("/internal/v1/diagnostics/runtime")
-                            .with(jwt().jwt(token -> token.subject("operator"))
+                            .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                     .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.components[?(@.name == 'migrations')].status")

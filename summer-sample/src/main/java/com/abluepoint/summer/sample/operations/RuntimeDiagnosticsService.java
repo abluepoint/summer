@@ -1,8 +1,12 @@
 package com.abluepoint.summer.sample.operations;
 
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.sample.observability.AuditObservation;
+import com.abluepoint.summer.sample.observability.TraceCorrelation;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.Statistic;
 import org.springframework.boot.health.actuate.endpoint.CompositeHealthDescriptor;
 import org.springframework.boot.health.actuate.endpoint.HealthDescriptor;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
@@ -18,6 +22,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.lang.management.ManagementFactory;
 
 @Service
 final class RuntimeDiagnosticsService {
@@ -28,20 +34,24 @@ final class RuntimeDiagnosticsService {
     private final Clock clock;
     private final Environment environment;
     private final ObjectProvider<Flyway> migrations;
+    private final AuditObservation audit;
 
     RuntimeDiagnosticsService(HealthEndpoint healthEndpoint, MeterRegistry meterRegistry,
-                              RequestIdAccessor requestIdAccessor, Environment environment, ObjectProvider<Flyway> migrations) {
+                              RequestIdAccessor requestIdAccessor, Environment environment, ObjectProvider<Flyway> migrations,
+                              AuditObservation audit) {
         this.healthEndpoint = healthEndpoint;
         this.meterRegistry = meterRegistry;
         this.requestIdAccessor = requestIdAccessor;
         this.clock = Clock.systemUTC();
         this.environment = environment;
         this.migrations = migrations;
+        this.audit = audit;
     }
 
     RuntimeDiagnosticsView snapshot() {
         return new RuntimeDiagnosticsView(
                 requestIdAccessor.currentRequestId(),
+                TraceCorrelation.currentTraceId(),
                 clock.instant(),
                 components(healthEndpoint.health()),
                 metrics());
@@ -100,6 +110,55 @@ final class RuntimeDiagnosticsService {
             }
             if (samples.size() >= 100) break;
         }
-        return new RuntimeMetricSnapshot(meters.size(), names, Map.copyOf(samples));
+        // Exclude non-finite values (e.g. a failed DB scrape) from JSON numeric samples.
+        samples.entrySet().removeIf(entry -> !Double.isFinite(entry.getValue()));
+        var auditSnapshot = audit.snapshot();
+        RuntimeModuleMetrics auditMetrics = new RuntimeModuleMetrics(
+                auditSnapshot.available() ? "AVAILABLE" : "UNAVAILABLE", "PERSISTED_LEDGER_MAX_5S_OLD",
+                auditSnapshot.checkedAt(), auditSnapshot.available() ? Map.of(
+                        "success", (double) auditSnapshot.success(), "failure", (double) auditSnapshot.failure(),
+                        "total", (double) auditSnapshot.total()) : Map.of());
+        return new RuntimeMetricSnapshot(meters.size(), names, Map.copyOf(samples), httpMetrics(), auditMetrics,
+                moduleMetrics("PROCESS_LIFETIME", Map.of("attempts", "spring.security.authentications")),
+                moduleMetrics("PROCESS_LIFETIME", Map.of("requests", "summer.cache.requests", "hits", "summer.cache.hits",
+                        "loads", "summer.cache.loads", "redisFailures", "summer.cache.redis.failures", "localEntries", "summer.cache.entries")),
+                moduleMetrics("CURRENT", Map.of("connections", "summer.realtime.connections")));
+    }
+
+    private RuntimeHttpMetrics httpMetrics() {
+        long count = 0, clientErrors = 0, serverErrors = 0;
+        double totalMillis = 0;
+        var timers = meterRegistry.find("http.server.requests").timers();
+        for (Timer timer : timers) {
+            long requests = timer.count();
+            count += requests;
+            totalMillis += timer.totalTime(TimeUnit.MILLISECONDS);
+            String status = timer.getId().getTag("status");
+            if (status != null && status.matches("4[0-9]{2}")) clientErrors += requests;
+            if (status != null && status.matches("5[0-9]{2}")) serverErrors += requests;
+        }
+        return new RuntimeHttpMetrics(timers.isEmpty() ? "NO_DATA" : "AVAILABLE", "PROCESS_LIFETIME",
+                Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()), count, clientErrors, serverErrors,
+                count == 0 ? null : totalMillis / count, count == 0 ? null : (double) (clientErrors + serverErrors) / count);
+    }
+
+    private RuntimeModuleMetrics moduleMetrics(String window, Map<String, String> requested) {
+        Map<String, Double> values = new LinkedHashMap<>();
+        requested.forEach((field, name) -> {
+            var meters = meterRegistry.find(name).meters();
+            if (!meters.isEmpty()) {
+                double sum = 0;
+                for (Meter meter : meters) {
+                    for (var measurement : meter.measure()) {
+                        if (measurement.getStatistic() == Statistic.COUNT || measurement.getStatistic() == Statistic.VALUE) {
+                            double value = measurement.getValue();
+                            if (Double.isFinite(value)) sum += value;
+                        }
+                    }
+                }
+                values.put(field, sum);
+            }
+        });
+        return new RuntimeModuleMetrics(values.isEmpty() ? "NOT_CONNECTED" : "AVAILABLE", window, clock.instant(), Map.copyOf(values));
     }
 }

@@ -29,6 +29,8 @@ class CustomerAuditEventEntity {
     private String result;
     @Column(name = "request_id", updatable = false, length = 120)
     private String requestId;
+    @Column(name = "trace_id", updatable = false, length = 32)
+    private String traceId;
     @Column(name = "detail_json", updatable = false, columnDefinition = "text")
     private String detailJson;
     @Column(name = "occurred_at", nullable = false, updatable = false)
@@ -39,7 +41,7 @@ class CustomerAuditEventEntity {
 
     CustomerAuditEventEntity(String eventId, String tenantId, String organizationId, String principal,
                              String resource, String action, String result, String requestId,
-                             String detailJson, Instant occurredAt) {
+                             String traceId, String detailJson, Instant occurredAt) {
         this.eventId = eventId;
         this.tenantId = tenantId;
         this.organizationId = organizationId;
@@ -48,6 +50,7 @@ class CustomerAuditEventEntity {
         this.action = action;
         this.result = result;
         this.requestId = requestId;
+        this.traceId = traceId;
         this.detailJson = detailJson;
         this.occurredAt = occurredAt;
     }
@@ -65,6 +68,7 @@ class CustomerAuditEventEntity {
     String action() { return action; }
     String result() { return result; }
     String requestId() { return requestId; }
+    String traceId() { return traceId; }
     String detailJson() { return detailJson; }
     Instant occurredAt() { return occurredAt; }
 }

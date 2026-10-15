@@ -1,0 +1,987 @@
+{
+  "issue": 141,
+  "date": "2026-10-16",
+  "status": "ACCEPTANCE_COMPLETE_PENDING_ROOT_REVIEW",
+  "stories": [
+    2,
+    11,
+    45,
+    52
+  ],
+  "dependencies": [
+    111,
+    112
+  ],
+  "candidateSha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+  "junitBatches": [
+    {
+      "name": "junit-red01",
+      "counts": {
+        "tests": 3,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": [
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeObservabilityHttpTest",
+          "name": "diagnosticsExposeMetricMeaningAndConnectedAuditInsteadOfOnlyMeterCount()"
+        },
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeObservabilityHttpTest",
+          "name": "prometheusAndMetricCatalogRejectAnAuthenticatedReaderWithoutDiagnosticsAuthority()"
+        },
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeObservabilityHttpTest",
+          "name": "prometheusIsRawTextForTheDiagnosticsCapability()"
+        }
+      ]
+    },
+    {
+      "name": "junit-green01",
+      "counts": {
+        "tests": 18,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": [
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeObservabilityHttpTest",
+          "name": "prometheusIsRawTextForTheDiagnosticsCapability()"
+        }
+      ]
+    },
+    {
+      "name": "junit-green02",
+      "counts": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "changedInputs": [],
+      "failedCases": []
+    },
+    {
+      "name": "junit-green03",
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": []
+    },
+    {
+      "name": "junit-green04",
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": []
+    },
+    {
+      "name": "junit-green05",
+      "counts": {
+        "tests": 16,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": [
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeObservabilityHttpTest",
+          "name": "monitoringRejectsAnonymousRequestsAndDoesNotEchoAnInvalidTraceParent()"
+        },
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeMetricSummaryTest",
+          "name": "computesWeightedMeanAndBothErrorClassesFromCompletedTimerCounts()"
+        },
+        {
+          "class": "com.abluepoint.summer.sample.operations.RuntimeMetricSummaryTest",
+          "name": "anEmptyProcessHasNoInventedLatencyOrErrorRate()"
+        }
+      ]
+    },
+    {
+      "name": "junit-green06",
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "changedInputs": [],
+      "failedCases": []
+    },
+    {
+      "name": "revocation-red01",
+      "counts": {
+        "tests": 3,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": [
+        {
+          "class": "com.abluepoint.summer.sample.operations.MonitoringRevocationHttpTest",
+          "name": "[1] path = \"/actuator/prometheus\""
+        },
+        {
+          "class": "com.abluepoint.summer.sample.operations.MonitoringRevocationHttpTest",
+          "name": "[2] path = \"/actuator/metrics\""
+        },
+        {
+          "class": "com.abluepoint.summer.sample.operations.MonitoringRevocationHttpTest",
+          "name": "[3] path = \"/internal/v1/diagnostics/runtime\""
+        }
+      ]
+    },
+    {
+      "name": "revocation-green01",
+      "counts": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "changedInputs": [],
+      "failedCases": []
+    },
+    {
+      "name": "revocation-green02",
+      "counts": {
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "changedInputs": [],
+      "failedCases": []
+    }
+  ],
+  "sourceFiles": {
+    "summer-sample/build.gradle.kts": "f9b50fb0b5ee1b8ed99487caec750dd45fc3880b97d49022663094b9a5dbc463",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/cache/VersionedTwoLevelCache.java": "d6a27b4b9314e34b4be9d33518c762bbc355b1bc5d99a034f49446d468f9ea44",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/customer/CustomerAuditEventEntity.java": "af77f873d5ac7631daa0bda88ed30905ccfe94bc4e48585f4896546248ebe41d",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/customer/CustomerAuditModels.java": "150d6ed16d777df08f68d721946591605d3c4e6ac63ed2ca61b1e15f9ead80cf",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/customer/CustomerAuditService.java": "2b5f76c39bc66c3fcbea8495fb33f6b84c4d63444d3f49e73942296b13d283b4",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/observability/AuditObservation.java": "b9762cae5c1d5b0cff0555adfb895a7452b0e6fec42db28d4d96bc8618a3e972",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/observability/MonitoringSecurityConfiguration.java": "0ff1b77b932c7e4f0b67a3e97e12d73a26ec043679e26cfdd341dacc7a1bd604",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/observability/ObservabilityConfiguration.java": "3cf3b0695c0a45f626a5d4fd09986e42346449810603c3b7517717026f0fb5f7",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/observability/TraceCorrelation.java": "24a514448311f166738c5aa3a23aac696cf2a9d66e8b87137eba54ce4afb1129",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/observability/TraceResponseFilter.java": "c4df1ec4fff1f1113590e7b9fad6f3c239d05596d255dd04d971dc50dc9b7121",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/observability/TracedRequestLogSink.java": "0a55c88399d2ea55b98be1b5eb1801a96029b524fcca54469b6c9bd22a7952ff",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/operations/RuntimeDiagnosticsModels.java": "8f4ed52890445d3080e1bf0afbfb033cc4acaafdac863192fd0523098684c222",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/operations/RuntimeDiagnosticsService.java": "a33c77a0f0be4f270a79580e0d743b99caf8a5d4605ead9115afca533fea9882",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeWebSocketHub.java": "2b8290ba752064b16f5b719cdeddccd6d5558b035f77cf2aaba3e8a571991ab0",
+    "summer-sample/src/main/resources/application.yml": "7e1f166fef04c5b197aa9f0df0b21c51152eea31163ad64c9c89e889a654e2df",
+    "summer-sample/src/main/resources/db/migration/mysql/V38__audit_trace_correlation.sql": "5e617b21a37724a27016aa25c19a64cc73ba6fa123cd95d067194489e891ee92"
+  },
+  "uiValidation": {
+    "typecheck": {
+      "exitCode": 0
+    },
+    "eslintScoped": {
+      "exitCode": 0,
+      "paths": [
+        "src/pages/diagnostics/runtime/api.ts",
+        "src/pages/diagnostics/runtime/index.tsx",
+        "src/locale/index.ts"
+      ]
+    },
+    "pythonSyntax": "passed",
+    "nodeSyntax": "passed"
+  },
+  "metricTagOrigins": {
+    "executor.active:name": 1,
+    "executor.completed:name": 1,
+    "executor.pool.core:name": 1,
+    "executor.pool.max:name": 1,
+    "executor.pool.size:name": 1,
+    "executor.queue.remaining:name": 1,
+    "executor.queued:name": 1,
+    "jdbc.connections.active:name": 1,
+    "jdbc.connections.idle:name": 1,
+    "jdbc.connections.max:name": 1,
+    "jdbc.connections.min:name": 1,
+    "jvm.buffer.count:id": 3,
+    "jvm.buffer.memory.used:id": 3,
+    "jvm.buffer.total.capacity:id": 3,
+    "jvm.gc.concurrent.phase.time:action": 1,
+    "jvm.gc.pause:action": 1,
+    "jvm.memory.committed:id": 8,
+    "jvm.memory.max:id": 8,
+    "jvm.memory.used:id": 8
+  },
+  "counting": "Batches remain separate; compile failures with zero executed cases are not test passes. No whole-repository gate claimed.",
+  "limits": [
+    "No external OTLP Collector export configured or accepted.",
+    "Metric tag-key allowlist cannot bound arbitrary future name/id/action values.",
+    "HTTP/auth/cache counters cover the current process; audit aggregates persist and cache at most 5 seconds; realtime gauge counts this node only."
+  ],
+  "issueClosedHere": false,
+  "nativeBatches": [
+    {
+      "name": "native-implementation-attempt01",
+      "counts": {
+        "tests": 111,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false,
+      "candidate_sha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+      "candidateRelevantInputsMatch": true,
+      "changedInputs": [],
+      "checks": [
+        {
+          "name": "fixture_capability_catalog",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "fixture_capability_catalog_correlation",
+          "passed": true
+        },
+        {
+          "name": "fixture_register_system.parameter.read",
+          "passed": true,
+          "status": 201,
+          "expected": 201
+        },
+        {
+          "name": "fixture_register_system.parameter.read_correlation",
+          "passed": true
+        },
+        {
+          "name": "fixture_register_system.parameter.create",
+          "passed": true,
+          "status": 201,
+          "expected": 201
+        },
+        {
+          "name": "fixture_register_system.parameter.create_correlation",
+          "passed": true
+        },
+        {
+          "name": "fixture_register_enterprise.messages.read",
+          "passed": true,
+          "status": 201,
+          "expected": 201
+        },
+        {
+          "name": "fixture_register_enterprise.messages.read_correlation",
+          "passed": true
+        },
+        {
+          "name": "admin_binding",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "admin_binding_correlation",
+          "passed": true
+        },
+        {
+          "name": "grant_customer_routes",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "grant_customer_routes_correlation",
+          "passed": true
+        },
+        {
+          "name": "create_reader",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "create_reader_correlation",
+          "passed": true
+        },
+        {
+          "name": "create_reader_membership",
+          "passed": true,
+          "status": 201,
+          "expected": 201
+        },
+        {
+          "name": "create_reader_membership_correlation",
+          "passed": true
+        },
+        {
+          "name": "legacy_audit_fixture",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "legacy_audit_fixture_correlation",
+          "passed": true
+        },
+        {
+          "name": "baseline_has_no_trace_column",
+          "passed": true
+        },
+        {
+          "name": "mysql_v38_upgrade_applied",
+          "passed": true
+        },
+        {
+          "name": "migration_preserves_old_append_only_events",
+          "passed": true
+        },
+        {
+          "name": "runtime_snapshot",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "runtime_snapshot_correlation",
+          "passed": true
+        },
+        {
+          "name": "mysql_redis_audit_and_migrations_healthy",
+          "passed": true
+        },
+        {
+          "name": "reader_runtime_forbidden",
+          "passed": true,
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "name": "reader_runtime_forbidden_correlation",
+          "passed": true
+        },
+        {
+          "name": "reader_runtime_forbidden_summer_error",
+          "passed": true
+        },
+        {
+          "name": "forbidden_has_real_trace_and_safe_log",
+          "passed": true
+        },
+        {
+          "name": "customer_success_for_metric_and_audit",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "customer_success_for_metric_and_audit_correlation",
+          "passed": true
+        },
+        {
+          "name": "success_trace_persisted_with_request_id",
+          "passed": true
+        },
+        {
+          "name": "audited_conflict",
+          "passed": true,
+          "status": 409,
+          "expected": 409
+        },
+        {
+          "name": "audited_conflict_correlation",
+          "passed": true
+        },
+        {
+          "name": "audited_conflict_summer_error",
+          "passed": true
+        },
+        {
+          "name": "error_response_propagates_otel_trace",
+          "passed": true
+        },
+        {
+          "name": "audit_error_lookup",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "audit_error_lookup_correlation",
+          "passed": true
+        },
+        {
+          "name": "otel_trace_correlates_to_persisted_audit",
+          "passed": true
+        },
+        {
+          "name": "otel_trace_propagated_to_safe_error_log",
+          "passed": true
+        },
+        {
+          "name": "cache_fixture_scope",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "cache_fixture_scope_correlation",
+          "passed": true
+        },
+        {
+          "name": "cache_fixture_create",
+          "passed": true,
+          "status": 201,
+          "expected": 201
+        },
+        {
+          "name": "cache_fixture_create_correlation",
+          "passed": true
+        },
+        {
+          "name": "cache_fixture_cold_read",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "cache_fixture_cold_read_correlation",
+          "passed": true
+        },
+        {
+          "name": "cache_fixture_warm_read",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "cache_fixture_warm_read_correlation",
+          "passed": true
+        },
+        {
+          "name": "cache_observation",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "cache_observation_correlation",
+          "passed": true
+        },
+        {
+          "name": "cache_metrics_follow_actual_reads",
+          "passed": true
+        },
+        {
+          "name": "actual_websocket_fixture_opened",
+          "passed": true
+        },
+        {
+          "name": "websocket_observation",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "websocket_observation_correlation",
+          "passed": true
+        },
+        {
+          "name": "realtime_gauge_counts_open_connection",
+          "passed": true
+        },
+        {
+          "name": "realtime_gauge_drops_after_close",
+          "passed": true
+        },
+        {
+          "name": "audit_metrics_match_persisted_ledger",
+          "passed": true
+        },
+        {
+          "name": "monitoring_summary",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "monitoring_summary_correlation",
+          "passed": true
+        },
+        {
+          "name": "http_latency_and_error_rate_have_explicit_lifetime_basis",
+          "passed": true
+        },
+        {
+          "name": "authentication_metrics_remain_connected",
+          "passed": true
+        },
+        {
+          "name": "prometheus_export_endpoint",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "prometheus_text_contains_actual_metric_families",
+          "passed": true
+        },
+        {
+          "name": "metric_dimensions_have_no_request_or_identity_values",
+          "passed": false
+        },
+        {
+          "name": "reader_denied_prometheus",
+          "passed": true,
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "name": "reader_denied_prometheus_correlation",
+          "passed": true
+        },
+        {
+          "name": "reader_denied_prometheus_summer_error",
+          "passed": true
+        },
+        {
+          "name": "anonymous_denied_prometheus",
+          "passed": true,
+          "status": 401,
+          "expected": 401
+        },
+        {
+          "name": "anonymous_denied_prometheus_correlation",
+          "passed": true
+        },
+        {
+          "name": "anonymous_denied_prometheus_summer_error",
+          "passed": true
+        },
+        {
+          "name": "reader_denied_metrics",
+          "passed": true,
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "name": "reader_denied_metrics_correlation",
+          "passed": true
+        },
+        {
+          "name": "reader_denied_metrics_summer_error",
+          "passed": true
+        },
+        {
+          "name": "anonymous_denied_metrics",
+          "passed": true,
+          "status": 401,
+          "expected": 401
+        },
+        {
+          "name": "anonymous_denied_metrics_correlation",
+          "passed": true
+        },
+        {
+          "name": "anonymous_denied_metrics_summer_error",
+          "passed": true
+        },
+        {
+          "name": "monitoring_responses_exclude_secrets",
+          "passed": true
+        },
+        {
+          "name": "binding_before_monitoring_deny",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "binding_before_monitoring_deny_correlation",
+          "passed": true
+        },
+        {
+          "name": "persist_monitoring_deny",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "persist_monitoring_deny_correlation",
+          "passed": true
+        },
+        {
+          "name": "old_jwt_denied_prometheus",
+          "passed": true,
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "name": "old_jwt_denied_prometheus_correlation",
+          "passed": true
+        },
+        {
+          "name": "old_jwt_denied_prometheus_summer_error",
+          "passed": true
+        },
+        {
+          "name": "old_jwt_denied_metrics",
+          "passed": true,
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "name": "old_jwt_denied_metrics_correlation",
+          "passed": true
+        },
+        {
+          "name": "old_jwt_denied_metrics_summer_error",
+          "passed": true
+        },
+        {
+          "name": "old_jwt_denied_runtime",
+          "passed": true,
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "name": "old_jwt_denied_runtime_correlation",
+          "passed": true
+        },
+        {
+          "name": "old_jwt_denied_runtime_summer_error",
+          "passed": true
+        },
+        {
+          "name": "binding_before_monitoring_restore",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "binding_before_monitoring_restore_correlation",
+          "passed": true
+        },
+        {
+          "name": "restore_monitoring_grant",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "restore_monitoring_grant_correlation",
+          "passed": true
+        },
+        {
+          "name": "same_jwt_reads_after_grant_restored",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "same_jwt_reads_after_grant_restored_correlation",
+          "passed": true
+        },
+        {
+          "name": "post_restart_monitoring",
+          "passed": true,
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "name": "post_restart_monitoring_correlation",
+          "passed": true
+        },
+        {
+          "name": "restart_preserves_audit_trace_and_resets_process_window",
+          "passed": true
+        },
+        {
+          "name": "runtime_logs_exclude_credentials_and_canary",
+          "passed": true
+        }
+      ],
+      "prometheusTagNames": [
+        "action",
+        "application",
+        "area",
+        "cause",
+        "error",
+        "exception",
+        "gc",
+        "id",
+        "level",
+        "method",
+        "name",
+        "outcome",
+        "pool",
+        "result",
+        "spring_security_authentication_type",
+        "spring_security_authorization_decision",
+        "spring_security_filterchain_position",
+        "spring_security_object",
+        "state",
+        "status",
+        "tier"
+      ],
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "browser": {
+        "checks": [
+          {
+            "name": "chrome_real_pkce_monitoring_page",
+            "passed": true
+          },
+          {
+            "name": "chrome_runtime_request_correlation",
+            "passed": true
+          },
+          {
+            "name": "chrome_mysql_and_migration_state_visible",
+            "passed": true
+          },
+          {
+            "name": "chrome_http_latency_error_rate_visible",
+            "passed": true
+          },
+          {
+            "name": "chrome_audit_metrics_visible",
+            "passed": true
+          },
+          {
+            "name": "chrome_window_and_trace_visible",
+            "passed": true
+          },
+          {
+            "name": "chrome_http_rate_matches_response",
+            "passed": true
+          },
+          {
+            "name": "chrome_completed_modules_have_real_metrics",
+            "passed": true
+          },
+          {
+            "name": "chrome_actual_redis_fault_is_not_healthy",
+            "passed": true
+          },
+          {
+            "name": "chrome_runtime_recovers_after_redis_fault",
+            "passed": true
+          },
+          {
+            "name": "chrome_unassigned_reader_denied",
+            "passed": true
+          },
+          {
+            "name": "chrome_no_unhandled_page_errors",
+            "passed": true
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "complete": true
+      },
+      "safeErrorLogs": [
+        {
+          "requestId": "t33-cc564cccce694aeda12d6307462e22fa",
+          "method": "POST",
+          "path": "/api/customers",
+          "status": 409,
+          "durationMs": 72,
+          "traceId": "7c3b4c76c6dd4a9db50f977fbea5a570"
+        }
+      ],
+      "errorCorrelation": {
+        "requestId": "t33-cc564cccce694aeda12d6307462e22fa",
+        "incomingTraceId": "7c3b4c76c6dd4a9db50f977fbea5a570",
+        "responseTraceId": "7c3b4c76c6dd4a9db50f977fbea5a570"
+      },
+      "metricSummary": {
+        "http": {
+          "status": "AVAILABLE",
+          "window": "PROCESS_LIFETIME",
+          "processStartedAt": "2026-10-15T16:33:04.251Z",
+          "requests": 24,
+          "clientErrors": 2,
+          "serverErrors": 1,
+          "meanLatencyMs": 152.15237333333332,
+          "errorRate": 0.125
+        },
+        "audit": {
+          "status": "AVAILABLE",
+          "window": "PERSISTED_LEDGER_MAX_5S_OLD",
+          "checkedAt": "2026-10-15T16:33:18.735511Z",
+          "values": {
+            "success": 4.0,
+            "failure": 1.0,
+            "total": 5.0
+          }
+        },
+        "authentication": {
+          "status": "AVAILABLE",
+          "window": "PROCESS_LIFETIME",
+          "checkedAt": "2026-10-15T16:33:19.909749Z",
+          "values": {
+            "attempts": 23.0
+          }
+        },
+        "cache": {
+          "status": "AVAILABLE",
+          "window": "PROCESS_LIFETIME",
+          "checkedAt": "2026-10-15T16:33:19.909863Z",
+          "values": {
+            "localEntries": 0.0,
+            "requests": 2.0,
+            "hits": 1.0,
+            "loads": 1.0,
+            "redisFailures": 0.0
+          }
+        },
+        "realtime": {
+          "status": "AVAILABLE",
+          "window": "CURRENT",
+          "checkedAt": "2026-10-15T16:33:19.909893Z",
+          "values": {
+            "connections": 0.0
+          }
+        }
+      },
+      "legacyAuditDigest": "98e96bb9fbedcef694da6807d37a1b5bacb65323308080a6275733c2bf861dcc",
+      "executedScripts": {
+        "scripts/acceptance/t33/environment.py": "1da3245e8c861bddfe59be51fb4016ba559fa1bdb989345f054fbf109444c6f4",
+        "scripts/acceptance/t33/run-t33.py": "feaca726942d2c2c5c0d2d3d418de08bd3e2cde241b0a26d5c1120d49d66eb15",
+        "scripts/acceptance/t33/t33-browser.mjs": "92787d398201e83128c813407facf1a26afa5c3695be1d1e7b1a84161dc76012",
+        "scripts/acceptance/t33/t33-socket.mjs": "d15fce8bb3980462ab6fdfb902632c7607cc42f8fa050e4a0f0abb6169939ee6"
+      }
+    },
+    {
+      "name": "prometheus-boundary-attempt02",
+      "counts": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": true,
+      "candidate_sha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+      "candidateRelevantInputsMatch": null,
+      "changedInputs": [],
+      "checks": [
+        {
+          "name": "parser_accepts_security_names_and_rejects_sensitive_dimensions",
+          "passed": true
+        },
+        {
+          "name": "actual_correlated_request_generates_http_metrics",
+          "passed": true
+        },
+        {
+          "name": "actual_prometheus_raw_export",
+          "passed": true
+        },
+        {
+          "name": "metric_dimensions_have_no_request_or_identity_values",
+          "passed": true,
+          "blockedLabelNames": [],
+          "identityMatchKinds": []
+        },
+        {
+          "name": "prometheus_export_excludes_credentials",
+          "passed": true
+        }
+      ],
+      "prometheusTagNames": [
+        "action",
+        "application",
+        "area",
+        "cause",
+        "error",
+        "exception",
+        "gc",
+        "id",
+        "level",
+        "method",
+        "name",
+        "outcome",
+        "pool",
+        "result",
+        "spring_security_authentication_type",
+        "spring_security_authorization_decision",
+        "spring_security_filterchain_position",
+        "spring_security_object",
+        "state",
+        "status",
+        "tier"
+      ],
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "20081": false,
+          "20082": false,
+          "20083": false,
+          "20573": false,
+          "20580": false
+        },
+        "app_account_absent": true
+      },
+      "executedScripts": {
+        "scripts/acceptance/t33/environment.py": "1da3245e8c861bddfe59be51fb4016ba559fa1bdb989345f054fbf109444c6f4",
+        "scripts/acceptance/t33/run-prometheus-boundary.py": "825dc07ad30b1f36528a1b5cb89b0fab173ebcece58be53b183c9d79fab5f976",
+        "scripts/acceptance/t33/run-t33.py": "0a2a9cd481a5c82ba3597fa3f93b6bfea4080ef0de4452ab13c803b4bae7493c",
+        "scripts/acceptance/t33/t33-browser.mjs": "92787d398201e83128c813407facf1a26afa5c3695be1d1e7b1a84161dc76012",
+        "scripts/acceptance/t33/t33-socket.mjs": "d15fce8bb3980462ab6fdfb902632c7607cc42f8fa050e4a0f0abb6169939ee6"
+      }
+    }
+  ],
+  "resolvedHarnessFailure": {
+    "batch": "native-implementation-attempt01",
+    "assertion": "metric_dimensions_have_no_request_or_identity_values",
+    "cause": "Substring uri incorrectly matched spring_security_* label names. Exact component matching corrected in harness only.",
+    "supplement": "prometheus-boundary-attempt02",
+    "counts": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "screenshotsReviewed": [
+    "runtime-normal.png",
+    "runtime-redis-fault.png",
+    "runtime-reader-denied.png"
+  ],
+  "candidateBuildInputCount": 541
+}

@@ -36,6 +36,10 @@ public final class VersionedTwoLevelCache {
     private final Duration ttl;
     private final ConcurrentMap<String, Object> loadLocks = new ConcurrentHashMap<>();
     private final AtomicLong redisFailureCount = new AtomicLong();
+    private final AtomicLong requests = new AtomicLong();
+    private final AtomicLong localHits = new AtomicLong();
+    private final AtomicLong remoteHits = new AtomicLong();
+    private final AtomicLong loads = new AtomicLong();
     private final String nodeId;
 
     public VersionedTwoLevelCache(StringRedisTemplate redis, ObjectMapper objectMapper,
@@ -55,38 +59,40 @@ public final class VersionedTwoLevelCache {
     public <T> T get(String tenantId, String resource, String entry, Class<T> type, Supplier<T> loader) {
         Objects.requireNonNull(loader, "loader");
         String scope = scope(tenantId, resource);
+        requests.incrementAndGet();
         String version;
         try {
             version = version(scope);
         } catch (RuntimeException failure) {
             recordRedisFailure(failure);
             l1.invalidateAll();
-            return loader.get();
+            return load(loader);
         }
 
         String entryKey = entryKey(scope, version, entry);
         String local = l1.getIfPresent(entryKey);
-        if (local != null) return read(local, type);
+        if (local != null) { localHits.incrementAndGet(); return read(local, type); }
 
         Object lock = loadLocks.computeIfAbsent(entryKey, ignored -> new Object());
         try {
             synchronized (lock) {
                 local = l1.getIfPresent(entryKey);
-                if (local != null) return read(local, type);
+                if (local != null) { localHits.incrementAndGet(); return read(local, type); }
                 String remote;
                 try {
                     remote = redis.opsForValue().get(entryKey);
                 } catch (RuntimeException failure) {
                     recordRedisFailure(failure);
                     l1.invalidateAll();
-                    return loader.get();
+                    return load(loader);
                 }
                 if (remote != null) {
+                    remoteHits.incrementAndGet();
                     l1.put(entryKey, remote);
                     return read(remote, type);
                 }
 
-                T loaded = loader.get();
+                T loaded = load(loader);
                 if (loaded != null) {
                     String encoded = write(loaded);
                     l1.put(entryKey, encoded);
@@ -120,6 +126,18 @@ public final class VersionedTwoLevelCache {
 
     public long redisFailureCount() {
         return redisFailureCount.get();
+    }
+
+    /** Process-local, aggregate counters: no tenant, resource or entry keys. */
+    public Statistics statistics() {
+        return new Statistics(requests.get(), localHits.get(), remoteHits.get(), loads.get(), l1.estimatedSize());
+    }
+
+    public record Statistics(long requests, long localHits, long remoteHits, long loads, long localEntries) { }
+
+    private <T> T load(Supplier<T> loader) {
+        loads.incrementAndGet();
+        return loader.get();
     }
 
     public String nodeId() {

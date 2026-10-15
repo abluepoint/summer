@@ -20,7 +20,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Component
-class RealtimeWebSocketHub {
+public class RealtimeWebSocketHub {
     static final int MAX_CONNECTIONS_PER_ENTERPRISE = 32;
     private final ObjectMapper objectMapper;
     private final RealtimeAccess access;
@@ -82,6 +82,11 @@ class RealtimeWebSocketHub {
     RealtimeConnectionView status(String enterpriseId) {
         return new RealtimeConnectionView(enterpriseId, sessions.getOrDefault(enterpriseId, Set.of()).size(),
                 MAX_CONNECTIONS_PER_ENTERPRISE, "AVAILABLE");
+    }
+
+    /** Aggregate gauge only; no enterprise or session identifiers are exposed. */
+    public long activeConnectionCount() {
+        return sessions.values().stream().flatMap(Collection::stream).filter(WebSocketSession::isOpen).count();
     }
 
     private void heartbeat() {

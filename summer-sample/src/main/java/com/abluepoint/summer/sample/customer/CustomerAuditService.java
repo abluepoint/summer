@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.customer;
 
+import io.opentelemetry.api.trace.Span;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -56,7 +57,7 @@ public class CustomerAuditService {
         String principal = authentication == null ? "system" : authentication.getName();
         repository.save(new CustomerAuditEventEntity(UUID.randomUUID().toString(), tenant,
                 organizationContext.current(tenant, authentication), principal,
-                resource, action, "SUCCESS", requestId, "{}", Instant.now()));
+                resource, action, "SUCCESS", requestId, currentTraceId(), "{}", Instant.now()));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -121,13 +122,18 @@ public class CustomerAuditService {
         repository.save(new CustomerAuditEventEntity(
                 UUID.randomUUID().toString(), TENANT_ID, organizationContext.current(TENANT_ID, authentication),
                 principal, resource, action, result,
-                requestId, serialize(detail), Instant.now()));
+                requestId, currentTraceId(), serialize(detail), Instant.now()));
     }
 
     private CustomerAuditEventView view(CustomerAuditEventEntity event) {
         return new CustomerAuditEventView(event.eventId(), event.tenantId(), event.organizationId(),
-                event.principal(), event.resource(), event.action(), event.result(), event.requestId(),
+                event.principal(), event.resource(), event.action(), event.result(), event.requestId(), event.traceId(),
                 parse(event.detailJson()), event.occurredAt());
+    }
+
+    private static String currentTraceId() {
+        var context = Span.current().getSpanContext();
+        return context.isValid() ? context.getTraceId() : null;
     }
 
     private String serialize(Map<String, Object> detail) {

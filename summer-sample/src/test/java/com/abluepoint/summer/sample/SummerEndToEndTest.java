@@ -468,7 +468,10 @@ class SummerEndToEndTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
 
-        MvcResult result = mockMvc.perform(get("/actuator/metrics"))
+        MvcResult result = mockMvc.perform(get("/actuator/metrics").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().jwt(token -> token.subject("monitoring-e2e")
+                        .claim("active_enterprise_id", "ent-acme")
+                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
+                        .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).contains("names");

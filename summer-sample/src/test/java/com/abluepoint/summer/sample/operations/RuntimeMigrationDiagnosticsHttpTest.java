@@ -71,7 +71,8 @@ class RuntimeMigrationDiagnosticsHttpTest {
     private void expectMigrationStatus(String expected) throws Exception {
         mockMvc.perform(get("/internal/v1/diagnostics/runtime")
                         .header("X-Request-Id", "migration-diagnostic-request")
-                        .with(jwt().jwt(token -> token.subject("operator"))
+                        .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "migration-diagnostic-request"))
