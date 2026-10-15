@@ -1,6 +1,7 @@
 package com.abluepoint.summer.sample.authorization;
 
 import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -31,9 +32,11 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
             "POST:/api/v1/invitations/{token}:accept", "enterprise.invitation.accept",
             "POST:/api/v1/invitations/{token}:reject", "enterprise.invitation.accept");
     private final AuthorizationService authorizationService;
+    private final RequestIdAccessor requestId;
 
-    AuthorizationRequestInterceptor(AuthorizationService authorizationService) {
+    AuthorizationRequestInterceptor(AuthorizationService authorizationService, RequestIdAccessor requestId) {
         this.authorizationService = authorizationService;
+        this.requestId = requestId;
     }
 
     @Override
@@ -70,7 +73,7 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
             enterpriseId = EnterpriseRequestContext.resolve(authentication);
         }
         AuthorizationService.Decision decision = authorizationService.decision(authentication, enterpriseId, permissionCode,
-                request.getHeader("X-Request-Id"));
+                requestId.currentRequestId());
         if (!decision.allowed()) throw new AccessDeniedException("Authorization denied: " + decision.reasonCode());
         return true;
     }

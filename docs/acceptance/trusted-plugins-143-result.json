@@ -304,5 +304,197 @@
     "ownedPort21573Released": true,
     "previous17FileSnapshot": "race-before/",
     "realAcceptanceReuse": "Original 105 backend checks and Chrome 9 + final-denial 1 remain separate historical evidence; not rerun. Management request coordination changed after those runs; six causal tests and a new typecheck cover this increment."
+  },
+  "standardsRemediation": {
+    "date": "2026-10-16",
+    "reviewedCommit": "35bdb13088be55ad3ecb7377a56bb4f763f80896",
+    "status": "READY_FOR_ROOT_REVIEW",
+    "originalReviewPreserved": true,
+    "originalBatchesUnchanged": true,
+    "correctsAcceptanceCriterion": 6,
+    "contractCorrection": "Sample plugin business errors use SAMPLE_PLUGIN_* with explicit ErrorCode/ErrorCategory; generic framework 403/500 remain SUMMER_FORBIDDEN/SUMMER_INTERNAL_ERROR. The original AC6 all-errors-as-framework wording is historical and superseded by this supplement.",
+    "mainFiles": {
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationRequestInterceptor.java": "c7409058238bb4bfbe3135a1c974611c4252f36d2f34c962f88acacba73730d9",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginController.java": "45555b6ba768eed3c9865be7e70f0ed64b305c4ea0762c8e455151b4eadc1e13",
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginErrorCode.java": "fbab99cc6b166263fb615bf429a114a9a7e9b9222d5bc494da35a9cb141a3d11"
+    },
+    "candidateSha256": "4dd825e8df88aa35cb5f6b16563d39a659c26034513889d17f43c7be8fd944cf",
+    "candidateInputCount": 542,
+    "migrationCount": 39,
+    "candidateBuildBy": "root",
+    "candidateBuildInputsStable": true,
+    "mainInputsMatchCandidate": true,
+    "mainInputsStable": true,
+    "junitBatches": [
+      {
+        "name": "correlation-red-01",
+        "counts": {
+          "tests": 4,
+          "failures": 4,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 1,
+        "sourceChangedDuringExecution": [],
+        "xmlDirectory": ".git/summer4-closeout-20261015/standards-fixes/correlation-red-01/xml",
+        "xmlPolicy": "Unique directory; actual XML case/failure structure preserved, system-out/system-err removed and known secrets/JWT redacted."
+      },
+      {
+        "name": "correlation-green-01",
+        "counts": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "sourceChangedDuringExecution": [],
+        "xmlDirectory": ".git/summer4-closeout-20261015/standards-fixes/correlation-green-01/xml",
+        "xmlPolicy": "Unique directory; actual XML case/failure structure preserved, system-out/system-err removed and known secrets/JWT redacted."
+      },
+      {
+        "name": "plugin-red-01",
+        "counts": {
+          "tests": 5,
+          "failures": 4,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 1,
+        "sourceChangedDuringExecution": [],
+        "xmlDirectory": ".git/summer4-closeout-20261015/standards-fixes/plugin-red-01/xml",
+        "xmlPolicy": "Unique directory; actual XML case/failure structure preserved, system-out/system-err removed and known secrets/JWT redacted."
+      },
+      {
+        "name": "plugin-green-01",
+        "counts": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "sourceChangedDuringExecution": [],
+        "xmlDirectory": ".git/summer4-closeout-20261015/standards-fixes/plugin-green-01/xml",
+        "xmlPolicy": "Unique directory; actual XML case/failure structure preserved, system-out/system-err removed and known secrets/JWT redacted."
+      },
+      {
+        "name": "framework-error-green-01",
+        "counts": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "sourceChangedDuringExecution": [],
+        "xmlDirectory": ".git/summer4-closeout-20261015/standards-fixes/framework-error-green-01/xml",
+        "xmlPolicy": "Unique directory; actual XML case/failure structure preserved, system-out/system-err removed and known secrets/JWT redacted."
+      }
+    ],
+    "runtime": {
+      "path": ".git/summer4-closeout-20261015/standards-fixes/runtime-01",
+      "counts": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "checks": [
+        {
+          "name": "allow_without_request_header",
+          "passed": true,
+          "httpStatus": 200,
+          "requestId": "ca1656c2-1c0f-4b92-8d74-7957f7b5960e",
+          "auditRequestId": "ca1656c2-1c0f-4b92-8d74-7957f7b5960e",
+          "auditDecision": "ALLOW",
+          "code": null
+        },
+        {
+          "name": "allow_with_normalized_request_header",
+          "passed": true,
+          "httpStatus": 200,
+          "requestId": "correlation_id__sample",
+          "auditRequestId": "correlation_id__sample",
+          "auditDecision": "ALLOW",
+          "code": null
+        },
+        {
+          "name": "deny_existing_token_without_request_header",
+          "passed": true,
+          "httpStatus": 403,
+          "requestId": "cbd41322-c1ee-49b4-ac24-e69903a39506",
+          "auditRequestId": "cbd41322-c1ee-49b4-ac24-e69903a39506",
+          "auditDecision": "DENY",
+          "code": "SUMMER_FORBIDDEN"
+        },
+        {
+          "name": "deny_existing_token_with_normalized_request_header",
+          "passed": true,
+          "httpStatus": 403,
+          "requestId": "correlation_id__sample",
+          "auditRequestId": "correlation_id__sample",
+          "auditDecision": "DENY",
+          "code": "SUMMER_FORBIDDEN"
+        },
+        {
+          "name": "invalid_plugin_uses_sample_namespace",
+          "passed": true,
+          "httpStatus": 400,
+          "code": "SAMPLE_PLUGIN_INVALID",
+          "requestId": "standards-1c616faf660f410c8aaac11e32266d08"
+        },
+        {
+          "name": "untrusted_plugin_uses_sample_namespace",
+          "passed": true,
+          "httpStatus": 409,
+          "code": "SAMPLE_PLUGIN_UNTRUSTED",
+          "requestId": "standards-f01c33ae886b497490c47d05ed3d5c3d"
+        },
+        {
+          "name": "incompatible_plugin_uses_sample_namespace",
+          "passed": true,
+          "httpStatus": 409,
+          "code": "SAMPLE_PLUGIN_INCOMPATIBLE",
+          "requestId": "standards-8352b3b690674b60aa0911517257dee3"
+        },
+        {
+          "name": "unexpected_plugin_failure_keeps_framework_namespace",
+          "passed": true,
+          "httpStatus": 500,
+          "code": "SUMMER_INTERNAL_ERROR",
+          "requestId": "standards-1ea6dea2bc4946e98cc9c3d474f87eb7"
+        },
+        {
+          "name": "same_node_recovers_after_controlled_write_failure",
+          "passed": true
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "realHttp": true,
+      "realMySql": true,
+      "realPkce": true,
+      "legacyCompatibility": false,
+      "networkMocking": false,
+      "businessSqlWrites": false,
+      "failureInjection": "CREATE/DROP trigger in disposable schema only; business mutations use HTTP"
+    },
+    "publicationProvenance": {
+      "executedScript": ".git/summer4-closeout-20261015/standards-fixes/runtime-01/executed-scripts/runtime-probe.py",
+      "executedSha256": "d47485b0eaf9340464e7565ffb9ff65853262bebfa39af21a59065274f00bd05",
+      "publishedScript": "scripts/acceptance/trusted-plugins/standards_probe.py",
+      "publishedSha256": "296b9ceee133347371528e530e664880859fac7fccdbd47da85beaefc506c94d",
+      "difference": "Only the preflight frozen-source assignment changes: private run reads the saved main freeze manifest; reusable public script computes the same three source hashes, then checks them against the required candidate-inputs manifest.",
+      "remainingAstIdentical": true,
+      "publicScriptRerun": false
+    },
+    "limits": [
+      "Original 105 HTTP, Chrome 9+1 and causal component 6 batches were not rerun or rewritten.",
+      "JUnit correlation uses real socket HTTP and signed synthetic JWTs with explicitly enabled test compatibility; the separate runtime batch uses real PKCE and strict persisted authorization.",
+      "No new browser run or production frontend build.",
+      "Issue changes, commit and push belong to root."
+    ]
   }
 }

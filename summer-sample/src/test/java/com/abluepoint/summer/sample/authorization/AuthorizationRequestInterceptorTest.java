@@ -31,7 +31,7 @@ class AuthorizationRequestInterceptorTest {
     @Test
     void unqualifiedConfigurationRouteUsesTheActiveEnterpriseInsteadOfSampleTenant() throws Exception {
         var service = mock(AuthorizationService.class);
-        var interceptor = new AuthorizationRequestInterceptor(service);
+        var interceptor = new AuthorizationRequestInterceptor(service, () -> null);
         var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("configuration-reader")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-north", "status", "ACTIVE")))
                 .build();
@@ -52,7 +52,7 @@ class AuthorizationRequestInterceptorTest {
     @Test
     void missingMatchedMappingFailsClosedInsteadOfAuthorizingConcreteUri() throws Exception {
         var service = mock(AuthorizationService.class);
-        var interceptor = new AuthorizationRequestInterceptor(service);
+        var interceptor = new AuthorizationRequestInterceptor(service, () -> null);
         authenticate();
         var request = new MockHttpServletRequest("GET", "/api/widgets/one");
         assertThatThrownBy(() -> interceptor.preHandle(request, new MockHttpServletResponse(), handler()))
@@ -64,7 +64,7 @@ class AuthorizationRequestInterceptorTest {
     @ValueSource(strings = {"/api/widgets/one", "/api/widgets/menu-manifest"})
     void missingEnterpriseContextStillRequiresAnAuthorizationDecision(String uri) throws Exception {
         var service = mock(AuthorizationService.class);
-        var interceptor = new AuthorizationRequestInterceptor(service);
+        var interceptor = new AuthorizationRequestInterceptor(service, () -> null);
         var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("unassigned-reader").build();
         var authentication = new JwtAuthenticationToken(jwt);
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -80,7 +80,7 @@ class AuthorizationRequestInterceptorTest {
     @Test
     void foreignEnterpriseDoesNotSelectTheTenantForGlobalBusinessOrPlatformResources() throws Exception {
         var service = mock(AuthorizationService.class);
-        var interceptor = new AuthorizationRequestInterceptor(service);
+        var interceptor = new AuthorizationRequestInterceptor(service, () -> null);
         var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("foreign-reader")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-other", "status", "ACTIVE"))).build();
         var authentication = new JwtAuthenticationToken(jwt);
@@ -102,7 +102,7 @@ class AuthorizationRequestInterceptorTest {
     @Test
     void parsedPatternUsesTheSameTemplateAsTheCatalog() throws Exception {
         var service = mock(AuthorizationService.class);
-        var interceptor = new AuthorizationRequestInterceptor(service);
+        var interceptor = new AuthorizationRequestInterceptor(service, () -> null);
         var authentication = authenticate();
         when(service.decision(authentication, "ent-acme", "GET:/api/widgets/{widgetId}", null))
                 .thenReturn(new AuthorizationService.Decision(true, "ROLE_ALLOW"));

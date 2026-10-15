@@ -91,7 +91,8 @@ class PluginConfigurationHttpTest {
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk());
         jdbc.execute("alter table summer_data_scope_policy rename to unavailable_plugin_policy");
         try {
-            mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().is5xxServerError())
+            mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.error.code").value("SUMMER_INTERNAL_ERROR"))
                     .andExpect(jsonPath("$.data").doesNotExist());
         } finally { jdbc.execute("alter table unavailable_plugin_policy rename to summer_data_scope_policy"); }
     }

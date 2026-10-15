@@ -2,7 +2,10 @@ package com.abluepoint.summer.sample.plugin;
 
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.ErrorCode;
 import com.abluepoint.summer.mvc.api.RawResponse;
+import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.sample.resource.ResourcePermission;
 import org.springframework.http.HttpStatus;
@@ -19,8 +22,13 @@ import java.util.List;
 class PluginController {
     private final PluginService service;
     private final RequestIdAccessor requestId;
+    private final ErrorStatusResolver errorStatus;
 
-    PluginController(PluginService service, RequestIdAccessor requestId) { this.service = service; this.requestId = requestId; }
+    PluginController(PluginService service, RequestIdAccessor requestId, ErrorStatusResolver errorStatus) {
+        this.service = service;
+        this.requestId = requestId;
+        this.errorStatus = errorStatus;
+    }
 
     @GetMapping("/v1/platform/plugins")
     @RawResponse
@@ -68,15 +76,16 @@ class PluginController {
     private <T> ResponseEntity<ApiResponse<T>> ok(T value) { return body(HttpStatus.OK, value); }
     private <T> ResponseEntity<ApiResponse<T>> body(HttpStatus status, T value) { String rid = requestId.currentRequestId(); return ResponseEntity.status(status).header("X-Request-Id", rid).body(ApiResponse.success(value, rid)); }
     private <T> ResponseEntity<ApiResponse<T>> error(Exception exception) {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR; String code = "SUMMER_INTERNAL_ERROR";
-        if (exception instanceof AccessDeniedException) { status = HttpStatus.FORBIDDEN; code = "SUMMER_FORBIDDEN"; }
-        else if (exception instanceof PluginValidationException) { status = HttpStatus.BAD_REQUEST; code = "SUMMER_PLUGIN_INVALID"; }
-        else if (exception instanceof PluginTrustException) { status = HttpStatus.CONFLICT; code = "SUMMER_PLUGIN_UNTRUSTED"; }
-        else if (exception instanceof PluginCompatibilityException) { status = HttpStatus.CONFLICT; code = "SUMMER_PLUGIN_INCOMPATIBLE"; }
-        else if (exception instanceof PluginNotFoundException) { status = HttpStatus.NOT_FOUND; code = "SUMMER_NOT_FOUND"; }
+        ErrorCode code = CommonErrorCode.INTERNAL_ERROR;
+        if (exception instanceof AccessDeniedException) code = CommonErrorCode.FORBIDDEN;
+        else if (exception instanceof PluginValidationException) code = PluginErrorCode.INVALID;
+        else if (exception instanceof PluginTrustException) code = PluginErrorCode.UNTRUSTED;
+        else if (exception instanceof PluginCompatibilityException) code = PluginErrorCode.INCOMPATIBLE;
+        else if (exception instanceof PluginNotFoundException) code = CommonErrorCode.NOT_FOUND;
         else if (exception instanceof RuntimeException failure) throw failure;
         String rid = requestId.currentRequestId();
-        return ResponseEntity.status(status).header("X-Request-Id", rid).body(ApiResponse.failure(new ApiError(code, exception.getMessage(), List.of()), rid));
+        return ResponseEntity.status(errorStatus.resolve(code)).header("X-Request-Id", rid)
+                .body(ApiResponse.failure(new ApiError(code.code(), exception.getMessage(), List.of()), rid));
     }
     @FunctionalInterface private interface ThrowingSupplier<T> { T get() throws Exception; }
 }

@@ -8,8 +8,8 @@
 
 ```sh
 SUMMER_TRUSTED_PLUGINS_EVIDENCE_DIR="$PWD/.git/summer4-closeout-20261015/t35-live/new-focused-run" \
-SUMMER_TRUSTED_PLUGINS_CANDIDATE="$PWD/.git/summer4-closeout-20261015/t20-live/frozen-build-01/candidate.jar" \
-SUMMER_TRUSTED_PLUGINS_CANDIDATE_SHA256=9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2 \
+SUMMER_TRUSTED_PLUGINS_CANDIDATE="$PWD/.git/summer4-closeout-20261015/standards-fixes/frozen-build-01/candidate.jar" \
+SUMMER_TRUSTED_PLUGINS_CANDIDATE_SHA256=4dd825e8df88aa35cb5f6b16563d39a659c26034513889d17f43c7be8fd944cf \
 python3 scripts/acceptance/trusted-plugins/focused_probe.py
 ```
 
@@ -29,3 +29,22 @@ SUMMER_PLUGIN_RACE_EVIDENCE_DIR="$PWD/../.git/summer4-closeout-20261015/t35-live
 ```
 
 此测试只启动自有 Chrome 和 21573 的内存组件资源服务，采用可控延期 Promise 的合成 HTTP adapter，不启动后端、MySQL 或 Redis，不作为新增真实接口验收。结果及实际页面/脚本副本保存在所选证据目录。
+
+
+## Standards 定向补证
+
+当前脚本的插件业务错误断言已更新到 `SAMPLE_PLUGIN_*`；原始执行目录保存旧脚本和旧候选的真实结果。上方示例改用包含本次补救的新候选，不能用旧 `9f2446` 候选运行新断言。旧 105/Chrome 9+1/组件 6 不重新计数。
+
+只复验请求关联与插件错误契约时，在仓库根目录执行：
+
+```sh
+SUMMER_TRUSTED_PLUGINS_EVIDENCE_DIR="$PWD/.git/summer4-closeout-20261015/standards-fixes/new-runtime-run" \
+SUMMER_TRUSTED_PLUGINS_CANDIDATE="$PWD/.git/summer4-closeout-20261015/standards-fixes/frozen-build-01/candidate.jar" \
+SUMMER_TRUSTED_PLUGINS_CANDIDATE_SHA256=4dd825e8df88aa35cb5f6b16563d39a659c26034513889d17f43c7be8fd944cf \
+SUMMER_STANDARDS_CANDIDATE_INPUTS="$PWD/.git/summer4-closeout-20261015/standards-fixes/frozen-build-01/candidate-inputs.json" \
+python3 scripts/acceptance/trusted-plugins/standards_probe.py
+```
+
+预检要求候选 SHA 及三处当前源码与候选输入清单一致。脚本通过正式 PKCE/角色接口配置权限，核对缺头与规范化头在 ALLOW/DENY 下的响应头、信封和持久审计；再核对三类业务错误、框架 403/500 及同节点恢复。SQL 不写业务行，只在临时 schema 创建/删除故障注入触发器。结束必须核对退出码、九项结果、敏感检测、主源稳定及 cleanup VERIFIED。
+
+实际 runtime-01 为 9/0/0/0、退出0。公开脚本与实际冻结执行副本只在预检如何取得三处源码 SHA 上不同，其余 AST 相同；该发布副本未另行重跑，详见私有 `probe-publication-provenance.json`。相关 JUnit 红/绿与原始独立去敏感 XML 单列在验收报告，不与实际九项相加。

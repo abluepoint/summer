@@ -66,3 +66,25 @@ TypeScript `tsc --noEmit` 退出 0。插件契约脚本和菜单契约脚本退�
 私有证据目录为 `.git/summer4-closeout-20261015/t35-live/`：每批保存实际执行脚本、JSON 结果、脱敏 HTTP 观察、候选摘要及清理回执；原 `RED-HANDOFF.md` 保持历史红灯状态。最终 `FILES.json`、`SOURCE_FROZEN.json`、`READY.json` 供主会话逐项复核。
 
 复现步骤见 [验收脚本说明](../../scripts/acceptance/trusted-plugins/README.md)。本票的“可信”指应用随包目录及既定摘要，不声称支持第三方二进制签名、热上传或任意组件执行。
+
+
+## 最终 Standards 审查补救（2026-10-16）
+
+对固定提交 `35bdb130` 的审查发现两项 P2，原报告保留。上文 AC6 把 Sample 插件业务错误统称为 Framework error 的说明不准确；该项曾由 root 重新打开等待补证。本节修正现行契约：插件校验、信任和兼容性失败分别使用 `SAMPLE_PLUGIN_INVALID`、`SAMPLE_PLUGIN_UNTRUSTED`、`SAMPLE_PLUGIN_INCOMPATIBLE`，由独立 `PluginErrorCode` 显式声明 `ErrorCategory`，经既有 `ErrorStatusResolver` 映射为 400/409。原框架 `SUMMER_FORBIDDEN`、`SUMMER_INTERNAL_ERROR` 与 403/500 语义保留，符合 ADR0009。
+
+另一处修复将 `AuthorizationRequestInterceptor` 的审计关联改为注入的 `RequestIdAccessor`，不再读取原始请求头。缺头时使用 MVC 生成的 requestId，含需规范化字符时使用规范化后的 ID，与响应头、信封和持久授权 ALLOW/DENY 审计一致，符合 ADR0010/0030。授权规则、租户选择和 DataScope 未改变。生产增量仅该拦截器、`PluginController` 和新增 `PluginErrorCode` 三处；上文“后端未改”指此前 UI 修复批次。
+
+| 独立批次 | tests / failures / errors / skipped | 范围 |
+| --- | --- | --- |
+| correlation-red-01 | 4 / 4 / 0 / 0 | 真实监听端口、签名 JWT、HTTP 请求与持久审计 API；缺头/规范化头各覆盖 ALLOW、DENY，有效红灯 |
+| correlation-green-01 | 16 / 0 / 0 / 0 | 上述四项及原拦截器、审计持久化测试；测试配置的 legacy 合成主体与下方正式 PKCE 验收分开 |
+| plugin-red-01 | 5 / 4 / 0 / 0 | 三类旧业务码及未登记场景有效失败；原正常生命周期通过 |
+| plugin-green-01 | 12 / 0 / 0 / 0 | 插件生命周期与既有配置/范围边界回归 |
+| framework-error-green-01 | 1 / 0 / 0 / 0 | 原不可用配置存储场景精确保持 500 / SUMMER_INTERNAL_ERROR，无数据 |
+| runtime-01 | 9 / 0 / 0 / 0 | 新候选、真实 MySQL/独立 Redis/PKCE，正式持久角色与旧令牌 DENY；四种关联、三类业务错误、受控 500 和同节点恢复 |
+
+新候选由 root 统一构建：`.git/summer4-closeout-20261015/standards-fixes/frozen-build-01/candidate.jar`，SHA-256 `4dd825e8df88aa35cb5f6b16563d39a659c26034513889d17f43c7be8fd944cf`。root 构建记录为 542 主输入前后稳定、39 迁移匹配；相对 `28a48` 恰为上述三处增量。定向实际请求前后，三处输入与候选清单一致。实际流程未使用网络 mock、合成 Token 或业务行 SQL 写入；仅在临时 schema 创建/移除触发器注入写入故障，其他业务均走正式 HTTP。
+
+runtime-01 退出 0、敏感日志零命中，临时 schema、数据库账号、独立 Redis、JVM 与五端口全部清理 VERIFIED。本次不包含新增 Chrome，也未重跑原 105、Chrome 9+1 或组件因果 6；这些旧批次、原失败和原始回执保持不变。AC6 的上述缺口现已由本节独立补证，提交、推送及重关票由 root 处理。
+
+私有原始证据在 `.git/summer4-closeout-20261015/standards-fixes/`：每个 JUnit 批次保存独立 XML（保留用例/失败结构、移除 stdout/stderr、脱敏），实际批次保存 executed-scripts、候选清单、九项逐条结果及 cleanup。可复用 `standards_probe.py` 与实际执行副本仅有预检冻结源清单读取方式的差异，其余 AST 相同；公开脚本未另行重跑，精确 SHA 与对照记录在 `probe-publication-provenance.json`。源码修复前备份、主源冻结和最终 FILES/READY 均留存。

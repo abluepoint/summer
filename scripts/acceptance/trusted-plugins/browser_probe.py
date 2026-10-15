@@ -14,10 +14,10 @@ def mh(v=None):
  h={'Idempotency-Key':uuid.uuid4().hex}
  if v is not None:h['If-Match']=str(v)
  return h
-def call(c,path,method='GET',body=None,expected=200,name=None,headers=None,strict=True,port=21081):
+def call(c,path,method='GET',body=None,expected=200,name=None,headers=None,strict=True,port=21081,expected_code=None):
  rid='t35-'+uuid.uuid4().hex;s,b,h=c.request(port,path,method,body,headers={'X-Request-Id':rid,**(headers or {})});e=b.get('error')if isinstance(b,dict)else None;code=e.get('code')if isinstance(e,dict)else None
  good=s==expected and isinstance(b,dict)and b.get('success')==(s<400)and b.get('requestId')==h.get('X-Request-Id')==rid
- if s>=400:good=good and isinstance(code,str)and code.startswith('SUMMER_')and b.get('data')is None and not any(v in json.dumps(b)for v in hidden)
+ if s>=400:good=good and isinstance(code,str)and (code==expected_code if expected_code else code.startswith('SUMMER_'))and b.get('data')is None and not any(v in json.dumps(b)for v in hidden)
  check(name or method+' '+path,good,httpStatus=s,expected=expected,code=code)
  if strict and s!=expected:raise AssertionError('unexpected_http_'+str(s)+'_expected_'+str(expected))
  return b.get('data')if isinstance(b,dict)else None,h
@@ -64,7 +64,7 @@ try:
    line=event.fileobj.readline()
    if not line:selector.unregister(event.fileobj);continue
    command=line.strip()
-   if command=='VERIFY_DISABLED':call(admin,SUMMARY,expected=409,name='chrome_disabled_plugin_api_blocked')
+   if command=='VERIFY_DISABLED':call(admin,SUMMARY,expected=409,name='chrome_disabled_plugin_api_blocked',expected_code='SAMPLE_PLUGIN_INCOMPATIBLE')
    elif command=='DENY_READ':binding(['enterprise.plugins.customer-insights.read'],env.username,[boot,role])
    elif command=='AUDIT_FAULT':
     binding([],env.username,[boot,role]);auditbefore=env.sql("SELECT COUNT(*) FROM summer_audit_event WHERE resource='plugin:customer-insights'",env.schema)

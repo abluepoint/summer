@@ -13,10 +13,10 @@ def mh(v=None):
  h={'Idempotency-Key':uuid.uuid4().hex}
  if v is not None:h['If-Match']=str(v)
  return h
-def call(c,path,method='GET',body=None,expected=200,name=None,headers=None,strict=True,port=21081):
+def call(c,path,method='GET',body=None,expected=200,name=None,headers=None,strict=True,port=21081,expected_code=None):
  rid='t35-'+uuid.uuid4().hex;s,b,h=c.request(port,path,method,body,headers={'X-Request-Id':rid,**(headers or {})});e=b.get('error')if isinstance(b,dict)else None;code=e.get('code')if isinstance(e,dict)else None
  good=s==expected and isinstance(b,dict)and b.get('success')==(s<400)and b.get('requestId')==h.get('X-Request-Id')==rid
- if s>=400:good=good and isinstance(code,str)and code.startswith('SUMMER_')and b.get('data')is None and not any(v in json.dumps(b)for v in hidden)
+ if s>=400:good=good and isinstance(code,str)and (code==expected_code if expected_code else code.startswith('SUMMER_'))and b.get('data')is None and not any(v in json.dumps(b)for v in hidden)
  check(name or method+' '+path,good,httpStatus=s,expected=expected,code=code)
  if strict and s!=expected:raise AssertionError('unexpected_http_'+str(s)+'_expected_'+str(expected))
  return b.get('data')if isinstance(b,dict)else None,h
@@ -46,13 +46,13 @@ try:
  claims=json.loads(base64.urlsafe_b64decode(admin.token.split('.')[1]+'=='))
  result['grantDiagnostics']={'pluginReadPlatformClaim':'platform.plugins.read' in claims.get('platform_capabilities',[]),'pluginWritePlatformClaim':'platform.plugins.write' in claims.get('platform_capabilities',[])};save()
  result['stage']='trust_lifecycle'
- call(admin,ITEM+':enable','POST',expected=409,name='unregistered_plugin_cannot_enable')
- call(admin,PL,'POST',{'pluginId':'outside-catalog','version':'1.0.0','artifactDigest':DIGEST},409,name='unregistered_artifact_id_rejected')
- call(admin,PL,'POST',{'pluginId':ID,'version':'1.0.0','artifactDigest':'sha256:untrusted'},409,name='wrong_artifact_digest_rejected')
- call(admin,PL,'POST',{'pluginId':'INVALID','version':'','artifactDigest':DIGEST},400,name='invalid_registration_rejected')
+ call(admin,ITEM+':enable','POST',expected=409,name='unregistered_plugin_cannot_enable',expected_code='SAMPLE_PLUGIN_UNTRUSTED')
+ call(admin,PL,'POST',{'pluginId':'outside-catalog','version':'1.0.0','artifactDigest':DIGEST},409,name='unregistered_artifact_id_rejected',expected_code='SAMPLE_PLUGIN_UNTRUSTED')
+ call(admin,PL,'POST',{'pluginId':ID,'version':'1.0.0','artifactDigest':'sha256:untrusted'},409,name='wrong_artifact_digest_rejected',expected_code='SAMPLE_PLUGIN_UNTRUSTED')
+ call(admin,PL,'POST',{'pluginId':'INVALID','version':'','artifactDigest':DIGEST},400,name='invalid_registration_rejected',expected_code='SAMPLE_PLUGIN_INVALID')
  plugin,_=call(admin,PL,'POST',{'pluginId':ID,'version':'1.0.0','artifactDigest':DIGEST},201);check('catalog_accepted_registered_trusted',plugin['trusted']and plugin['status']=='REGISTERED')
  call(admin,ITEM+':enable','POST');d,_=call(admin,ITEM+'/diagnostic');check('enabled_diagnostic_compatible_trusted',d['compatible']and d['trusted']and d['status']=='ENABLED'and not d['problems'])
- call(admin,ITEM+':upgrade','POST',{'version':'9.0.0','artifactDigest':DIGEST});before=rowstate();call(admin,ITEM+':enable','POST',expected=409,name='incompatible_version_cannot_enable');check('incompatible_enable_preserves_persisted_state',before==rowstate())
+ call(admin,ITEM+':upgrade','POST',{'version':'9.0.0','artifactDigest':DIGEST});before=rowstate();call(admin,ITEM+':enable','POST',expected=409,name='incompatible_version_cannot_enable',expected_code='SAMPLE_PLUGIN_INCOMPATIBLE');check('incompatible_enable_preserves_persisted_state',before==rowstate())
  d,_=call(admin,ITEM+'/diagnostic');check('incompatibility_diagnostic_has_problems',not d['compatible']and d['status']=='INCOMPATIBLE'and bool(d['problems']))
  call(admin,ITEM+':upgrade','POST',{'version':'1.0.0','artifactDigest':DIGEST});call(admin,ITEM+':enable','POST')
  result['stage']='configuration'
@@ -78,7 +78,7 @@ try:
  call(admin,op+'/disable','POST',{'expectedVersion':override['version']});d=summary();check('plugin_hidden_override_does_not_fall_back_to_secret_base',not config(d)['configured']and marker not in json.dumps(d))
  call(admin,dp+'/disable','POST',{'expectedVersion':1});d=summary();check('plugin_disabled_dictionary_is_absent',not d['dictionary']['items'])
  result['stage']='lifecycle_and_audit'
- call(admin,ITEM+':disable','POST');call(reader,SUMMARY,expected=409,name='disabled_plugin_summary_blocked');listed,_=call(reader,B+'/plugins');check('disabled_plugin_not_enterprise_manifest',not listed['items']);call(admin,ITEM+':enable','POST')
+ call(admin,ITEM+':disable','POST');call(reader,SUMMARY,expected=409,name='disabled_plugin_summary_blocked',expected_code='SAMPLE_PLUGIN_INCOMPATIBLE');listed,_=call(reader,B+'/plugins');check('disabled_plugin_not_enterprise_manifest',not listed['items']);call(admin,ITEM+':enable','POST')
  audit=env.sql("SELECT action,principal,request_id,detail_json FROM summer_audit_event WHERE resource='plugin:customer-insights'",env.schema);check('plugin_success_lifecycle_and_read_audited_without_configuration_values',all(x in audit for x in ['PLUGIN_REGISTERED','PLUGIN_ENABLED','PLUGIN_UPGRADED','PLUGIN_DISABLED','PLUGIN_CUSTOMER_INSIGHTS_READ'])and't35-'in audit and not any(v in audit for v in hidden))
  before=env.sql("SELECT COUNT(*) FROM summer_audit_event WHERE resource='plugin:customer-insights'",env.schema)
  env.sql("CREATE TRIGGER t35_audit_failure BEFORE INSERT ON summer_audit_event FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='controlled acceptance fault'",env.schema)

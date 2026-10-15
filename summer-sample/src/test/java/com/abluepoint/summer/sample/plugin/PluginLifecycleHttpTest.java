@@ -21,6 +21,29 @@ class PluginLifecycleHttpTest {
     @Autowired MockMvc mockMvc;
 
     @Test
+    void invalidRegistrationUsesTheSampleBusinessNamespace() throws Exception {
+        mockMvc.perform(post("/api/v1/platform/plugins")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pluginId\":\"INVALID\",\"version\":\"\",\"artifactDigest\":\"sha256:customer-insights-v1\"}")
+                        .with(platform("platform.plugins.write")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SAMPLE_PLUGIN_INVALID"));
+    }
+
+    @Test
+    void incompatibleEnableUsesTheSampleBusinessNamespace() throws Exception {
+        mockMvc.perform(post("/api/v1/platform/plugins")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pluginId\":\"customer-insights\",\"version\":\"9.0.0\",\"artifactDigest\":\"sha256:customer-insights-v1\"}")
+                        .with(platform("platform.plugins.write")))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/platform/plugins/customer-insights:enable")
+                        .with(platform("platform.plugins.write")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("SAMPLE_PLUGIN_INCOMPATIBLE"));
+    }
+
+    @Test
     void registersTrustedArtifactEnablesItAndReadsScopedExampleWithAuditBoundary() throws Exception {
         mockMvc.perform(post("/api/v1/platform/plugins")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -57,7 +80,7 @@ class PluginLifecycleHttpTest {
                         .content("{\"pluginId\":\"customer-insights\",\"version\":\"1.0.0\",\"artifactDigest\":\"sha256:wrong\"}")
                         .with(platform("platform.plugins.write")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_PLUGIN_UNTRUSTED"));
+                .andExpect(jsonPath("$.error.code").value("SAMPLE_PLUGIN_UNTRUSTED"));
 
         mockMvc.perform(post("/api/v1/platform/plugins")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -69,7 +92,7 @@ class PluginLifecycleHttpTest {
         mockMvc.perform(post("/api/v1/platform/plugins/customer-insights:enable")
                         .with(platform("platform.plugins.write")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_PLUGIN_INCOMPATIBLE"));
+                .andExpect(jsonPath("$.error.code").value("SAMPLE_PLUGIN_INCOMPATIBLE"));
 
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/plugins/customer-insights/summary")
                         .with(enterprise("enterprise.plugins.customer-insights.read")))
@@ -82,7 +105,7 @@ class PluginLifecycleHttpTest {
         mockMvc.perform(post("/api/v1/platform/plugins/customer-insights:enable")
                         .with(platform("platform.plugins.write")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_PLUGIN_UNTRUSTED"));
+                .andExpect(jsonPath("$.error.code").value("SAMPLE_PLUGIN_UNTRUSTED"));
 
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/plugins")
                         .with(enterprise("enterprise.plugins.read")))
