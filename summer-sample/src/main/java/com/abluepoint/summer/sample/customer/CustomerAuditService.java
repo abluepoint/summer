@@ -44,6 +44,13 @@ public class CustomerAuditService {
     }
 
     @Transactional
+    public void recordResourceFailure(String resource, String action, String requestId,
+                                      Authentication authentication, String reason) {
+        recordResource(resource, action, "FAILURE", requestId, authentication,
+                Map.of("reason", reason == null ? "operation_failed" : reason));
+    }
+
+    @Transactional
     public void recordTenantResourceSuccess(String tenant, String resource, String action, String requestId,
                                             Authentication authentication) {
         String principal = authentication == null ? "system" : authentication.getName();

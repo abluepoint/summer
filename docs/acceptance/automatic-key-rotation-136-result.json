@@ -1,0 +1,414 @@
+{
+  "issue": 136,
+  "parent": 108,
+  "userStories": [
+    35,
+    37,
+    38
+  ],
+  "dependencies": [
+    131,
+    135
+  ],
+  "candidate": {
+    "returncode": 0,
+    "input_count": 534,
+    "changed_during_build": [],
+    "elapsed_seconds": 2.3,
+    "migration_resources_match_source": true,
+    "jar_sha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3"
+  },
+  "productionInputSha256": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/key/AutomaticKeyRotationService.java": "c8856673a65a3e112f0e16c5a371de2e154f6e381f1809ba1cdef8d7bfbe3d5e",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/key/KeyCapabilityConfiguration.java": "c9e3b0de83a1564dac862e51b3705feaec7aeb9615931af5ed6295d5dbe7e146",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/customer/CustomerAuditService.java": "f7d726aee6cb097c4eef091d7d0240779f0323d9e79fd36be09f022e5a16997b"
+  },
+  "relatedUiInputSha256": {
+    "summer-ui/src/pages/security-keys/index.tsx": "f479be814075b83765f9fbc05d4faa930aa392dd110228aa7c06e2084f8dde6d",
+    "summer-ui/src/pages/security-keys/api.ts": "39a216e651665dd3800d896317348e61c226be8d7e0067f533836f88f3e7ba83",
+    "summer-ui/src/pages/audit/index.tsx": "242b980bad668a2fcab3b63aff343c70471391359f19c0fe468a017c77dc61e2",
+    "summer-ui/src/pages/audit/api.ts": "ef226c5164b3c15dea3250f4d782140dd5d429abc32c322d1cbf8d5570c55e99",
+    "summer-ui/src/menu/access.ts": "c24942a3792383fff676895911db9e5125222e585d4d8c6350e8ec54171fbb5e"
+  },
+  "acceptanceScriptSha256": {
+    "scripts/acceptance/automatic-key-rotation/CountedTaskConfiguration.java": "1427adb390bf22f8c5ad95bd7caf380e8e0e88fa0340cb1e13146767bedb9fac",
+    "scripts/acceptance/automatic-key-rotation/run.py": "048bf28c68ac17f65b99f265a494467563bfc7a7d07b5454906d7172403559c5",
+    "scripts/acceptance/automatic-key-rotation/browser.mjs": "664d067652b3d671548408c5b5640f4b376f990194c5cd6fbaaed1a985916ffa",
+    "scripts/acceptance/automatic-key-rotation/supplement.py": "8ab9d3107fd9b2d4b10ec88ff1648847d35caac32adcca74c5f0a181b965d739"
+  },
+  "batches": {
+    "transactionRed": {
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "auditRed": {
+      "exit": 1,
+      "counts": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "rotationJUnit": {
+      "exit": 0,
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "auditHttpJUnit": {
+      "exit": 0,
+      "counts": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "mysqlRed": {
+      "issue": 136,
+      "stage": "complete",
+      "checks": [
+        {
+          "name": "default_schedule_is_ninety_days",
+          "passed": true
+        },
+        {
+          "name": "real_persistent_quartz_job_disallows_concurrent_execution",
+          "passed": true
+        },
+        {
+          "name": "actual_quartz_job_rotates_due_key",
+          "passed": true
+        },
+        {
+          "name": "old_key_remains_in_grace_with_retention_deadline",
+          "passed": true
+        },
+        {
+          "name": "duplicate_job_wake_before_next_period_does_not_rotate_again",
+          "passed": true
+        },
+        {
+          "name": "failed_automatic_rotation_persists_failed_state_and_retry",
+          "passed": false
+        },
+        {
+          "name": "failed_automatic_rotation_preserves_active_key",
+          "passed": true
+        }
+      ],
+      "networkMocking": false,
+      "timeFixture": "next_rotation_at only; actual production Quartz job",
+      "productionJarUnmodified": true,
+      "candidateSha256": "e1a0380ffd187f95c4e517a92412f23d429c828647b7b4f5e4a498b856f4057d",
+      "sensitiveLogDetected": false,
+      "diagnostics": [
+        {
+          "node": 26081,
+          "class": "org.springframework.orm.jpa.JpaSystemException"
+        },
+        {
+          "node": 26081,
+          "class": "org.hibernate.exception.GenericJDBCException"
+        },
+        {
+          "node": 26081,
+          "class": "java.sql.SQLException"
+        },
+        {
+          "node": 26081,
+          "class": "org.quartz.core.JobExecutionProcessException"
+        },
+        {
+          "node": 26081,
+          "class": "org.springframework.orm.jpa.JpaSystemException"
+        },
+        {
+          "node": 26081,
+          "class": "org.hibernate.exception.GenericJDBCException"
+        },
+        {
+          "node": 26081,
+          "class": "java.sql.SQLException"
+        }
+      ],
+      "cleanup": "VERIFIED",
+      "counts": {
+        "tests": 7,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": false
+    },
+    "mysqlGreen": {
+      "issue": 136,
+      "stage": "complete",
+      "checks": [
+        {
+          "name": "default_schedule_is_ninety_days",
+          "passed": true
+        },
+        {
+          "name": "real_persistent_quartz_job_disallows_concurrent_execution",
+          "passed": true
+        },
+        {
+          "name": "actual_quartz_job_rotates_due_key",
+          "passed": true
+        },
+        {
+          "name": "old_key_remains_in_grace_with_retention_deadline",
+          "passed": true
+        },
+        {
+          "name": "duplicate_job_wake_before_next_period_does_not_rotate_again",
+          "passed": true
+        },
+        {
+          "name": "failed_automatic_rotation_persists_failed_state_and_retry",
+          "passed": true
+        },
+        {
+          "name": "failed_automatic_rotation_preserves_active_key",
+          "passed": true
+        }
+      ],
+      "networkMocking": false,
+      "timeFixture": "next_rotation_at only; actual production Quartz job",
+      "productionJarUnmodified": true,
+      "candidateSha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+      "sensitiveLogDetected": false,
+      "diagnostics": [],
+      "cleanup": "VERIFIED",
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": true
+    },
+    "supplement": {
+      "issue": 136,
+      "stage": "complete",
+      "checks": [
+        {
+          "name": "configured_seven_day_period_and_one_day_retention_visible",
+          "passed": true
+        },
+        {
+          "name": "two_actual_quartz_cluster_members_registered",
+          "passed": true
+        },
+        {
+          "name": "ungranted_metadata_read_rejected_with_framework_error_and_correlation",
+          "passed": true
+        },
+        {
+          "name": "real_failure_has_one_hour_retry_backoff",
+          "passed": true
+        },
+        {
+          "name": "failed_rotation_has_queryable_safe_persistent_audit",
+          "passed": true
+        },
+        {
+          "name": "fault_recovery_rotates_once_and_reschedules_configured_period",
+          "passed": true
+        },
+        {
+          "name": "new_node_signs_new_kid_while_old_public_key_still_verifies",
+          "passed": true
+        },
+        {
+          "name": "success_and_failure_records_are_both_queryable_after_recovery",
+          "passed": true
+        },
+        {
+          "name": "automatic_status_and_audits_survive_real_jvm_restart",
+          "passed": true
+        },
+        {
+          "name": "five_related_ui_inputs_unchanged",
+          "passed": true
+        }
+      ],
+      "networkMocking": false,
+      "timeFixture": "next_rotation_at only; actual production Quartz job",
+      "productionJarUnmodified": true,
+      "candidateSha256": "a9a6d65d782497e24164163b35f2f0680fbe7c587bb6c2384390723f1d0294c3",
+      "browsers": [
+        {
+          "exitCode": 0,
+          "mode": "failed",
+          "checks": [
+            {
+              "name": "automatic_failed_schedule_visible",
+              "passed": true
+            },
+            {
+              "name": "automatic_failure_count_visible",
+              "passed": true
+            },
+            {
+              "name": "automatic_failed_record_visible_in_audit_management",
+              "passed": true
+            },
+            {
+              "name": "audit_detail_exposes_safe_operation_and_correlation",
+              "passed": true
+            }
+          ],
+          "networkMocking": false,
+          "pageErrors": 0,
+          "complete": true,
+          "browserShutdown": {
+            "processExited": true,
+            "forced": false
+          },
+          "counts": {
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "passed": true
+        },
+        {
+          "exitCode": 0,
+          "mode": "recovered",
+          "checks": [
+            {
+              "name": "automatic_succeeded_schedule_visible",
+              "passed": true
+            },
+            {
+              "name": "active_and_retained_public_keys_visible",
+              "passed": true
+            },
+            {
+              "name": "automatic_recovered_record_visible_in_audit_management",
+              "passed": true
+            },
+            {
+              "name": "audit_detail_exposes_safe_operation_and_correlation",
+              "passed": true
+            }
+          ],
+          "networkMocking": false,
+          "pageErrors": 0,
+          "complete": true,
+          "browserShutdown": {
+            "processExited": true,
+            "forced": false
+          },
+          "counts": {
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "passed": true
+        },
+        {
+          "exitCode": 0,
+          "mode": "denied",
+          "checks": [
+            {
+              "name": "ungranted_user_cannot_view_automatic_schedule_or_rotate",
+              "passed": true
+            }
+          ],
+          "networkMocking": false,
+          "pageErrors": 0,
+          "complete": true,
+          "browserShutdown": {
+            "processExited": true,
+            "forced": false
+          },
+          "counts": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "passed": true
+        }
+      ],
+      "sensitiveLogDetected": false,
+      "diagnostics": [],
+      "cleanup": "VERIFIED",
+      "counts": {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "passed": true
+    }
+  },
+  "cleanup": {
+    "attempt-03": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "26081": false,
+        "26082": false,
+        "26083": false,
+        "26573": false,
+        "26580": false
+      },
+      "app_account_absent": true
+    },
+    "supplement-01": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "26081": false,
+        "26082": false,
+        "26083": false,
+        "26573": false,
+        "26580": false
+      },
+      "app_account_absent": true
+    }
+  },
+  "limits": [
+    "分批执行，不合计为一次全仓测试",
+    "仅前移到期时间并唤醒实际 Quartz，不自然等待周期或完整保留期",
+    "窗口内实际验签；到期清理沿用 T23",
+    "全仓 check 仍需最终冻结后执行",
+    "只核对相关生产及 UI 输入，不声称并行全树冻结"
+  ],
+  "privateEvidenceRoot": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015",
+  "privateEvidencePaths": [
+    "t28-fix/red-01",
+    "t28-fix/audit-red-01",
+    "t28-fix/audit-green-01",
+    "t28-fix/audit-http-green-01",
+    "t28-live/attempt-01",
+    "t28-live/attempt-02",
+    "t28-live/attempt-03",
+    "t28-live/supplement-01"
+  ],
+  "postRunFormattingOnly": {
+    "path": "scripts/acceptance/automatic-key-rotation/supplement.py",
+    "executedSha256": "af39dfdc5471d46b805ddccb1a9873039edf95490bbeb16e5a8b8ebd5bd56692",
+    "submittedSha256": "8ab9d3107fd9b2d4b10ec88ff1648847d35caac32adcca74c5f0a181b965d739",
+    "change": "remove one extra blank line at EOF",
+    "pythonAstEqual": true,
+    "originalPreserved": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t28-live/supplement-01/source-before-eof-cleanup/supplement.py"
+  }
+}

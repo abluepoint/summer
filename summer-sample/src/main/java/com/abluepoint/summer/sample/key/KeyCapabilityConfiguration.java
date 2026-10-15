@@ -42,8 +42,10 @@ class KeyCapabilityConfiguration {
     @ConditionalOnProperty(prefix = "summer.security.storage", name = "keys", havingValue = "mysql")
     AutomaticKeyRotationService automaticKeyRotationService(MysqlSummerKeyStore store,
                                                              KeyRotationStateRepository rotationStates,
-                                                             SecurityAuditLogger audit) {
-        return new AutomaticKeyRotationService(store, rotationStates, audit);
+                                                             SecurityAuditLogger audit,
+                                                             org.springframework.transaction.PlatformTransactionManager transactions,
+                                                             com.abluepoint.summer.sample.customer.CustomerAuditService ledger) {
+        return new AutomaticKeyRotationService(store, rotationStates, audit, transactions, ledger);
     }
 
     @Bean

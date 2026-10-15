@@ -2,6 +2,8 @@ package com.abluepoint.summer.sample.key;
 
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -20,11 +22,12 @@ class AutomaticKeyRotationServiceTest {
         KeyRotationStateRepository states = mock(KeyRotationStateRepository.class);
         KeyRotationStateEntity state = new KeyRotationStateEntity(90, 30, Instant.now().minus(1, ChronoUnit.MINUTES));
         when(states.findById(1)).thenReturn(Optional.of(state));
+        when(states.lockForRotation()).thenReturn(Optional.of(state));
         when(store.currentVersion()).thenReturn(7);
         when(store.rotate(30, 7, "automatic-key-rotation-v7"))
                 .thenReturn(new MysqlSummerKeyStore.Rotation("kid-8", 8, 30));
 
-        AutomaticKeyRotationService service = new AutomaticKeyRotationService(store, states, noopAudit());
+        AutomaticKeyRotationService service = new AutomaticKeyRotationService(store, states, noopAudit(), transactions(), ledger());
         RotationStatusView result = service.rotateIfDue();
 
         assertThat(result.status()).isEqualTo("SUCCEEDED");
@@ -39,10 +42,11 @@ class AutomaticKeyRotationServiceTest {
         KeyRotationStateRepository states = mock(KeyRotationStateRepository.class);
         KeyRotationStateEntity state = new KeyRotationStateEntity(90, 30, Instant.now().minus(1, ChronoUnit.MINUTES));
         when(states.findById(1)).thenReturn(Optional.of(state));
+        when(states.lockForRotation()).thenReturn(Optional.of(state));
         when(store.currentVersion()).thenReturn(2);
         when(store.rotate(anyInt(), anyInt(), anyString())).thenThrow(new IllegalStateException("private material must stay hidden"));
 
-        RotationStatusView result = new AutomaticKeyRotationService(store, states, noopAudit()).rotateIfDue();
+        RotationStatusView result = new AutomaticKeyRotationService(store, states, noopAudit(), transactions(), ledger()).rotateIfDue();
 
         assertThat(result.status()).isEqualTo("FAILED");
         assertThat(result.failureCount()).isEqualTo(1);
@@ -57,9 +61,10 @@ class AutomaticKeyRotationServiceTest {
         KeyRotationStateEntity state = new KeyRotationStateEntity(90, 30, Instant.now().minus(1, ChronoUnit.MINUTES));
         state.attempt(Instant.now().minus(11, ChronoUnit.MINUTES), 4);
         when(states.findById(1)).thenReturn(Optional.of(state));
+        when(states.lockForRotation()).thenReturn(Optional.of(state));
         when(store.currentVersion()).thenReturn(5);
 
-        RotationStatusView result = new AutomaticKeyRotationService(store, states, noopAudit()).rotateIfDue();
+        RotationStatusView result = new AutomaticKeyRotationService(store, states, noopAudit(), transactions(), ledger()).rotateIfDue();
 
         assertThat(result.status()).isEqualTo("SUCCEEDED");
         verify(store, never()).rotate(anyInt(), anyInt(), anyString());
@@ -67,5 +72,15 @@ class AutomaticKeyRotationServiceTest {
 
     private static SecurityAuditLogger noopAudit() {
         return (event, principal, attributes) -> { };
+    }
+
+    private static PlatformTransactionManager transactions() {
+        PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
+        when(manager.getTransaction(any())).thenAnswer(ignored -> new SimpleTransactionStatus());
+        return manager;
+    }
+
+    private static com.abluepoint.summer.sample.customer.CustomerAuditService ledger() {
+        return mock(com.abluepoint.summer.sample.customer.CustomerAuditService.class);
     }
 }

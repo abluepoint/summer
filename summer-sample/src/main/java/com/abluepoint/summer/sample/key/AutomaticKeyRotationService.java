@@ -1,7 +1,10 @@
 package com.abluepoint.summer.sample.key;
 
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
-import org.springframework.transaction.annotation.Transactional;
+import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -11,17 +14,38 @@ class AutomaticKeyRotationService {
     private final MysqlSummerKeyStore store;
     private final KeyRotationStateRepository states;
     private final SecurityAuditLogger audit;
+    private final TransactionTemplate transactions;
+    private final CustomerAuditService ledger;
 
     AutomaticKeyRotationService(MysqlSummerKeyStore store, KeyRotationStateRepository states,
-                                 SecurityAuditLogger audit) {
+                                 SecurityAuditLogger audit, PlatformTransactionManager transactionManager,
+                                 CustomerAuditService ledger) {
         this.store = store;
         this.states = states;
         this.audit = audit;
+        this.transactions = new TransactionTemplate(transactionManager);
+        this.transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.ledger = ledger;
     }
 
-    @Transactional
     synchronized RotationStatusView rotateIfDue() {
-        KeyRotationStateEntity state = requiredState();
+        // Match manual rotation's monitor-before-database-lock order, so an
+        // overlapping HTTP rotation cannot deadlock this node's Quartz thread.
+        synchronized (store) {
+            String operationId = "automatic-key-rotation-" + java.util.UUID.randomUUID();
+            try {
+                return transactions.execute(ignored -> rotateInTransaction(operationId));
+            } catch (RuntimeException failure) {
+                // A failed key flush invalidates its transaction/persistence context.
+                // Record the retry only after that transaction has fully rolled back.
+                return transactions.execute(ignored -> recordFailure(failure, operationId));
+            }
+        }
+    }
+
+    private RotationStatusView rotateInTransaction(String operationId) {
+        KeyRotationStateEntity state = states.lockForRotation().orElseThrow(
+                () -> new IllegalStateException("SUMMER_KEY_ROTATION_STATE_MISSING"));
         Instant now = Instant.now();
         if (state.nextRotationAt().isAfter(now)) return view(state);
         if ("RUNNING".equals(state.status()) && state.lastAttemptAt() != null
@@ -38,21 +62,32 @@ class AutomaticKeyRotationService {
         state.attempt(now, expectedVersion);
         states.saveAndFlush(state);
         String idempotencyKey = "automatic-key-rotation-v" + expectedVersion;
-        try {
-            store.rotate(state.retentionDays(), expectedVersion, idempotencyKey);
-            state.success(now, now.plus(state.periodDays(), java.time.temporal.ChronoUnit.DAYS));
-            states.saveAndFlush(state);
-            audit.record("security_key_automatic_rotation_succeeded", "system",
-                    Map.of("version", store.currentVersion(), "periodDays", state.periodDays(), "retentionDays", state.retentionDays()));
-        } catch (RuntimeException failure) {
-            int failures = state.failureCount() + 1;
-            long backoffHours = Math.min(24L, 1L << Math.min(5, Math.max(0, failures - 1)));
-            Instant retryAt = now.plus(Duration.ofHours(backoffHours));
-            state.failure(now, failureCode(failure), retryAt);
-            states.saveAndFlush(state);
-            audit.record("security_key_automatic_rotation_failed", "system",
-                    Map.of("failureCount", state.failureCount(), "retryAt", retryAt.toString(), "errorCode", state.lastError()));
-        }
+        store.rotate(state.retentionDays(), expectedVersion, idempotencyKey);
+        state.success(now, now.plus(state.periodDays(), java.time.temporal.ChronoUnit.DAYS));
+        states.saveAndFlush(state);
+        ledger.recordResourceSuccess("security:automatic-key-rotation", "KEY_AUTOMATIC_ROTATION_SUCCEEDED", operationId, null);
+        audit.record("security_key_automatic_rotation_succeeded", "system",
+                Map.of("version", store.currentVersion(), "periodDays", state.periodDays(), "retentionDays", state.retentionDays()));
+        return view(state);
+    }
+
+    private RotationStatusView recordFailure(RuntimeException failure, String operationId) {
+        KeyRotationStateEntity state = states.lockForRotation().orElseThrow(
+                () -> new IllegalStateException("SUMMER_KEY_ROTATION_STATE_MISSING"));
+        Instant now = Instant.now();
+        // Another node/manual rotation may have succeeded after our rollback.
+        // Its future schedule must not be replaced by this older failure.
+        if (state.nextRotationAt().isAfter(now)) return view(state);
+        int failures = state.failureCount() + 1;
+        long backoffHours = Math.min(24L, 1L << Math.min(5, Math.max(0, failures - 1)));
+        Instant retryAt = now.plus(Duration.ofHours(backoffHours));
+        state.attempt(now, store.currentVersion());
+        state.failure(now, failureCode(failure), retryAt);
+        states.saveAndFlush(state);
+        ledger.recordResourceFailure("security:automatic-key-rotation", "KEY_AUTOMATIC_ROTATION_FAILED", operationId, null,
+                "SUMMER_KEY_ROTATION_FAILED");
+        audit.record("security_key_automatic_rotation_failed", "system",
+                Map.of("failureCount", state.failureCount(), "retryAt", retryAt.toString(), "errorCode", state.lastError()));
         return view(state);
     }
 
