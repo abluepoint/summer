@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -92,6 +93,16 @@ public class ApiExceptionHandler {
                 CommonErrorCode.INVALID_ARGUMENT.code(),
                 CommonErrorCode.INVALID_ARGUMENT.defaultMessage(),
                 List.of(new ApiError.FieldViolation("$", "must be valid JSON"))
+        );
+        return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingHeader(MissingRequestHeaderException exception) {
+        ApiError error = new ApiError(
+                CommonErrorCode.INVALID_ARGUMENT.code(),
+                CommonErrorCode.INVALID_ARGUMENT.defaultMessage(),
+                List.of(new ApiError.FieldViolation(exception.getHeaderName(), "is required"))
         );
         return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
     }

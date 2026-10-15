@@ -1,0 +1,72 @@
+{
+  "status": "VERIFIED",
+  "problem": "MissingRequestHeaderException fell through generic Exception handler, causing500 for a missing required header.",
+  "change": "Narrow exception mapping returns400 SUMMER_INVALID_ARGUMENT with named field violation and stable requestId; supplied-header behavior unchanged.",
+  "actual": {
+    "stage": "complete",
+    "checks": [
+      {
+        "name": "missing_idempotency_header_is_correlated_bad_request",
+        "passed": true
+      },
+      {
+        "name": "same_valid_request_with_required_header_is_created",
+        "passed": true
+      }
+    ],
+    "networkMocking": false,
+    "businessSqlWrites": false,
+    "candidateSha256": "e1a0380ffd187f95c4e517a92412f23d429c828647b7b4f5e4a498b856f4057d",
+    "missingHeaderResponse": {
+      "status": 400,
+      "code": "SUMMER_INVALID_ARGUMENT",
+      "correlationMatches": true,
+      "fields": [
+        "Idempotency-Key"
+      ]
+    },
+    "sensitiveLogDetected": false,
+    "cleanup": "VERIFIED",
+    "counts": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "passed": true
+  },
+  "focusedJUnitRed": {
+    "exit": 1,
+    "counts": {
+      "tests": 2,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "focusedJUnitGreen": {
+    "exit": 0,
+    "counts": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "initialCompileFailure": {
+    "tests": 0,
+    "cause": "Standalone MVC jsonPath matcher required unavailable Hamcrest; switched test assertion to existing Jackson and AssertJ, no new dependency."
+  },
+  "candidateBuild": {
+    "returncode": 0,
+    "input_count": 534,
+    "changed_during_build": [],
+    "elapsed_seconds": 5.4,
+    "migration_resources_match_source": true,
+    "jar_sha256": "e1a0380ffd187f95c4e517a92412f23d429c828647b7b4f5e4a498b856f4057d"
+  },
+  "mainInputMatchesCandidate": true,
+  "secrets": "Memory/environment/stdin only; known runtime sensitive log scan0; no raw JVM logs in public evidence.",
+  "scope": "No authorization, endpoint business behavior, stored data or user index changes. T26 initialization exposed this shared MVC defect; ticket lifecycle was verified separately.",
+  "privateEvidence": ".git/summer4-closeout-20261015/mvc-header-fix"
+}
