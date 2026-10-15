@@ -1,0 +1,238 @@
+{
+  "status": "READY_FOR_COORDINATOR_CLOSEOUT",
+  "issue": 122,
+  "recorded_at": "2026-10-15T18:08:50.155574+08:00",
+  "candidate_sha256": "9976bf12e231e8ebd5ff2641bd9c67039fac97d334ee7384622e6525914e924c",
+  "tests": 27,
+  "passed": 27,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "counting": "16 backend/environment + 6 real Chrome + 5 production-only checks. Full-run browser wrapper and repeated historical runs excluded.",
+  "checks": [
+    {
+      "name": "candidate_digest",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "mysql_v34_first_migration",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "separate_management_catalog_and_health",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "real_managed_login",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "catalog_metadata_and_explicit_override",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "protocol_and_functional_protection",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "two_node_snapshot_convergence",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "real_denied_and_unauthenticated_reads",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "invalid_and_missing_history_correlation",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "startup_added_route_default_deny_then_grant",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "restart_removed_route_retains_binding_and_snapshot",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "replacement_cannot_inherit_old_grant",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "replacement_two_node_convergence",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "startup_change_counts",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "opaque_component_reports_incomplete",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "mapping_conflict_fails_startup",
+      "status": "passed",
+      "kind": "backend/environment",
+      "source": "attempt-13-9976bf12-full/result.json"
+    },
+    {
+      "name": "real_pkce_login_catalog_history",
+      "status": "passed",
+      "kind": "real Chrome",
+      "source": "attempt-13-9976bf12-full/browser-result.json"
+    },
+    {
+      "name": "real_revision_diff_removed_replaced",
+      "status": "passed",
+      "kind": "real Chrome",
+      "source": "attempt-13-9976bf12-full/browser-result.json"
+    },
+    {
+      "name": "immutable_snapshot_and_invalid_compare_guard",
+      "status": "passed",
+      "kind": "real Chrome",
+      "source": "attempt-13-9976bf12-full/browser-result.json"
+    },
+    {
+      "name": "real_invalid_http_correlation",
+      "status": "passed",
+      "kind": "real Chrome",
+      "source": "attempt-13-9976bf12-full/browser-result.json"
+    },
+    {
+      "name": "real_backend_outage_and_retry",
+      "status": "passed",
+      "kind": "real Chrome",
+      "source": "attempt-13-9976bf12-full/browser-result.json"
+    },
+    {
+      "name": "real_denied_user_page",
+      "status": "passed",
+      "kind": "real Chrome",
+      "source": "attempt-13-9976bf12-full/browser-result.json"
+    },
+    {
+      "name": "protocol_infrastructure_configurability_ac",
+      "status": "passed",
+      "kind": "production-only",
+      "source": "attempt-12-9976bf12-production/protocol-result.json"
+    },
+    {
+      "name": "standard_management_catalog_complete",
+      "status": "passed",
+      "kind": "production-only",
+      "source": "attempt-12-9976bf12-production/protocol-result.json"
+    },
+    {
+      "name": "production_login_csrf_retained",
+      "status": "passed",
+      "kind": "production-only",
+      "source": "attempt-12-9976bf12-production/protocol-result.json"
+    },
+    {
+      "name": "production_token_client_auth_retained",
+      "status": "passed",
+      "kind": "production-only",
+      "source": "attempt-12-9976bf12-production/protocol-result.json"
+    },
+    {
+      "name": "production_mysql_restart_history_retained",
+      "status": "passed",
+      "kind": "production-only",
+      "source": "attempt-12-9976bf12-production/protocol-result.json"
+    }
+  ],
+  "raw_full_run": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "browser_wrapper_included": true
+  },
+  "standard_management": {
+    "complete": true,
+    "issues": [],
+    "production_descriptor_count": 484,
+    "same_descriptors_as_2859": true
+  },
+  "unknown_mapping": {
+    "complete": false,
+    "issues": [
+      {
+        "code": "SUMMER_RESOURCE_DISCOVERY_UNSUPPORTED",
+        "contextId": "application",
+        "detail": "An explicit metadata contributor is required for this runtime component",
+        "source": "acceptance.InterfaceResourceAcceptanceConfiguration#opaque"
+      }
+    ]
+  },
+  "local_targeted_regression": {
+    "tests": 25,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "gradle_exit_code": 0,
+    "receipt": "../matrix/t14-composite-green-result.json"
+  },
+  "frontend_input_gate": {
+    "files": 245,
+    "changed": [],
+    "status": "STABLE"
+  },
+  "visual_review": {
+    "diff": "PASSED: removed/replaced history and explicit migration protection readable",
+    "denied": "PASSED: permission denied page, no catalog/history content",
+    "files": [
+      "attempt-13-9976bf12-full/catalog-real-diff.png",
+      "attempt-13-9976bf12-full/catalog-real-denied.png"
+    ]
+  },
+  "cleanup": "VERIFIED",
+  "issue_dependency": {
+    "issue": 112,
+    "status": "COMPLETED_REPORTED_BY_COORDINATOR"
+  },
+  "issue_mutated_by_this_task": false,
+  "historical_red": [
+    "protocol-configurability-red.json",
+    "management-completeness-red.json"
+  ],
+  "release_gate_note": "This is T14 acceptance on the pinned candidate. Repository-wide check is owned by the coordinator and is not represented by these counts.",
+  "evidence_root": ".git/summer4-closeout-20261015/t14-live",
+  "source_boundary": {
+    "coordinator_reported_main_inputs": 529,
+    "main_change_since_2859": "summer-sample/src/main/java/com/abluepoint/summer/sample/resource/InterfaceResourceCatalogService.java",
+    "scanner_sha256": "edb07d245796bda3e7fbaa7158a5b5878978a08d17b3d5aa94f17d2391aa0092"
+  }
+}

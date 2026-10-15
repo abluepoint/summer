@@ -76,7 +76,8 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
     private List<InterfaceResourceDescriptor> discover(ApplicationContext context, String contextId, List<InterfaceResourceDiscoveryIssue> issues) {
         List<InterfaceResourceDescriptor> descriptors = new ArrayList<>();
         List<InterfaceResourceContributor> contributors = List.copyOf(context.getBeansOfType(InterfaceResourceContributor.class).values());
-        for (HandlerMapping candidate : context.getBeansOfType(HandlerMapping.class).values()) {
+        List<HandlerMapping> mappings = List.copyOf(context.getBeansOfType(HandlerMapping.class).values());
+        for (HandlerMapping candidate : mappings) {
             var contributed = contributors.stream().map(provider -> provider.mapping(candidate)).filter(java.util.Optional::isPresent).findFirst();
             if (contributed.isPresent()) { descriptors.addAll(contributed.get().get()); continue; }
             if (candidate instanceof AbstractHandlerMethodMapping<?> mapping) {
@@ -110,7 +111,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
                             type == ResourceType.PROTOCOL || type == ResourceType.INFRASTRUCTURE,
                             contextId, "URL_MAPPING", Map.of(), type == ResourceType.STATIC ? "STATIC_MAPPING" : type == ResourceType.BUSINESS ? "MANAGED_ADAPTER_REQUIRED" : "COMPONENT_OWNED"));
                 });
-            } else issues.add(incomplete(contextId, candidate));
+            } else if (!coveredManagementComposite(candidate, mappings)) issues.add(incomplete(contextId, candidate));
         }
         for (SecurityFilterChain chain : context.getBeansOfType(SecurityFilterChain.class).values()) {
             for (var filter : chain.getFilters()) {
@@ -138,6 +139,21 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         return descriptors.stream().map(item -> new InterfaceResourceDescriptor(item.httpMethod(), item.normalizedPath(),
                 item.handler(), item.module(), item.resourceType(), item.sensitiveLevel(), item.permissionCode(), item.configurable(),
                 contextId, item.source(), item.conditions(), item.configurationPolicy())).toList();
+    }
+
+    /** Boot's management wrapper has no routes of its own; each delegate must still be scanned. */
+    private static boolean coveredManagementComposite(HandlerMapping candidate, List<HandlerMapping> mappings) {
+        if (!candidate.getClass().getName().equals(
+                "org.springframework.boot.webmvc.autoconfigure.actuate.web.CompositeHandlerMapping")) return false;
+        try {
+            Method method = candidate.getClass().getDeclaredMethod("getMappings");
+            org.springframework.util.ReflectionUtils.makeAccessible(method);
+            Object value = method.invoke(candidate);
+            return value instanceof List<?> delegates && delegates.stream().allMatch(delegate ->
+                    delegate != candidate && mappings.stream().anyMatch(mapping -> mapping == delegate));
+        } catch (ReflectiveOperationException | RuntimeException unsupported) {
+            return false;
+        }
     }
 
     InterfaceResourceCatalogView read(Authentication authentication) {

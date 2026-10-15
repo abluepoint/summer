@@ -12,12 +12,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"management.server.port=0", "management.endpoints.web.base-path=/management-only", "management.endpoints.web.exposure.include=health"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class InterfaceResourceManagementContextHttpTest {
     @Autowired MockMvc mvc;
+    @Test void standardManagementDelegatesDoNotCauseIncompleteDiscovery() throws Exception {
+        mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
+                        .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.complete").value(true))
+                .andExpect(jsonPath("$.data.issues").isEmpty());
+    }
+
     @Test void includesTheActualSeparateManagementContext() throws Exception {
         var response = mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
                         .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))

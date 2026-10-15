@@ -3,8 +3,8 @@ import hashlib,json,os,subprocess,sys
 from pathlib import Path
 from environment import Environment,Client,OUT,ROOT
 from fixtures import Fixtures
-CANDIDATE=ROOT/'.git/summer4-closeout-20261015/runtime/candidate-4c81/candidate.jar'
-EXPECTED='4c81a803dd19f610999a8a8b5b336b4a25771af82a981a3a47e79a5c3e86eeae'
+CANDIDATE=Path(os.environ.get('CATALOG_CANDIDATE_PATH',str(ROOT/'.git/summer4-closeout-20261015/runtime/candidate-4c81/candidate.jar')))
+EXPECTED=os.environ.get('CATALOG_CANDIDATE_SHA256','4c81a803dd19f610999a8a8b5b336b4a25771af82a981a3a47e79a5c3e86eeae')
 SCRIPT=Path(__file__).resolve().parent
 FIXTURE=OUT/'interface-resource-fixture.jar';API='/api/v1/platform/interface-resources'
 env=None;ui=None;browser=None;stage='setup';result={'candidate_sha256':EXPECTED,'checks':[],'failures':0,'errors':0}

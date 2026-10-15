@@ -5,7 +5,7 @@ from environment import Environment,Client,OUT,ROOT
 from fixtures import Fixtures
 candidate=Path(os.environ.get('CATALOG_CANDIDATE_PATH',str(ROOT/'.git/summer4-closeout-20261015/runtime/candidate-4c81/candidate.jar')))
 expected=os.environ.get('CATALOG_CANDIDATE_SHA256','4c81a803dd19f610999a8a8b5b336b4a25771af82a981a3a47e79a5c3e86eeae')
-planned=['protocol_infrastructure_configurability_ac','production_login_csrf_retained','production_token_client_auth_retained','production_mysql_restart_history_retained']
+planned=['protocol_infrastructure_configurability_ac','standard_management_catalog_complete','production_login_csrf_retained','production_token_client_auth_retained','production_mysql_restart_history_retained']
 result={'candidate_sha256':expected,'external_fixture_loaded':False,'checks':[],'failures':0,'errors':0,'skipped':0};env=None;stage=planned[0]
 def start():env.start(23081,jar=candidate,extra_properties={'management.server.port':23083})
 def mark():result['checks'].append({'name':stage,'status':'passed'})
@@ -21,9 +21,10 @@ try:
  assert rows and not result['non_configurable'],'protocol_configurability_ac_failed'
  assert any(r['normalizedPath']=='/ws/v1/messages' and r['configurationPolicy']=='COMPONENT_OWNED' for r in rows)
  assert any(r['contextId']=='management' and r['normalizedPath']=='/actuator/health' for r in rows);mark()
- stage=planned[1];anonymous=Client();status,_,_=anonymous.request(23081,'/login','POST','username=invalid',bearer=False);assert status==403;mark()
- stage=planned[2];status,body,_=anonymous.request(23081,'/oauth2/token','POST','grant_type=client_credentials',bearer=False);assert status in (400,401) and not (body and body.get('access_token'));mark()
- stage=planned[3];before=env.sql('select count(*) from summer_interface_resource_revision',env.schema);env.stop(23081);start()
+ stage=planned[1];result.update(complete=view['complete'],issues=view['issues']);assert view['complete'] is True and view['issues']==[],'standard_management_catalog_incomplete';mark()
+ stage=planned[2];anonymous=Client();status,_,_=anonymous.request(23081,'/login','POST','username=invalid',bearer=False);assert status==403;mark()
+ stage=planned[3];status,body,_=anonymous.request(23081,'/oauth2/token','POST','grant_type=client_credentials',bearer=False);assert status in (400,401) and not (body and body.get('access_token'));mark()
+ stage=planned[4];before=env.sql('select count(*) from summer_interface_resource_revision',env.schema);env.stop(23081);start()
  status,body,_=fixture.admin.request(23081,'/api/v1/platform/interface-resources');assert status==200 and body['data']==view
  assert env.sql('select count(*) from summer_interface_resource_revision',env.schema)==before;mark();result['status']='PASSED'
 except Exception as error:result.update(status='RED',failures=1,failure_type=type(error).__name__,failed_stage=stage)

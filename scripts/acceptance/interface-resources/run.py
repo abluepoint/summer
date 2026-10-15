@@ -4,8 +4,8 @@ from pathlib import Path
 from environment import Environment,Client,OUT,ROOT
 from fixtures import Fixtures,literal
 
-CANDIDATE=ROOT/'.git/summer4-closeout-20261015/runtime/candidate-4c81/candidate.jar'
-EXPECTED='4c81a803dd19f610999a8a8b5b336b4a25771af82a981a3a47e79a5c3e86eeae'
+CANDIDATE=Path(os.environ.get('CATALOG_CANDIDATE_PATH',str(ROOT/'.git/summer4-closeout-20261015/runtime/candidate-4c81/candidate.jar')))
+EXPECTED=os.environ.get('CATALOG_CANDIDATE_SHA256','4c81a803dd19f610999a8a8b5b336b4a25771af82a981a3a47e79a5c3e86eeae')
 FIXTURE=OUT/'interface-resource-fixture.jar'
 API='/api/v1/platform/interface-resources'
 SCRIPT=Path(__file__).resolve().parent
@@ -33,8 +33,10 @@ try:
  migration=env.sql("select count(*) from flyway_schema_history where version='34' and success=1",env.schema);assert migration=='1';assert env.sql("select count(*) from information_schema.tables where table_schema="+literal(env.schema)+" and table_name='summer_interface_resource_revision'")=='1';passed(mysql_version=env.sql('select version()'),migration='V34')
  stage=PLANNED[2];fixture=Fixtures(env).seed();admin=fixture.admin;denied=fixture.denied
  managed=catalog(admin);assert any(r['contextId']=='management' and r['resourceType']=='INFRASTRUCTURE' and r['normalizedPath']=='/actuator/health' for r in managed['items'])
+ management_snapshot=save_snapshot('management-snapshot',managed)
+ assert managed['complete'] is True and managed['issues']==[],'standard_management_catalog_incomplete'
  with urllib.request.urlopen('http://127.0.0.1:23083/actuator/health') as health:assert health.status==200
- passed()
+ passed(complete=managed['complete'],issues_count=len(managed['issues']),snapshot_sha256=management_snapshot)
  stage=PLANNED[3];assert env.sql('select count(*) from summer_authorization_user_binding where username='+literal(env.username),env.schema)=='1';assert admin.token and denied.token;passed(authentication='form + PKCE authorization_code',authorization='persisted managed role and binding')
  stage=PLANNED[4];required={'httpMethod','normalizedPath','handler','module','resourceType','sensitiveLevel','permissionCode','contextId','conditions'}
  assert all(required<=set(row) for row in managed['items']);assert {'BUSINESS','PROTOCOL','INFRASTRUCTURE','STATIC'}<={row['resourceType'] for row in managed['items']}
@@ -72,7 +74,10 @@ try:
   if line.strip()=='CONTROL stop':env.stop(23081);browser.stdin.write('ACK\n');browser.stdin.flush()
   elif line.strip()=='CONTROL restart':start('replacement');browser.stdin.write('ACK\n');browser.stdin.flush()
  browser.wait(timeout=30);assert browser.returncode==0,'browser_failure';report=json.loads((OUT/'browser-result.json').read_text());assert report['status']=='PASSED';passed(browser_tests=report['tests'])
- stage=PLANNED[15];env.stop(23081);start('opaque');opaque=catalog(admin);assert opaque['complete'] is False and any(row['code']=='SUMMER_RESOURCE_DISCOVERY_UNSUPPORTED' for row in opaque['issues']);assert '/api/acceptance/catalog/explicit' in paths(opaque);passed()
+ stage=PLANNED[15];env.stop(23081);start('opaque');opaque=catalog(admin);opaque_snapshot=save_snapshot('opaque-snapshot',opaque)
+ assert opaque['complete'] is False and len(opaque['issues'])==1
+ assert opaque['issues'][0]['code']=='SUMMER_RESOURCE_DISCOVERY_UNSUPPORTED' and opaque['issues'][0]['source']=='acceptance.InterfaceResourceAcceptanceConfiguration#opaque'
+ assert '/api/acceptance/catalog/explicit' in paths(opaque);passed(complete=opaque['complete'],issues=opaque['issues'],snapshot_sha256=opaque_snapshot)
  stage=PLANNED[16];env.stop(23081);before=len(env.diagnostics)
  try:start('conflict')
  except RuntimeError:pass
