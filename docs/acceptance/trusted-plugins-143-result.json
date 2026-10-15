@@ -1,0 +1,308 @@
+{
+  "issue": 143,
+  "stories": [
+    47,
+    48,
+    50
+  ],
+  "date": "2026-10-16",
+  "timezone": "Asia/Shanghai",
+  "status": "READY_FOR_ROOT_REVIEW",
+  "candidateSha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+  "batches": [
+    {
+      "name": "attempt-01",
+      "counts": {
+        "tests": 25,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "5ecb573a403334491577464a36f7d0ae62ef430cfd92ccc2d1a9b20d9242ca05"
+    },
+    {
+      "name": "attempt-02-joint",
+      "counts": {
+        "tests": 77,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "e25c175719a12559b5859539e9a92af075e499e71d6cdd6762f017581b7437cc"
+    },
+    {
+      "name": "attempt-03-joint",
+      "counts": {
+        "tests": 105,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "21d41c385e20bb98240afe7e8811c7e2672e1d97bfb7834cd67f47f6f16ae210"
+    },
+    {
+      "name": "browser-attempt-01",
+      "counts": {
+        "tests": 35,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "5c86420ebdccdb3cd69a8dd83cd34fc657145dd6733676b26c2822abf33f7e82",
+      "chrome": {
+        "tests": 8,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0,
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": true
+        },
+        "resultSha256": "adecba334e8749677e221a829f06d63b4fdea85087bc6358aef21b7368585775"
+      },
+      "uiInputCount": 242
+    },
+    {
+      "name": "focused-red-01",
+      "counts": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "f19c8615870d8db57379b6459f4bf2f2813cc6f3f423a676104e8756262f8192",
+      "chrome": {
+        "tests": 9,
+        "failures": 5,
+        "errors": 0,
+        "skipped": 4,
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        },
+        "resultSha256": "5f3c0e412c58965075f05459db19ea2f03c7f479c8d12e454a1ae540c1535989"
+      },
+      "uiInputCount": 242
+    },
+    {
+      "name": "focused-green-01",
+      "counts": {
+        "tests": 51,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "f0869111029f69d1b671d161cb31815cde09101ca07cfef2fdff4147ad8d696b",
+      "chrome": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": true
+        },
+        "resultSha256": "f8e885476b6d3c6191aabf08c47915b5f46e54282b9b6b5a43412c855da04b64"
+      },
+      "uiInputCount": 243
+    },
+    {
+      "name": "denied-route-01",
+      "counts": {
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false,
+      "changedBackendPaths": [],
+      "changedUiPaths": [],
+      "resultSha256": "6221fc001237a527dfa8abc19027056a291eaa99f8313999510d4142dd651687",
+      "chrome": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": true
+        },
+        "resultSha256": "1da36fa1ecd5e798f1d866577d186940fc149bd2342591e26dea031f264933b0"
+      },
+      "uiInputCount": 243
+    }
+  ],
+  "backendInputCount": 14,
+  "backendInputsMatchCandidate": true,
+  "protectedPathsUnchanged": true,
+  "protectedPathCount": 19,
+  "migrationReadback": {
+    "migrations": [
+      {
+        "version": "28",
+        "success": true
+      },
+      {
+        "version": "29",
+        "success": true
+      },
+      {
+        "version": "30",
+        "success": true
+      },
+      {
+        "version": "32",
+        "success": true
+      },
+      {
+        "version": "33",
+        "success": true
+      }
+    ],
+    "passed": true
+  },
+  "frontendChecks": {
+    "typecheckExitCode": 0,
+    "pluginContractExitCode": 0,
+    "menuContractExitCode": 0,
+    "menuNamedChecks": 13,
+    "newProductionBuild": false
+  },
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 2,
+      "status": "PASS"
+    },
+    {
+      "id": 3,
+      "status": "PASS"
+    },
+    {
+      "id": 4,
+      "status": "PASS"
+    },
+    {
+      "id": 5,
+      "status": "PASS"
+    },
+    {
+      "id": 6,
+      "status": "PASS"
+    },
+    {
+      "id": 7,
+      "status": "PASS"
+    }
+  ],
+  "limits": [
+    "No new JUnit, Gradle, candidate build or frontend production build.",
+    "Main HTTP matrix reused only after the 14 backend inputs matched.",
+    "Chrome forced shutdown was recorded honestly; all owned resources were verified absent.",
+    "Initial final-denial screenshot captured an authentication transition; denied-route-01 supplies the final 403 visual evidence.",
+    "Global manifest publication can show a permission toast for an enterprise reader; publication is not required for reading the published menu."
+  ],
+  "managementRaceRegression": {
+    "scope": "management page only; DOM rendering body and all other frontend production files unchanged",
+    "transport": "synthetic HTTP adapter with controlled deferred Promises; causal component test, not new live HTTP acceptance",
+    "batches": [
+      {
+        "name": "race-red-01",
+        "counts": {
+          "tests": 6,
+          "failures": 5,
+          "errors": 1,
+          "skipped": 0
+        },
+        "exitCode": 1,
+        "realBackend": false,
+        "sourceSha256": "3ef5382bcb0d7c9936c718a8917dd4524cc60943ea819c30010062c9fd7a3e68",
+        "resultSha256": "c931616d9deea38fa71f44bfc3b45e1b7292a6fe2778b5dec7ff3d31c62ccf51",
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      },
+      {
+        "name": "race-red-02",
+        "counts": {
+          "tests": 6,
+          "failures": 6,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exitCode": 1,
+        "realBackend": false,
+        "sourceSha256": "3ef5382bcb0d7c9936c718a8917dd4524cc60943ea819c30010062c9fd7a3e68",
+        "resultSha256": "10bd3bb5c268af48f006d8102966209f718d1ca12bdef7fe9c9618ee30b65421",
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      },
+      {
+        "name": "race-green-01",
+        "counts": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exitCode": 0,
+        "realBackend": false,
+        "sourceSha256": "6144af5db8246ff98180d53f758db0f359d582c929be2962de0ca7a7f797c61a",
+        "resultSha256": "411a14af48232c84f375fa13c292288bd5b35f090743f974a73b4341a3807e1e",
+        "pageErrors": 0,
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    ],
+    "typecheckExitCode": 0,
+    "ownedPort21573Released": true,
+    "previous17FileSnapshot": "race-before/",
+    "realAcceptanceReuse": "Original 105 backend checks and Chrome 9 + final-denial 1 remain separate historical evidence; not rerun. Management request coordination changed after those runs; six causal tests and a new typecheck cover this increment."
+  }
+}

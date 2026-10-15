@@ -180,6 +180,13 @@ export const routes: IRoute[] = [
     capabilityCode: 'security.oauth-client.read',
   },
   {
+    name: 'menu.plugins.customerInsights',
+    key: 'plugins/customer-insights',
+    exact: true,
+    capabilityCode: 'enterprise.plugins.customer-insights.read',
+    requiredPermissions: [{ resource: 'enterprise.plugins.customer-insights', actions: ['read'] }],
+  },
+  {
     name: 'menu.plugins',
     key: 'plugins',
     requiredPermissions: [{ resource: 'menu.plugins', actions: ['read'] }],

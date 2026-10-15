@@ -43,8 +43,9 @@ const routes = evaluateModule('../src/routes.ts', {
   '@/menu/access': access,
   react: {},
 });
-assert.equal(routes.menuManifest.manifestVersion, 5, 'changed metadata must have a new version');
+assert.equal(routes.menuManifest.manifestVersion, 6, 'changed metadata must have a new version');
 const bootstrapCodes = {
+  'plugins/customer-insights': 'enterprise.plugins.customer-insights.read',
   roles: 'enterprise.roles.read',
   'interface-resources': 'platform.interface-resources.read',
   'auth-users': 'enterprise.members.read',
@@ -61,4 +62,4 @@ for (const [key, code] of Object.entries(bootstrapCodes)) {
   assert.equal(authentication.default(route, permissions), true, `${key} must be navigable with its backend grant`);
   assert.equal(authentication.default(route, {}), false, `${key} must remain hidden without a grant`);
 }
-console.log('Menu permissions: 5 failure/action regressions and 7 bootstrap navigation contracts passed');
+console.log('Menu permissions: 5 failure/action regressions and 8 navigation contracts passed');

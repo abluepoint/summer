@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Form, Input, Message, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { disablePlugin, enablePlugin, getCustomerInsights, getPluginDiagnostic, listEnterprisePlugins, listPlugins, Plugin, PluginApiError, PluginDiagnostic, PluginInsights, registerPlugin } from './api';
@@ -13,12 +13,63 @@ export default function PluginsPage() {
   const [error, setError] = useState<PluginApiError | null>(null);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
-  const load = () => { setLoading(true); Promise.all([listPlugins(), listEnterprisePlugins(enterpriseId)]).then(([platform, visible]) => { setPlugins(platform.items); setInsights(null); setError(null); if (!visible.items.length) return; }).catch(setError).finally(() => setLoading(false)); };
-  useEffect(() => load(), []);
-  const register = () => form.validate().then((values) => registerPlugin(values).then(() => { Message.success(t['plugins.registered']); form.resetFields(); load(); }).catch(setError));
-  const toggle = (plugin: Plugin) => (plugin.status === 'ENABLED' ? disablePlugin(plugin.pluginId) : enablePlugin(plugin.pluginId)).then(() => { Message.success(t['plugins.saved']); load(); }).catch(setError);
-  const inspect = (plugin: Plugin) => getPluginDiagnostic(plugin.pluginId).then(setDiagnostic).catch(setError);
-  const readInsights = () => getCustomerInsights(enterpriseId).then(setInsights).catch(setError);
+  const mounted = useRef(true);
+  const requests = useRef({ epoch: 0, insights: 0, diagnostic: 0 });
+  const current = (epoch: number) => mounted.current && requests.current.epoch === epoch;
+  const invalidate = () => {
+    const epoch = ++requests.current.epoch;
+    setInsights(null);
+    setDiagnostic(null);
+    setError(null);
+    setLoading(false);
+    return epoch;
+  };
+  const load = () => {
+    if (!mounted.current) return Promise.resolve();
+    const epoch = invalidate();
+    setLoading(true);
+    return Promise.all([listPlugins(), listEnterprisePlugins(enterpriseId)])
+      .then(([platform]) => { if (current(epoch)) setPlugins(platform.items); })
+      .catch((failure) => { if (current(epoch)) setError(failure); })
+      .finally(() => { if (current(epoch)) setLoading(false); });
+  };
+  useEffect(() => {
+    mounted.current = true;
+    load();
+    return () => { mounted.current = false; requests.current.epoch += 1; };
+  }, []);
+  const mutate = (call: () => Promise<Plugin>, message: string, after?: () => void) => {
+    if (!mounted.current) return Promise.resolve();
+    const epoch = invalidate();
+    return call().then(() => {
+      if (!current(epoch)) return;
+      Message.success(message);
+      after?.();
+      return load();
+    }).catch((failure) => { if (current(epoch)) setError(failure); });
+  };
+  const register = () => form.validate().then((values) => mutate(() => registerPlugin(values), t['plugins.registered'], () => form.resetFields()));
+  const toggle = (plugin: Plugin) => mutate(() => plugin.status === 'ENABLED' ? disablePlugin(plugin.pluginId) : enablePlugin(plugin.pluginId), t['plugins.saved']);
+  const inspect = (plugin: Plugin) => {
+    const epoch = requests.current.epoch;
+    const sequence = ++requests.current.diagnostic;
+    const active = () => current(epoch) && sequence === requests.current.diagnostic;
+    setDiagnostic(null);
+    setError(null);
+    return getPluginDiagnostic(plugin.pluginId)
+      .then((value) => { if (active()) setDiagnostic(value); })
+      .catch((failure) => { if (active()) setError(failure); });
+  };
+  const readInsights = () => {
+    const epoch = requests.current.epoch;
+    const sequence = ++requests.current.insights;
+    const active = () => current(epoch) && sequence === requests.current.insights;
+    setInsights(null);
+    setError(null);
+    return getCustomerInsights(enterpriseId)
+      .then((value) => { if (active()) setInsights(value); })
+      .catch((failure) => { if (active()) setError(failure); });
+  };
   return <Card title={t['plugins.title']} extra={<Button loading={loading} onClick={load}>{t['plugins.refresh']}</Button>}>
     <Typography.Paragraph>{t['plugins.description']}</Typography.Paragraph>
     {error && <Alert type="error" content={`${error.message || t['plugins.error']}${error.requestId ? ` (${error.requestId})` : ''}`} style={{ marginBottom: 16 }} />}
