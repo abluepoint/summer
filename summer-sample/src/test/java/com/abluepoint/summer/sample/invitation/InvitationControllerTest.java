@@ -219,6 +219,66 @@ class InvitationControllerTest {
     }
 
     @Test
+    void applicantEndpointsStillRequireTheirScopeAndMatchingSubject() throws Exception {
+        String body = "{\"applicantEmail\":\"owner@example.test\",\"applicantName\":\"Owner\",\"organizationId\":\"org-engineering\",\"capabilityCodes\":[]}";
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/join-applications")
+                        .contentType(MediaType.APPLICATION_JSON).content(body).header("Idempotency-Key", "join-missing-scope")
+                        .with(jwt().jwt(token -> token.subject("owner@example.test").claim("summer_identity_source", "local-user"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/join-applications")
+                        .contentType(MediaType.APPLICATION_JSON).content(body).header("Idempotency-Key", "join-wrong-subject")
+                        .with(applicant("other@example.test")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void invitationConsumptionAllowsOnlyTheInvitedSubjectWithoutMembership() throws Exception {
+        var created = createInvitation("invite-local-owner", "owner@example.test", "3600");
+        String token = JsonPath.read(created.getResponse().getContentAsString(), "$.data.token");
+        mockMvc.perform(post("/api/v1/invitations/{token}:accept", token)
+                        .header("Idempotency-Key", "invite-local-wrong-owner").with(invitee("other@example.test")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/invitations/{token}:accept", token)
+                        .header("Idempotency-Key", "invite-local-correct-owner").with(invitee("owner@example.test")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.state").value("ACCEPTED"));
+        var declined = createInvitation("invite-local-decline", "decline@example.test", "3600");
+        String declinedToken = JsonPath.read(declined.getResponse().getContentAsString(), "$.data.token");
+        mockMvc.perform(post("/api/v1/invitations/{token}:reject", declinedToken)
+                        .header("Idempotency-Key", "invite-local-reject").with(invitee("decline@example.test")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.state").value("REJECTED"));
+    }
+
+    @Test
+    void applicantExceptionCannotChangeAnotherSubjectsApplicationOrReviewApplications() throws Exception {
+        MvcResult submitted = submitApplication("join-owner-boundary", "owner@example.test");
+        String id = JsonPath.read(submitted.getResponse().getContentAsString(), "$.data.applicationId");
+        String etag = submitted.getResponse().getHeader("ETag");
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/join-applications/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"materials\":[\"unauthorized.pdf\"]}")
+                        .header("If-Match", etag).header("Idempotency-Key", "join-wrong-subject-edit")
+                        .with(applicant("other@example.test")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/join-applications/{id}:withdraw", id)
+                        .header("If-Match", etag).header("Idempotency-Key", "join-wrong-subject-withdraw")
+                        .with(applicant("other@example.test")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/join-applications/{id}:approve", id)
+                        .header("If-Match", etag).header("Idempotency-Key", "join-applicant-review")
+                        .with(jwt().jwt(token -> token.subject("owner@example.test"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.join-application.review"))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/join-applications")
+                        .with(jwt().jwt(token -> token.subject("owner@example.test"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.join-application.read"))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/join-applications/{id}:withdraw", id)
+                        .header("If-Match", etag).header("Idempotency-Key", "join-owner-withdraw")
+                        .with(applicant("owner@example.test")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.state").value("WITHDRAWN"));
+    }
+
+    @Test
     void refusesCrossEnterpriseJoinApplicationReview() throws Exception {
         MvcResult submitted = submitApplication("join-cross-enterprise-1", "joiner@example.test");
         String applicationId = JsonPath.read(submitted.getResponse().getContentAsString(), "$.data.applicationId");
@@ -253,6 +313,12 @@ class InvitationControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor applicant(String email) {
-        return jwt().jwt(token -> token.subject(email)).authorities(new SimpleGrantedAuthority("SCOPE_enterprise.join-application.submit"));
+        return jwt().jwt(token -> token.subject(email).claim("summer_identity_source", "local-user"))
+                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.join-application.submit"));
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor invitee(String email) {
+        return jwt().jwt(token -> token.subject(email).claim("summer_identity_source", "local-user"))
+                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.invitation.accept"));
     }
 }

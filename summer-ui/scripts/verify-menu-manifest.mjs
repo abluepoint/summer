@@ -16,3 +16,5 @@ assert.match(api, /Idempotency-Key/);
 assert.match(routes, /key: 'menu-manifest'/);
 assert.match(page, /getVisibleMenuManifest/);
 console.log('Menu manifest is generated from routes and uses real permission APIs');
+
+await import('./verify-menu-permissions.mjs');

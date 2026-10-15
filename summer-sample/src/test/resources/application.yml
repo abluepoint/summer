@@ -24,6 +24,9 @@ server:
 
 summer:
   sample:
+    authorization:
+      # Legacy synthetic JWT fixtures opt in explicitly; production defaults to denial.
+      legacy-scope-compatibility: true
     resilience:
       enabled: true
       timeout: 200ms

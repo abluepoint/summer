@@ -100,7 +100,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
                 type,
                 sensitivity,
                 explicit == null ? null : explicit.value(),
-                type != ResourceType.BUSINESS
+                true
         );
     }
 

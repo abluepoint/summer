@@ -21,8 +21,9 @@ import {
   startLoginForUnavailable,
 } from './auth/oidc';
 import { authText, configureBusinessApiAuth } from './auth/requests';
-import { generatePermission, menuManifest } from './routes';
+import { menuManifest } from './routes';
 import { getVisibleMenuManifest, syncMenuManifest } from './menu/api';
+import { loadMenuPermissions } from './menu/permissions';
 import useLocale from './utils/useLocale';
 import changeTheme from './utils/changeTheme';
 import useStorage from './utils/useStorage';
@@ -58,25 +59,10 @@ function AuthenticatedLayout() {
             });
         }
         const profile = user.profile;
-        let permissions = generatePermission('admin');
-        try {
-          await syncMenuManifest(menuManifest);
-          const visible = await getVisibleMenuManifest('ent-acme');
-          const backendPermissions = {} as Record<string, string[]>;
-          visible.items.forEach((item) => {
-            const actions = item.actions || [];
-            if (!actions.length) return;
-            backendPermissions[item.menuId] = actions;
-            if (item.capabilityCode) {
-              const separator = item.capabilityCode.lastIndexOf('.');
-              const resource = separator > 0 ? item.capabilityCode.slice(0, separator) : item.capabilityCode;
-              backendPermissions[resource] = actions;
-            }
-          });
-          if (Object.keys(backendPermissions).length) permissions = backendPermissions;
-        } catch {
-          // The local admin fallback keeps login usable while an older server is upgraded.
-        }
+        const permissions = await loadMenuPermissions(
+          () => syncMenuManifest(menuManifest),
+          () => getVisibleMenuManifest('ent-acme')
+        );
         store.dispatch({
           type: 'update-userInfo',
           payload: {

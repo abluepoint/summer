@@ -197,8 +197,9 @@ export const routes: IRoute[] = [
     name: 'menu.interfaceResources',
     key: 'interface-resources',
     requiredPermissions: [
-      { resource: 'menu.interfaceResources', actions: ['read'] },
+      { resource: 'platform.interface-resources', actions: ['read'] },
     ],
+    capabilityCode: 'platform.interface-resources.read',
   },
   {
     name: 'menu.audit',
@@ -218,7 +219,8 @@ export const routes: IRoute[] = [
   {
     name: 'menu.roles',
     key: 'roles',
-    requiredPermissions: [{ resource: 'menu.roles', actions: ['read'] }],
+    requiredPermissions: [{ resource: 'enterprise.roles', actions: ['read'] }],
+    capabilityCode: 'enterprise.roles.read',
   },
   {
     name: 'menu.authorizationEvents',

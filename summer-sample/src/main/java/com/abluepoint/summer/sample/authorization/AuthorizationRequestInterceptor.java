@@ -11,15 +11,25 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.util.pattern.PathPattern;
 
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Map;
 
 /** Applies managed role/deny decisions at the HTTP resource seam. */
 @Component
 final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMvcConfigurer {
+    private static final String SAMPLE_ENTERPRISE = "ent-acme";
+    private static final Map<String, String> APPLICANT_ENDPOINT_SCOPES = Map.of(
+            "POST:/api/v1/enterprises/{enterpriseId}/join-applications", "enterprise.join-application.submit",
+            "PATCH:/api/v1/enterprises/{enterpriseId}/join-applications/{id}", "enterprise.join-application.submit",
+            "POST:/api/v1/enterprises/{enterpriseId}/join-applications/{id}:withdraw", "enterprise.join-application.submit",
+            "POST:/api/v1/invitations/{token}:accept", "enterprise.invitation.accept",
+            "POST:/api/v1/invitations/{token}:reject", "enterprise.invitation.accept");
     private final AuthorizationService authorizationService;
 
     AuthorizationRequestInterceptor(AuthorizationService authorizationService) {
@@ -36,16 +46,24 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         if (!(handler instanceof HandlerMethod method) || "OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof JwtAuthenticationToken jwt)) return true;
+        String permissionCode = permissionCode(request, method);
+        if (method.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                && ("GET:/api/v1/session".equals(permissionCode) || "DELETE:/api/v1/session".equals(permissionCode))) {
+            // Reading or destroying one's own session does not require a tenant role.
+            // The controller retains authentication, revocation and current-session checks.
+            return true;
+        }
+        if (isApplicantEndpoint(method, permissionCode, jwt)) return true;
         String requestedEnterprise = enterpriseFromPath(request.getRequestURI());
         if (requestedEnterprise != null && !hasActiveMembership(jwt, requestedEnterprise)) {
             throw new AccessDeniedException("Inactive enterprise membership");
         }
-        if ("GET".equalsIgnoreCase(request.getMethod()) && request.getRequestURI().endsWith("/menu-manifest")) {
+        if ("GET:/api/v1/enterprises/{enterpriseId}/menu-manifest".equals(permissionCode)
+                && method.getBeanType().getName().equals("com.abluepoint.summer.sample.menu.MenuManifestController")) {
             return true;
         }
-        String enterpriseId = requestedEnterprise == null ? activeEnterprise(jwt) : requestedEnterprise;
-        if (enterpriseId == null) return true;
-        String permissionCode = permissionCode(request, method);
+        // Global Sample business and platform resources share the Sample's fixed tenant boundary.
+        String enterpriseId = requestedEnterprise == null ? SAMPLE_ENTERPRISE : requestedEnterprise;
         AuthorizationService.Decision decision = authorizationService.decision(authentication, enterpriseId, permissionCode,
                 request.getHeader("X-Request-Id"));
         if (!decision.allowed()) throw new AccessDeniedException("Authorization denied: " + decision.reasonCode());
@@ -55,25 +73,27 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
     private static String permissionCode(HttpServletRequest request, HandlerMethod method) {
         ResourcePermission explicit = AnnotatedElementUtils.findMergedAnnotation(method.getMethod(), ResourcePermission.class);
         if (explicit == null) explicit = AnnotatedElementUtils.findMergedAnnotation(method.getBeanType(), ResourcePermission.class);
-        if (explicit != null && !explicit.value().isBlank()) return explicit.value();
-        String path = request.getRequestURI();
+        if (explicit != null && !explicit.value().isBlank()) return explicit.value().trim();
+        Object matched = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        String path;
+        if (matched instanceof PathPattern pattern) path = pattern.getPatternString();
+        else if (matched instanceof String pattern && !pattern.isBlank()) path = pattern;
+        else throw new AccessDeniedException("Matched resource mapping is unavailable");
+        path = path.trim().replaceAll("/{2,}", "/");
         if (path.length() > 1 && path.endsWith("/")) path = path.substring(0, path.length() - 1);
-        return request.getMethod().toUpperCase() + ":" + path;
+        return request.getMethod().toUpperCase(Locale.ROOT) + ":" + path;
     }
 
-    private static String activeEnterprise(JwtAuthenticationToken jwt) {
-        Object memberships = jwt.getToken().getClaims().get("enterprise_memberships");
-        if (!(memberships instanceof Collection<?> values)) return null;
-        for (Object value : values) {
-            if (!(value instanceof Map<?, ?> membership)) continue;
-            Object status = membership.get("status");
-            if (status == null) status = membership.get("membership_status");
-            if (!"ACTIVE".equalsIgnoreCase(String.valueOf(status))) continue;
-            Object id = membership.get("enterpriseId");
-            if (id == null) id = membership.get("enterprise_id");
-            if (id != null && !String.valueOf(id).isBlank()) return String.valueOf(id);
+    private static boolean isApplicantEndpoint(HandlerMethod method, String permissionCode, JwtAuthenticationToken jwt) {
+        if (!method.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")) return false;
+        String scope = APPLICANT_ENDPOINT_SCOPES.get(permissionCode);
+        if (scope == null) return false;
+        if (jwt.getAuthorities().stream().noneMatch(authority -> ("SCOPE_" + scope).equals(authority.getAuthority()))) {
+            throw new AccessDeniedException("Applicant scope required");
         }
-        return null;
+        // These operations precede membership. InvitationService still checks the subject,
+        // resource tenant, invitation token, expected version and permitted state transition.
+        return true;
     }
 
     private static boolean hasActiveMembership(JwtAuthenticationToken jwt, String enterpriseId) {

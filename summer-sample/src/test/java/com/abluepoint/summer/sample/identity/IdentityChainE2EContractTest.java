@@ -168,8 +168,12 @@ class IdentityChainE2EContractTest {
                         .with(service("cs-1", "ctx-cross", "human-1", null, "human-1", "human-1")))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/enterprises/ent-other/mcp-invocations")
-                        .with(auditorFor("ent-other")))
+                        .with(auditor()))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/enterprises/ent-other/mcp-invocations")
+                        .with(auditorFor("ent-other")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
     }
 
     @Test

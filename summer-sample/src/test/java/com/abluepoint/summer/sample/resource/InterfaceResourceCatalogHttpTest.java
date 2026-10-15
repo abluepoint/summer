@@ -47,7 +47,10 @@ class InterfaceResourceCatalogHttpTest {
                 .containsEntry("normalizedPath", "/api/customers")
                 .containsEntry("httpMethod", "GET")
                 .containsEntry("resourceType", "BUSINESS")
+                .containsEntry("configurable", true)
                 .containsEntry("permissionCode", "GET:/api/customers"));
+        assertThat(items).filteredOn(item -> "BUSINESS".equals(item.get("resourceType")))
+                .isNotEmpty().allSatisfy(item -> assertThat(item).containsEntry("configurable", true));
         assertThat(items).anySatisfy(item -> assertThat(item)
                 .containsEntry("normalizedPath", "/oauth2/token")
                 .containsEntry("resourceType", "PROTOCOL")

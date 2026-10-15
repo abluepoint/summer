@@ -35,13 +35,32 @@ class TaskRetryRecoveryHttpTest {
         mockMvc.perform(post("/api/v1/enterprises/ent-acme/tasks/{id}:trigger", taskId)
                         .header("Idempotency-Key", "trigger-once").with(admin("enterprise.tasks.write")))
                 .andExpect(status().isAccepted());
+        awaitManualExecution(taskId);
+        // Replay after completion as well: scheduled cron executions are independent of this key.
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/tasks/{id}:trigger", taskId)
+                        .header("Idempotency-Key", "trigger-once").with(admin("enterprise.tasks.write")))
+                .andExpect(status().isAccepted());
         for (int i = 0; i < 20; i++) {
-            var response = mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/{id}/executions", taskId)
-                    .with(admin("enterprise.tasks.read"))).andReturn().getResponse().getContentAsString();
-            if (response.contains("\"totalElements\":1")) return;
+            org.assertj.core.api.Assertions.assertThat(manualExecutions(taskId)).hasSize(1);
             Thread.sleep(25);
         }
-        throw new AssertionError("idempotent trigger did not create one execution");
+    }
+
+    private void awaitManualExecution(String taskId) throws Exception {
+        for (int i = 0; i < 80; i++) {
+            List<Map<String, Object>> executions = manualExecutions(taskId);
+            org.assertj.core.api.Assertions.assertThat(executions).hasSizeLessThanOrEqualTo(1);
+            if (executions.size() == 1 && "SUCCESS".equals(executions.getFirst().get("status"))) return;
+            Thread.sleep(25);
+        }
+        throw new AssertionError("idempotent trigger did not complete one execution");
+    }
+
+    private List<Map<String, Object>> manualExecutions(String taskId) throws Exception {
+        var response = mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/{id}/executions", taskId)
+                        .with(admin("enterprise.tasks.read")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.data.items[?(@.idempotencyKey == 'trigger-once')]");
     }
 
     @Test

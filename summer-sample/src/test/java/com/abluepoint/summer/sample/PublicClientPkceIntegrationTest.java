@@ -2,10 +2,12 @@ package com.abluepoint.summer.sample;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -42,6 +44,12 @@ class PublicClientPkceIntegrationTest {
 
     @Autowired
     RegisteredClientRepository clients;
+
+    @Autowired
+    JdbcTemplate jdbc;
+
+    private boolean customerGrantInstalled;
+    private boolean customerCapabilityCreated;
 
     @Value("${summer.security.authorization-server.user.password}")
     String loginPassword;
@@ -153,6 +161,7 @@ class PublicClientPkceIntegrationTest {
 
     @Test
     void completesAuthorizationCodePkceAndKeepsProtocolResponsesRaw() throws Exception {
+        grantCustomerReadToLoginUser();
         String verifier = "summer-pkce-verifier-012345678901234567890123456789";
         String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(
                 java.security.MessageDigest.getInstance("SHA-256")
@@ -210,6 +219,9 @@ class PublicClientPkceIntegrationTest {
         String accessToken = JsonPath.read(body, "$.access_token");
         String idToken = JsonPath.read(body, "$.id_token");
         assertThat(accessToken).isNotBlank();
+        assertThat(jwtPayload(accessToken).get("summer_managed_grants")).isEqualTo(true);
+        assertThat(jwtPayload(accessToken).get("enterprise_capabilities"))
+                .isEqualTo(java.util.Map.of("ent-acme", java.util.List.of("GET:/api/customers")));
         assertThat(idToken).isNotBlank();
         assertThat(jwtPayload(idToken).get("sub")).isEqualTo("summer-user");
         assertThat(jwtPayload(idToken).get("preferred_username")).isEqualTo("summer-user");
@@ -313,6 +325,7 @@ class PublicClientPkceIntegrationTest {
 
     @Test
     void publishesEndSessionDiscoveryAndClearsLoginSessionOnRpInitiatedLogout() throws Exception {
+        grantCustomerReadToLoginUser();
         String discovery = mockMvc.perform(get("/.well-known/openid-configuration"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -355,6 +368,7 @@ class PublicClientPkceIntegrationTest {
                         .param("code", code).param("code_verifier", verifier))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String accessToken = JsonPath.read(tokenBody, "$.access_token");
+        assertThat(jwtPayload(accessToken).get("summer_managed_grants")).isEqualTo(true);
         String idToken = JsonPath.read(tokenBody, "$.id_token");
         assertThat(authorizationService.findByToken(idToken, new OAuth2TokenType("id_token"))).isNotNull();
         mockMvc.perform(get(java.net.URI.create("/connect/logout?id_token_hint=invalid"))
@@ -375,6 +389,35 @@ class PublicClientPkceIntegrationTest {
                 .anyMatch(cookie -> "JSESSIONID".equals(cookie.getName()) && cookie.getMaxAge() == 0);
         mockMvc.perform(get("/api/customers").header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
+    }
+
+    private void grantCustomerReadToLoginUser() {
+        String permission = "GET:/api/customers";
+        assertThat(jdbc.queryForObject("select count(*) from summer_authorization_user_binding where username = ?",
+                Integer.class, "summer-user")).isZero();
+        customerGrantInstalled = true;
+        var existing = jdbc.queryForList("select capability_id from summer_authorization_capability where code = ? and enterprise_id = ? and status = 'ACTIVE'",
+                String.class, permission, "ent-acme");
+        String capabilityId = existing.isEmpty() ? "pkce-customer-reader-capability" : existing.getFirst();
+        if (existing.isEmpty()) {
+            jdbc.update("insert into summer_authorization_capability (capability_id, enterprise_id, scope, code, resource, action, risk_level, status, version, created_at, updated_at) values (?, ?, 'ENTERPRISE', ?, ?, 'read', 'LOW', 'ACTIVE', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    capabilityId, "ent-acme", permission, permission);
+            customerCapabilityCreated = true;
+        }
+        jdbc.update("insert into summer_authorization_role (role_id, enterprise_id, name, code, built_in, status, capability_ids, capability_codes, version, created_at, updated_at) values (?, ?, 'PKCE customer reader', 'pkce-customer-reader', false, 'ACTIVE', ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "pkce-customer-reader-role", "ent-acme", capabilityId, permission);
+        jdbc.update("insert into summer_authorization_user_binding (binding_id, enterprise_id, username, role_ids, denied_capability_codes, version, created_at, updated_at) values (?, ?, ?, ?, '[]', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "pkce-customer-reader-binding", "ent-acme", "summer-user", "[\"pkce-customer-reader-role\"]");
+    }
+
+    @AfterEach
+    void removeCustomerReadGrant() {
+        if (!customerGrantInstalled) return;
+        jdbc.update("delete from summer_authorization_user_binding where binding_id = ?", "pkce-customer-reader-binding");
+        jdbc.update("delete from summer_authorization_role where role_id = ?", "pkce-customer-reader-role");
+        if (customerCapabilityCreated) {
+            jdbc.update("delete from summer_authorization_capability where capability_id = ?", "pkce-customer-reader-capability");
+        }
     }
 
     private static java.util.Map<String, Object> jwtPayload(String token) throws Exception {

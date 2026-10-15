@@ -122,6 +122,7 @@ class LocalConsoleAuthenticationConfiguration {
                 "enterprise.policies.read", "enterprise.policies.write",
                 "enterprise.role.read", "enterprise.role.write",
                 "enterprise.roles.read", "enterprise.roles.write",
+                "enterprise.menu.read", "enterprise.menu.write",
                 "enterprise.capabilities.read", "enterprise.capabilities.write",
                 "enterprise.bundles.read", "enterprise.bundles.write",
                 "enterprise.invitation.read", "enterprise.invitation.write",
@@ -136,6 +137,7 @@ class LocalConsoleAuthenticationConfiguration {
     private static List<String> platformCapabilities() {
         return List.of(
                 "platform.capabilities.read", "platform.capabilities.write",
+                "platform.interface-resources.read", "platform.menu.write",
                 "platform.connection-services.read", "platform.connection-services.write",
                 "platform.enterprise-review.read", "platform.enterprise-review.write",
                 "platform.enterprise-review.approve",

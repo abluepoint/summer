@@ -33,6 +33,7 @@
 | [0027](0027-versioned-authorization-change-stream.md) | 权限变更使用 outbox 与 Redis Stream 版本化传播 | 节点独立消费组、共享 receipt 幂等、版本/重试/死信和持久化投影恢复 |
 | [0028](0028-enforce-effective-configuration-scopes.md) | 持久化主体数据范围、公共配置授权和组织/租户覆盖优先级 | T18/T19；真实 MySQL 与 HTTP 已验证，浏览器流程单独验收 |
 | [0029](0029-share-servlet-login-context-and-isolate-bearer-authentication.md) | 共享 Servlet 登录上下文并隔离 Bearer 认证 | Cookie CSRF、原子撤销、故障诊断与 JDBC 本地登录身份映射 |
+| [0030](0030-deny-unassigned-users-and-align-configurable-resource-grants.md) | 未分配主体默认拒绝、管理权限码对齐与持久审计 | 初始化权限限定、前端空权限关闭、精确路由例外；补充 0026/0027/0029 |
 
 ## 来源与适用范围
 

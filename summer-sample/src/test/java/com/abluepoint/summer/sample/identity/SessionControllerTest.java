@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -54,6 +55,28 @@ class SessionControllerTest {
                 .andExpect(header().string("ETag", etag))
                 .andExpect(header().string("X-Request-Id", org.hamcrest.Matchers.not(org.hamcrest.Matchers.blankOrNullString())))
                 .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray()).isEmpty());
+    }
+
+    @Test
+    void unassignedLocalUserCanReadOnlyTheirOwnSessionWithoutMembership() throws Exception {
+        mockMvc.perform(get("/api/v1/session")
+                        .with(jwt().jwt(token -> token.subject("unassigned-user").claim("summer_identity_source", "local-user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.principal.subject").value("unassigned-user"))
+                .andExpect(jsonPath("$.data.enterpriseMemberships").isEmpty());
+        mockMvc.perform(get("/api/v1/sessions")
+                        .with(jwt().jwt(token -> token.subject("unassigned-user").claim("summer_identity_source", "local-user"))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/sessions/another-session")
+                        .with(jwt().jwt(token -> token.subject("unassigned-user").claim("summer_identity_source", "local-user"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unassignedLocalUserCanLogOutWithoutMembership() throws Exception {
+        mockMvc.perform(delete("/api/v1/session")
+                        .with(jwt().jwt(token -> token.subject("unassigned-user").claim("summer_identity_source", "local-user"))))
+                .andExpect(status().isNoContent());
     }
 
     @Test

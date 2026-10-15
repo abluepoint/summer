@@ -196,7 +196,7 @@ public class DataScopeService {
         DataScopeExpression.Compiled base = compile(policy.enterpriseId(), policy.operator(), policy.rulesJson(), policy.conditionsJson(), subject, organization);
         List<DataScopeBindingEntity> all = bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(policy.enterpriseId(), policy.resource());
         List<String> roleIds = subject == null ? List.of() : users.findByEnterpriseIdAndUsername(policy.enterpriseId(), subject)
-                .map(u -> Arrays.asList(u.roleIds().split("\\n"))).orElse(List.of());
+                .map(u -> persistedRoleIds(u.roleIds())).orElse(List.of());
         Set<String> activeRoles = new HashSet<>();
         for (String roleId : roleIds) roles.findById(roleId)
                 .filter(r -> policy.enterpriseId().equals(r.enterpriseId()) && "ACTIVE".equals(r.status()))
@@ -215,6 +215,26 @@ public class DataScopeService {
         DataScopeExpression.Node userDenied = new DataScopeExpression.Junction(false, denies);
         DataScopeExpression.Node grant = managedRoles ? new DataScopeExpression.Junction(false, allows) : new DataScopeExpression.Constant(true);
         return new Effective(new DataScopeExpression.Junction(true, List.of(base.expression(), grant, new DataScopeExpression.Not(userDenied))), userDenied, sources);
+    }
+
+    private List<String> persistedRoleIds(String value) {
+        if (value == null || value.isBlank()) return List.of();
+        // Current MySQL writes use JSON arrays; older local projections used newline lists.
+        if (!value.stripLeading().startsWith("[")) {
+            return Arrays.stream(value.split("\\n", -1)).filter(role -> !role.isBlank()).toList();
+        }
+        try {
+            var array = mapper.readTree(value);
+            if (!array.isArray()) throw new IllegalArgumentException("Invalid persisted role assignment");
+            List<String> result = new ArrayList<>();
+            for (var role : array) {
+                if (!role.isString()) throw new IllegalArgumentException("Invalid persisted role assignment");
+                if (!role.asText().isBlank()) result.add(role.asText());
+            }
+            return List.copyOf(result);
+        } catch (JacksonException invalid) {
+            throw new IllegalArgumentException("Invalid persisted role assignment", invalid);
+        }
     }
 
     private DataScopeExpression.Compiled compile(String enterpriseId, String operator, String rules, String conditions,

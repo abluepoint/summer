@@ -52,7 +52,7 @@ class SummerEndToEndTest {
     String localPassword;
 
     @Test
-    void localConsoleLoginSessionCanReadEnterpriseApis() throws Exception {
+    void localConsoleBootstrapCanReadOwnSessionAndManageRolesButCannotAccessBusinessData() throws Exception {
         assertThat(applicationContext.getBeansOfType(org.springframework.security.web.authentication.AuthenticationSuccessHandler.class))
                 .containsOnlyKeys("localConsoleAuthenticationSuccessHandler");
         MvcResult login = mockMvc.perform(post("/login")
@@ -69,12 +69,15 @@ class SummerEndToEndTest {
         mockMvc.perform(get("/api/v1/session").session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.enterpriseMemberships[0].enterpriseId").value("ent-acme"));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/roles").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/applications").session(session))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/platform/enterprise-reviews").session(session))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/customers").session(session))
+                .andExpect(status().isForbidden());
     }
 
     @Test

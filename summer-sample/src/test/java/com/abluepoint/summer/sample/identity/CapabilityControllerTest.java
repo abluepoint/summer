@@ -119,9 +119,20 @@ class CapabilityControllerTest {
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }
 
+    @Autowired
+    org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository clients;
+
     @Test
-    void acceptsTheConfiguredPlatformCapabilityScopeFromTheAuthorizationServer() throws Exception {
-        String token = accessToken("capabilities.platform.read");
+    void acceptsTheRegisteredPlatformCapabilityScopeFromTheAuthorizationServer() throws Exception {
+        var original = clients.findByClientId(CLIENT_ID);
+        clients.save(org.springframework.security.oauth2.server.authorization.client.RegisteredClient.from(original)
+                .scope("capabilities.platform.read").build());
+        String token;
+        try {
+            token = accessToken("capabilities.platform.read");
+        } finally {
+            clients.save(original);
+        }
 
         mockMvc.perform(get("/api/v1/platform/capabilities")
                         .header("Authorization", "Bearer " + token))
