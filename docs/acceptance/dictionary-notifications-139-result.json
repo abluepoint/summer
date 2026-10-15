@@ -1,0 +1,121 @@
+{
+  "issue": 139,
+  "status": "READY_FOR_REVIEW",
+  "readyForCoordinatorReview": true,
+  "fullRunnerGreen": false,
+  "productionChangesByThisTask": 0,
+  "candidateSha256": "9f2446f79736b13a28da00cfd9409bbdc08b138eb5f74b270480fdabd1f350e2",
+  "dictionaryInputsUnchangedAcrossCandidates": 20,
+  "finalBaselineInputsUnchanged": 22,
+  "batches": {
+    "attempt-01": {
+      "runtimeCounts": {
+        "tests": 8,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 8,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false
+    },
+    "attempt-02": {
+      "runtimeCounts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 13,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false
+    },
+    "attempt-03": {
+      "runtimeCounts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 6,
+        "failures": 2,
+        "errors": 1,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false
+    },
+    "attempt-04": {
+      "runtimeCounts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "browserCounts": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": "VERIFIED",
+      "sensitiveLogDetected": false
+    }
+  },
+  "persistenceReadback": {
+    "checks": [
+      {
+        "name": "all_five_lifecycle_notifications_persisted_once",
+        "passed": true,
+        "observedCount": 5
+      }
+    ],
+    "counts": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "runnerTeardown": {
+    "completedBusinessChecks": 13,
+    "chromeExitedBeforeRunnerStop": true,
+    "runnerRequiredSigterm": true,
+    "stoppedOwnedPid": 7979,
+    "reason": "Node runner remained after final browser receipt; underlying handle cause not yet proven."
+  },
+  "lifecycleProbe": {
+    "exitCode": 0,
+    "elapsedSeconds": 15.28,
+    "businessTests": 0,
+    "stdoutBytes": 0,
+    "stderrBytes": 0
+  },
+  "correction": "Whole-JVM/menu-read outage remains fail-closed. No main/menu or production change. Test only actual SSE sockets with menu and business HTTP available.",
+  "testProxyFix": "Propagate upstream aborted and pre-response error to downstream socket destruction.",
+  "finalBrowserChangesAfterBusinessRun": [
+    "lifecycle-only zero-business branch",
+    "signalCode-aware Chrome termination",
+    "owned child stdio destruction and unref"
+  ],
+  "allSevenAcceptanceCriteriaHaveFunctionalEvidence": true,
+  "allFourRuntimeCleanups": "VERIFIED",
+  "gradleUsed": false,
+  "issueMutated": false,
+  "gitIndexWriteCommands": false,
+  "commitOrPush": false,
+  "subagentsOrCrossChatMessages": false,
+  "evidenceRoot": ".git/summer4-closeout-20261015/t31-live/",
+  "report": "docs/acceptance/dictionary-notifications-139.md"
+}
