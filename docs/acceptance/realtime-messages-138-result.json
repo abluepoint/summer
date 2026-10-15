@@ -1,0 +1,310 @@
+{
+  "issue": 138,
+  "status": "READY_FOR_COORDINATOR_CLOSEOUT",
+  "stories": [
+    40,
+    42
+  ],
+  "dependency": 133,
+  "candidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "protocol": {
+    "checks": [
+      {
+        "name": "actual_cookie_and_bearer_socket_authentication",
+        "passed": true
+      },
+      {
+        "name": "anonymous_tenant_and_invalid_cursor_rejected",
+        "passed": true,
+        "anonymousStatus": 401,
+        "tenantStatus": 403,
+        "cursorStatus": 400
+      },
+      {
+        "name": "websocket_send_ack_and_cross_node_delivery",
+        "passed": true
+      },
+      {
+        "name": "one_delivery_per_message_per_node",
+        "passed": true,
+        "senderDeliveries": 1,
+        "otherNodeDeliveries": 1
+      },
+      {
+        "name": "websocket_ack_is_persisted",
+        "passed": true
+      },
+      {
+        "name": "duplicate_send_keeps_message_and_sequence",
+        "passed": true
+      },
+      {
+        "name": "cross_node_concurrent_messages_are_unique_and_ordered",
+        "passed": true,
+        "sentDistinctSequences": 12,
+        "receivedSequences": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      },
+      {
+        "name": "reconnect_replays_persisted_messages_after_cursor",
+        "passed": true
+      },
+      {
+        "name": "invalid_socket_message_has_framework_error",
+        "passed": true
+      },
+      {
+        "name": "http_invalid_input_has_failure_envelope_and_request_id",
+        "passed": true
+      },
+      {
+        "name": "actual_33rd_connection_closes_at_tenant_limit",
+        "passed": true,
+        "acceptedAdditional": 31,
+        "closeCode": 1013,
+        "connections": 32
+      },
+      {
+        "name": "persisted_write_revocation_closes_old_token_socket",
+        "passed": true,
+        "closeCode": 1008
+      },
+      {
+        "name": "idle_socket_times_out_without_client_heartbeat",
+        "passed": true,
+        "closeCode": 1001
+      },
+      {
+        "name": "message_storage_fault_fails_http_and_closes_socket",
+        "passed": true,
+        "httpStatus": 500,
+        "closeCode": 1011
+      },
+      {
+        "name": "message_storage_fault_recovery_retains_durable_messages",
+        "passed": true
+      },
+      {
+        "name": "revoked_cookie_session_cannot_ping_or_receive",
+        "passed": true,
+        "closeCode": 1008
+      }
+    ],
+    "businessSqlWrites": false,
+    "stage": "complete",
+    "candidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+    "isolatedSchemaFaultDdl": true,
+    "cleanup": "VERIFIED",
+    "passed": true,
+    "counts": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "chrome": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "checks": [
+      {
+        "name": "actual_chrome_pkce_login",
+        "passed": true
+      },
+      {
+        "name": "same_origin_cookie_websocket_opens",
+        "passed": true
+      },
+      {
+        "name": "ui_sends_and_renders_persisted_message",
+        "passed": true
+      },
+      {
+        "name": "ui_ack_updates_persistent_status",
+        "passed": true
+      },
+      {
+        "name": "reload_restores_durable_message_and_ack",
+        "passed": true
+      },
+      {
+        "name": "socket_failure_is_visible_and_keeps_unsent_input",
+        "passed": true,
+        "receivedErrorOrClose": false,
+        "visibleError": true,
+        "inputPreserved": true
+      },
+      {
+        "name": "real_ungranted_user_is_denied_without_send_controls",
+        "passed": true
+      }
+    ],
+    "networkMocking": false,
+    "pageErrors": 0,
+    "exitCode": 0,
+    "cleanup": "VERIFIED"
+  },
+  "junit": {
+    "counts": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exitCode": 0,
+    "sourceInputCount": 696,
+    "changedInputs": [],
+    "suites": [
+      {
+        "name": "com.abluepoint.summer.sample.ModulithArchitectureTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.ModulithArchitectureTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.abluepoint.summer.sample.realtime.RealtimeAccessTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeAccessTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.abluepoint.summer.sample.realtime.RealtimeConnectionLimitTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeConnectionLimitTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.abluepoint.summer.sample.realtime.RealtimeConnectionTimeoutTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeConnectionTimeoutTest.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.abluepoint.summer.sample.realtime.RealtimeDeliveryOrderTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeDeliveryOrderTest.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.abluepoint.summer.sample.realtime.RealtimeMessageHttpTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeMessageHttpTest.xml",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.abluepoint.summer.sample.realtime.RealtimeWebSocketRevocationTest",
+        "file": ".git/summer4-closeout-20261015/t30-runtime/junit-t30-bounded-final/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeWebSocketRevocationTest.xml",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "ui": {
+    "typecheck": 0,
+    "build": 0,
+    "inputs": 244,
+    "changed": []
+  },
+  "node": {
+    "tests": 30,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "acceptanceCriteria": [
+    {
+      "id": 1,
+      "status": "PASS"
+    },
+    {
+      "id": 2,
+      "status": "PASS"
+    },
+    {
+      "id": 3,
+      "status": "PASS"
+    },
+    {
+      "id": 4,
+      "status": "PASS"
+    },
+    {
+      "id": 5,
+      "status": "PASS"
+    },
+    {
+      "id": 6,
+      "status": "PASS"
+    },
+    {
+      "id": 7,
+      "status": "PASS"
+    }
+  ],
+  "sourceSha256": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageNodeRelay.java": "7807bae330aa0b2d78852bdda463bf1760acfb3ea402c7860239d2c198169fea",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageRepository.java": "971b6a3fbdbc6f46714710220c59d4140c207d2b1dbf67a0c4ff8c4f368d6b96",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageController.java": "ae7eb968434ec29abeb7b17bbdb0bf4750729b6e561bf0b2a990cc47f5a350cb",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeAccess.java": "3cb54cbb3733cb065c5aa55b2bb67297aecc66e3748515b7cb2f2849ff1d3590",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeWebSocketConfiguration.java": "54dc6b4507494b8de4d79c821276bdd9214f7e98c4d0dd5e789cb06f3f09bf47",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeWebSocketHub.java": "2763e2b2f4b40e6fbdb1c2df1162636c3c13d76f1c80256b40d8f8ca960361b6",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageService.java": "396fa0725a64f8163155c84be3b368c8680c370f4a1a95cee695eb8045d8d769",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeWebSocketHandler.java": "bb54c895e3fe3f7e00b1a455d97fb09ba6d8a8e63c848751b84bd06c1f0b31ce",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeHandshakeInterceptor.java": "ee7f20191d2235812b412a371ffcf9bac8e3695b325072929905631e69bb9754",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageModels.java": "b7f0c175469116d89c4e9c14f8e3da1d8f0277c8f9756cbbf3a502d7fbd5e1e2",
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageEntity.java": "be8800f6e40c5f06fe90b584674494f04a6cac0422cad7b67631fbe571c62a16",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/realtime/RealtimeMessageHttpTest.java": "77726f02ae3adf124483cacb9d8180f99fa7ba718e2cfe164d36ee55b117cd4c",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/realtime/RealtimeAccessTest.java": "c0ddf3dff9841aabb8b83d2b62b1fac11dabfb5428017871b590c5bfa1a15249",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/realtime/RealtimeWebSocketRevocationTest.java": "5429e689fa26ed0549a6fcb14cf31071cb455a808b659b32227bf7e0beabe366",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/realtime/RealtimeConnectionTimeoutTest.java": "1322a5054f209aa27e2cc58334dcfdbb5833c6d806cbea625063fdf021f05b50",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/realtime/RealtimeDeliveryOrderTest.java": "8e1f0e260b17f6fe9e1aade35a3bf4db6ffb79a80cd2ffe509c3f00af7ca8e30",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/realtime/RealtimeConnectionLimitTest.java": "85862aa388257335c90908f36a1cb201d03d7af6a8b03b50cb6789f26c678c99",
+    "summer-ui/src/pages/messages/index.tsx": "3adff1e163a05ceecb51c2410f9ac1d7cd7e45fbd13204b4a48800e0a67e1933",
+    "summer-ui/src/pages/messages/api.ts": "0a95b56447201ede69da5b0b7ecdab46e79094b1c1279c59119e78cd68da50fc",
+    "scripts/acceptance/realtime/socket.mjs": "79fbacfec6f39463e5cf41bcacdc2a270a96f04be32b04e657bfc2cda4024892",
+    "scripts/acceptance/realtime/run.py": "643f3ea504b9a58c697a197336f0f70d248bd4755c4ead29595dcc12a4b3d723",
+    "scripts/acceptance/realtime/browser_probe.py": "9d0c6f2bcee5abeeb4e3972cc384c13d1a9c61da1d7c7ad28bc712b016e5446a",
+    "scripts/acceptance/realtime/browser.mjs": "e24c6fdf4ddff38f62e36f114f00ed9d44f5df048331cfa60e13f0077fcceae2",
+    "scripts/acceptance/realtime/ui-server.mjs": "b7f34ff3336070af397889d5c7007aded798b0d60ad9ae5f51cbb7052372baba",
+    "scripts/acceptance/realtime/README.md": "e81fdf93775c94276a1a97c21f14db0fbbd6707785cfdded30d3fd490220c21b",
+    "scripts/acceptance/realtime/environment.py": "ec3ae82ed5c9bafcd258b9aaac8404e1c98d9170716a308777a1ef29afd8c43e",
+    "scripts/acceptance/realtime/fixtures.py": "549961d9dbb69f028d9983a7973c9f60ad16fb3d61eb9393e7a41d9a28cebabb"
+  },
+  "limitations": [
+    "发送阻塞由专用JUnit覆盖；未模拟真实内核网络缓冲耗尽。",
+    "连接数上限按每节点每企业计算。",
+    "浏览器超长输入被客户端拒绝，不宣称该步骤关闭WebSocket。",
+    "全仓回归单独记录，未以本票定向检查冒称全仓通过。"
+  ],
+  "historicalFailuresPreserved": true,
+  "userChangesPreserved": true
+}

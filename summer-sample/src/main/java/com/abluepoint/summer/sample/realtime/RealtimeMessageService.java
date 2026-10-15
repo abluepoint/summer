@@ -3,16 +3,16 @@ package com.abluepoint.summer.sample.realtime;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,36 +28,58 @@ class RealtimeMessageService {
     private final ApplicationEventPublisher events;
     private final RequestIdAccessor requestId;
     private final ObjectProvider<RealtimeMessageNodeRelay> nodeRelay;
+    private final RealtimeAccess access;
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate writes;
 
     RealtimeMessageService(RealtimeMessageRepository repository, ObjectMapper objectMapper,
                            ApplicationEventPublisher events, RequestIdAccessor requestId,
-                           ObjectProvider<RealtimeMessageNodeRelay> nodeRelay) {
+                           ObjectProvider<RealtimeMessageNodeRelay> nodeRelay, RealtimeAccess access,
+                           JdbcTemplate jdbc, PlatformTransactionManager transactions) {
         this.repository = repository; this.objectMapper = objectMapper; this.events = events; this.requestId = requestId; this.nodeRelay = nodeRelay;
+        this.access = access; this.jdbc = jdbc; this.writes = new TransactionTemplate(transactions);
+        this.writes.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    synchronized RealtimeMessageView send(String enterpriseId, RealtimeMessageCreateRequest request, Authentication auth) {
+    RealtimeMessageView send(String enterpriseId, RealtimeMessageCreateRequest request, Authentication auth) {
         require(enterpriseId, auth, WRITE);
         validate(request);
-        String sender = auth.getName();
-        var existing = repository.findByEnterpriseIdAndSenderAndClientMessageId(enterpriseId, sender, request.clientMessageId());
-        if (existing.isPresent()) return view(existing.get(), true);
-        long next = repository.findFirstByEnterpriseIdOrderBySequenceDesc(enterpriseId).map(e -> e.sequence() + 1).orElse(1L);
-        Instant expires = request.ttlSeconds() == null ? null : Instant.now().plusSeconds(request.ttlSeconds());
-        String payload = encode(request.payload());
-        RealtimeMessageEntity entity = repository.saveAndFlush(new RealtimeMessageEntity(UUID.randomUUID().toString(), enterpriseId,
-                sender, request.clientMessageId(), blank(request.recipient()) ? null : request.recipient().trim(), payload, next, expires));
-        RealtimeMessageView result = view(entity, false);
-        events.publishEvent(new RealtimeMessagePublishedEvent(result));
-        nodeRelay.ifAvailable(relay -> relay.publish(result));
+        RealtimeMessageView result = writes.execute(status -> {
+            lockEnterprise(enterpriseId);
+            require(enterpriseId, auth, WRITE);
+            String sender = auth.getName();
+            var existing = repository.findByEnterpriseIdAndSenderAndClientMessageId(enterpriseId, sender, request.clientMessageId());
+            if (existing.isPresent()) return view(existing.get(), true);
+            long next = repository.findFirstByEnterpriseIdOrderBySequenceDesc(enterpriseId).map(e -> e.sequence() + 1).orElse(1L);
+            Instant expires = request.ttlSeconds() == null ? null : Instant.now().plusSeconds(request.ttlSeconds());
+            RealtimeMessageEntity entity = repository.saveAndFlush(new RealtimeMessageEntity(UUID.randomUUID().toString(), enterpriseId,
+                    sender, request.clientMessageId(), blank(request.recipient()) ? null : request.recipient().trim(),
+                    encode(request.payload()), next, expires));
+            return view(entity, false);
+        });
+        // No frame or cross-node notification can describe an uncommitted message.
+        if (!result.duplicate()) {
+            events.publishEvent(new RealtimeMessagePublishedEvent(result));
+            nodeRelay.ifAvailable(relay -> relay.publish(result));
+        }
         return result;
     }
 
-    synchronized RealtimeMessageView acknowledge(String enterpriseId, String messageId, Authentication auth) {
+    RealtimeMessageView acknowledge(String enterpriseId, String messageId, Authentication auth) {
         require(enterpriseId, auth, WRITE);
-        RealtimeMessageEntity entity = repository.findById(messageId)
-                .filter(e -> enterpriseId.equals(e.enterpriseId())).orElseThrow(RealtimeMessageNotFoundException::new);
-        entity.acknowledge();
-        return view(repository.saveAndFlush(entity), false);
+        return writes.execute(status -> {
+            lockEnterprise(enterpriseId);
+            require(enterpriseId, auth, WRITE);
+            RealtimeMessageEntity entity = repository.findById(messageId)
+                    .filter(e -> enterpriseId.equals(e.enterpriseId())).orElseThrow(RealtimeMessageNotFoundException::new);
+            entity.acknowledge();
+            return view(repository.saveAndFlush(entity), false);
+        });
+    }
+
+    private void lockEnterprise(String enterpriseId) {
+        // All JVMs serialize sequence allocation and deduplication on the same durable tenant row.
+        jdbc.queryForObject("select enterprise_id from summer_enterprise where enterprise_id=? for update", String.class, enterpriseId);
     }
 
     RealtimeMessagePage list(String enterpriseId, long after, Authentication auth) {
@@ -107,24 +129,8 @@ class RealtimeMessageService {
         if (!blank(request.recipient()) && request.recipient().trim().length() > 128) throw new RealtimeMessageValidationException("recipient is too long");
     }
 
-    static void require(String enterpriseId, Authentication auth, String... capabilities) {
-        if (!(auth instanceof JwtAuthenticationToken jwt) || blank(enterpriseId) || !activeMember(jwt, enterpriseId)
-                || !hasCapability(jwt, enterpriseId, capabilities)
-                || Arrays.stream(capabilities).noneMatch(cap -> jwt.getAuthorities().stream().anyMatch(a -> ("SCOPE_" + cap).equals(a.getAuthority()))))
-            throw new AccessDeniedException("Message capability denied");
-    }
-
-    private static boolean activeMember(JwtAuthenticationToken jwt, String enterpriseId) {
-        Object value = jwt.getToken().getClaims().get("enterprise_memberships");
-        return value instanceof Collection<?> items && items.stream().filter(Map.class::isInstance).map(Map.class::cast)
-                .anyMatch(m -> enterpriseId.equals(String.valueOf(m.getOrDefault("enterpriseId", m.get("enterprise_id"))))
-                        && "ACTIVE".equalsIgnoreCase(String.valueOf(m.getOrDefault("status", m.get("membership_status")))));
-    }
-
-    private static boolean hasCapability(JwtAuthenticationToken jwt, String enterpriseId, String... capabilities) {
-        Object value = jwt.getToken().getClaims().get("enterprise_capabilities");
-        if (!(value instanceof Map<?, ?> map) || !(map.get(enterpriseId) instanceof Collection<?> granted)) return false;
-        return granted.stream().map(String::valueOf).anyMatch(g -> Arrays.asList(capabilities).contains(g));
+    void require(String enterpriseId, Authentication authentication, String capability) {
+        access.require(enterpriseId, authentication, capability);
     }
 
     private static boolean blank(String value) { return value == null || value.isBlank(); }

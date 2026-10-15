@@ -86,6 +86,8 @@ abstract class RealtimeMessageTestSupport {
 
     protected static org.springframework.test.web.servlet.request.RequestPostProcessor operator(String capability) {
         return jwt().jwt(token -> token.subject("message-operator")
+                        .issuedAt(java.time.Instant.now().minusSeconds(30))
+                        .expiresAt(java.time.Instant.now().plusSeconds(300))
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));

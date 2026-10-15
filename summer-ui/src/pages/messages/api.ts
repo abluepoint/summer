@@ -28,8 +28,8 @@ export const acknowledgeMessage = (enterpriseId: string, messageId: string) =>
 export const connectionStatus = (enterpriseId: string) =>
   request<{ enterpriseId: string; connections: number; maxConnections: number; status: string }>(() => axios.get(`${base(enterpriseId)}/connections`));
 
-export type RealtimeSocketEvent = { type: string; message?: RealtimeMessage; messageId?: string; status?: string; code?: string; sequence?: number };
-export type RealtimeSocket = { send: (payload: Record<string, unknown>) => void; close: () => void };
+export type RealtimeSocketEvent = { type: string; message?: RealtimeMessage; messageId?: string; clientMessageId?: string; status?: string; code?: string; sequence?: number };
+export type RealtimeSocket = { send: (payload: Record<string, unknown>) => boolean; close: () => void };
 
 export function connectRealtime(enterpriseId: string, after: number, onEvent: (event: RealtimeSocketEvent) => void,
                                 onState: (state: 'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CLOSED') => void): RealtimeSocket {
@@ -37,22 +37,30 @@ export function connectRealtime(enterpriseId: string, after: number, onEvent: (e
   let closed = false;
   let retry = 0;
   let cursor = after;
+  let heartbeat: number | undefined;
   const open = () => {
     if (closed) return;
     onState(retry ? 'RECONNECTING' : 'CONNECTING');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${window.location.host}/ws/v1/messages?enterpriseId=${encodeURIComponent(enterpriseId)}&after=${cursor}`);
-    socket.onopen = () => { retry = 0; onState('OPEN'); };
+    socket.onopen = () => {
+      retry = 0; onState('OPEN');
+      heartbeat = window.setInterval(() => {
+        if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' }));
+      }, 15000);
+    };
     socket.onmessage = (event) => {
       try {
         const parsed = JSON.parse(event.data) as RealtimeSocketEvent;
         if (parsed.message?.sequence) cursor = Math.max(cursor, parsed.message.sequence);
-        if (parsed.sequence) cursor = Math.max(cursor, parsed.sequence);
         onEvent(parsed);
       } catch { onEvent({ type: 'error', code: 'SUMMER_MESSAGE_INVALID' }); }
     };
-    socket.onclose = () => {
+    socket.onclose = (event) => {
+      if (heartbeat !== undefined) window.clearInterval(heartbeat);
       if (closed) { onState('CLOSED'); return; }
+      onEvent({ type: 'error', code: event.code === 1008 ? 'SUMMER_ACCESS_DENIED' : 'SUMMER_MESSAGE_CONNECTION_LOST' });
+      if (event.code === 1008) { closed = true; onState('CLOSED'); return; }
       retry += 1;
       window.setTimeout(open, Math.min(8000, 250 * 2 ** Math.min(retry - 1, 5)));
     };
@@ -60,7 +68,10 @@ export function connectRealtime(enterpriseId: string, after: number, onEvent: (e
   };
   open();
   return {
-    send: (payload) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload)); },
-    close: () => { closed = true; socket?.close(); },
+    send: (payload) => {
+      if (socket?.readyState !== WebSocket.OPEN) return false;
+      socket.send(JSON.stringify(payload)); return true;
+    },
+    close: () => { closed = true; if (heartbeat !== undefined) window.clearInterval(heartbeat); socket?.close(); },
   };
 }

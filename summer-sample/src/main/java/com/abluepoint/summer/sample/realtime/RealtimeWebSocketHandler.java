@@ -27,17 +27,17 @@ class RealtimeWebSocketHandler extends TextWebSocketHandler {
         String enterpriseId = (String) session.getAttributes().get("enterpriseId");
         try { hub.register(enterpriseId, session); }
         catch (RealtimeConnectionLimitException e) { session.close(new CloseStatus(1013, "connection limit")); return; }
-        var authentication = (org.springframework.security.core.Authentication) session.getAttributes().get("authentication");
+        catch (org.springframework.security.access.AccessDeniedException denied) { hub.closeDenied(session); return; }
         long after = (long) session.getAttributes().getOrDefault("after", 0L);
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "connected", "enterpriseId", enterpriseId,
-                "after", after, "connections", hub.status(enterpriseId).connections()))));
-        for (RealtimeMessageView message : messages.list(enterpriseId, after, authentication).items()) {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "message", "message", message))));
-        }
+        hub.connected(session, Map.of("type", "connected", "enterpriseId", enterpriseId,
+                "after", after, "connections", hub.status(enterpriseId).connections()));
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        try { hub.requireCurrent(session); }
+        catch (org.springframework.security.access.AccessDeniedException denied) { hub.closeDenied(session); return; }
+        hub.touch(session);
         String enterpriseId = (String) session.getAttributes().get("enterpriseId");
         var authentication = (org.springframework.security.core.Authentication) session.getAttributes().get("authentication");
         Map<String, Object> command;
@@ -45,20 +45,20 @@ class RealtimeWebSocketHandler extends TextWebSocketHandler {
         catch (RuntimeException e) { protocolError(session, "SUMMER_MESSAGE_INVALID", "Message must be valid JSON"); return; }
         String type = command.get("type") == null ? "" : String.valueOf(command.get("type"));
         try {
-            if ("ping".equals(type)) { session.sendMessage(new TextMessage("{\"type\":\"pong\"}")); return; }
+            if ("ping".equals(type)) { hub.send(session, Map.of("type", "pong")); return; }
             if ("send".equals(type)) {
                 RealtimeMessageCreateRequest request = new RealtimeMessageCreateRequest(
                         string(command.get("clientMessageId")), string(command.get("recipient")),
                         command.get("payload") instanceof Map<?, ?> map ? castMap(map) : Map.of(),
                         command.get("ttlSeconds") instanceof Number n ? n.intValue() : null);
                 RealtimeMessageView result = messages.send(enterpriseId, request, authentication);
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "ack", "clientMessageId", result.clientMessageId(),
-                        "messageId", result.messageId(), "status", result.status(), "sequence", result.sequence(), "duplicate", result.duplicate()))));
+                hub.send(session, Map.of("type", "ack", "clientMessageId", result.clientMessageId(),
+                        "messageId", result.messageId(), "status", result.status(), "sequence", result.sequence(), "duplicate", result.duplicate()));
                 return;
             }
             if ("ack".equals(type)) {
                 RealtimeMessageView result = messages.acknowledge(enterpriseId, string(command.get("messageId")), authentication);
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "ack", "messageId", result.messageId(), "status", result.status()))));
+                hub.send(session, Map.of("type", "ack", "messageId", result.messageId(), "status", result.status()));
                 return;
             }
             protocolError(session, "SUMMER_MESSAGE_INVALID", "Unsupported message type");
@@ -73,7 +73,7 @@ class RealtimeWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void protocolError(WebSocketSession session, String code, String detail) throws Exception {
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "error", "code", code, "message", detail))));
+        hub.send(session, Map.of("type", "error", "code", code, "message", detail));
     }
 
     private static String string(Object value) { return value == null ? null : String.valueOf(value); }

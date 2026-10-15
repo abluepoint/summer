@@ -76,7 +76,7 @@ class RealtimeMessageController {
     @RawResponse
     @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.read')")
     ResponseEntity<ApiResponse<RealtimeConnectionView>> connections(@PathVariable String enterpriseId, Authentication authentication) {
-        try { RealtimeMessageService.require(enterpriseId, authentication, RealtimeMessageService.READ); }
+        try { service.require(enterpriseId, authentication, RealtimeMessageService.READ); }
         catch (AccessDeniedException e) { return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", "Message capability denied"); }
         return body(HttpStatus.OK, hub.status(enterpriseId));
     }

@@ -16,6 +16,15 @@ import java.util.Map;
 
 @Component
 class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
+    private final RealtimeAccess access;
+    private final com.abluepoint.summer.sample.identity.SessionStreamAccess sessions;
+
+    RealtimeHandshakeInterceptor(RealtimeAccess access,
+                                 com.abluepoint.summer.sample.identity.SessionStreamAccess sessions) {
+        this.access = access;
+        this.sessions = sessions;
+    }
+
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler handler,
                                    Map<String, Object> attributes) {
@@ -25,7 +34,7 @@ class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
         if (!(authentication instanceof JwtAuthenticationToken)) {
             response.setStatusCode(HttpStatus.UNAUTHORIZED); return false;
         }
-        try { RealtimeMessageService.require(enterpriseId, authentication, RealtimeMessageService.READ); }
+        try { access.require(enterpriseId, authentication, RealtimeMessageService.READ); }
         catch (RuntimeException denied) { response.setStatusCode(HttpStatus.FORBIDDEN); return false; }
         long after;
         try { after = RealtimeMessageService.cursor(UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams().getFirst("after")); }
@@ -33,6 +42,8 @@ class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
         attributes.put("enterpriseId", enterpriseId);
         attributes.put("after", after);
         attributes.put("authentication", authentication);
+        attributes.put("sessionActive", sessions.capture(
+                ((ServletServerHttpRequest) request).getServletRequest(), authentication));
         return true;
     }
 
