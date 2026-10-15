@@ -28,3 +28,19 @@ test('a late failure for the old selection cannot replace a newer successful sel
  let hold=false,release,received;const pending=new Promise(r=>{received=r;});const page=await pageFor(async route=>{const path=new URL(route.request().url()).pathname;if(path===publicPath)return fulfill(route,200,success({code:'customer-segment',items}));if(path.endsWith('/selected')&&hold){received();await new Promise(r=>{release=r;});return fulfill(route,404,failure(404,'stale-selection'));}return fulfill(route,200,success(path.endsWith('/fallback')?items[1]:items[0]));});
  try{hold=true;await page.getByRole('button',{name:'刷新选项',exact:true}).click();await Promise.race([pending,new Promise((_,reject)=>setTimeout(()=>reject(new Error('selection request missing')),5000))]);await selection(page).click();const consumed=page.waitForResponse(r=>new URL(r.url()).pathname===publicPath+'/items/fallback');await page.getByRole('option',{name:'备用项',exact:true}).click();await consumed;const stale=page.waitForResponse(r=>new URL(r.url()).pathname===publicPath+'/items/selected'&&r.status()===404);release();await stale;assert.equal((await selection(page).innerText()).includes('备用项'),true);assert.equal(await page.locator('.arco-alert-error').count(),0);}finally{release?.();await page.close();}
 });
+
+test('a disabled dictionary and later restored snapshot preserve unsaved override input',async()=>{
+ let unavailable=false;const page=await pageFor(route=>{const path=new URL(route.request().url()).pathname;if(path===publicPath&&unavailable)return fulfill(route,404,failure(404,'dictionary-disabled-dirty'));return fulfill(route,200,success(path===publicPath?{code:'customer-segment',items,version:1}:items[0]));});
+ const draft='[{"value":"selected","label":"未保存覆盖","sortOrder":0,"enabled":true}]';
+ try{await page.getByLabel('覆盖选项 JSON').fill(draft);unavailable=true;await page.getByRole('button',{name:'刷新选项',exact:true}).click();await page.getByText(/dictionary-disabled-dirty/).waitFor();assert.equal(await page.getByLabel('覆盖选项 JSON').inputValue(),draft);unavailable=false;await page.getByRole('button',{name:'刷新选项',exact:true}).click();await selection(page).getByText('已选项',{exact:true}).waitFor();assert.equal(await page.getByLabel('覆盖选项 JSON').inputValue(),draft);}finally{await page.close();}
+});
+
+test('authorization loss still clears unsaved override and server-derived consumer data',async()=>{
+ let denied=false;const page=await pageFor(route=>{const path=new URL(route.request().url()).pathname;return denied?fulfill(route,403,failure(403,'dictionary-read-denied-dirty')):fulfill(route,200,success(path===publicPath?{code:'customer-segment',items,version:1}:items[0]));});
+ try{await page.getByLabel('覆盖选项 JSON').fill('[{"value":"selected","label":"未保存"}]');denied=true;await page.getByRole('button',{name:'刷新选项',exact:true}).click();await page.getByText(/dictionary-read-denied-dirty/).waitFor();assert.equal(await page.getByLabel('覆盖选项 JSON').inputValue(),'[]');assert.equal((await selection(page).innerText()).includes('已选项'),false);}finally{await page.close();}
+});
+
+test('a forbidden override write shows the request id and releases the saving state',async()=>{
+ const page=await pageFor(route=>{const path=new URL(route.request().url()).pathname;return fulfill(route,200,success(path===publicPath?{code:'customer-segment',items,version:1}:items[0]));});
+ try{await page.route('**/api/v1/enterprises/ent-acme/dictionaries/customer-segment/overrides/_tenant',route=>fulfill(route,403,failure(403,'dictionary-write-denied')));await page.getByLabel('覆盖选项 JSON').fill('[{"value":"selected","label":"未保存","sortOrder":0,"enabled":true}]');await page.getByRole('button',{name:'发布字典覆盖',exact:true}).click();await page.getByText(/无权发布字典覆盖.*dictionary-write-denied/).waitFor();assert.equal(await page.getByRole('button',{name:'发布字典覆盖',exact:true}).isEnabled(),true);}finally{await page.close();}
+});

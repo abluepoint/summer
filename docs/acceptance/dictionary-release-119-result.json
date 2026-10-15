@@ -1,0 +1,284 @@
+{
+  "status": "ACCEPTED_FOR_COORDINATOR_CLOSEOUT",
+  "issue": 119,
+  "dependency": {
+    "number": 117,
+    "requiredState": "CLOSED/COMPLETED"
+  },
+  "candidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+  "runtime": {
+    "issue": 119,
+    "stage": "complete",
+    "checks": [
+      {
+        "name": "unpublished_draft_is_not_public",
+        "passed": true
+      },
+      {
+        "name": "first_snapshot_published_version_one",
+        "passed": true
+      },
+      {
+        "name": "both_nodes_read_immutable_first_snapshot",
+        "passed": true
+      },
+      {
+        "name": "public_read_primes_real_redis_cache",
+        "passed": true
+      },
+      {
+        "name": "unpublished_item_edits_do_not_change_selected_snapshot",
+        "passed": true
+      },
+      {
+        "name": "publish_idempotent_retry_keeps_version",
+        "passed": true
+      },
+      {
+        "name": "publish_updates_both_nodes_and_invalidates_cache",
+        "passed": true
+      },
+      {
+        "name": "stale_publication_rejected_with_correlated_error",
+        "passed": true
+      },
+      {
+        "name": "disable_removes_snapshot_from_both_nodes",
+        "passed": true
+      },
+      {
+        "name": "repeat_disable_invalid_transition_rejected",
+        "passed": true
+      },
+      {
+        "name": "rollback_restores_immutable_previous_options",
+        "passed": true
+      },
+      {
+        "name": "missing_and_current_rollback_targets_rejected",
+        "passed": true
+      },
+      {
+        "name": "reader_cannot_publish_disable_or_rollback",
+        "passed": true
+      },
+      {
+        "name": "all_lifecycle_actions_audited_and_outboxed_without_values",
+        "passed": true
+      },
+      {
+        "name": "two_jvm_same_expected_version_has_one_conflict",
+        "passed": true,
+        "statuses": [
+          200,
+          409
+        ]
+      },
+      {
+        "name": "only_winner_created_new_snapshot",
+        "passed": true
+      },
+      {
+        "name": "snapshot_history_persists_after_jvm_restart",
+        "passed": true
+      },
+      {
+        "name": "production_mysql_migrations_succeeded",
+        "passed": true
+      }
+    ],
+    "networkMocking": false,
+    "businessSqlWrites": false,
+    "candidateSha256": "442e609f2962febb86d84adadb7d96940f5ae7713a06b023ef84b21404c2a453",
+    "sensitiveLogDetected": false,
+    "cleanup": "VERIFIED",
+    "counts": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "passed": true
+  },
+  "realChrome": {
+    "checks": [
+      {
+        "name": "actual_pkce_form_reads_first_published_snapshot",
+        "passed": true
+      },
+      {
+        "name": "manual_reread_ignores_unpublished_item_changes",
+        "passed": true
+      },
+      {
+        "name": "draft_reread_keeps_unsaved_form_text",
+        "passed": true
+      },
+      {
+        "name": "manual_reread_displays_new_published_version_and_options",
+        "passed": true
+      },
+      {
+        "name": "published_reread_preserves_selected_value_and_unsaved_form",
+        "passed": true
+      },
+      {
+        "name": "disabled_snapshot_shows_correlated_unavailable_error",
+        "passed": true
+      },
+      {
+        "name": "disable_failure_keeps_unsaved_form_text",
+        "passed": true
+      },
+      {
+        "name": "rollback_reread_restores_old_snapshot",
+        "passed": true
+      },
+      {
+        "name": "rollback_reread_keeps_unsaved_form_text",
+        "passed": true
+      },
+      {
+        "name": "invalid_form_json_is_rejected_without_losing_input",
+        "passed": true
+      },
+      {
+        "name": "actual_reader_write_denied_with_request_id",
+        "passed": true
+      },
+      {
+        "name": "no_unhandled_page_errors",
+        "passed": true
+      }
+    ],
+    "networkMocking": false,
+    "pageErrors": 0,
+    "complete": true,
+    "readerDeniedResponse": {
+      "status": 403,
+      "code": "SUMMER_FORBIDDEN",
+      "requestIdPresent": true
+    }
+  },
+  "browserReadbackAndCleanup": {
+    "issue": 119,
+    "stage": "complete",
+    "businessSqlWrites": false,
+    "networkMocking": false,
+    "commands": [
+      "DRAFT_EDIT",
+      "PUBLISH",
+      "DISABLE",
+      "ROLLBACK"
+    ],
+    "browserExitCode": 0,
+    "restoredPublishedVersion": 1,
+    "restoredLabels": [
+      "发布一甲",
+      "发布一乙"
+    ],
+    "sensitiveLogDetected": false,
+    "cleanup": "VERIFIED",
+    "uiInputCount": 242,
+    "changedUiInputs": [],
+    "passed": true
+  },
+  "componentRegression": {
+    "componentRed": {
+      "tests": 5,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "componentGreen": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "additionalWriteDenialComponent": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "typecheckExit": 0,
+    "note": "Component and actual identity UI verified separately: component5 plus write-denial1, actual Chrome12; historical reader timeout remains unexplained.",
+    "buildExit": 0
+  },
+  "priorFullCheckJUnit": {
+    "suite": "DictionaryVersionHttpTest",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "belongsToPrevious688Gate": true,
+    "newRun": false
+  },
+  "productionBackendChanges": false,
+  "dictionaryMainInputsMatchedCandidate": 20,
+  "uiChange": "Preserve user-edited override JSON on dictionary404; clear unavailable selection and snapshot; authorization401/403 continues clearing all consumer/form state.",
+  "historicalBrowser": {
+    "directory": ".git/summer4-closeout-20261015/t11-live/browser-attempt-01",
+    "tests": 10,
+    "failures": 2,
+    "errors": 1,
+    "skipped": 0,
+    "failuresDescription": "404 clears unsaved override JSON and subsequent rollback reread does not preserve it.",
+    "additionalTimeout": "Reader override denial message wait timed out; cause not established. A dedicated component passed and replay observed403/SUMMER_FORBIDDEN/requestId. No independent fix claimed.",
+    "cleanup": "VERIFIED"
+  },
+  "visualReview": {
+    "disabledAndRollbackUnsavedJson": "Inspected native screenshots; unsaved JSON present after404 and rollback.",
+    "readerDenied": "Inspected native screenshot; permission message with requestId.",
+    "publicationScreenshot": "Retained original capture; select label still shows prior text in pixels despite passed DOM assertion. Not used as pixel proof of the new label."
+  },
+  "acceptanceClauses": [
+    {
+      "clause": 1,
+      "title": "未发布项不可公开读取",
+      "status": "PASS",
+      "evidence": "未发布字典404；版本一发布后新增/改写草稿仍保持原版本和原选项。"
+    },
+    {
+      "clause": 2,
+      "title": "生命周期审计、事件及缓存失效",
+      "status": "PASS",
+      "evidence": "发布、停用、回滚在MySQL审计/outbox留存，实际Redis版本和两JVM读取随之变化；事件不含选项值。"
+    },
+    {
+      "clause": 3,
+      "title": "重新读取且不覆盖未保存表单",
+      "status": "PASS",
+      "evidence": "Chrome手动重读版本2的新选项，保留选择及未保存JSON；404停用和回滚后仍保留JSON。"
+    },
+    {
+      "clause": 4,
+      "title": "冲突、非法转换与拒绝",
+      "status": "PASS",
+      "evidence": "陈旧发布、重复停用、非法回滚均409；只读三类变更403；双JVM同版本一200一409且只新增一个快照。"
+    },
+    {
+      "clause": 5,
+      "title": "真实迁移、HTTP与SummerUI",
+      "status": "PASS",
+      "evidence": "生产候选在真实MySQL/独立Redis运行，18后端和12Chrome检查；成功/拒绝/无效输入、JVM重启持久化。"
+    },
+    {
+      "clause": 6,
+      "title": "响应与请求关联、敏感边界",
+      "status": "PASS",
+      "evidence": "统一信封与matching requestId、SUMMER命名空间；Chrome 404/403关联ID可见，运行日志敏感检测零命中。"
+    },
+    {
+      "clause": 7,
+      "title": "追踪、计数与保留原改动",
+      "status": "PASS",
+      "evidence": "故事7/8/9/49/50、原票、脚本、真实红灯与组件修复、复验清理分批留存；无后端修改，保留其他owner源码/index。"
+    }
+  ],
+  "counting": "Runtime18 and realChrome12 separate; component5 plus write-denial1 separate executions, no duplicated fixture checks counted; previous3JUnit belong to688 full check and are not new.",
+  "scopeExclusion": "T31 realtime distribution is separate; actual T11 manual refresh is tested, existingSSE events are not counted asT31 acceptance. NewT16 menu/globalUI is present in Chrome run but its permissions are not certified by this ticket.",
+  "evidenceRoot": ".git/summer4-closeout-20261015/t11-live",
+  "credentialHandling": "Only process memory/environment/stdin; no original credentials,private keys,tokens or raw runtime logs in public evidence."
+}

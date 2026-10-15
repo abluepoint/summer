@@ -47,9 +47,12 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
   function readFailure(failure: Error & { status?: number; requestId?: string }, selectedItem = false) {
     setSelectedUnavailable(true);
     if (!selectedItem || [401, 403].includes(failure.status || 0)) { setOptions([]); setVersion(undefined); }
-    if ([401, 403].includes(failure.status || 0) || (!selectedItem && failure.status === 404)) {
+    if ([401, 403].includes(failure.status || 0)) {
       valueRef.current = ''; setValue(''); setOverrideJson('[]'); overrideDirty.current = false;
-    } else if (!selectedItem && !overrideDirty.current) setOverrideJson('[]');
+    } else {
+      if (!selectedItem && failure.status === 404) { valueRef.current = ''; setValue(''); }
+      if (!selectedItem && !overrideDirty.current) setOverrideJson('[]');
+    }
     const message = failure.status === 403 ? '无权读取此字典' : failure.status === 404 ? (selectedItem ? '所选字典项不可用，请重新选择' : '字典不可用或不在授权范围内') : failure.message || t['dictionary.error'];
     setError(`${message}${failure.requestId ? ` (${failure.requestId})` : ''}`);
   }
