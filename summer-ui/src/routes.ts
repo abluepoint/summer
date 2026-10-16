@@ -309,6 +309,14 @@ export const routes: IRoute[] = [
         ],
       },
       {
+        name: 'menu.diagnostics.release',
+        key: 'diagnostics/release',
+        capabilityCode: 'internal.release.read',
+        requiredPermissions: [
+          { resource: 'internal.release', actions: ['read'] },
+        ],
+      },
+      {
         name: 'menu.diagnostics.resilience',
         key: 'diagnostics/resilience',
         requiredPermissions: [

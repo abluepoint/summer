@@ -1,0 +1,230 @@
+{
+  "status": "FINAL_GATES_PASSED_ROOT_ISSUE_CLOSEOUT_PENDING",
+  "date": "2026-10-16",
+  "issue": 144,
+  "reviewHead": "6c024b5270437ce811cdc9ac36bb1e8f7d953be0",
+  "backend": {
+    "counts": {
+      "tests": 775,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": 181,
+    "inputs": 730,
+    "executed": 644,
+    "fromCache": 131,
+    "modules": [
+      {
+        "module": "summer-common",
+        "taskStatus": "FROM-CACHE",
+        "tests": 1,
+        "suites": 1
+      },
+      {
+        "module": "summer-common-autoconfigure",
+        "taskStatus": "FROM-CACHE",
+        "tests": 1,
+        "suites": 1
+      },
+      {
+        "module": "summer-data-jpa",
+        "taskStatus": "FROM-CACHE",
+        "tests": 7,
+        "suites": 3
+      },
+      {
+        "module": "summer-data-jpa-autoconfigure",
+        "taskStatus": "FROM-CACHE",
+        "tests": 2,
+        "suites": 1
+      },
+      {
+        "module": "summer-mvc",
+        "taskStatus": "FROM-CACHE",
+        "tests": 82,
+        "suites": 11
+      },
+      {
+        "module": "summer-mvc-autoconfigure",
+        "taskStatus": "FROM-CACHE",
+        "tests": 18,
+        "suites": 1
+      },
+      {
+        "module": "summer-sample",
+        "taskStatus": "EXECUTED",
+        "tests": 644,
+        "suites": 156
+      },
+      {
+        "module": "summer-security",
+        "taskStatus": "FROM-CACHE",
+        "tests": 4,
+        "suites": 2
+      },
+      {
+        "module": "summer-security-autoconfigure",
+        "taskStatus": "FROM-CACHE",
+        "tests": 16,
+        "suites": 5
+      }
+    ],
+    "missingBaselineCases": [],
+    "additionalCases": [
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "[1] failure = org.springframework.dao.QueryTimeoutException: Redis command timed out"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "[2] failure = jakarta.servlet.ServletException: org.springframework.dao.QueryTimeoutException: Redis command timed out"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "[3] failure = java.lang.IllegalStateException: jakarta.servlet.ServletException: org.springframework.dao.QueryTimeoutException: Redis command timed out"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "cannotReplaceAnAlreadyCommittedResponse()"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "jdbcQueryTimeoutIsNotMisclassifiedAsSessionRedisFailure()"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "queryTimeoutWithoutRedisCauseIsRethrownUnchanged()"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "servletErrorDispatchDoesNotTurnSessionTimeoutIntoSuccessWrapped500()"
+      ],
+      [
+        "com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest",
+        "servletSessionReadTimeoutReturns503WithFailureEnvelope()"
+      ]
+    ],
+    "sourceBeforeAfterCurrentEqual": true,
+    "allCaseStatesPassed": true
+  },
+  "backendExit": 0,
+  "elapsedSeconds": 839.4,
+  "cacheReadback": {
+    "moduleCount": 8,
+    "xmlFiles": 25,
+    "exactBytesEqualBackend05": true,
+    "originPolicy": "7 modules original cache provenance recorded in backend05 report; security-autoconfigure16 executed in backend05 and Gradle cache restored in backend06. Gradle fingerprints not independently recomputed."
+  },
+  "boundaries": [
+    "775 JUnit records, not775 freshly executed external journeys.",
+    "Two default-disabled BFF/strict methods return early despite XML PASSED; not independent external chain acceptance.",
+    "Sample module actually executed; environment-gated MySQL24 and Testcontainers20 records retained with zero skipped.",
+    "backend05 and all original failing native/targeted batches remain immutable; no cross-batch summation."
+  ],
+  "frontend": {
+    "baseline": "frontend-02",
+    "incremental": "frontend-03",
+    "commandsBaseline": 7,
+    "commandsIncremental": 3,
+    "nativeNodeCases": 39,
+    "errors": 0,
+    "lintWarnings": 65,
+    "inputs": 330,
+    "reuse": "Unchanged Node/mock/proxy/style from frontend02; typecheck/lint/build repeated after two role React-key changes. No frontend source changes afterwards."
+  },
+  "candidate03": {
+    "sha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+    "inputs": 543,
+    "migrationResources": 40,
+    "mySqlMigrationResources": 39,
+    "runtimeEntriesCompared": 987,
+    "changedProductionSourceFiles": 1,
+    "changedClassEntries": 2,
+    "outerClassDisassemblyEqual": true
+  },
+  "native03": {
+    "counts": {
+      "tests": 85,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "chrome": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exit": 0,
+    "cleanupAllPassed": true,
+    "scope": "Actual isolated Redis pause; two-node Cookie503/failure/no-data/requestId/no-store, pureBearer200 NOT_READY, recovery200; Chrome ten rows,403 clears old result,WebSocket delivery/replay.",
+    "unchanged02Reuse": [
+      "scope93",
+      "migration54",
+      "cache-fault76",
+      "rolling/recovery first213 checks of failed native01"
+    ],
+    "reuseBoundary": "These are explicitly candidate02 batches; native01 whole214/1/1/0 remains failed and is not reclassified."
+  },
+  "independentSessionReview": {
+    "standardsFindings": 0,
+    "specFindings": 0,
+    "reviewer": "Existing Astra chat, not implementer of the two reviewed Java files. Unavailable Sol attempt supplied no review."
+  },
+  "historicalEvidenceReport": "summer4-final-gates-144.md",
+  "evidence": [
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-06/result.json",
+      "sha256": "94806e8f6099fa7b42c1a573e174f2b8421d263e1eb07ce109a4a9389226d09a"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-06/source-before.json",
+      "sha256": "62f903be3bf4f71fd84bf8170c6ec0f703dd30a07b3b03afafdd85d57bf29188"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-06/source-after.json",
+      "sha256": "62f903be3bf4f71fd84bf8170c6ec0f703dd30a07b3b03afafdd85d57bf29188"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-06/events.log",
+      "sha256": "f746eca88c28dbaf678b28cb3c2d956e37978d8c116737d758adcea8067bd421"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-review/final-gates-06/ROOT-READBACK.json",
+      "sha256": "a4c82f35e97ee52f123b506134b5b15a414cc6c2c961ab494612722f6a0dc5d3"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/candidate03-native-ui-attempt-01/result.json",
+      "sha256": "9e8268f8e3a193dd43256f7adce51170b35dd077bd6315b946f6da432cbfce40"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/candidate03-native-ui-attempt-01/cleanup.json",
+      "sha256": "50638424f3d6e9121d62224647e1ab97ea4d2e0b7a0287ccb9dc3e8cd9fac95f"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/candidate03-native-ui-attempt-01/candidate-provenance.json",
+      "sha256": "fca6dd9d0448def71971e41392d2aadf91253c289f3515050c6aac2944262027"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/frozen-build-03/candidate-build.json",
+      "sha256": "9aee96865ea984f1933b54cca523e0f0fa8a27a5a2feecfe823b0632eed8c4d6"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/frozen-build-03/runtime-delta-from-02.json",
+      "sha256": "7b2211f9ae962f02b1ddf2f7b1ab32891e4d7b4834576a57b801fca72f2d4575"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-review/session-redis-timeout-fix-astra-01/result.json",
+      "sha256": "1a5b2ac166dfbcf4edfeca80323d9f890439de629fcdbbc19c73d98a0670f44a"
+    },
+    {
+      "path": "docs/acceptance/summer4-final-gates-144.md",
+      "sha256": "537b8ce01ae99f3d4ab1438847b820a9e39048bb402e57e3de30f8bedf900dda"
+    },
+    {
+      "path": "docs/acceptance/summer4-final-gates-144.json",
+      "sha256": "3a8ec5cae7e6b8af79e49eee1cbcda96569cd7eeb438f56cf134e30bb6e1073e"
+    }
+  ]
+}

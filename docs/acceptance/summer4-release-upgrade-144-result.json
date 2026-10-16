@@ -1,0 +1,2038 @@
+{
+  "issue": 144,
+  "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+  "parent": 108,
+  "parentState": "OPEN",
+  "scope": "Candidate02 nine preserved native batches and candidate03 affected-scope supplement. Issue144 and parent108 remain OPEN pending root review/commit/closure.",
+  "candidate02Sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+  "countsPolicy": "Never add batches, duplicated fixtures, HTTP named checks, browser scenarios or JUnit into one total. Outer errors count caught exceptions, including assertion propagation. No zero-execution success claims.",
+  "batches": [
+    {
+      "id": "scope-native-attempt-01",
+      "meaning": "Candidate02 exact PLATFORM capability, same-code ENTERPRISE negative, unchanged JWT revocation/restoration.",
+      "stage": "complete",
+      "counts": {
+        "tests": 93,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "namedChecksPassed": 93,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "a209575a05900bf6e24d5022357736e1cddd77bdc9d36f5a4e6174fa1ca7d8a3",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/scope-native-attempt-01",
+      "failedChecks": [],
+      "cleanupVerified": true,
+      "keyChecks": [
+        {
+          "name": "created capability keeps requested scope and code",
+          "passed": true,
+          "scope": "PLATFORM",
+          "action": "read"
+        },
+        {
+          "name": "created capability keeps requested scope and code",
+          "passed": true,
+          "scope": "PLATFORM",
+          "action": "write"
+        },
+        {
+          "name": "created capability keeps requested scope and code",
+          "passed": true,
+          "scope": "ENTERPRISE",
+          "action": "read"
+        },
+        {
+          "name": "created capability keeps requested scope and code",
+          "passed": true,
+          "scope": "ENTERPRISE",
+          "action": "write"
+        },
+        {
+          "name": "only PLATFORM grant removed, same-code ENTERPRISE grant retained",
+          "passed": true,
+          "action": "read"
+        },
+        {
+          "name": "the exact previously issued JWT is reused",
+          "passed": true,
+          "action": "read"
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "only PLATFORM grant removed, same-code ENTERPRISE grant retained",
+          "passed": true,
+          "action": "write"
+        },
+        {
+          "name": "the exact previously issued JWT is reused",
+          "passed": true,
+          "action": "write"
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "no sensitive application log detected",
+          "passed": true
+        },
+        {
+          "name": "executed backend and UI inputs remain stable",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "native-attempt-01",
+      "meaning": "Candidate02 mixed-version backend first213 checks pass; Chrome tbody locator fixture causes original final failure. No rewrite.",
+      "stage": "native-ui-and-realtime",
+      "counts": {
+        "tests": 214,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "namedChecksPassed": 213,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "ffe022bb74fabe70e3232bd1e0b578a0875036921ced803fe94ed551530401d5",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/native-attempt-01",
+      "failedChecks": [
+        {
+          "name": "native Chrome UI and realtime scenarios",
+          "passed": false,
+          "counts": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 1,
+            "skipped": 0
+          }
+        }
+      ],
+      "cleanupVerified": true,
+      "oldCandidate": {
+        "path": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t34-live/frozen-build-01/candidate.jar",
+        "sha256": "28a48d6cda86996d2d1b4d396c854e3d51d671ccc7994a41029daa567df02d18"
+      },
+      "browser": {
+        "checks": [
+          {
+            "name": "native_login_preflight_ten_checks",
+            "passed": false,
+            "errorType": "AssertionError",
+            "localFrames": [
+              "browser.mjs:20:64",
+              "browser.mjs:13:33",
+              "browser.mjs:17:2"
+            ]
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "errors": 1,
+        "skipped": 0,
+        "browserVersion": "151.0.7922.109",
+        "tests": 1,
+        "failures": 1,
+        "errorType": "AssertionError",
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      },
+      "keyChecks": [
+        {
+          "name": "rolling artifacts contain different application bytecode",
+          "passed": true,
+          "changedClassCount": 15
+        },
+        {
+          "name": "ten live prerequisites pass",
+          "passed": true,
+          "node": 23081
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "ten live prerequisites pass",
+          "passed": true,
+          "node": 23082
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23082
+        },
+        {
+          "name": "all current migration files applied",
+          "passed": true,
+          "applied": 39
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "IAM_RELEASE_INVALID",
+          "node": 23082
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_CONFLICT",
+          "node": 23082
+        },
+        {
+          "name": "unexecuted delivery gates never reported passed",
+          "passed": true
+        },
+        {
+          "name": "mixed-version cache invalidation reaches other node",
+          "passed": true
+        },
+        {
+          "name": "real L2 entries exist",
+          "passed": true
+        },
+        {
+          "name": "mixed nodes consume authorization events",
+          "passed": true,
+          "groups": [
+            {
+              "name": "summer-authorization-consumers-t36-23081",
+              "pending": 0,
+              "lag": 0
+            },
+            {
+              "name": "summer-authorization-consumers-t36-23082",
+              "pending": 0,
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "name": "published event available for duplicate exercise",
+          "passed": true
+        },
+        {
+          "name": "duplicate event drains on both nodes",
+          "passed": true
+        },
+        {
+          "name": "duplicate does not add a processed receipt",
+          "passed": true
+        },
+        {
+          "name": "both nodes accept same task key",
+          "passed": true,
+          "statuses": [
+            202,
+            202
+          ]
+        },
+        {
+          "name": "one cross-node execution completes",
+          "passed": true
+        },
+        {
+          "name": "mixed-version task SSE reaches both nodes",
+          "passed": true
+        },
+        {
+          "name": "task SSE exposes replay cursors",
+          "passed": true
+        },
+        {
+          "name": "SSE Last-Event-ID replays later event",
+          "passed": true
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_TASK_TYPE_UNTRUSTED",
+          "node": 23081
+        },
+        {
+          "name": "nodes share public signing keys",
+          "passed": true
+        },
+        {
+          "name": "active and grace public keys match",
+          "passed": true
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_PLUGIN_UNTRUSTED",
+          "node": 23081
+        },
+        {
+          "name": "plugin incompatible version diagnosed",
+          "passed": true
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_PLUGIN_INCOMPATIBLE",
+          "node": 23081
+        },
+        {
+          "name": "compatible plugin visible on other node",
+          "passed": true
+        },
+        {
+          "name": "surviving node serves throughout rolling restart",
+          "passed": true,
+          "requests": 148,
+          "non200": 0
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23082
+        },
+        {
+          "name": "restore target is new",
+          "passed": true
+        },
+        {
+          "name": "encrypted archive backup",
+          "passed": true,
+          "exitCode": 0
+        },
+        {
+          "name": "encrypted archive restore",
+          "passed": true,
+          "exitCode": 0
+        },
+        {
+          "name": "backup is encrypted and private",
+          "passed": true
+        },
+        {
+          "name": "key data and permission table counts restored",
+          "passed": true,
+          "tables": {
+            "summer_security_keys": [
+              2,
+              2
+            ],
+            "summer_authorization_user_binding": [
+              2,
+              2
+            ],
+            "summer_authorization_role": [
+              1,
+              1
+            ],
+            "summer_authorization_capability": [
+              64,
+              64
+            ],
+            "summer_auth_user": [
+              2,
+              2
+            ],
+            "summer_enterprise_member": [
+              4,
+              4
+            ],
+            "summer_system_parameter": [
+              1,
+              1
+            ],
+            "oauth2_registered_client": [
+              1,
+              1
+            ],
+            "oauth2_authorization": [
+              3,
+              3
+            ],
+            "flyway_schema_history": [
+              39,
+              39
+            ]
+          }
+        },
+        {
+          "name": "existing restore target cannot be overwritten",
+          "passed": true
+        },
+        {
+          "name": "restored key data differs from later source mutation",
+          "passed": true
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23083
+        },
+        {
+          "name": "restored signing keys retain public identity",
+          "passed": true
+        },
+        {
+          "name": "native Chrome UI and realtime scenarios",
+          "passed": false,
+          "counts": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 1,
+            "skipped": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "native-ui-attempt-02",
+      "meaning": "Arco header shares row class; fixture counted11 rather than10 business rows.",
+      "stage": "native-ui-and-realtime-supplement",
+      "counts": {
+        "tests": 37,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "namedChecksPassed": 36,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "39b42baf4fec34e04f82d2a02a985f07cd0ca641ac17afb36b60432091f5144a",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/native-ui-attempt-02",
+      "failedChecks": [
+        {
+          "name": "native Chrome UI and realtime scenarios",
+          "passed": false,
+          "counts": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 1,
+            "skipped": 0
+          }
+        }
+      ],
+      "cleanupVerified": true,
+      "browser": {
+        "checks": [
+          {
+            "name": "native_login_preflight_ten_checks",
+            "passed": false,
+            "errorType": "AssertionError",
+            "localFrames": [
+              "browser.mjs:20:180",
+              "browser.mjs:13:33",
+              "browser.mjs:17:2"
+            ]
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "errors": 1,
+        "skipped": 0,
+        "browserVersion": "151.0.7922.109",
+        "tableRows": {
+          "all": 12,
+          "checks": 11
+        },
+        "tests": 1,
+        "failures": 1,
+        "errorType": "AssertionError",
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "id": "native-ui-attempt-03",
+      "meaning": "Ten business rows pass; Redis outage fixture accepted200 only and failed before status was persisted.",
+      "stage": "native-ui-and-realtime-supplement",
+      "counts": {
+        "tests": 50,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "namedChecksPassed": 49,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "3d5eecf246868dbfc64b50f5f2e779a65937491cb1c5b46ffd7cebbd8df810d3",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/native-ui-attempt-03",
+      "failedChecks": [
+        {
+          "name": "native Chrome UI and realtime scenarios",
+          "passed": false,
+          "counts": {
+            "tests": 2,
+            "failures": 1,
+            "errors": 1,
+            "skipped": 0
+          }
+        }
+      ],
+      "cleanupVerified": true,
+      "browser": {
+        "checks": [
+          {
+            "name": "native_login_preflight_ten_checks",
+            "passed": true
+          },
+          {
+            "name": "native_redis_fault_and_recovery",
+            "passed": false,
+            "errorType": "AssertionError",
+            "localFrames": [
+              "browser.mjs:14:262",
+              "browser.mjs:23:42",
+              "browser.mjs:13:33",
+              "browser.mjs:22:2"
+            ]
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "errors": 1,
+        "skipped": 0,
+        "browserVersion": "151.0.7922.109",
+        "tableRows": {
+          "all": 12,
+          "checks": 10
+        },
+        "tests": 2,
+        "failures": 1,
+        "errorType": "AssertionError",
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "id": "native-ui-attempt-04",
+      "meaning": "Redis session outage actual500 with absent top-level error.code; original failure retained.",
+      "stage": "native-ui-and-realtime-supplement",
+      "counts": {
+        "tests": 50,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "namedChecksPassed": 49,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "a0000573587eae0b9949098cf4aa5cb86ef80477cdd4653d2588f50bfa19d91b",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/native-ui-attempt-04",
+      "failedChecks": [
+        {
+          "name": "native Chrome UI and realtime scenarios",
+          "passed": false,
+          "counts": {
+            "tests": 2,
+            "failures": 1,
+            "errors": 1,
+            "skipped": 0
+          }
+        }
+      ],
+      "cleanupVerified": true,
+      "browser": {
+        "checks": [
+          {
+            "name": "native_login_preflight_ten_checks",
+            "passed": true
+          },
+          {
+            "name": "native_redis_fault_and_recovery",
+            "passed": false,
+            "errorType": "AssertionError",
+            "localFrames": [
+              "browser.mjs:14:472",
+              "browser.mjs:23:42",
+              "browser.mjs:13:33",
+              "browser.mjs:22:2"
+            ]
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "errors": 1,
+        "skipped": 0,
+        "browserVersion": "151.0.7922.109",
+        "responses": [
+          {
+            "status": 200,
+            "code": null,
+            "requestId": "54451173-9b21-486e-a7fa-3ddd43f286fa",
+            "responseRequestId": "54451173-9b21-486e-a7fa-3ddd43f286fa"
+          },
+          {
+            "status": 500,
+            "code": null,
+            "requestId": "15f248f7-0f22-46fa-82e8-f07131629ed0",
+            "responseRequestId": "15f248f7-0f22-46fa-82e8-f07131629ed0"
+          }
+        ],
+        "tests": 2,
+        "failures": 1,
+        "tableRows": {
+          "all": 12,
+          "checks": 10
+        },
+        "errorType": "AssertionError",
+        "shutdown": {
+          "processExited": true,
+          "forced": false
+        }
+      }
+    },
+    {
+      "id": "native-ui-attempt-05",
+      "meaning": "Browser ready/recovery/denial/restoration/WS pass; actual500 success=true remains failed. Cache post-write503 was valid controlled refusal but old fixture incorrectly required200. Chrome forced owned-child shutdown is reported.",
+      "stage": "native-ui-and-realtime-supplement",
+      "counts": {
+        "tests": 74,
+        "failures": 2,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "namedChecksPassed": 72,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "14e6835be21780d523c81025ef4f72d81d6b5a8b4bf144498a1b34411e073132",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/native-ui-attempt-05",
+      "failedChecks": [
+        {
+          "name": "GET /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+          "passed": false,
+          "httpStatus": 503,
+          "expected": 200,
+          "node": 23082,
+          "code": "SUMMER_DEPENDENCY_UNAVAILABLE",
+          "requestId": "t36-c421e0078ae241c9bce6e7f69e3e765f",
+          "responseRequestId": "t36-c421e0078ae241c9bce6e7f69e3e765f"
+        },
+        {
+          "name": "native Chrome UI and realtime scenarios",
+          "passed": false,
+          "counts": {
+            "tests": 5,
+            "failures": 1,
+            "errors": 1,
+            "skipped": 0
+          }
+        }
+      ],
+      "cleanupVerified": true,
+      "browser": {
+        "checks": [
+          {
+            "name": "native_login_preflight_ten_checks",
+            "passed": true
+          },
+          {
+            "name": "native_redis_fault_contract",
+            "passed": false,
+            "errorType": "AssertionError",
+            "localFrames": [
+              "browser.mjs:30:16",
+              "browser.mjs:13:39",
+              "browser.mjs:27:9"
+            ]
+          },
+          {
+            "name": "native_redis_recovery",
+            "passed": true
+          },
+          {
+            "name": "native_persisted_denial_clears_previous_result",
+            "passed": true
+          },
+          {
+            "name": "native_cross_node_websocket_delivery_and_replay",
+            "passed": true
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "errors": 1,
+        "skipped": 0,
+        "browserVersion": "151.0.7922.109",
+        "responses": [
+          {
+            "status": 200,
+            "elapsedMs": 492,
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "status",
+              "checks",
+              "rollbackDryRunSupported"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "cbc0a754-18f1-4cd2-8ad2-9809317f62cc",
+            "responseRequestId": "cbc0a754-18f1-4cd2-8ad2-9809317f62cc"
+          },
+          {
+            "status": 500,
+            "elapsedMs": 2128,
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "timestamp",
+              "status",
+              "error",
+              "path"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "cf2122f4-6a95-46e8-938a-d9b2e81b9eb1",
+            "responseRequestId": "cf2122f4-6a95-46e8-938a-d9b2e81b9eb1"
+          },
+          {
+            "status": 200,
+            "elapsedMs": 312,
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "status",
+              "checks",
+              "rollbackDryRunSupported"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "54dde84a-f531-4bd3-94b0-5697b38174d0",
+            "responseRequestId": "54dde84a-f531-4bd3-94b0-5697b38174d0"
+          },
+          {
+            "status": 403,
+            "elapsedMs": 66,
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [],
+            "success": false,
+            "errorType": "object",
+            "code": "SUMMER_FORBIDDEN",
+            "requestId": "0d3420a0-d997-47f2-8c9b-11fad76d24e4",
+            "responseRequestId": "0d3420a0-d997-47f2-8c9b-11fad76d24e4"
+          },
+          {
+            "status": 200,
+            "elapsedMs": 177,
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "status",
+              "checks",
+              "rollbackDryRunSupported"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "97c01055-dc2e-4b4e-a038-17684688df28",
+            "responseRequestId": "97c01055-dc2e-4b4e-a038-17684688df28"
+          }
+        ],
+        "tests": 5,
+        "failures": 1,
+        "tableRows": {
+          "all": 12,
+          "checks": 10
+        },
+        "faultErrorType": "AssertionError",
+        "shutdown": {
+          "processExited": true,
+          "forced": true
+        }
+      },
+      "safeExceptionClasses": {
+        "classes": [
+          [
+            23081,
+            "io.lettuce.core.RedisCommandTimeoutException"
+          ],
+          [
+            23081,
+            "org.springframework.dao.QueryTimeoutException"
+          ]
+        ],
+        "sensitiveLogDetected": false
+      }
+    },
+    {
+      "id": "migration-native-attempt-01",
+      "meaning": "Fixture omitted system.parameter.publish while creating public=true;403 before migration. Formal role corrected in new batch.",
+      "stage": "setup",
+      "counts": {
+        "tests": 17,
+        "failures": 1,
+        "errors": 1,
+        "skipped": 0
+      },
+      "exitCode": 1,
+      "namedChecksPassed": 16,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "e93fcde80c8ee65ce7c4af3f480a24bbcdd12c0005c6a9bd61cbacea40aaff98",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/migration-native-attempt-01",
+      "failedChecks": [
+        {
+          "name": "POST /api/system-parameters",
+          "passed": false,
+          "httpStatus": 403,
+          "expected": 201,
+          "node": 23081
+        }
+      ],
+      "cleanupVerified": true,
+      "oldCandidate": {
+        "path": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-review-20261007/t36-live/rolling-old.jar",
+        "sha256": "546510c7646131b34fbb5fa5e8088074de913a4e919dac0f74862a4363dc9b20"
+      }
+    },
+    {
+      "id": "migration-native-attempt-02",
+      "meaning": "Historical31-file old application encrypted restore to current39; V32 expand/contract indexes, V36 membership preservation and current API read/write pass.",
+      "stage": "complete",
+      "counts": {
+        "tests": 54,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "namedChecksPassed": 54,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "9ef9c0a79879a5af614d20aaba8eb637fbe750175144b00b060cf62a1228407e",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/migration-native-attempt-02",
+      "failedChecks": [],
+      "cleanupVerified": true,
+      "oldCandidate": {
+        "path": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-review-20261007/t36-live/rolling-old.jar",
+        "sha256": "546510c7646131b34fbb5fa5e8088074de913a4e919dac0f74862a4363dc9b20"
+      },
+      "keyChecks": [
+        {
+          "name": "historical Flyway checksums unchanged",
+          "passed": true
+        },
+        {
+          "name": "old schema has 31 applied migration files",
+          "passed": true
+        },
+        {
+          "name": "old global uniqueness constraint exists",
+          "passed": true
+        },
+        {
+          "name": "restore target is new",
+          "passed": true
+        },
+        {
+          "name": "encrypted archive backup",
+          "passed": true,
+          "exitCode": 0
+        },
+        {
+          "name": "encrypted archive restore",
+          "passed": true,
+          "exitCode": 0
+        },
+        {
+          "name": "backup is encrypted and private",
+          "passed": true
+        },
+        {
+          "name": "key data and permission table counts restored",
+          "passed": true,
+          "tables": {
+            "summer_security_keys": [
+              1,
+              1
+            ],
+            "summer_authorization_user_binding": [
+              1,
+              1
+            ],
+            "summer_authorization_role": [
+              1,
+              1
+            ],
+            "summer_authorization_capability": [
+              15,
+              15
+            ],
+            "summer_auth_user": [
+              1,
+              1
+            ],
+            "summer_system_parameter": [
+              1,
+              1
+            ],
+            "oauth2_registered_client": [
+              1,
+              1
+            ],
+            "oauth2_authorization": [
+              2,
+              2
+            ],
+            "flyway_schema_history": [
+              31,
+              31
+            ]
+          }
+        },
+        {
+          "name": "existing restore target cannot be overwritten",
+          "passed": true
+        },
+        {
+          "name": "restored key data differs from later source mutation",
+          "passed": true
+        },
+        {
+          "name": "restored database migrated to all 39 current files",
+          "passed": true,
+          "applied": 39
+        },
+        {
+          "name": "V32 expands tenant uniqueness and contracts old global index",
+          "passed": true
+        },
+        {
+          "name": "V36 preserves existing bound active identity membership",
+          "passed": true
+        },
+        {
+          "name": "current application reads upgraded legacy value",
+          "passed": true
+        },
+        {
+          "name": "current application writes after contract step",
+          "passed": true
+        },
+        {
+          "name": "old source database remains unchanged at 31 migrations",
+          "passed": true
+        },
+        {
+          "name": "no sensitive logs detected",
+          "passed": true
+        },
+        {
+          "name": "executed backend and UI inputs remain stable",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "cache-fault-native-attempt-01",
+      "meaning": "Real paused Redis: authorized current reads or controlled503/no data, formal write, restricted403 and bounded post-recovery convergence pass.",
+      "stage": "complete",
+      "counts": {
+        "tests": 76,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "namedChecksPassed": 76,
+      "candidate": {
+        "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "c2e09c2be7fc55dc550020c9107f8bba2ac00cd540df7d0343d19cfd16c8de5f",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/cache-fault-native-attempt-01",
+      "failedChecks": [],
+      "cleanupVerified": true,
+      "keyChecks": [
+        {
+          "name": "both nodes warm same parameter",
+          "passed": true,
+          "node": 23081
+        },
+        {
+          "name": "both nodes warm same parameter",
+          "passed": true,
+          "node": 23082
+        },
+        {
+          "name": "real L2 entries exist before fault",
+          "passed": true
+        },
+        {
+          "name": "fault read has matching request correlation",
+          "passed": true,
+          "node": 23081,
+          "status": 200,
+          "code": null,
+          "requestId": "t36-49c19b260c2f4edf9fd04fbd5244ff2d",
+          "elapsedMs": 829
+        },
+        {
+          "name": "Redis fault read returns current authorized database value",
+          "passed": true,
+          "node": 23081
+        },
+        {
+          "name": "fault read has matching request correlation",
+          "passed": true,
+          "node": 23082,
+          "status": 200,
+          "code": null,
+          "requestId": "t36-8d5deb69fb0b4f32a646687c08269a49",
+          "elapsedMs": 845
+        },
+        {
+          "name": "Redis fault read returns current authorized database value",
+          "passed": true,
+          "node": 23082
+        },
+        {
+          "name": "fault read has matching request correlation",
+          "passed": true,
+          "node": 23082,
+          "status": 503,
+          "code": "SUMMER_DEPENDENCY_UNAVAILABLE",
+          "requestId": "t36-87cdfaecf6f542d49b184a65d321183f",
+          "elapsedMs": 814
+        },
+        {
+          "name": "Redis fault read is a controlled refusal without data",
+          "passed": true,
+          "node": 23082,
+          "status": 503,
+          "code": "SUMMER_DEPENDENCY_UNAVAILABLE"
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23082
+        },
+        {
+          "name": "fault-window write eventually converges after Redis recovery",
+          "passed": true,
+          "node": 23081,
+          "observations": [
+            {
+              "status": 200,
+              "currentValue": true,
+              "requestId": "dbe96b04-83e0-4b3e-b302-1804acb2fdeb"
+            }
+          ]
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23081
+        },
+        {
+          "name": "fault-window write eventually converges after Redis recovery",
+          "passed": true,
+          "node": 23082,
+          "observations": [
+            {
+              "status": 200,
+              "currentValue": true,
+              "requestId": "f3b7e946-feb0-4ace-bff4-600f6fd4c6bd"
+            }
+          ]
+        },
+        {
+          "name": "failure envelope has stable code and no data",
+          "passed": true,
+          "code": "SUMMER_FORBIDDEN",
+          "node": 23082
+        },
+        {
+          "name": "no sensitive application log detected",
+          "passed": true
+        },
+        {
+          "name": "executed backend and UI inputs remain stable",
+          "passed": true
+        }
+      ],
+      "safeExceptionClasses": {
+        "classes": [],
+        "sensitiveLogDetected": false
+      }
+    },
+    {
+      "id": "candidate03-native-ui-attempt-01",
+      "meaning": "Candidate03 affected-scope real Cookie503/no-store/correlation, pure Bearer200 NOT_READY, recovery, Chrome403/restoration and cross-nodeWS. Candidate02 unrelated batches explicitly reused.",
+      "stage": "complete",
+      "counts": {
+        "tests": 85,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "namedChecksPassed": 85,
+      "candidate": {
+        "sha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+        "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-03/candidate.jar"
+      },
+      "businessSqlWrites": false,
+      "networkMocking": false,
+      "cleanup": {
+        "schema_absent": true,
+        "container_absent": true,
+        "redis_isolated_container_destroyed": true,
+        "listeners": {
+          "23081": false,
+          "23082": false,
+          "23083": false,
+          "23573": false,
+          "23580": false
+        },
+        "app_account_absent": true
+      },
+      "originalResultSha256": "9e8268f8e3a193dd43256f7adce51170b35dd077bd6315b946f6da432cbfce40",
+      "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/candidate03-native-ui-attempt-01",
+      "failedChecks": [],
+      "cleanupVerified": true,
+      "browser": {
+        "checks": [
+          {
+            "name": "native_login_preflight_ten_checks",
+            "passed": true
+          },
+          {
+            "name": "native_redis_fault_contract",
+            "passed": true
+          },
+          {
+            "name": "native_redis_recovery",
+            "passed": true
+          },
+          {
+            "name": "native_persisted_denial_clears_previous_result",
+            "passed": true
+          },
+          {
+            "name": "native_cross_node_websocket_delivery_and_replay",
+            "passed": true
+          }
+        ],
+        "networkMocking": false,
+        "pageErrors": 0,
+        "errors": 0,
+        "skipped": 0,
+        "browserVersion": "151.0.7922.109",
+        "responses": [
+          {
+            "status": 200,
+            "elapsedMs": 213,
+            "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "status",
+              "checks",
+              "rollbackDryRunSupported"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "d3899db2-bb11-41dc-9a5b-8598d68538bd",
+            "responseRequestId": "d3899db2-bb11-41dc-9a5b-8598d68538bd"
+          },
+          {
+            "status": 503,
+            "elapsedMs": 2181,
+            "cacheControl": "no-store",
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [],
+            "success": false,
+            "errorType": "object",
+            "code": "SUMMER_SESSION_STORE_UNAVAILABLE",
+            "requestId": "baec3286-033a-461a-930a-726ae6156757",
+            "responseRequestId": "baec3286-033a-461a-930a-726ae6156757"
+          },
+          {
+            "status": 200,
+            "elapsedMs": 221,
+            "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "status",
+              "checks",
+              "rollbackDryRunSupported"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "c5f06331-5582-4578-8b3f-bc43f8a6e1bf",
+            "responseRequestId": "c5f06331-5582-4578-8b3f-bc43f8a6e1bf"
+          },
+          {
+            "status": 403,
+            "elapsedMs": 89,
+            "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [],
+            "success": false,
+            "errorType": "object",
+            "code": "SUMMER_FORBIDDEN",
+            "requestId": "41b973bb-7f15-40d1-b8fd-59bb56e88249",
+            "responseRequestId": "41b973bb-7f15-40d1-b8fd-59bb56e88249"
+          },
+          {
+            "status": 200,
+            "elapsedMs": 308,
+            "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+            "fields": [
+              "success",
+              "data",
+              "error",
+              "requestId",
+              "timestamp"
+            ],
+            "dataFields": [
+              "status",
+              "checks",
+              "rollbackDryRunSupported"
+            ],
+            "success": true,
+            "errorType": "object",
+            "code": null,
+            "requestId": "69c2f150-52d9-4a57-8d60-b1ec99e69c0a",
+            "responseRequestId": "69c2f150-52d9-4a57-8d60-b1ec99e69c0a"
+          }
+        ],
+        "tests": 5,
+        "failures": 0,
+        "tableRows": {
+          "all": 12,
+          "checks": 10
+        },
+        "faultContract": "SESSION_STORE_503",
+        "shutdown": {
+          "processExited": true,
+          "forced": true
+        }
+      },
+      "safeExceptionClasses": {
+        "classes": [],
+        "sensitiveLogDetected": false
+      }
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "number": 1,
+      "requirement": "迁移、配置、密钥、权限、任务、实时连接和插件版本均有升级检查。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "native-attempt-01:213 passed backend checks; original overall batch remains failed",
+        "migration-native-attempt-02",
+        "candidate03-native-ui-attempt-01",
+        "docs/acceptance/session-redis-timeout-144.md",
+        "docs/acceptance/summer4-final-gates-144-v2.md"
+      ],
+      "originalFailureEvidence": [
+        "native-ui-attempt-04",
+        "native-ui-attempt-05:historical500/success=true defect retained, not passing evidence"
+      ]
+    },
+    {
+      "number": 2,
+      "requirement": "备份恢复演练能够恢复关键数据和权限状态。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "native-attempt-01",
+        "migration-native-attempt-02"
+      ]
+    },
+    {
+      "number": 3,
+      "requirement": "两节点滚动升级期间 API、会话、缓存和事件行为满足兼容窗口。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "native-attempt-01:passed mixed-version API/session/cache/event/task/SSE/rolling checks",
+        "cache-fault-native-attempt-01",
+        "candidate03-native-ui-attempt-01",
+        "docs/acceptance/summer4-final-gates-144-v2.md"
+      ],
+      "originalFailureEvidence": [
+        "native-ui-attempt-04",
+        "native-ui-attempt-05:historical500/success=true defect retained, not passing evidence"
+      ]
+    },
+    {
+      "number": 4,
+      "requirement": "输出需求—设计—实现—测试—缺陷—验收追踪和未完成项清单。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "docs/acceptance/summer4-parent108-trace.md"
+      ]
+    },
+    {
+      "number": 5,
+      "requirement": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "migration-native-attempt-02",
+        "scope-native-attempt-01",
+        "cache-fault-native-attempt-01",
+        "candidate03-native-ui-attempt-01",
+        "docs/acceptance/session-redis-timeout-144.md",
+        "docs/acceptance/summer4-final-gates-144-v2.md"
+      ],
+      "originalFailureEvidence": [
+        "native-ui-attempt-04",
+        "native-ui-attempt-05:historical500/success=true defect retained, not passing evidence"
+      ]
+    },
+    {
+      "number": 6,
+      "requirement": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "scope-native-attempt-01",
+        "typed-error-green:4/0/0/0",
+        "cache-fault-native-attempt-01",
+        "candidate03-native-ui-attempt-01",
+        "docs/acceptance/session-redis-timeout-144.md",
+        "docs/acceptance/summer4-final-gates-144-v2.md"
+      ],
+      "originalFailureEvidence": [
+        "native-ui-attempt-04",
+        "native-ui-attempt-05:historical500/success=true defect retained, not passing evidence"
+      ]
+    },
+    {
+      "number": 7,
+      "requirement": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+      "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+      "evidence": [
+        "docs/guides/summer4-t36-final-acceptance.md",
+        "this JSON and exact FILES.json"
+      ]
+    }
+  ],
+  "originalDefectEvidence": {
+    "status": "REPRODUCED_PRODUCT_ERROR_ENVELOPE_DEFECT",
+    "trigger": "Actual Chrome session: docker pause owned Redis, click release readiness refresh",
+    "request": {
+      "method": "GET",
+      "path": "/internal/v1/release/readiness",
+      "auth": "real login Cookie plus app Bearer",
+      "mocking": false
+    },
+    "response": {
+      "status": 500,
+      "elapsedMs": 2128,
+      "fields": [
+        "success",
+        "data",
+        "error",
+        "requestId",
+        "timestamp"
+      ],
+      "dataFields": [
+        "timestamp",
+        "status",
+        "error",
+        "path"
+      ],
+      "success": true,
+      "errorType": "object",
+      "code": null,
+      "requestId": "cf2122f4-6a95-46e8-938a-d9b2e81b9eb1",
+      "responseRequestId": "cf2122f4-6a95-46e8-938a-d9b2e81b9eb1"
+    },
+    "safeExceptionClasses": {
+      "classes": [
+        [
+          23081,
+          "io.lettuce.core.RedisCommandTimeoutException"
+        ],
+        [
+          23081,
+          "org.springframework.dao.QueryTimeoutException"
+        ]
+      ],
+      "sensitiveLogDetected": false
+    },
+    "evidence": "native-ui-attempt-05/browser-result.json",
+    "counts": {
+      "tests": 74,
+      "failures": 2,
+      "errors": 1,
+      "skipped": 0
+    },
+    "browserCounts": {
+      "tests": 5,
+      "failures": 1,
+      "errors": 1,
+      "skipped": 0
+    },
+    "browserShutdown": {
+      "processExited": true,
+      "forced": true
+    },
+    "otherBrowserScenarios": [
+      {
+        "name": "native_login_preflight_ten_checks",
+        "passed": true
+      },
+      {
+        "name": "native_redis_recovery",
+        "passed": true
+      },
+      {
+        "name": "native_persisted_denial_clears_previous_result",
+        "passed": true
+      },
+      {
+        "name": "native_cross_node_websocket_delivery_and_replay",
+        "passed": true
+      }
+    ],
+    "cacheFacts": [
+      {
+        "name": "GET /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+        "passed": true,
+        "httpStatus": 200,
+        "expected": 200,
+        "node": 23081,
+        "code": null,
+        "requestId": "t36-d0a13dbb5cce4f8d861463f4e06a3fed",
+        "responseRequestId": "t36-d0a13dbb5cce4f8d861463f4e06a3fed"
+      },
+      {
+        "name": "GET /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+        "passed": true,
+        "httpStatus": 200,
+        "expected": 200,
+        "node": 23082,
+        "code": null,
+        "requestId": "t36-92b010170b9541a9b13848cb854a5bbc",
+        "responseRequestId": "t36-92b010170b9541a9b13848cb854a5bbc"
+      },
+      {
+        "name": "GET /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+        "passed": true,
+        "httpStatus": 200,
+        "expected": 200,
+        "node": 23081,
+        "code": null,
+        "requestId": "t36-0eae5961a0de44478137b5c217fc3975",
+        "responseRequestId": "t36-0eae5961a0de44478137b5c217fc3975"
+      },
+      {
+        "name": "paused Redis safely serves warmed parameter",
+        "passed": true,
+        "node": 23081
+      },
+      {
+        "name": "GET /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+        "passed": true,
+        "httpStatus": 200,
+        "expected": 200,
+        "node": 23082,
+        "code": null,
+        "requestId": "t36-2bac182c19e74337811a15fa0445d824",
+        "responseRequestId": "t36-2bac182c19e74337811a15fa0445d824"
+      },
+      {
+        "name": "paused Redis safely serves warmed parameter",
+        "passed": true,
+        "node": 23082
+      },
+      {
+        "name": "PATCH /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+        "passed": true,
+        "httpStatus": 200,
+        "expected": 200,
+        "node": 23081,
+        "code": null,
+        "requestId": "t36-b66b768f097a4df3a7eea062c12fa66a",
+        "responseRequestId": "t36-b66b768f097a4df3a7eea062c12fa66a"
+      },
+      {
+        "name": "GET /api/v1/enterprises/ent-acme/system-parameters/t36-cache-fault",
+        "passed": false,
+        "httpStatus": 503,
+        "expected": 200,
+        "node": 23082,
+        "code": "SUMMER_DEPENDENCY_UNAVAILABLE",
+        "requestId": "t36-c421e0078ae241c9bce6e7f69e3e765f",
+        "responseRequestId": "t36-c421e0078ae241c9bce6e7f69e3e765f"
+      }
+    ],
+    "cleanup": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "23081": false,
+        "23082": false,
+        "23083": false,
+        "23573": false,
+        "23580": false
+      },
+      "app_account_absent": true
+    },
+    "noProductEdits": true,
+    "next": "Root owns read-only diagnosis and any unfreeze. Independently supplement cache controlled503/denial/recovery without re-running successful mixed-version matrix."
+  },
+  "reports": [
+    {
+      "path": "docs/guides/summer4-t36-final-acceptance.md",
+      "sha256": "86ea8cc6f7057145e1dde80cb0aecce20155464a1b534cf508fb58149b6081df"
+    },
+    {
+      "path": "docs/acceptance/summer4-final-gates-144-v2.md",
+      "sha256": "3daa0c30a465feda15b2cb6fe7e9eca59a43b17fefad4cb7fe60ddfa4f1f52a5"
+    },
+    {
+      "path": "docs/acceptance/summer4-historical-ac-109-117-133.md",
+      "sha256": "0143b9f969d85ef8e54e9b243dd465a6b93f0d5adcbec5b0d02872afda9210fd"
+    }
+  ],
+  "postRunVerification": [
+    {
+      "attempt": "native-attempt-01",
+      "kind": "post_run_independent_input_verification",
+      "snapshots": {
+        "backend-inputs.json": {
+          "count": 543,
+          "drift": []
+        },
+        "ui-inputs-before.json": {
+          "count": 252,
+          "drift": []
+        }
+      },
+      "originalResultUnmodified": true
+    },
+    {
+      "attempt": "native-ui-attempt-02",
+      "kind": "post_run_independent_input_verification",
+      "snapshots": {
+        "backend-inputs.json": {
+          "count": 543,
+          "drift": []
+        },
+        "ui-inputs-before.json": {
+          "count": 252,
+          "drift": []
+        }
+      },
+      "originalResultUnmodified": true
+    },
+    {
+      "attempt": "native-ui-attempt-03",
+      "kind": "post_run_independent_input_verification",
+      "snapshots": {
+        "backend-inputs.json": {
+          "count": 543,
+          "drift": []
+        },
+        "ui-inputs-before.json": {
+          "count": 252,
+          "drift": []
+        }
+      },
+      "originalResultUnmodified": true
+    }
+  ],
+  "visualReview": {
+    "screenshots": [
+      "native-ui-attempt-03/preflight-ready.png",
+      "native-ui-attempt-05/preflight-dependency-fault.png",
+      "native-ui-attempt-05/preflight-forbidden.png",
+      "native-ui-attempt-05/preflight-recovered.png",
+      "candidate03-native-ui-attempt-01/preflight-ready.png",
+      "candidate03-native-ui-attempt-01/preflight-dependency-fault.png",
+      "candidate03-native-ui-attempt-01/preflight-forbidden.png",
+      "candidate03-native-ui-attempt-01/preflight-recovered.png",
+      "candidate03-native-ui-attempt-01/preflight-permission-restored.png"
+    ],
+    "method": "Native Chrome151 screenshot inspected visually",
+    "observed": "Chinese text,10 business rows, requestId, clearing old READY/data on failure, and recovery are legible without clipping or overlap."
+  },
+  "limitations": [
+    "Single isolated local MySQL/Redis deployment, not production Kubernetes or arbitrary historic-version compatibility.",
+    "Candidate02 unrelated scope/migration/rolling/cache business results reused by identical runtime bytecode/resources/dependencies; candidate03 supplement is not a rerun of those original batches.",
+    "Raw JWT, passwords, cookies, private keys and SQL dump content are never in this report.",
+    "Root final backend06 gates775 include644 executed and131 FROM-CACHE; backend05 historical767=652 executed+115 cached remains separate; neither total means all native HTTP."
+  ],
+  "candidate03AffectedScope": {
+    "id": "candidate03-native-ui-attempt-01",
+    "meaning": "Candidate03 affected-scope real Cookie503/no-store/correlation, pure Bearer200 NOT_READY, recovery, Chrome403/restoration and cross-nodeWS. Candidate02 unrelated batches explicitly reused.",
+    "stage": "complete",
+    "counts": {
+      "tests": 85,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exitCode": 0,
+    "namedChecksPassed": 85,
+    "candidate": {
+      "sha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+      "source": "/Users/bluepoint/Project/abluepoint/summer/.git/summer4-closeout-20261015/t36-final/frozen-build-03/candidate.jar"
+    },
+    "businessSqlWrites": false,
+    "networkMocking": false,
+    "cleanup": {
+      "schema_absent": true,
+      "container_absent": true,
+      "redis_isolated_container_destroyed": true,
+      "listeners": {
+        "23081": false,
+        "23082": false,
+        "23083": false,
+        "23573": false,
+        "23580": false
+      },
+      "app_account_absent": true
+    },
+    "originalResultSha256": "9e8268f8e3a193dd43256f7adce51170b35dd077bd6315b946f6da432cbfce40",
+    "rawEvidenceDirectory": ".git/summer4-closeout-20261015/t36-final/candidate03-native-ui-attempt-01",
+    "failedChecks": [],
+    "cleanupVerified": true,
+    "browser": {
+      "checks": [
+        {
+          "name": "native_login_preflight_ten_checks",
+          "passed": true
+        },
+        {
+          "name": "native_redis_fault_contract",
+          "passed": true
+        },
+        {
+          "name": "native_redis_recovery",
+          "passed": true
+        },
+        {
+          "name": "native_persisted_denial_clears_previous_result",
+          "passed": true
+        },
+        {
+          "name": "native_cross_node_websocket_delivery_and_replay",
+          "passed": true
+        }
+      ],
+      "networkMocking": false,
+      "pageErrors": 0,
+      "errors": 0,
+      "skipped": 0,
+      "browserVersion": "151.0.7922.109",
+      "responses": [
+        {
+          "status": 200,
+          "elapsedMs": 213,
+          "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+          "fields": [
+            "success",
+            "data",
+            "error",
+            "requestId",
+            "timestamp"
+          ],
+          "dataFields": [
+            "status",
+            "checks",
+            "rollbackDryRunSupported"
+          ],
+          "success": true,
+          "errorType": "object",
+          "code": null,
+          "requestId": "d3899db2-bb11-41dc-9a5b-8598d68538bd",
+          "responseRequestId": "d3899db2-bb11-41dc-9a5b-8598d68538bd"
+        },
+        {
+          "status": 503,
+          "elapsedMs": 2181,
+          "cacheControl": "no-store",
+          "fields": [
+            "success",
+            "data",
+            "error",
+            "requestId",
+            "timestamp"
+          ],
+          "dataFields": [],
+          "success": false,
+          "errorType": "object",
+          "code": "SUMMER_SESSION_STORE_UNAVAILABLE",
+          "requestId": "baec3286-033a-461a-930a-726ae6156757",
+          "responseRequestId": "baec3286-033a-461a-930a-726ae6156757"
+        },
+        {
+          "status": 200,
+          "elapsedMs": 221,
+          "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+          "fields": [
+            "success",
+            "data",
+            "error",
+            "requestId",
+            "timestamp"
+          ],
+          "dataFields": [
+            "status",
+            "checks",
+            "rollbackDryRunSupported"
+          ],
+          "success": true,
+          "errorType": "object",
+          "code": null,
+          "requestId": "c5f06331-5582-4578-8b3f-bc43f8a6e1bf",
+          "responseRequestId": "c5f06331-5582-4578-8b3f-bc43f8a6e1bf"
+        },
+        {
+          "status": 403,
+          "elapsedMs": 89,
+          "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+          "fields": [
+            "success",
+            "data",
+            "error",
+            "requestId",
+            "timestamp"
+          ],
+          "dataFields": [],
+          "success": false,
+          "errorType": "object",
+          "code": "SUMMER_FORBIDDEN",
+          "requestId": "41b973bb-7f15-40d1-b8fd-59bb56e88249",
+          "responseRequestId": "41b973bb-7f15-40d1-b8fd-59bb56e88249"
+        },
+        {
+          "status": 200,
+          "elapsedMs": 308,
+          "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+          "fields": [
+            "success",
+            "data",
+            "error",
+            "requestId",
+            "timestamp"
+          ],
+          "dataFields": [
+            "status",
+            "checks",
+            "rollbackDryRunSupported"
+          ],
+          "success": true,
+          "errorType": "object",
+          "code": null,
+          "requestId": "69c2f150-52d9-4a57-8d60-b1ec99e69c0a",
+          "responseRequestId": "69c2f150-52d9-4a57-8d60-b1ec99e69c0a"
+        }
+      ],
+      "tests": 5,
+      "failures": 0,
+      "tableRows": {
+        "all": 12,
+        "checks": 10
+      },
+      "faultContract": "SESSION_STORE_503",
+      "shutdown": {
+        "processExited": true,
+        "forced": true
+      }
+    },
+    "safeExceptionClasses": {
+      "classes": [],
+      "sensitiveLogDetected": false
+    }
+  },
+  "candidate03Sha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+  "candidate02To03Reuse": {
+    "candidateSha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+    "inputCount": 543,
+    "sourceDelta": [
+      "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.java"
+    ],
+    "inputDrift": [],
+    "changedClassEntries": [
+      "BOOT-INF/classes/com/abluepoint/summer/sample/identity/SessionFailureConfiguration$1.class",
+      "BOOT-INF/classes/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.class"
+    ],
+    "all40MigrationResourcesUnchanged": true,
+    "unaffectedReuse": [
+      "scope-native-attempt-01:93/0/0/0",
+      "migration-native-attempt-02:54/0/0/0",
+      "native-attempt-01:first213 backend named checks, entire batch214/1/1/0 preserved",
+      "cache-fault-native-attempt-01:76/0/0/0; stateless cache unaffected"
+    ],
+    "affectedRevalidation": "Real Cookie Redis timeout, pure Bearer readiness, recovery,403,WS in independent candidate03 batch"
+  },
+  "candidate03RootRuntimeDelta": {
+    "candidate02Sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+    "candidate03Sha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+    "changedRuntimeEntries": [
+      "BOOT-INF/classes/com/abluepoint/summer/sample/identity/SessionFailureConfiguration$1.class",
+      "BOOT-INF/classes/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.class"
+    ],
+    "sameRuntimeEntrySet": true,
+    "outerSemanticDisassemblyEqual": true,
+    "runtimeEntriesCompared": 987,
+    "interpretation": "Actual03 native affected-path proof required;02 batches remain02; unaffected protocol/data/migration scope may be explicitly reused. Initial expected-one-class validator failure retained separately."
+  },
+  "resolvedDefect": {
+    "original": "native-ui-attempt-04 and05 retained500/success=true",
+    "resolution": "Root SessionFailureConfiguration Redis cause-chain fix; candidate03 real Cookie503 Unified failure/no-data/no-store and Bearer isolation pass",
+    "evidence": "candidate03-native-ui-attempt-01"
+  }
+}

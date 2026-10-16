@@ -29,7 +29,10 @@ class SessionFailureConfiguration {
                     for (int i = 0; cause != null && i < 20; i++, cause = cause.getCause()) {
                         if (cause instanceof SessionIndexUnavailableException
                                 || cause instanceof org.springframework.data.redis.RedisConnectionFailureException
-                                || cause instanceof org.springframework.data.redis.RedisSystemException) unavailable = true;
+                                || cause instanceof org.springframework.data.redis.RedisSystemException
+                                // Lettuce translates command timeouts to the generic QueryTimeoutException.
+                                // Match its Redis cause, not JDBC or other data-store query timeouts.
+                                || cause instanceof io.lettuce.core.RedisCommandTimeoutException) unavailable = true;
                     }
                     if (!unavailable || response.isCommitted()) throw failure;
                     response.reset();

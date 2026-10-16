@@ -97,6 +97,20 @@ class T36UpgradeAcceptanceHttpTest {
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }
 
+    @Test
+    void unexpectedClaimConversionFailureDoesNotExposeInternalDetails() throws Exception {
+        mockMvc.perform(get("/internal/v1/release/readiness")
+                        .header("X-Request-Id", "t36-safe-error")
+                        .with(jwt().jwt(token -> token.subject("t36-invalid-claim")
+                                        .claim("release_operator", java.util.Map.of("value", "t36-private-canary")))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_internal.release.read"))))
+                .andExpect(status().isInternalServerError())
+                .andExpect(header().string("X-Request-Id", "t36-safe-error"))
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.error.message").value("An unexpected error occurred"))
+                .andExpect(jsonPath("$.requestId").value("t36-safe-error"));
+    }
+
     private static org.springframework.test.web.servlet.request.RequestPostProcessor operator(String scope) {
         return jwt().jwt(token -> token.subject("t36-release-operator")
                         .claim("release_operator", true)

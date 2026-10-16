@@ -1,0 +1,518 @@
+{
+  "status": "BACKEND_FRONTEND_GATES_VERIFIED_T36_PENDING",
+  "reviewedAt": "2026-10-16T03:42:04.071836+08:00",
+  "issue": 144,
+  "reviewHead": "6c024b5270437ce811cdc9ac36bb1e8f7d953be0",
+  "backendExecutionHead": "53c4b015db2424a75c8189b6c83019fb599ec370",
+  "backend": {
+    "batch": "backend-05",
+    "exit": 0,
+    "counts": {
+      "tests": 767,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suiteCount": 180,
+    "xmlCaseCount": 767,
+    "allRunnerSuiteAndCaseRecordsMatchXml": true,
+    "execution": {
+      "EXECUTED": {
+        "testTaskCount": 2,
+        "xmlTests": 652,
+        "xmlSuites": 160
+      },
+      "FROM-CACHE": {
+        "testTaskCount": 7,
+        "xmlTests": 115,
+        "xmlSuites": 20
+      },
+      "UP-TO-DATE": {
+        "testTaskCount": 0,
+        "xmlTests": 0,
+        "xmlSuites": 0
+      }
+    },
+    "modules": {
+      "summer-common": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 1,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-common:test FROM-CACHE"
+      },
+      "summer-common-autoconfigure": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 1,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-common-autoconfigure:test FROM-CACHE"
+      },
+      "summer-data-jpa": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 3,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-data-jpa:test FROM-CACHE"
+      },
+      "summer-data-jpa-autoconfigure": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 1,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-data-jpa-autoconfigure:test FROM-CACHE"
+      },
+      "summer-mvc": {
+        "tests": 82,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 11,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-mvc:test FROM-CACHE"
+      },
+      "summer-mvc-autoconfigure": {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 1,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-mvc-autoconfigure:test FROM-CACHE"
+      },
+      "summer-sample": {
+        "tests": 636,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 155,
+        "taskState": "EXECUTED",
+        "event": "> Task :summer-sample:test"
+      },
+      "summer-security": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 2,
+        "taskState": "FROM-CACHE",
+        "event": "> Task :summer-security:test FROM-CACHE"
+      },
+      "summer-security-autoconfigure": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 5,
+        "taskState": "EXECUTED",
+        "event": "> Task :summer-security-autoconfigure:test"
+      }
+    },
+    "noSourceTestModules": [
+      "summer-boot-starter",
+      "summer-common-starter",
+      "summer-data-jpa-starter",
+      "summer-mvc-starter",
+      "summer-security-starter"
+    ],
+    "baseline": {
+      "batch": "backend-04",
+      "counts": {
+        "tests": 733,
+        "failures": 7,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suiteCount": 171,
+      "caseRecordsPreserved": 733,
+      "missing": 0,
+      "comparison": "suite + testcase display name with multiplicity; two repeated parameterized display names retain their two occurrences in both batches"
+    },
+    "additionalCaseRecords": {
+      "total": 34,
+      "sampleNewEventAndPlatformScopeRegressions": 14,
+      "securityExistingRecordsNotReachedAfterBackend04Failure": 20
+    },
+    "conditionalExecution": {
+      "environmentGatedMySql": {
+        "classes": 7,
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "dockerGatedTestcontainers": {
+        "classes": 9,
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "taskState": "EXECUTED in summer-sample:test"
+    },
+    "earlyReturnBoundaries": [
+      {
+        "class": "IdentityChainE2EContractTest",
+        "method": "connectionServiceContextCannotChangeBetweenDecisionAndExecution",
+        "enableProperty": "aict.identity.contract.strict"
+      },
+      {
+        "class": "IdentityChainE2EContractTest",
+        "method": "sameOriginBffToSummerMcpJourneyIsExplicitlyGatedUntilRuntimeExists",
+        "enableProperty": "aict.e2e.enabled"
+      }
+    ],
+    "earlyReturnInterpretation": "Both are PASSED XML records. Source returns before behavior assertions when properties are off; runner/init/build scripts do not explicitly enable them. No independent BFF/strict external-chain execution evidence is supplied, so neither is counted as that acceptance. No claim that remaining records are all native HTTP.",
+    "cacheProvenance": "All seven FROM-CACHE modules have exact matching original local Gradle cache JUnit XML after removing output blocks, cache key/origin build ID/Gradle9.0.0 metadata; captured module source inputs match backend04, backend05 and current. Standard Gradle task fingerprint is not independently recomputed.",
+    "source": {
+      "inputCount": 729,
+      "freezeMatchesBefore": true,
+      "currentVsBeforeDifferences": [],
+      "runnerPostExecutionChangedPaths": [],
+      "postSnapshotLimit": "runner computes after=snap() and persists changedDuringExecution only; no standalone full source-after.json; current full readback is independently captured in current-source.json",
+      "candidateInputCount": 543,
+      "candidateCurrentDifferences": [],
+      "candidateAndGateOverlapCount": 543,
+      "candidateAndGateOverlapDifferences": [],
+      "candidateOnlyInputs": []
+    }
+  },
+  "historicalFailures": {
+    "backend04": {
+      "exit": 1,
+      "counts": {
+        "tests": 733,
+        "failures": 7,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reasons": [
+        {
+          "class": "SystemParameterCountHttpTest",
+          "failures": 5,
+          "cause": "test application.yml shadows production Redis env mapping; credential precondition failed"
+        },
+        {
+          "class": "SummerEndToEndTest",
+          "failures": 1,
+          "cause": "same Redis mapping boundary caused health request to return 503"
+        },
+        {
+          "class": "CustomerAuditMySqlIntegrationTest",
+          "failures": 1,
+          "cause": "V38 adds nullable trace_id: actual11 vs obsolete exact10 assertion"
+        }
+      ],
+      "preserved": true
+    },
+    "historical525": {
+      "counts": {
+        "tests": 525,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "scope": "2026-10-15 prior merged checkpoint; not current candidate; two existing BFF/strict early-return limitations remain"
+    }
+  },
+  "targetedFixes": {
+    "redisScopedFix": {
+      "result": ".git/summer4-closeout-20261015/final-gates/redis-test-config-fix-01/targeted-02/result.json",
+      "counts": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "xmlFiles": [
+        {
+          "path": ".git/summer4-closeout-20261015/final-gates/redis-test-config-fix-01/targeted-02/xml/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml",
+          "sha256": "215f1049a57e9028ce8736cca2d250935bd5853daaf153605d66ff493dc5e7ae"
+        },
+        {
+          "path": ".git/summer4-closeout-20261015/final-gates/redis-test-config-fix-01/targeted-02/xml/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterCountHttpTest.xml",
+          "sha256": "f9d114c0b789afa1f09fd3c4c884026d35b586aaecc241b0f0338f09c8a796b1"
+        }
+      ],
+      "sourceStableWithinCapturedScope": true
+    },
+    "auditSchemaFix": {
+      "result": ".git/summer4-closeout-20261015/customer-audit-schema-fix-01/green-01/result.json",
+      "counts": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "xmlFiles": [
+        {
+          "path": ".git/summer4-closeout-20261015/customer-audit-schema-fix-01/green-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerAuditMySqlIntegrationTest.xml",
+          "sha256": "7a085ec90c6264b57d251c29684c809a8ea7a5753cc2a12a303ee4fe43e65d89"
+        }
+      ],
+      "sourceStableWithinCapturedScope": true
+    }
+  },
+  "rootTestInfrastructureFiles": {
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/customer/CustomerAuditMySqlIntegrationTest.java": "132b45019967c981b8956583f948478bb1cd83f61b4db863235853eea9cc1366",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/systemparameter/SystemParameterCountHttpTest.java": "556779777f3203deee0c8228eee0992674ef314b46dff040e78f4bd41019803d",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/SummerEndToEndTest.java": "2d3f63bc1d3f05da3054c817d30d2115468137553c7e06d3290bb0569618e57a"
+  },
+  "testApplicationYml": {
+    "matchesBeforeTemporaryGlobalEdit": true,
+    "sha256": "e1dc8e50332363035fd7a9e19591a51df98b26c4445d09d77cdaa02e434429bf"
+  },
+  "frontend": [
+    {
+      "batch": "frontend-02",
+      "nodeVersion": "v22.23.1",
+      "sourceInputCount": 330,
+      "sourceBeforeAfterEqual": true,
+      "currentSourceDifferences": [
+        "summer-ui/src/pages/roles/index.tsx"
+      ],
+      "gates": [
+        {
+          "gate": "typecheck",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "01-typecheck.log",
+          "logSha256": "74c103eacd986366abb68fb16896bc2aad3b40178f9f776bc55298dc13722885",
+          "sourceDrift": []
+        },
+        {
+          "gate": "test",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [
+            {
+              "tests": 19,
+              "suites": 0,
+              "pass": 19,
+              "fail": 0,
+              "cancelled": 0,
+              "skipped": 0,
+              "todo": 0
+            },
+            {
+              "tests": 11,
+              "suites": 0,
+              "pass": 11,
+              "fail": 0,
+              "cancelled": 0,
+              "skipped": 0,
+              "todo": 0
+            },
+            {
+              "tests": 9,
+              "suites": 0,
+              "pass": 9,
+              "fail": 0,
+              "cancelled": 0,
+              "skipped": 0,
+              "todo": 0
+            }
+          ],
+          "log": "02-test.log",
+          "logSha256": "d47bb1337c5617d37f1853dd963c04a8808b3574cd2fbb540440324f33ad749c",
+          "sourceDrift": []
+        },
+        {
+          "gate": "test:mock-boundary",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "03-test-mock-boundary.log",
+          "logSha256": "6667cfa2fa73756fcd6276fbbd5a244b280fa0d60e6e17de958d4556b2a349f8",
+          "sourceDrift": []
+        },
+        {
+          "gate": "test:proxy",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "04-test-proxy.log",
+          "logSha256": "138ed53aff3bb1c61dda8fb71cffaf844417d64624fc9c307b3bd7d8b2271bbf",
+          "sourceDrift": []
+        },
+        {
+          "gate": "lint",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "05-lint.log",
+          "logSha256": "b23db9df4ff89d8a27fe5378f14fc65e87277a9c2eedf5cea38dd78c95fec368",
+          "sourceDrift": []
+        },
+        {
+          "gate": "lint:style",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "06-lint-style.log",
+          "logSha256": "7275925f6c5eb13de35fd3ef2a16b660a6ff7b3eff8e482cb05617bc29b3b101",
+          "sourceDrift": []
+        },
+        {
+          "gate": "build",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "07-build.log",
+          "logSha256": "962571cb3cbc5093574d160a93fdb24d7c81a7c8f579441e81fc7c78435745e8",
+          "sourceDrift": []
+        }
+      ],
+      "cleanupVerifiedByRecordedMetadata": true
+    },
+    {
+      "batch": "frontend-03",
+      "nodeVersion": "v22.23.1",
+      "sourceInputCount": 330,
+      "sourceBeforeAfterEqual": true,
+      "currentSourceDifferences": [],
+      "gates": [
+        {
+          "gate": "typecheck",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "01-typecheck.log",
+          "logSha256": "74c103eacd986366abb68fb16896bc2aad3b40178f9f776bc55298dc13722885",
+          "sourceDrift": []
+        },
+        {
+          "gate": "lint",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "02-lint.log",
+          "logSha256": "b23db9df4ff89d8a27fe5378f14fc65e87277a9c2eedf5cea38dd78c95fec368",
+          "sourceDrift": []
+        },
+        {
+          "gate": "build",
+          "exitCode": 0,
+          "timedOut": false,
+          "nodeTestSummaries": [],
+          "log": "03-build.log",
+          "logSha256": "2a393200b960a84aed777261be213697c873c57d17e3cedb3df12578c82cbafa",
+          "sourceDrift": []
+        }
+      ],
+      "cleanupVerifiedByRecordedMetadata": true
+    }
+  ],
+  "frontendReuse": {
+    "baseline": "frontend-02:7gates exit0,39Node,330inputs stable",
+    "onlyFrontendSourceDelta": [
+      "summer-ui/src/pages/roles/index.tsx"
+    ],
+    "delta": "Two React keys use HTTP method/path rather than shared permissionCode; grant values unchanged",
+    "affectedRerun": [
+      "typecheck",
+      "lint",
+      "build"
+    ],
+    "dedicatedCauseTest": "duplicate-probe-02 red1/1 -> duplicate-source-green1/0 (real React/Arco synthetic transport, native business supplement separately owned)",
+    "mainFreeze": ".git/summer4-closeout-20261015/enterprise-page-integration-fix-01/MAIN_SOURCE_FROZEN-v2.json",
+    "freezeManifestSha256": "d7fe0999ae267ac0df20a71e2649255ad6f2f09fd6ebccf3623fd8105d1b9033"
+  },
+  "frontendBoundary": "39 Node tests are 19+11+9 actual node:test summaries; source contracts, local synthetic Mock/Chrome boundary and proxy checks are separate commands. No new native backend/business Chrome acceptance. Lint exit0 with65 warnings, no errors. frontend03 reruns only typecheck/lint/build after two method/path React key changes.",
+  "candidate": {
+    "sha256": "8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e",
+    "buildInputs": 543,
+    "allCandidateInputsPresentAndEqualInBackend729": true,
+    "allInputsMatchCurrent": true,
+    "migrationResources": {
+      "total": 40,
+      "mysql": 39,
+      "common": 1,
+      "allJarBytesMatchCurrentSource": true
+    },
+    "originalValidatorResult": {
+      "exit": 1,
+      "preserved": true,
+      "reason": "mistook total migrations count as39, actual40=MySQL39+common1; Gradle build itself succeeded"
+    },
+    "correctionStatus": "PASSED_AFTER_VALIDATOR_CORRECTION",
+    "boundary": "Resource validation is not proof of real migration/restore execution."
+  },
+  "t36": {
+    "status": "PENDING",
+    "scope": "Current candidate native combined validation in the coordinator-owned230xx window, including planned upgrade/restore proof; no result consumed or inferred here.",
+    "closesIssue144": false
+  },
+  "evidence": [
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-05/result.json",
+      "sha256": "041f19d4a4210bc6e8d6f0aedb41b164370881961df90a5089e77fe36a9b3518"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-04/result.json",
+      "sha256": "46634c072897240cf96c10aa55a4e01a925d23599bda5f2e5c92ff3fe649383b"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/backend-05/source-before.json",
+      "sha256": "f8cf63ea16eba3245b06fe6cb5dca4354f55006d448d730fe1d62f185dbfbf2d"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/FINAL-BACKEND-FREEZE-05.json",
+      "sha256": "5badcf890718b86d92fbcd91c65bf77064c1feeaf547ff1fc7b3e821ab1caebc"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/ROOT-TEST-INFRA-FILES.json",
+      "sha256": "e8012b587b1f13f801e114cd105e4236758f3ba5f2eefd1e0d5f27c79d01e6a2"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/frontend-02/RESULT.json",
+      "sha256": "426fb5d880060f403e98e020dcb5cba72119c0abb7b305e16d393122053c6f0a"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/frontend-03/RESULT.json",
+      "sha256": "20c567f55f495811b2847ca7c3fca4c09ab16090b41fbd00c5ec63c90d32a180"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/final-gates/frontend-03/incremental-scope.json",
+      "sha256": "ab07f86ae2e411c57780f218ea5ad6963bff333c653eade50a9e46f03cffe378"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate-build.json",
+      "sha256": "da9b834b3a9dcc4c78a8e9b9c99e6a13cc06e3b88baf4b8ef444317a4ac6ff2f"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/frozen-build-02/migration-count-correction.json",
+      "sha256": "94ed1b26c7d93eb43bfe67d3284637b2983c0ac90f00538d5c51d50b2c9ff829"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/t36-final/frozen-build-02/candidate-inputs.json",
+      "sha256": "21d0dbb56b3222a425da6cfe2624bc1a63cf5f453b08462877acd6483315ee0e"
+    },
+    {
+      "path": "docs/guides/summer4-merge-review-20261015.md",
+      "sha256": "c30242a471bb1890fbac20635a07b1814576be9cb126e86946a9f798bb5c881e"
+    }
+  ],
+  "privateIndependentReadbackDirectory": ".git/summer4-closeout-20261015/final-review/final-gates-05",
+  "protectedUserInputs": {
+    "customerControllerSha256": "d6a830964d63ee8e60f2b32c1a4561000a76f86488f6ca35330c9e1dbd94b416",
+    "dependencyLogPresent": true,
+    "index": "No index write/stage/commit/push/Issue operation by this audit; original993 protection is coordinator evidence, extra shared entries retained."
+  },
+  "reviewActions": {
+    "newGradleBuildTestOrEnvironmentExecutions": 0,
+    "publicFilesWritten": [
+      "docs/acceptance/summer4-final-gates-144.md",
+      "docs/acceptance/summer4-final-gates-144.json"
+    ]
+  }
+}

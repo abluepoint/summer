@@ -22,7 +22,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest(properties = {"summer.security.storage.keys=memory", "summer.sample.authorization.legacy-scope-compatibility=true"})
+@SpringBootTest(properties = {
+        "summer.security.storage.keys=memory",
+        "summer.sample.authorization.legacy-scope-compatibility=true",
+        "spring.data.redis.host=${SUMMER_REDIS_HOST:127.0.0.1}",
+        "spring.data.redis.port=${SUMMER_REDIS_PORT:6379}",
+        "spring.data.redis.username=${SUMMER_REDIS_USERNAME:}",
+        "spring.data.redis.password=${SUMMER_REDIS_PASSWORD:}",
+        "spring.data.redis.database=${SUMMER_TEST_REDIS_DATABASE:15}",
+        "spring.data.redis.timeout=2s",
+        "spring.data.redis.connect-timeout=2s"
+})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class SystemParameterCountHttpTest {

@@ -1,0 +1,696 @@
+{
+  "status": "HISTORICAL_AC_MAPPING_REVIEWED_FINAL_CURRENT_CANDIDATE_ACCEPTANCE_SEPARATE",
+  "issueNumbers": [
+    109,
+    117,
+    133
+  ],
+  "purpose": "仅补齐历史关闭票复选框的21条证据映射，不把历史结果称当前候选通过。",
+  "originalAuditSha256": "a0977b6bdb3c50f70dd740824db4e848a2b094b9bb5ec52a28f8a7b05ca53e89",
+  "originalAuditRelativePath": ".git/summer4-closeout-20261015/final-review/historical-ac-sync-01/REPORT.json",
+  "historicalClosureCommit": "ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3",
+  "tickets": [
+    {
+      "number": 109,
+      "title": "T01｜认证存储扩展点预重构",
+      "url": "https://github.com/abluepoint/summer/issues/109",
+      "stateAtReadback": "CLOSED",
+      "stories": [
+        1,
+        34,
+        35,
+        37
+      ],
+      "closureReference": {
+        "commentId": 6185696796,
+        "url": "https://github.com/abluepoint/summer/issues/109#issuecomment-6185696796",
+        "updatedAt": "2026-10-15T06:08:29Z",
+        "verifiedAncestorCommits": [
+          "ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3"
+        ]
+      },
+      "criteria": [
+        {
+          "index": 1,
+          "text": "现有登录、PKCE 回调、退出、CSRF 和会话测试继续通过。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "C109",
+            "D25",
+            "S25",
+            "SEC",
+            "X",
+            "PKCE",
+            "NODES",
+            "B25"
+          ],
+          "support": "10项PKCE、14项双节点会话、Cookie/Secure各1及真实Chrome7保留登录/回调/注销/CSRF/会话行为。",
+          "limits": "MockMvc与最小Tomcat、完整应用Chrome分列；历史47/12/7有重叠，不加总为新执行。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 2,
+          "text": "身份、OAuth 客户端、授权同意、会话和密钥存储均可由配置选择实现。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "SEL",
+            "WIR",
+            "ADP",
+            "JDBC",
+            "X"
+          ],
+          "support": "默认memory与六维custom选择、缺失adapter拒绝均3绿；Sample相应JDBC/Redis/MySQL适配器已有受控官方接口。",
+          "limits": "配置选择是启动期adapter/应用Bean覆盖；不承诺Sample任意运行时热切换或每个store支持所有数据库。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 3,
+          "text": "凭据与密钥仅通过受控内部契约处理；浏览器 Token 仍遵循既有内存存储和协议边界。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "OIDC",
+            "PKCE",
+            "JDBC",
+            "D25",
+            "D36",
+            "B25"
+          ],
+          "support": "浏览器userStore在内存，协议state可放sessionStorage；OAuth管理不返回secret；JDBC受控类型映射保留claims/iat/exp。",
+          "limits": "原T25未启用MySQL keys，不能用7Chrome证明持久密钥/JWK共享；仅历史10-07 T36另做的显式MySQL key证据支持后者。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 4,
+          "text": "增加契约测试，验证默认实现与未来 MySQL/Redis 实现的外部行为一致。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "SEL",
+            "SEC",
+            "JDBC",
+            "NODES",
+            "X",
+            "B25",
+            "R36"
+          ],
+          "support": "已增加默认/自定义装配契约，JDBC往返、Redis会话与真实PKCE作为后续适配器外部行为的分层验证。",
+          "limits": "3项SEL直接证明装配及替换，不等于所有未来适配器全功能等价矩阵；仅本仓已实现适配器及已验收行为可同步。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 5,
+          "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "D25",
+            "B25",
+            "NODES",
+            "D36",
+            "R36",
+            "UI6"
+          ],
+          "support": "空随机MySQL/Flyway、实际JDBC OAuth、Redis两JVM、真实Chrome登录/注销，以及CSRF403、撤销Cookie401；输入/权限另有PKCE和UI6。",
+          "limits": "完整生产HTTPS、独立BFF/strict外部链路及会话管理页全部按钮不在T01扩展点验收内；本次未新跑迁移/HTTP/UI。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 6,
+          "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "WIR",
+            "OIDC",
+            "PKCE",
+            "JDBC",
+            "SESS",
+            "X",
+            "DM"
+          ],
+          "support": "复用Spring官方存储接口和协议Raw；业务ApiResponse、SUMMER_框架码及requestId；凭据仅历史受控注入，报告不复制Token/私钥。",
+          "limits": "Parameter contract按适用端点使用，不要求协议端点改JSON Field；这不是全仓敏感值扫描或所有未来adapter安全证明。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 7,
+          "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "C109",
+            "D25",
+            "DM",
+            "S25",
+            "SEC",
+            "B25",
+            "X"
+          ],
+          "support": "关闭评论关联ef96、公开设计/修复红灯/实现/分组结果；原525归档XML本次重新汇总相符；原用户改动按历史合并记录排除。",
+          "limits": "提交祖先不等于验收；525内两条BFF/strict早退，不算真实链路。用户历史索引保护依原记录，非本次重演。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        }
+      ],
+      "recommendation": "仅同步与既有历史验收范围相符的7条AC，并在同步评论保留范围限制；本审查未发现需新增功能或重开票的证据。当前候选最终完成仍由root既定T36与wholegate判断。"
+    },
+    {
+      "number": 117,
+      "title": "T09｜参数与字典二级缓存",
+      "url": "https://github.com/abluepoint/summer/issues/117",
+      "stateAtReadback": "CLOSED",
+      "stories": [
+        9,
+        14,
+        15
+      ],
+      "closureReference": {
+        "commentId": 6185697881,
+        "url": "https://github.com/abluepoint/summer/issues/117#issuecomment-6185697881",
+        "updatedAt": "2026-10-15T06:08:34Z",
+        "verifiedAncestorCommits": [
+          "ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3"
+        ]
+      },
+      "criteria": [
+        {
+          "index": 1,
+          "text": "读取路径优先使用 L1/L2，缓存未命中回源 MySQL。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "D09",
+            "ADR09",
+            "CACHE",
+            "CACHEIN",
+            "CACHEUNIT",
+            "CACHETC",
+            "X",
+            "R36"
+          ],
+          "support": "version验证后优先L1/L2，miss调用权威loader；单元L1命中/击穿、真实Redis L2共享2项归档可核。",
+          "limits": "参数/字典先查当前授权、可见性或快照版本；不能解释为零SQL。只有已接入参数find/公开字典路径，不是全部任意查询。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 2,
+          "text": "参数或字典变更后所有节点最终失效旧缓存。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "D09",
+            "ADR09",
+            "CACHE",
+            "CACHEIN",
+            "CACHETC",
+            "R36",
+            "D36"
+          ],
+          "support": "共享version递增使旧key不可达；每节点独立Stream组且receipt前清L1；历史双JVM A更新B读新值，Redis version递增/L2存在。",
+          "limits": "最终一致性，依赖节点恢复、独立node-id与事件/TTL；不承诺网络永久分区中立即强一致。R36缓存摘要无逐HTTP计数，不虚构n/n。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 3,
+          "text": "Redis 不可用时行为可诊断，不能返回越权或过期的敏感配置。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "CACHE",
+            "CACHEIN",
+            "CACHEUNIT",
+            "X",
+            "ADR09"
+          ],
+          "support": "version/Redis读取异常清L1并回权威loader；故障计数+固定脱敏日志；按当前可见性/scope/主体分key，不绕过授权。",
+          "limits": "故障单测为mock注入，历史R36 NOT_READY不是缓存安全回源的直接原生证明；当前候选真实Redis故障与恢复须由计划中的T36补强，非新增功能缺陷。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 4,
+          "text": "集成测试覆盖命中、未命中、失效、TTL 和跨节点一致性。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "CACHETC",
+            "CACHEUNIT",
+            "X",
+            "R36",
+            "D36"
+          ],
+          "support": "历史缓存单测3/0/0/0+真实Redis集成2/0/0/0覆盖命中、未命中、版本失效、TTL；另有双JVM真实API收敛摘要。",
+          "limits": "两cache对象同JVM不可冒称两JVM；当前新增租户隔离第三项不倒算入旧2项。未运行时不能以Docker条件或测试存在算通过。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 5,
+          "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "D09",
+            "D36",
+            "R36",
+            "UI6",
+            "X"
+          ],
+          "support": "历史MySQL迁移/双JVM缓存与UI6真实页面涵盖参数/字典成功、无效JSON零写入、真实403/requestId。",
+          "limits": "DictionaryHttpTest/SystemParameterHttpTest归档是MockMvc，不能照公开简写“真实HTTP”扩大；原生依据是双JVM与UI6。缓存对UI透明，不要求新增缓存页面。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 6,
+          "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "ADR09",
+            "CACHE",
+            "CACHEIN",
+            "X",
+            "UI6"
+          ],
+          "support": "缓存不改变参数/字典原业务API；tenant/resource/version+主体scope隔离；不输出driver异常或缓存值；原统一错误/requestId断言保留。",
+          "limits": "不能凭缓存类存在保证所有字段/敏感值全仓安全；本次只核缓存路径及公开响应契约。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 7,
+          "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "C117",
+            "D09",
+            "D36",
+            "DM",
+            "X",
+            "R36",
+            "UI6"
+          ],
+          "support": "#117评论、ADR与缓存契约、原始JUnit suite及真实UI结果形成可复核链；旧525总体数已重读。",
+          "limits": "本报告显式保留旧失败ui-diagnostic与最终UI6区别；不把关闭扩为T18/T19或当前T36完成，不改历史记录/用户文件。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        }
+      ],
+      "recommendation": "仅同步与既有历史验收范围相符的7条AC，并在同步评论保留范围限制；本审查未发现需新增功能或重开票的证据。当前候选最终完成仍由root既定T36与wholegate判断。"
+    },
+    {
+      "number": 133,
+      "title": "T25｜共享登录会话与撤销",
+      "url": "https://github.com/abluepoint/summer/issues/133",
+      "stateAtReadback": "CLOSED",
+      "stories": [
+        1,
+        34,
+        42
+      ],
+      "closureReference": {
+        "commentId": 6185698881,
+        "url": "https://github.com/abluepoint/summer/issues/133#issuecomment-6185698881",
+        "updatedAt": "2026-10-15T06:08:38Z",
+        "verifiedAncestorCommits": [
+          "ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3"
+        ]
+      },
+      "criteria": [
+        {
+          "index": 1,
+          "text": "同一登录会话可在多个后端节点验证。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "D25",
+            "ADR25",
+            "SESS",
+            "NODES",
+            "S25",
+            "X",
+            "B25"
+          ],
+          "support": "SpringSession共享完整Context；14项中sameCookieAuthenticatesOnAnotherNode；完整应用7项同CookieB读取、停A续接、重启A后继续。",
+          "limits": "最小Tomcat内存OAuth14与完整MySQL/JDBC OAuth/Chrome7分列；非所有部署拓扑/不同生产版本兼容保证。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 2,
+          "text": "退出和管理员撤销后，原服务端会话不能继续使用；已有 JWT 行为按既有有效期与业务权限契约验证。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "ADR25",
+            "SESS",
+            "NODES",
+            "X",
+            "B25"
+          ],
+          "support": "logout/OIDC先撤共享索引，管理员revoke后Cookie401；有效旧JWT仍200，无效/过期Bearer401且不退回Cookie。",
+          "limits": "JWT不会被会话注销全局吊销；业务权限仍执行既有持久授权判定。原生7的列表/撤销为browser fetch，不是每个管理员按钮。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 3,
+          "text": "会话过期、并发会话和 CSRF 行为符合既有 ADR。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "ADR25",
+            "NODES",
+            "X",
+            "B25"
+          ],
+          "support": "idleExpiry、anotherBrowserSessionSurvivesRevocation、concurrentRefreshCannotResurrect、cookieWriteRequiresCsrf及跨节点CSRF均实际14项内。",
+          "limits": "空闲默认30min由配置，短测试窗口证明过期机制；非任意并发/性能上界或生产HTTPS代理的完整验收。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 4,
+          "text": "Redis 故障和会话不存在均有可诊断结果，不泄露 Token。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "SESS",
+            "NODES",
+            "X",
+            "D25"
+          ],
+          "support": "missingIndex拒Cookie401；真实不可达Redis节点503/SUMMER_SESSION_STORE_UNAVAILABLE并有X-Request-Id；有效Bearer仍200；API非法/未知reference按400/404。",
+          "limits": "真实14项覆盖连接失败；未逐一注入所有保存超时、序列化故障。只报告状态/码/关联信息，不复制Token。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 5,
+          "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "D25",
+            "B25",
+            "S25",
+            "X",
+            "R25"
+          ],
+          "support": "完整应用空库Flyway+MySQL/JDBC OAuth、独立Redis双JVM+Chrome7均通过；真实CSRF403、Cookie401、注销和停机接续。",
+          "limits": "生产HTTPS、全页面按钮、独立BFF/strict链路和完整升级矩阵由父范围跟踪，不额外归给本票；本次没有执行新环境。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 6,
+          "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "ADR25",
+            "SESS",
+            "PKCE",
+            "OIDC",
+            "X"
+          ],
+          "support": "身份仅从完整SecurityContext恢复，索引不重建JWT；协议Raw、业务统一错误、SUMMER_码及requestId；Token只保留浏览器内存。",
+          "limits": "旧JWT按原有效期和业务权限而非登录索引撤销；敏感值未复制入本审查产物。不能把局部检查当全仓日志审计。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        },
+        {
+          "index": 7,
+          "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+          "checkedAtReadback": false,
+          "evidence": [
+            "C133",
+            "D25",
+            "DM",
+            "S25",
+            "SEC",
+            "B25",
+            "R25",
+            "X"
+          ],
+          "support": "公开文档记录首次跨节点/CSRF/JDBC红灯、修复设计、47/12/7计数、清理和边界；关闭评论指向固定ef96。",
+          "limits": "原47/12/7、后续525、当前全量门禁是不同批次；全部分别保留，用户改动依原记录保留，未在本次重演。",
+          "historicalAssessment": "SUPPORTED_FOR_SCOPED_HISTORICAL_CHECKBOX_SYNC",
+          "newFunctionalGapEstablished": false,
+          "currentCandidateStatus": "NOT_PROVEN_BY_THIS_AUDIT"
+        }
+      ],
+      "recommendation": "仅同步与既有历史验收范围相符的7条AC，并在同步评论保留范围限制；本审查未发现需新增功能或重开票的证据。当前候选最终完成仍由root既定T36与wholegate判断。"
+    }
+  ],
+  "evidence": {
+    "C109": {
+      "kind": "closure_comment",
+      "url": "https://github.com/abluepoint/summer/issues/109#issuecomment-6185696796",
+      "path": ".git/summer4-closeout-20261015/final-review/historical-ac-sync-01/closure-comments.json",
+      "scope": "2026-10-15 关闭评论；明确本次关票未重跑，引用历史验收。",
+      "sha256": "685dd14290e187cc7a504b3d9f1dfb0bffceb04a003038098a36a1a5107e00f1"
+    },
+    "C117": {
+      "kind": "closure_comment",
+      "url": "https://github.com/abluepoint/summer/issues/117#issuecomment-6185697881",
+      "path": ".git/summer4-closeout-20261015/final-review/historical-ac-sync-01/closure-comments.json",
+      "scope": "同上；未把关闭扩为 T18/T19 完成。",
+      "sha256": "685dd14290e187cc7a504b3d9f1dfb0bffceb04a003038098a36a1a5107e00f1"
+    },
+    "C133": {
+      "kind": "closure_comment",
+      "url": "https://github.com/abluepoint/summer/issues/133#issuecomment-6185698881",
+      "path": ".git/summer4-closeout-20261015/final-review/historical-ac-sync-01/closure-comments.json",
+      "scope": "同上；排除生产 HTTPS、所有页面按钮、独立 BFF/strict 链路。",
+      "sha256": "685dd14290e187cc7a504b3d9f1dfb0bffceb04a003038098a36a1a5107e00f1"
+    },
+    "D25": {
+      "kind": "public_acceptance",
+      "path": "docs/guides/summer4-t25-shared-session-acceptance.md",
+      "scope": "2026-10-07 历史验收：Sample47、Security12、完整应用Chrome7，分组而非相加为新一轮。当前文档与关闭提交字节一致。",
+      "sha256": "079595fdb65d82978f15a8247a664c662501302b3403141579bac586463739d4"
+    },
+    "D09": {
+      "kind": "public_contract",
+      "path": "docs/guides/summer4-cache-117.md",
+      "scope": "L1/L2、租户/version/key、TTL、节点独立消费组及故障绕过契约；与关闭提交字节一致。",
+      "sha256": "abc998f5cfe3ef098a0ca4e36d6cfb130ded0505eadc1330dfa5269dfdb92e83"
+    },
+    "D36": {
+      "kind": "historical_public_acceptance",
+      "path": "docs/guides/summer4-t36-upgrade-acceptance.md",
+      "scope": "只引用“2026-10-07 真实隔离环境复验”：两JVM缓存、MySQL密钥与轮换、六组真实UI等。当前文档开头指向新最终报告不作新通过依据。",
+      "sha256": "099430866d0a20d426b898f1bec99d6e772566fffbf90b821b6db227ddea4820"
+    },
+    "DM": {
+      "kind": "historical_merge_acceptance",
+      "path": "docs/guides/summer4-merge-review-20261015.md",
+      "scope": "历史完整check525/0/0/0；两BFF/strict测试提前返回，不作实际外部链路；原用户改动排除在提交外。",
+      "sha256": "c30242a471bb1890fbac20635a07b1814576be9cb126e86946a9f798bb5c881e"
+    },
+    "X": {
+      "kind": "archived_junit_xml_readback",
+      "path": ".git/summer4-closeout-20261015/final-review/historical-ac-sync-01/historical-suite-readback.json",
+      "scope": "本次解析121份历史XML得到525/0/0/0，并摘录17个相关suite及逐case状态；不打印system-out，不是新执行。每份目标XML有SHA。",
+      "sha256": "f16f69f36b5de169d9244382de099c761986e637ca0602d7de9bdc6cdc8e8619"
+    },
+    "B25": {
+      "kind": "historical_native_browser_result",
+      "path": ".git/summer4-review-20261005/t25-20261007/browser-result.json",
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "scope": "完整Sample、空随机MySQL/Flyway/JDBC OAuth、独立Redis、两JVM、Chrome真实PKCE；浏览器fetch列表/撤销，非完整会话管理页按钮。",
+      "sha256": "223d44af9b70be8d37a7a85e70fd67744f8427e81b94fcc6f9ec14ae9a0e415f"
+    },
+    "R25": {
+      "kind": "historical_cleanup",
+      "path": ".git/summer4-review-20261005/t25-20261007/runtime-result.json",
+      "scope": "原schema、独立Redis已移除，18081/18082无监听，errors=[]。不证明其他运行清理。",
+      "sha256": "0392ab5610085b1c7cf37ffbbd50782d40747c6161c02fe7d4200a71f62b449a"
+    },
+    "S25": {
+      "kind": "historical_suite_summary",
+      "path": ".git/summer4-review-20261005/t25-20261007/sample-final-counts.json",
+      "counts": {
+        "tests": 47,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "scope": "10个Sample suite；其中SharedSessionNodes14为随机端口真实Tomcat/Redis，其他MockMvc/单测按实际边界。",
+      "sha256": "e339f3f41e36079b74a64e2c0a062ce56f1d9a50e48703c0262d64b4bb14e42d"
+    },
+    "SEC": {
+      "kind": "historical_suite_summary",
+      "path": ".git/summer4-review-20261005/t25-20261007/security-counts.json",
+      "counts": {
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "scope": "含SecurityStorageContractTest3；默认/自定义装配契约，不是所有适配器的完整同构行为矩阵。",
+      "sha256": "bfac50d38331a7c9e1407ac8b4ac49a8ba8f63ec643fd3c57b46f3975d92e5f3"
+    },
+    "R36": {
+      "kind": "historical_native_summary",
+      "path": ".git/summer4-review-20261007/t36-live/result.json",
+      "scope": "SCOPED_LOCAL_GATES_PASSED；cache/keys/ui均true；不同本地制品rolling和备份恢复。cache是分领域布尔门禁，未给出可据以声称n/n的逐HTTP case原始计数。不是当前T36。",
+      "sha256": "6fa3c4aacf20ac76f1774bc048b0979db0c549167916a9eaa9c3356d8bfedbc0"
+    },
+    "UI6": {
+      "kind": "historical_native_ui_result",
+      "path": ".git/summer4-review-20261007/t18-t19-ui/live/result-1791382435330.json",
+      "counts": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "scope": "real-backend/executed=true，参数创建/覆盖、组织字典、无效输入零写入、真实403/requestId；不得使用t36-live/ui-diagnostic-latest.json里的旧失败诊断冒充该绿灯。",
+      "sha256": "ca37da7a4e0640673b4496d6e9bb74bacf7ffbeaa1191fb590a99b2ca01b3e97"
+    },
+    "SEL": {
+      "kind": "static_contract",
+      "path": "summer-security-autoconfigure/src/test/java/com/abluepoint/summer/security/autoconfigure/SecurityStorageContractTest.java",
+      "scope": "exposesDefaultConsentAndSessionStorageContracts、rejectsCustomStorageSelectionWithoutAnApplicationAdapter、usesApplicationAdaptersWhenEveryStorageIsConfiguredAsCustom。默认/自定义均同官方接口。",
+      "sha256": "419d8576acf28ec1bbc509be3852f4e28de1e378a3aa66f375ae148b8f76fb49"
+    },
+    "WIR": {
+      "kind": "static_implementation",
+      "path": "summer-security-autoconfigure/src/main/java/com/abluepoint/summer/security/autoconfigure/SummerSecurityAutoConfiguration.java",
+      "scope": "storage六维配置与ConditionalOnMissingBean；配合SummerSecurityProperties和SecurityStorageSelectionValidator，非memory而缺adapter启动失败。",
+      "sha256": "bddf3f919dcdfe388ed4f9547b9c3f7b4953c9fd2ded4c7e7da83699dd68ec7b"
+    },
+    "ADP": {
+      "kind": "static_implementation",
+      "paths": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/JdbcOAuthStorageConfiguration.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/AuthUserService.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionIndexConfiguration.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/KeyCapabilityConfiguration.java"
+      ],
+      "scope": "JDBC客户端/授权/同意、身份仓库、Redis session、MySQL/reference密钥adapter；T01是扩展点，不要求每类store提供所有后端。Sample身份应用Bean优先并非按配置动态热切换。",
+      "sha256ByPath": {
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/JdbcOAuthStorageConfiguration.java": "c4fe8c1cbc7bd98d81e0abdb8c552090631d5b7122c878e6f81b35c8deb8d155",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/AuthUserService.java": "7a435e83449d2b8953a840c08591222e74d1503feba464fb218832f115d6a247",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionIndexConfiguration.java": "e3c1e08ac0ff75a740bcbaa8678d8d41b16ac8438949fbfc4f37d7511eb3fbc5",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/key/KeyCapabilityConfiguration.java": "c9e3b0de83a1564dac862e51b3705feaec7aeb9615931af5ed6295d5dbe7e146"
+      }
+    },
+    "OIDC": {
+      "kind": "static_implementation",
+      "path": "summer-ui/src/auth/oidc.ts",
+      "scope": "userStore=InMemoryWebStorage；sessionStorage仅协议state/recovery；S256/public-client、无refresh由PKCE契约测试佐证；不把sessionStorage存在误认成Token持久化。",
+      "sha256": "9a62d3d4f2974630cb94eed679d8f843a96dcc2e3fd938fe40e77ea7abaf4e5f"
+    },
+    "PKCE": {
+      "kind": "static_test_contract",
+      "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/PublicClientPkceIntegrationTest.java",
+      "scope": "MockMvc 10历史case：PKCE/code、raw token/CSRF、拒plain与不支持grant、登录CSRF、OIDC注销、独立浏览器session。原生浏览器另看B25。",
+      "sha256": "82c14170e99ee5e6c2980202751d3cf5c11b9f542eef6ab50631fc793b5b256a"
+    },
+    "JDBC": {
+      "kind": "static_test_contract",
+      "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/authorization/OAuthPersistenceHttpTest.java",
+      "scope": "usesPersistentStoresAndProtectsClientManagement、clientAndConsentCanBeWrittenAndReadThroughJdbcContracts、managesPublicClientLifecycleWithoutReturningSecrets；历史XML3绿是H2/JDBC+MockMvc，不称MySQL。当前新增编辑测试不倒算到历史3。",
+      "sha256": "797e8a96b3297b01b00d52ee3ad73c539b1ca6e58e593889091f5748d6950749"
+    },
+    "CACHE": {
+      "kind": "static_implementation",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/cache/VersionedTwoLevelCache.java",
+      "scope": "get每次先读version，再L1/L2/loader；version或entry读取失败清本地并直接loader；invalidate本地清除+共享version递增；TTL、聚合故障计数与固定日志。",
+      "sha256": "d6a27b4b9314e34b4be9d33518c762bbc355b1bc5d99a034f49446d468f9ea44"
+    },
+    "CACHEIN": {
+      "kind": "static_implementation",
+      "paths": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterService.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/dictionary/DictionaryVersionService.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventDeliveryService.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventStreamListener.java"
+      ],
+      "scope": "参数find与字典publicSnapshot先校验当前可见性/版本再缓存；cache key含主体、scope指纹等；outbox投递递增version，各node独立group在receipt检查前evictLocal。安全前置查库不等于完全免SQL。",
+      "sha256ByPath": {
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterService.java": "5e3d166bd2dc490074298f5f7cdcff03127fbc7cd1e2af6b7607ee5786d58328",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/dictionary/DictionaryVersionService.java": "5e0ab5fd70bcfe88d1882ee5d642a59e6643b647d7194f835f3ed9ee8045a30d",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventDeliveryService.java": "adf95274cffa0ad02458afe90ccd3137c3140fe8951904875790bfd963a63a22",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventStreamListener.java": "9f1ca5376e78c8e712570025150e9f761207d1920ba6b91507e029daa009a22e"
+      }
+    },
+    "CACHEUNIT": {
+      "kind": "static_test_contract",
+      "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/cache/VersionedTwoLevelCacheTest.java",
+      "scope": "readsFromL1AfterTheFirstLoadWithinTheSameVersion、protectsAColdEntryFromAConcurrentCacheStampede、bypassesLocalAndRemoteEntriesWhenRedisCannotValidateTheVersion；第三项为mock故障，非真实Redis停机。",
+      "sha256": "0cad88de9e01df91373f0390adbb7b0401d4963e1a356148b2770ba0c6fc740f"
+    },
+    "CACHETC": {
+      "kind": "static_test_contract",
+      "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/cache/VersionedTwoLevelCacheRedisIntegrationTest.java",
+      "scope": "历史XML实际2项：twoNodesShareL2AndVersionInvalidationMakesOldEntriesUnreachable、l1AndL2ExpireAfterConfiguredTtl。真实TC Redis、两cache对象，同JVM；当前第三项租户隔离不能倒算历史已执行。disabledWithoutDocker不能单凭注解称通过，历史XML两项skip=0。",
+      "sha256": "2a94ca5f9c77afc051c951d9b2e640b4fe22e5433557f43985cede18e696ebae"
+    },
+    "NODES": {
+      "kind": "static_test_contract",
+      "path": "summer-sample/src/test/java/com/abluepoint/summer/sample/identity/SharedSessionNodesHttpTest.java",
+      "scope": "14历史case：真实HTTP/Tomcat/Redis，内存OAuth和最小测试应用；同Cookie跨节点、CSRF、缺索引、管理员撤销、另浏览器不受影响、过期/并发撤销、503、Bearer独立、OIDC。",
+      "sha256": "a71bc0fcf535750a35c16cb49a809fcce445d5f8cbab79f28f26ad05df892f74"
+    },
+    "SESS": {
+      "kind": "static_implementation",
+      "paths": [
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SharedHttpSessionConfiguration.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionIndexConfiguration.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionIndexService.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionController.java",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.java"
+      ],
+      "scope": "redis选择启用SpringSession；索引仅deny已有context不铸造身份，Lua不复活REVOKED；撤销权限/主体归属；401/404/400/503/统一错误与requestId。",
+      "sha256ByPath": {
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SharedHttpSessionConfiguration.java": "f7557c545d00de08b23d0984c856bbe95154efe9e72b870983f30e0f9c063085",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionIndexConfiguration.java": "e3c1e08ac0ff75a740bcbaa8678d8d41b16ac8438949fbfc4f37d7511eb3fbc5",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionIndexService.java": "9b112ce0967c9ace2dc721f58d81527fd1da323c2d3f89aaaf09f87ca7152e93",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionController.java": "fb1506f8da51c51c44d64eb91e1cd97ad152b0f0edd7528fb348c50efcf85ca7",
+        "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.java": "cdfe199d72d5231a9a88037f81244d442816c81e814ebe67e387be4e7ddf5fb4"
+      }
+    },
+    "ADR09": {
+      "kind": "design",
+      "path": "docs/adr/0025-versioned-two-level-parameter-dictionary-cache.md",
+      "scope": "最终一致性、租户边界、不可验证version不读旧值，非强一致全网广播。",
+      "sha256": "3cddc4f01dae94179c3f42f251475543fdb471a89f3a3ada4f32e3b2751c76f5"
+    },
+    "ADR25": {
+      "kind": "design",
+      "path": "docs/adr/0029-share-servlet-login-context-and-isolate-bearer-authentication.md",
+      "scope": "Cookie与Bearer隔离、CSRF、空闲期、注销不隐式撤access token；单实例Redis，非Cluster跨槽承诺。",
+      "sha256": "d8c9566a121b7e9e86d8f7d80248081c5b12fbaf58d549a0997feaa6c394d02c"
+    }
+  },
+  "historicalExecutionBoundaries": [
+    "525/0/0/0来自121份原XML；两BFF/strict早退并非实际链路。",
+    "47/12/7来自不同Sample、Security、原生Chrome组，不相加为本次新执行；同一suite在525内重复出现也不重复累计。",
+    "cache TC历史2项，当前测试已3项；OAuth历史3项当前已增加编辑case；当前静态代码不倒算旧执行。",
+    "ui-diagnostic-latest.json仍是旧失败；真正6绿使用t18-t19-ui/live/result-1791382435330.json。",
+    "原T25密钥配置纠正在公开md保留，后续历史T36独立证据不倒算原7项。"
+  ],
+  "currentCandidateEvidence": "本轮后端/前端门禁参见summer4-final-gates-144.md；T36真实升级与恢复另见summer4-t36-final-acceptance.md。历史审计中的pending字段保留当时状态，不代表最终交付结论。"
+}

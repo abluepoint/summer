@@ -91,7 +91,7 @@ class ReleaseGateControllerTest {
                         .header("Idempotency-Key", "release-gates-replay")
                         .with(operator("internal.release.write")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"));
     }
 
     @Test

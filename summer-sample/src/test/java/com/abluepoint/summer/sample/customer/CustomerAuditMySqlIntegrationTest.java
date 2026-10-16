@@ -42,10 +42,13 @@ class CustomerAuditMySqlIntegrationTest {
 
     @Test
     void flywayCreatesAuditTableAndRealHttpWriteIsQueryable() throws Exception {
-        int columns = jdbcTemplate.queryForObject(
-                "select count(*) from information_schema.columns where table_schema = database() and table_name = 'summer_audit_event'",
-                Integer.class);
-        org.assertj.core.api.Assertions.assertThat(columns).isEqualTo(10);
+        var columns = jdbcTemplate.queryForList(
+                "select column_name from information_schema.columns where table_schema = database() and table_name = 'summer_audit_event'",
+                String.class);
+        // V38 adds nullable trace correlation; later additive migrations must remain valid.
+        org.assertj.core.api.Assertions.assertThat(columns).contains(
+                "event_id", "tenant_id", "organization_id", "principal", "resource", "action",
+                "result", "request_id", "detail_json", "occurred_at", "trace_id");
 
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)

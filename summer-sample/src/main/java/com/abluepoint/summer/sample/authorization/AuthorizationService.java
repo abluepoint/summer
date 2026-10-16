@@ -282,6 +282,46 @@ public class AuthorizationService {
         return auditedDecision(authentication, enterpriseId, permissionCode, requestId, allowed, reason);
     }
 
+    /** Evaluates the union of persisted PLATFORM grants across the subject's active memberships. */
+    public synchronized Decision platformDecision(Authentication authentication, String permissionCode, String requestId) {
+        if (!(authentication instanceof JwtAuthenticationToken jwt) || permissionCode == null) {
+            return auditedDecision(authentication, null, permissionCode, requestId, false, "DEFAULT_DENY");
+        }
+        reloadPersistentState();
+        List<UserAssignmentRecord> bindings = userAssignments.values().stream()
+                .filter(binding -> jwt.getName().equals(binding.username)).toList();
+        if (bindings.isEmpty()) {
+            boolean managed = Boolean.TRUE.equals(jwt.getToken().getClaims().get("summer_managed_grants"));
+            boolean local = "local-user".equals(jwt.getToken().getClaimAsString("summer_identity_source"));
+            if (local && !managed && jwt.getName().equals(bootstrapUsername) && active(jwt, ENTERPRISE)
+                    && has(jwt, ENTERPRISE, "enterprise.roles.write")
+                    && hasPlatform(jwt, "platform.capabilities.write") && BOOTSTRAP_PERMISSIONS.contains(permissionCode)) {
+                return auditedDecision(authentication, ENTERPRISE, permissionCode, requestId, true, "BOOTSTRAP_ADMIN");
+            }
+            if (legacyScopeCompatibility && !local && !managed) {
+                return auditedDecision(authentication, null, permissionCode, requestId, true, "LEGACY_SCOPE");
+            }
+        }
+        boolean explicitlyDenied = false;
+        for (UserAssignmentRecord binding : bindings) {
+            if (!active(jwt, binding.enterpriseId)) continue;
+            if (binding.deniedCodes.contains(permissionCode)) {
+                explicitlyDenied = true;
+                continue;
+            }
+            boolean allowed = binding.roleIds.stream().map(roles::get).filter(Objects::nonNull)
+                    .filter(role -> binding.enterpriseId.equals(role.enterpriseId) && "ACTIVE".equals(role.status))
+                    .flatMap(role -> role.capabilityIds.stream()).map(capabilities::get).filter(Objects::nonNull)
+                    .anyMatch(capability -> "ACTIVE".equals(capability.status) && "PLATFORM".equals(capability.scope)
+                            && capability.enterpriseId == null && permissionCode.equals(capability.code));
+            if (allowed) {
+                return auditedDecision(authentication, binding.enterpriseId, permissionCode, requestId, true, "ROLE_ALLOW");
+            }
+        }
+        return auditedDecision(authentication, null, permissionCode, requestId, false,
+                explicitlyDenied ? "USER_EXPLICIT_DENY" : "DEFAULT_DENY");
+    }
+
     private Decision auditedDecision(Authentication authentication, String enterpriseId, String permissionCode,
                                       String requestId, boolean allowed, String reason) {
         String principal = authentication == null ? "" : authentication.getName();

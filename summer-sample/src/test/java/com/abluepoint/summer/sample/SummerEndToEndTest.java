@@ -26,7 +26,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.data.redis.host=${SUMMER_REDIS_HOST:127.0.0.1}",
+        "spring.data.redis.port=${SUMMER_REDIS_PORT:6379}",
+        "spring.data.redis.username=${SUMMER_REDIS_USERNAME:}",
+        "spring.data.redis.password=${SUMMER_REDIS_PASSWORD:}",
+        "spring.data.redis.database=${SUMMER_TEST_REDIS_DATABASE:15}",
+        "spring.data.redis.timeout=2s",
+        "spring.data.redis.connect-timeout=2s"
+})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class SummerEndToEndTest {
 

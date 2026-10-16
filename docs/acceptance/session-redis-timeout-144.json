@@ -1,0 +1,237 @@
+{
+  "issue": 144,
+  "relatedTasks": [
+    "T25",
+    "T36"
+  ],
+  "date": "2026-10-16",
+  "status": "scoped_java_fix_verified_native_candidate03_replay_pending",
+  "productionScope": [
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.java"
+  ],
+  "sourceFreeze": {
+    "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/SessionFailureConfiguration.java": "2b8340db7a5b99b617e9b1895b77e44718903051cece9e2aa1f35ab8b16539e8",
+    "summer-sample/src/test/java/com/abluepoint/summer/sample/identity/SessionFailureConfigurationTest.java": "c7d777107ce0e35b38d43760665a4de4c6d59fbfc4b8b195ac9eb4d19c3a0bc3"
+  },
+  "finalCounts": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "newCases": 8,
+  "existingCases": 1,
+  "finalExit": 0,
+  "batches": [
+    {
+      "name": "red-01",
+      "result": "recovered-result.json",
+      "counts": {
+        "tests": 2,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": null,
+      "changedDuringExecution": null,
+      "resultSha256": "70fb5f45085c2174b80caff2d76a5a2ed47fda157139c8eb57105a5bb901be1c",
+      "xml": {
+        "red-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml": "3ae7f8e253d32bd722ddfe165d2cae5eed753b6bc61c05f501cec3bd128d635a"
+      },
+      "executedSource": {
+        "SessionFailureConfigurationTest.java": "2ca46dc32d9e1f76a232381b741f46b1997726ec4a40d0f770734c473057eefd",
+        "SessionFailureConfiguration.java": "cdfe199d72d5231a9a88037f81244d442816c81e814ebe67e387be4e7ddf5fb4"
+      }
+    },
+    {
+      "name": "red-02",
+      "result": "result.json",
+      "counts": {
+        "tests": 7,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 1,
+      "changedDuringExecution": [],
+      "resultSha256": "58a318b93ef93a442d5f742f5bced4028b720260fad6ef5f58ccd82c3f213afe",
+      "xml": {
+        "red-02/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml": "833914647369a30e2283003a361dcf81085ba8bdff4e6cc811a76dd76f50ca31"
+      },
+      "executedSource": {
+        "SessionFailureConfigurationTest.java": "1a3adf2cf3cca0a35caa23621a9b5b76d91d5f0d788792f1856522b5211acdda",
+        "SessionFailureConfiguration.java": "cdfe199d72d5231a9a88037f81244d442816c81e814ebe67e387be4e7ddf5fb4"
+      }
+    },
+    {
+      "name": "red-03",
+      "result": "result.json",
+      "counts": {
+        "tests": 8,
+        "failures": 5,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 1,
+      "changedDuringExecution": [],
+      "resultSha256": "fe1a05d72775dc119a9c1d71bb1dfbb29f19fc0e54960983621fb0f961d085e1",
+      "xml": {
+        "red-03/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml": "ba1deea618ee26bd54b611744ec19ae4a4cec12ea51081d0f07c2c2cd7691e4d"
+      },
+      "executedSource": {
+        "SessionFailureConfigurationTest.java": "a625662f7b1dbc00fe26eb249048170f6aedde8e25eb825c6ce598297c902238",
+        "SessionFailureConfiguration.java": "cdfe199d72d5231a9a88037f81244d442816c81e814ebe67e387be4e7ddf5fb4"
+      }
+    },
+    {
+      "name": "red-04",
+      "result": "result.json",
+      "counts": {
+        "tests": 8,
+        "failures": 5,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 1,
+      "changedDuringExecution": [],
+      "resultSha256": "333c56726a51467541d211f704990c3aac948e960a39ddd717f81c6cdc3d4f7a",
+      "xml": {
+        "red-04/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml": "051e3abfd0b5959e887b1cf8354c2b58451d90643ccd5d2e31882c1e200f11ee"
+      },
+      "executedSource": {
+        "SessionFailureConfigurationTest.java": "c7d777107ce0e35b38d43760665a4de4c6d59fbfc4b8b195ac9eb4d19c3a0bc3",
+        "SessionFailureConfiguration.java": "cdfe199d72d5231a9a88037f81244d442816c81e814ebe67e387be4e7ddf5fb4"
+      }
+    },
+    {
+      "name": "green-01",
+      "result": "result.json",
+      "counts": {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "changedDuringExecution": [],
+      "resultSha256": "e310481e5428b3dca0cb37fe5a3725c3b75e036457e014ad05c62cc518e84381",
+      "xml": {
+        "green-01/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml": "03dfa33228d08195f326f18b083e0b3b1d5e1a6bf732df975218fa0481b58998"
+      },
+      "executedSource": {
+        "SessionFailureConfigurationTest.java": "c7d777107ce0e35b38d43760665a4de4c6d59fbfc4b8b195ac9eb4d19c3a0bc3",
+        "SessionFailureConfiguration.java": "2b8340db7a5b99b617e9b1895b77e44718903051cece9e2aa1f35ab8b16539e8"
+      }
+    },
+    {
+      "name": "green-02",
+      "result": "result.json",
+      "counts": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "changedDuringExecution": [],
+      "resultSha256": "82680b92922d939589ca2dbd6b7d557b66b106f02b36753351dc70959cc26bef",
+      "xml": {
+        "green-02/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SharedSessionRedisFailureHttpTest.xml": "6656d59566f61393969fe771a3f262468a9e85c7ddde3604be2d3e87215d2d47",
+        "green-02/xml/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml": "0c5e50bc420ec3bb488e07c1d64488f0cc46cf726a8e9213f0215ebdbeeed3af"
+      },
+      "executedSource": {
+        "SessionFailureConfigurationTest.java": "c7d777107ce0e35b38d43760665a4de4c6d59fbfc4b8b195ac9eb4d19c3a0bc3",
+        "SessionFailureConfiguration.java": "2b8340db7a5b99b617e9b1895b77e44718903051cece9e2aa1f35ab8b16539e8"
+      }
+    }
+  ],
+  "batchInterpretation": {
+    "red-01": "Actual XML2/1; runner rejected FAILED task marker; no normal result, recovery metadata separate.",
+    "red-02": "Four valid timeout red failures.",
+    "red-03": "Four valid timeout failures plus one invalid HTTP fixture HTML parsing failure.",
+    "red-04": "Final valid red; real HTTP500/success:true/data.status500.",
+    "green-01": "New8 passed.",
+    "green-02": "New8 plus existing1 passed; no captured source drift."
+  },
+  "originalNativeRed": {
+    "source": ".git/summer4-closeout-20261015/t36-final/native-ui-attempt-05",
+    "sha256": "f4511dea881bb600f404eb81238ecc0fd77b09947ca60ac042d6fe9c7a93e3fd",
+    "faultResponse": {
+      "status": 500,
+      "elapsedMs": 2128,
+      "fields": [
+        "success",
+        "data",
+        "error",
+        "requestId",
+        "timestamp"
+      ],
+      "dataFields": [
+        "timestamp",
+        "status",
+        "error",
+        "path"
+      ],
+      "success": true,
+      "errorType": "object",
+      "code": null,
+      "requestId": "cf2122f4-6a95-46e8-938a-d9b2e81b9eb1",
+      "responseRequestId": "cf2122f4-6a95-46e8-938a-d9b2e81b9eb1"
+    },
+    "exceptionEvidence": {
+      "classes": [
+        [
+          23081,
+          "io.lettuce.core.RedisCommandTimeoutException"
+        ],
+        [
+          23081,
+          "org.springframework.dao.QueryTimeoutException"
+        ]
+      ],
+      "sensitiveLogDetected": false
+    },
+    "boundary": "Captured real candidate02 Redis pause; regression will inject actual translated exception at Spring Session repository seam, no Redis service started.",
+    "earlierAttemptsBoundary": "批次03仅保存状态断言失败，未保存实际响应状态；批次04和05明确捕获500。"
+  },
+  "contract": {
+    "httpStatus": 503,
+    "success": false,
+    "data": null,
+    "errorCode": "SUMMER_SESSION_STORE_UNAVAILABLE",
+    "requestId": "nonblank and matches X-Request-Id",
+    "cacheControl": "no-store"
+  },
+  "negativeControls": [
+    "JDBC QueryTimeoutException with SQLTimeoutException cause propagates unchanged",
+    "QueryTimeoutException without Redis cause propagates unchanged",
+    "Already committed response cannot be replaced"
+  ],
+  "boundaries": [
+    "Final9 = new8 + existing SharedSessionRedisFailureHttpTest1; no full gate.",
+    "New HTTP test uses real random-port Tomcat, Boot ErrorMvc and production response advice/filter with injected session repository timeout; not actual Redis pause/PKCE/readiness implementation.",
+    "Existing1 uses memory servlet sessions and real unavailable-port session index path; not paused Spring Session Redis.",
+    "red01 actual2/1 XML retained; runner rejected FAILED task marker, so recovered metadata is separate.",
+    "red03 HTTP test hit default HTML because test fixture omitted Tomcat server auto configuration; its HTTP failure is not valid success-wrapped500 reproduction.",
+    "red04 is final valid8/5 red including actual HTTP500/success:true/data.status500; exact same test source passes green01 andgreen02.",
+    "Candidate02 native05 contains exception classes only, not a native stack/cause chain; never represented as exact call-site proof.",
+    "Only recognized Session timeout is fixed; no claim that every Servlet/error success wrapping is fixed.",
+    "No actual Redis pause in these9 tests; candidate03 native replay is pending T36 evidence.",
+    "Business-cache SUMMER_DEPENDENCY_UNAVAILABLE remains a separate contract."
+  ],
+  "protectedCapturedCount": 661,
+  "protectedChanged": [],
+  "nativeReplay": {
+    "candidate": "candidate03",
+    "status": "pending_T36_owner_evidence",
+    "requirements": [
+      "Cookie/PKCE Redis pause returns503 with failure envelope and requestId/no-store",
+      "UI clears old result and exposes controlled error",
+      "Redis recovery returns200 with complete readiness",
+      "Bearer remains isolated from Servlet session",
+      "Business-cache dependency503 kept distinct"
+    ]
+  },
+  "privateEvidenceDirectory": ".git/summer4-closeout-20261015/session-redis-timeout-fix-01",
+  "javaReady": "JAVA_READY.json"
+}
