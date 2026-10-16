@@ -1,12 +1,15 @@
 {
   "title": "Summer 4 父方案108需求到验收追踪",
-  "status": "TECHNICAL_EVIDENCE_PASSED_ROOT_CLOSEOUT_PENDING",
+  "status": "COMPLETE",
   "date": "2026-10-16",
   "timezone": "Asia/Shanghai",
   "parent": {
     "number": 108,
     "url": "https://github.com/abluepoint/summer/issues/108",
-    "state": "OPEN"
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "closedAt": "2026-10-16T01:41:10Z",
+    "closureComment": "https://github.com/abluepoint/summer/issues/108#issuecomment-6206087372"
   },
   "sourceLedger": ".git/summer4-closeout-20261015/ticket-commit-reference-ledger-draft.json",
   "sourceLedgerMeaning": "只证明引用和提交祖先，不推导验收完成",
@@ -22,7 +25,7 @@
         132,
         133
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 2,
@@ -32,7 +35,7 @@
         111,
         141
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 3,
@@ -42,7 +45,7 @@
         129,
         130
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 4,
@@ -51,7 +54,7 @@
         110,
         111
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 5,
@@ -61,7 +64,7 @@
         118,
         127
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 6,
@@ -71,7 +74,7 @@
         118,
         127
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 7,
@@ -81,7 +84,7 @@
         119,
         127
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 8,
@@ -91,7 +94,7 @@
         119,
         127
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 9,
@@ -103,7 +106,7 @@
         119,
         139
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 10,
@@ -112,7 +115,7 @@
         113,
         115
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 11,
@@ -123,7 +126,7 @@
         114,
         141
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 12,
@@ -132,7 +135,7 @@
         112,
         113
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 13,
@@ -140,7 +143,7 @@
       "tickets": [
         112
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 14,
@@ -150,7 +153,7 @@
         115,
         117
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 15,
@@ -160,7 +163,7 @@
         117,
         128
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 16,
@@ -168,7 +171,7 @@
       "tickets": [
         120
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 17,
@@ -177,7 +180,7 @@
         123,
         128
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 18,
@@ -186,7 +189,7 @@
         123,
         128
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 19,
@@ -194,7 +197,7 @@
       "tickets": [
         122
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 20,
@@ -202,7 +205,7 @@
       "tickets": [
         122
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 21,
@@ -210,7 +213,7 @@
       "tickets": [
         122
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 22,
@@ -219,7 +222,7 @@
         122,
         123
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 23,
@@ -228,7 +231,7 @@
         122,
         123
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 24,
@@ -236,7 +239,7 @@
       "tickets": [
         124
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 25,
@@ -244,7 +247,7 @@
       "tickets": [
         124
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 26,
@@ -252,7 +255,7 @@
       "tickets": [
         124
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 27,
@@ -261,7 +264,7 @@
         124,
         128
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 28,
@@ -271,7 +274,7 @@
         124,
         128
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 29,
@@ -282,7 +285,7 @@
         125,
         127
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 30,
@@ -292,7 +295,7 @@
         125,
         126
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 31,
@@ -302,7 +305,7 @@
         125,
         126
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 32,
@@ -313,7 +316,7 @@
         126,
         128
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 33,
@@ -323,7 +326,7 @@
         126,
         127
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 34,
@@ -336,7 +339,7 @@
         132,
         133
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 35,
@@ -348,7 +351,7 @@
         131,
         136
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 36,
@@ -356,7 +359,7 @@
       "tickets": [
         129
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 37,
@@ -367,7 +370,7 @@
         131,
         136
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 38,
@@ -377,7 +380,7 @@
         135,
         136
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 39,
@@ -386,7 +389,7 @@
         134,
         135
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 40,
@@ -394,7 +397,7 @@
       "tickets": [
         138
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 41,
@@ -403,7 +406,7 @@
         137,
         139
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 42,
@@ -414,7 +417,7 @@
         138,
         139
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 43,
@@ -422,7 +425,7 @@
       "tickets": [
         140
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 44,
@@ -430,7 +433,7 @@
       "tickets": [
         140
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 45,
@@ -438,7 +441,7 @@
       "tickets": [
         141
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 46,
@@ -446,7 +449,7 @@
       "tickets": [
         142
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 47,
@@ -454,7 +457,7 @@
       "tickets": [
         143
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 48,
@@ -462,7 +465,7 @@
       "tickets": [
         143
       ],
-      "acceptance": "追踪覆盖已建立；实际验收按各关联票及其候选/批次判断"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 49,
@@ -474,7 +477,7 @@
         119,
         144
       ],
-      "acceptance": "T36本地技术证据闭合；父票最终状态待root实际回读"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 50,
@@ -486,7 +489,7 @@
         143,
         144
       ],
-      "acceptance": "T36本地技术证据闭合；父票最终状态待root实际回读"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 51,
@@ -494,7 +497,7 @@
       "tickets": [
         144
       ],
-      "acceptance": "T36本地技术证据闭合；父票最终状态待root实际回读"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     },
     {
       "number": 52,
@@ -504,7 +507,7 @@
         142,
         144
       ],
-      "acceptance": "T36本地技术证据闭合；父票最终状态待root实际回读"
+      "acceptance": "关联票最终均CLOSED/COMPLETED、每票7/7；实际分批证据及限制保持原追踪"
     }
   ],
   "tickets": [
@@ -523,35 +526,43 @@
         "scope": "关联用户故事：1、34、35、37。\n建立可替换的认证、OAuth 客户端、授权同意、会话和密钥存储契约，同时保持当前 Summer UI 的登录、PKCE、退出和测试行为不变。\n\n### 范围与契约\n- 这是保持行为的窄范围预重构：先建立可替换存储边界，保留内存适配器；不批量重写业务调用，不改变认证协议。",
         "criteria": [
           {
-            "checked": false,
-            "text": "现有登录、PKCE 回调、退出、CSRF 和会话测试继续通过。"
+            "checked": true,
+            "text": "现有登录、PKCE 回调、退出、CSRF 和会话测试继续通过。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "身份、OAuth 客户端、授权同意、会话和密钥存储均可由配置选择实现。"
+            "checked": true,
+            "text": "身份、OAuth 客户端、授权同意、会话和密钥存储均可由配置选择实现。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "凭据与密钥仅通过受控内部契约处理；浏览器 Token 仍遵循既有内存存储和协议边界。"
+            "checked": true,
+            "text": "凭据与密钥仅通过受控内部契约处理；浏览器 Token 仍遵循既有内存存储和协议边界。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "增加契约测试，验证默认实现与未来 MySQL/Redis 实现的外部行为一致。"
+            "checked": true,
+            "text": "增加契约测试，验证默认实现与未来 MySQL/Redis 实现的外部行为一致。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "checked": true,
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "checked": true,
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "checked": true,
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": false
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "身份、客户端、授权、同意、会话和密钥经可替换存储接口装配，保持PKCE与协议响应边界。",
@@ -634,7 +645,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；公开21AC逐项复核已完成，复选框同步待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -661,7 +672,15 @@
         "limitations": [
           "原历史21AC已由root独立逐项核对并输出公开报告，复选框同步仍由root负责；本次T36原生结果与历史计数分列。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T06:08:31Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        },
+        "finalClosureComment": "https://github.com/abluepoint/summer/issues/109#issuecomment-6206082069"
       }
     },
     {
@@ -680,34 +699,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "应用使用 127.0.0.1:3306 的 MySQL 配置启动，配置只来自受控运行时输入。"
+            "text": "应用使用 127.0.0.1:3306 的 MySQL 配置启动，配置只来自受控运行时输入。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "Flyway 可重复执行且不会破坏既有 Customer 数据。"
+            "text": "Flyway 可重复执行且不会破坏既有 Customer 数据。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "Customer 列表、详情、创建、更新、停用、恢复和删除在重启后保持数据。"
+            "text": "Customer 列表、详情、创建、更新、停用、恢复和删除在重启后保持数据。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "使用真实 MySQL 集成测试验证唯一性、分页、排序和错误返回。"
+            "text": "使用真实 MySQL 集成测试验证唯一性、分页、排序和错误返回。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "MySQL权威持久化和Flyway管理Customer，运行时外置配置；诊断页面显示真实迁移状态。",
@@ -815,7 +842,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -842,7 +869,14 @@
         "limitations": [
           "浏览器流程段数不是JUnit数量；随机隔离库不代表生产部署。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T09:54:38Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -861,34 +895,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "Redis 地址、超时和凭据不写入仓库或日志。"
+            "text": "Redis 地址、超时和凭据不写入仓库或日志。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端能区分连接成功、认证失败、超时和服务不可用。"
+            "text": "管理端能区分连接成功、认证失败、超时和服务不可用。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "健康检查和指标不会输出密码或完整连接 URI。"
+            "text": "健康检查和指标不会输出密码或完整连接 URI。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "至少有真实 Redis 联调和失败场景测试。"
+            "text": "至少有真实 Redis 联调和失败场景测试。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Redis诊断复用受保护会话，凭据仅运行时注入，固定状态与脱敏指标反馈。",
@@ -986,7 +1028,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -1013,7 +1055,14 @@
         "limitations": [
           "故障作用于独立Redis；不改变共享实例或将健康200当全部业务通过。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T09:54:45Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -1031,34 +1080,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "创建、更新、停用、恢复和删除都生成可检索审计事件。"
+            "text": "创建、更新、停用、恢复和删除都生成可检索审计事件。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "审计记录包含认证主体、租户/组织、动作、资源、结果和 requestId。"
+            "text": "审计记录包含认证主体、租户/组织、动作、资源、结果和 requestId。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "密码、Token、私钥和不必要请求正文不会进入数据库或日志。"
+            "text": "密码、Token、私钥和不必要请求正文不会进入数据库或日志。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端查询支持分页、筛选、详情和脱敏展示。"
+            "text": "管理端查询支持分页、筛选、详情和脱敏展示。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "操作流水追加写入，主体、有效租户组织及requestId关联；查询独立授权。",
@@ -1156,7 +1213,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -1183,7 +1240,14 @@
         "limitations": [
           "应用追加/API只读不等于防DBA修改；最终全量中测试修复由root独立记录。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T09:54:53Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -1203,34 +1267,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员可以创建、修改、查询、启用和停用系统参数。"
+            "text": "管理员可以创建、修改、查询、启用和停用系统参数。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "类型、必填、范围和格式校验由后端 Parameter contract 负责。"
+            "text": "类型、必填、范围和格式校验由后端 Parameter contract 负责。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "冲突返回稳定错误码并保留 requestId，成功写入操作流水。"
+            "text": "冲突返回稳定错误码并保留 requestId，成功写入操作流水。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "Summer UI 使用真实 API，不依赖 mock。"
+            "text": "Summer UI 使用真实 API，不依赖 mock。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "参数类型、版本、公开标记和范围经Parameter contract校验，错误字段和关联ID显示在编辑处。",
@@ -1312,7 +1384,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -1339,7 +1411,14 @@
         "limitations": [
           "补验46含重复夹具，不与135累加；后续参数页改动由T07/T10另验。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T10:35:01Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -1358,34 +1437,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员可以创建、编辑、排序、启停字典类型和字典项。"
+            "text": "管理员可以创建、编辑、排序、启停字典类型和字典项。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "公开读取只返回已发布且允许公开的字典。"
+            "text": "公开读取只返回已发布且允许公开的字典。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "字典更新后，真实表单可重新读取并显示最新选项。"
+            "text": "字典更新后，真实表单可重新读取并显示最新选项。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "非法项值、停用项和无权限读取均返回统一错误。"
+            "text": "非法项值、停用项和无权限读取均返回统一错误。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "字典管理与发布消费分离，单项读取复用有效公开快照及租户数据权限。",
@@ -1463,7 +1550,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -1490,7 +1577,14 @@
         "limitations": [
           "基础157与补充92含重复设置，不累加；完整版本历史/实时通知分别属于T11/T31。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T11:12:34Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -1510,34 +1604,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "参数查询支持白名单字段的组合过滤、排序、分页和投影。"
+            "text": "参数查询支持白名单字段的组合过滤、排序、分页和投影。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "未知字段、非法排序和越权租户条件被拒绝。"
+            "text": "未知字段、非法排序和越权租户条件被拒绝。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "查询结果不依赖固定列顺序或隐式别名覆盖。"
+            "text": "查询结果不依赖固定列顺序或隐式别名覆盖。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "通过真实 HTTP API 验证查询契约和数据隔离。"
+            "text": "通过真实 HTTP API 验证查询契约和数据隔离。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Field白名单查询经命名SQL投影和统一DataScope，独立count复用同一解析条件。",
@@ -2064,7 +2166,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -2091,7 +2193,14 @@
         "limitations": [
           "旧整批375/0/1/0的浏览器错误保留；各候选/夹具/组件不得加成一次全量。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T14:20:34Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -2109,34 +2218,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "参数写入成功与 outbox 记录原子完成。"
+            "text": "参数写入成功与 outbox 记录原子完成。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "数据库事务回滚时不会产生可消费的变更事件。"
+            "text": "数据库事务回滚时不会产生可消费的变更事件。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "消费者支持重复投递幂等、失败重试和死信状态。"
+            "text": "消费者支持重复投递幂等、失败重试和死信状态。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端可查询投递状态，事件正文不含敏感值。"
+            "text": "管理端可查询投递状态，事件正文不含敏感值。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "MySQL事务outbox与Redis Stream至少一次投递；每节点独立消费组和幂等回执。",
@@ -3258,7 +3375,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -3285,7 +3402,14 @@
         "limitations": [
           "XCLAIM IDLE是时间夹具；只重放保留事件，非exactly-once；首条空流丢失未复现。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T15:23:34Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -3302,35 +3426,43 @@
         "scope": "关联用户故事：9、14、15。\n为参数和字典建立 Caffeine L1 + Redis L2 缓存，结合版本 key、TTL 和事件失效支持多节点读取。\n\n### 范围与契约\n- 每个节点必须接收失效事件，不能让一个共享消费组将失效事件只分配给单个节点；节点重连通过版本校验补偿。\n- 维护 TTL、版本键、击穿保护和租户隔离，使用两个真实应用节点验证。",
         "criteria": [
           {
-            "checked": false,
-            "text": "读取路径优先使用 L1/L2，缓存未命中回源 MySQL。"
+            "checked": true,
+            "text": "读取路径优先使用 L1/L2，缓存未命中回源 MySQL。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "参数或字典变更后所有节点最终失效旧缓存。"
+            "checked": true,
+            "text": "参数或字典变更后所有节点最终失效旧缓存。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "Redis 不可用时行为可诊断，不能返回越权或过期的敏感配置。"
+            "checked": true,
+            "text": "Redis 不可用时行为可诊断，不能返回越权或过期的敏感配置。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "集成测试覆盖命中、未命中、失效、TTL 和跨节点一致性。"
+            "checked": true,
+            "text": "集成测试覆盖命中、未命中、失效、TTL 和跨节点一致性。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "checked": true,
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "checked": true,
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "checked": true,
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": false
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Caffeine L1与Redis L2使用租户和资源版本键，Redis版本不可读时绕过旧缓存回源。",
@@ -3388,7 +3520,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；公开21AC逐项复核已完成，复选框同步待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -3415,7 +3547,15 @@
         "limitations": [
           "原历史21AC已由root独立逐项核对并输出公开报告，复选框同步仍由root负责；本次T36原生结果与历史计数分列。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T06:08:36Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        },
+        "finalClosureComment": "https://github.com/abluepoint/summer/issues/117#issuecomment-6206083371"
       }
     },
     {
@@ -3434,34 +3574,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "草稿内容不会影响运行时读取，只有发布版本生效。"
+            "text": "草稿内容不会影响运行时读取，只有发布版本生效。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "发布、停用和回滚均生成审计并触发缓存失效。"
+            "text": "发布、停用和回滚均生成审计并触发缓存失效。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "并发发布冲突可检测，旧版本可回滚。"
+            "text": "并发发布冲突可检测，旧版本可回滚。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端可查看版本历史和当前生效版本。"
+            "text": "管理端可查看版本历史和当前生效版本。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "参数草稿与运行发布版本分离，发布/回滚事务写审计和事件，历史按服务端版本刷新。",
@@ -3706,7 +3854,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -3733,7 +3881,14 @@
         "limitations": [
           "不将T07独立count或其他菜单修复计入本票；批次各自报告。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T13:57:55Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -3753,34 +3908,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "未发布字典项不会出现在公开读取结果。"
+            "text": "未发布字典项不会出现在公开读取结果。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "发布、停用和回滚产生审计、outbox 事件和缓存失效。"
+            "text": "发布、停用和回滚产生审计、outbox 事件和缓存失效。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "前端主动重新读取后取得已发布版本，版本替换不覆盖未提交表单。"
+            "text": "前端主动重新读取后取得已发布版本，版本替换不覆盖未提交表单。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "版本冲突、非法状态迁移和越权操作均被拒绝。"
+            "text": "版本冲突、非法状态迁移和越权操作均被拒绝。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "不可变字典发布快照隔离草稿，生命周期审计/outbox和缓存版本一致。",
@@ -4023,7 +4186,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -4050,7 +4213,14 @@
         "limitations": [
           "原Chrome10/2/1/0及提示超时原因未证实；主动重读不替代T31实时通知。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T14:17:26Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -4067,34 +4237,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员引导创建首个用户，不在源码或迁移中写默认密码。"
+            "text": "管理员引导创建首个用户，不在源码或迁移中写默认密码。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "用户创建、停用、恢复和查询通过真实 API 完成。"
+            "text": "用户创建、停用、恢复和查询通过真实 API 完成。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "密码只保存强哈希，登录失败和成功均写安全审计。"
+            "text": "密码只保存强哈希，登录失败和成功均写安全审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "重启和多次登录验证使用 MySQL 用户数据而不是内存回退。"
+            "text": "重启和多次登录验证使用 MySQL 用户数据而不是内存回退。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "真实认证用户与Customer分离，持久身份签发且保持public-client PKCE与内存Token。",
@@ -4226,7 +4404,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -4254,7 +4432,14 @@
         "limitations": [
           "共用112不能按两票重复计；自然闲置75秒仅对应配置15秒场景。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T09:57:28Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -4272,34 +4457,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员可以创建租户、组织和成员关系。"
+            "text": "管理员可以创建租户、组织和成员关系。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "用户可属于多个组织，当前上下文可明确选择并记录。"
+            "text": "用户可属于多个组织，当前上下文可明确选择并记录。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "跨租户和非成员组织的数据读取返回拒绝或空结果，语义一致。"
+            "text": "跨租户和非成员组织的数据读取返回拒绝或空结果，语义一致。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "Summer UI 可查看组织树和成员关系，所有变更有审计。"
+            "text": "Summer UI 可查看组织树和成员关系，所有变更有审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Enterprise、Member、Organization及上下文持久化，活动成员和企业状态在每次授权中复查。",
@@ -4426,7 +4619,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -4449,7 +4642,14 @@
         "limitations": [
           "193项广泛回归早于最终碰撞保护19；UI内存企业选择不等于服务端组织上下文切换。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T09:57:35Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -4469,34 +4669,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "目录包含 HTTP 方法、规范化路径、处理器、模块、资源类型、敏感等级和权限码。"
+            "text": "目录包含 HTTP 方法、规范化路径、处理器、模块、资源类型、敏感等级和权限码。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "业务接口默认需要权限，协议和基础设施端点明确标记为可配置资源。"
+            "text": "业务接口默认需要权限，协议和基础设施端点明确标记为可配置资源。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "特殊接口可通过显式注解覆盖自动生成的权限码。"
+            "text": "特殊接口可通过显式注解覆盖自动生成的权限码。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "新增或删除接口能在启动检查和管理端中被发现。"
+            "text": "新增或删除接口能在启动检查和管理端中被发现。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "扫描全部HTTP映射并分类，配置资源和组件自有安全边界分开，未知扫描保持不完整。",
@@ -4567,7 +4775,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -4594,7 +4802,14 @@
         "limitations": [
           "未知映射仍报告不完整；管理健康存在不等于目录完整，旧27中1失败保留。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T10:14:03Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -4614,34 +4829,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员可创建角色并绑定扫描出的接口资源。"
+            "text": "管理员可创建角色并绑定扫描出的接口资源。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "业务接口未配置权限时默认拒绝，公开接口必须显式配置。"
+            "text": "业务接口未配置权限时默认拒绝，公开接口必须显式配置。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "用户角色允许、用户显式拒绝和平台默认策略的优先级可验证。"
+            "text": "用户角色允许、用户显式拒绝和平台默认策略的优先级可验证。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "用真实 HTTP 请求验证允许、拒绝、未登录和审计结果。"
+            "text": "用真实 HTTP 请求验证允许、拒绝、未登录和审计结果。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "角色/用户绑定按企业与版本在数据库裁决，显式拒绝优先，提交后发布投影及回执。",
@@ -5383,7 +5606,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -5410,7 +5633,14 @@
         "limitations": [
           "Chrome功能8绿但旧退出-15保留；独立生命周期0业务不算功能；重启JVM非重启MySQL。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T11:14:19Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -5430,34 +5660,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "manifest 不包含后端组件引用，只包含菜单、路径、排序、标题键、图标键和 Capability Code。"
+            "text": "manifest 不包含后端组件引用，只包含菜单、路径、排序、标题键、图标键和 Capability Code。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理员可配置启用状态、父子关系、排序和 Capability 绑定。"
+            "text": "管理员可配置启用状态、父子关系、排序和 Capability 绑定。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "Summer UI 菜单、按钮和路由按后端返回的动作权限显示。"
+            "text": "Summer UI 菜单、按钮和路由按后端返回的动作权限显示。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "后端 API 权限校验独立存在，前端隐藏不能替代授权。"
+            "text": "后端 API 权限校验独立存在，前端隐藏不能替代授权。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "路由生成组件解耦manifest，数据库版本覆盖与后端动作能力控制菜单和按钮。",
@@ -5891,7 +6129,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -5918,7 +6156,14 @@
         "limitations": [
           "最终Chrome有界强制回收如实保留；前端隐藏不替代服务端授权。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T14:29:07Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -5938,34 +6183,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "所有目标查询自动带租户边界。"
+            "text": "所有目标查询自动带租户边界。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "本人、组织、部门和负责人范围在列表、详情和写入路径一致生效。"
+            "text": "本人、组织、部门和负责人范围在列表、详情和写入路径一致生效。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "敏感资源未配置范围时默认拒绝。"
+            "text": "敏感资源未配置范围时默认拒绝。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "通过不同用户和租户的真实 API 请求验证无越权数据。"
+            "text": "通过不同用户和租户的真实 API 请求验证无越权数据。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "结构化DataScope在查询层注入强制租户边界，缺策略默认拒绝，禁止原始SQL。",
@@ -6139,7 +6392,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -6166,7 +6419,14 @@
         "limitations": [
           "后端不因本票改动；独立快照仅历史对照，最终以共享工作区回放为准。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T15:16:55Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -6185,34 +6445,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "策略条件树有版本、校验和可审计变更。"
+            "text": "策略条件树有版本、校验和可审计变更。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "不接受原始 SQL 或未验证字段。"
+            "text": "不接受原始 SQL 或未验证字段。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "用户显式拒绝优先于角色允许，结果可解释。"
+            "text": "用户显式拒绝优先于角色允许，结果可解释。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端可预览指定用户和租户的最终有效范围。"
+            "text": "管理端可预览指定用户和租户的最终有效范围。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "组合AND/OR与有效策略预览沿用DataScope，签发时复制可信活动租户和组织上下文。",
@@ -6478,7 +6746,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -6505,7 +6773,14 @@
         "limitations": [
           "9f还包含T29变更；未重跑旧123；审计故障仅证明本资源回滚，不扩称全outbox。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T15:50:29Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -6526,34 +6801,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理端读写按接口权限和数据范围控制。"
+            "text": "管理端读写按接口权限和数据范围控制。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "公共 API 只返回公开标记且当前主体有权访问的数据。"
+            "text": "公共 API 只返回公开标记且当前主体有权访问的数据。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "租户/组织覆盖遵循明确优先级并写审计。"
+            "text": "租户/组织覆盖遵循明确优先级并写审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "前端无权限时显示授权结果，不能依赖隐藏字段绕过服务端。"
+            "text": "前端无权限时显示授权结果，不能依赖隐藏字段绕过服务端。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "动作权限、持久DataScope与租户组织覆盖共同决定参数/字典有效读取和发布。",
@@ -6794,7 +7077,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -6821,7 +7104,14 @@
         "limitations": [
           "故障回滚范围为覆盖行及相应审计，未证明全部业务表/outbox；无本票生产修复。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T16:26:45Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -6842,34 +7132,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "授权变更产生可追踪事件并支持幂等消费。"
+            "text": "授权变更产生可追踪事件并支持幂等消费。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "任一节点变更后其他节点在约定 TTL/事件延迟内拒绝旧权限。"
+            "text": "任一节点变更后其他节点在约定 TTL/事件延迟内拒绝旧权限。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "事件丢失、重复和 Redis 重启可恢复。"
+            "text": "事件丢失、重复和 Redis 重启可恢复。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "集成测试验证权限缓存失效和审计顺序。"
+            "text": "集成测试验证权限缓存失效和审计顺序。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "授权事务outbox与独立节点消费组传播失效，页面定时/聚焦重读当前权限并失败关闭。",
@@ -7207,7 +7505,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -7234,7 +7532,14 @@
         "limitations": [
           "后台节流不承诺硬实时；本票旧记录不证明后续发现的事件B作用域缺陷，见T34补救。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T16:36:17Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -7254,34 +7559,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "MySQL 只保存密文、算法、kid、版本和状态，主密钥不落库。"
+            "text": "MySQL 只保存密文、算法、kid、版本和状态，主密钥不落库。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "密钥模块不提供私钥明文读取 API。"
+            "text": "密钥模块不提供私钥明文读取 API。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "应用重启后仍能使用同一有效 kid 签发并验证令牌。"
+            "text": "应用重启后仍能使用同一有效 kid 签发并验证令牌。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "密钥读取和签名失败有统一错误、审计和脱敏日志。"
+            "text": "密钥读取和签名失败有统一错误、审计和脱敏日志。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "MySQL保存密文私钥，运行时主密钥解密；公开JWK保持Raw协议，失败审计只存安全标识。",
@@ -7355,7 +7668,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -7382,7 +7695,14 @@
         "limitations": [
           "Raw500只有关联头无业务信封；不把新9项冒称整个旧矩阵重跑。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T11:12:46Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -7399,34 +7719,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "引用名和真实密钥严格分离，配置验证提示格式错误。"
+            "text": "引用名和真实密钥严格分离，配置验证提示格式错误。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "有效引用可完成签名和验签，失效引用快速失败。"
+            "text": "有效引用可完成签名和验签，失效引用快速失败。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端只显示来源、算法、kid 和存在性，不显示原值。"
+            "text": "管理端只显示来源、算法、kid 和存在性，不显示原值。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "测试覆盖环境、文件和 Secret 引用的失败关闭行为。"
+            "text": "测试覆盖环境、文件和 Secret 引用的失败关闭行为。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "引用仅保存来源和引用名，环境/受控文件/Secret在运行时解析并失败关闭。",
@@ -7959,7 +8287,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -7986,7 +8314,14 @@
         "limitations": [
           "Secret由K8s Pod注入后供本机JVM，应用未部署K8s；引用模式轮换不在本票承诺中。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T13:47:34Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -8003,34 +8338,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员可创建新 key 并切换活动 kid。"
+            "text": "管理员可创建新 key 并切换活动 kid。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "旧 key 在令牌有效期内继续用于验证，过期后可停用。"
+            "text": "旧 key 在令牌有效期内继续用于验证，过期后可停用。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "轮换失败不会覆盖当前有效 key。"
+            "text": "轮换失败不会覆盖当前有效 key。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "轮换动作、操作者和结果进入审计。"
+            "text": "轮换动作、操作者和结果进入审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "数据库轮换状态行锁裁决版本，成功回执和JWK快照在事务提交后发布，旧公钥保留GRACE。",
@@ -8105,7 +8448,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -8132,7 +8475,14 @@
         "limitations": [
           "GRACE截止使用时间夹具，不冒称自然等待或独立人工停用完整能力。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T14:32:26Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -8149,34 +8499,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "Summer UI public client 重启后配置和协议行为保持一致。"
+            "text": "Summer UI public client 重启后配置和协议行为保持一致。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "客户端注册、修改和停用有权限和审计。"
+            "text": "客户端注册、修改和停用有权限和审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "授权同意和授权码生命周期满足现有 ADR 约束。"
+            "text": "授权同意和授权码生命周期满足现有 ADR 约束。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "PKCE、issuer、redirect URI 和 scope 测试继续通过。"
+            "text": "PKCE、issuer、redirect URI 和 scope 测试继续通过。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "OAuth客户端、授权和同意持久化；默认种子只初始化，协议端点保持Raw与PKCE。",
@@ -8271,7 +8629,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -8298,7 +8656,14 @@
         "limitations": [
           "不同运行去重59不是61；离线审计不算新增HTTP，过期为时间夹具。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T15:14:54Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -8315,35 +8680,43 @@
         "scope": "关联用户故事：1、34、42。\n使用 Redis 共享会话索引，支持多节点登录、退出、会话查询和撤销，并保持浏览器安全边界。\n\n### 范围与契约\n- 提供当前会话/撤销页面；撤销服务端登录会话与已签发 JWT 的有效期分开验证，保留既有 ADR 的 Token 生命周期，不以删除 Cookie 声称 JWT 已失效。",
         "criteria": [
           {
-            "checked": false,
-            "text": "同一登录会话可在多个后端节点验证。"
+            "checked": true,
+            "text": "同一登录会话可在多个后端节点验证。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "退出和管理员撤销后，原服务端会话不能继续使用；已有 JWT 行为按既有有效期与业务权限契约验证。"
+            "checked": true,
+            "text": "退出和管理员撤销后，原服务端会话不能继续使用；已有 JWT 行为按既有有效期与业务权限契约验证。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "会话过期、并发会话和 CSRF 行为符合既有 ADR。"
+            "checked": true,
+            "text": "会话过期、并发会话和 CSRF 行为符合既有 ADR。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "Redis 故障和会话不存在均有可诊断结果，不泄露 Token。"
+            "checked": true,
+            "text": "Redis 故障和会话不存在均有可诊断结果，不泄露 Token。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "checked": true,
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "checked": true,
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "checked": true,
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": false
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Servlet登录上下文由Redis共享；Bearer使用请求级仓库，注销和续期与索引撤销一致。",
@@ -8406,7 +8779,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；公开21AC逐项复核已完成，复选框同步待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -8433,7 +8806,15 @@
         "limitations": [
           "原历史21AC已由root独立逐项核对并输出公开报告，复选框同步仍由root负责；本次T36原生结果与历史计数分列。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T06:08:40Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        },
+        "finalClosureComment": "https://github.com/abluepoint/summer/issues/133#issuecomment-6206084536"
       }
     },
     {
@@ -8450,34 +8831,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "管理员可配置任务、权限、状态和执行参数。"
+            "text": "管理员可配置任务、权限、状态和执行参数。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "任务定义和执行记录落 MySQL。"
+            "text": "任务定义和执行记录落 MySQL。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "任务启动、暂停和立即执行均写审计。"
+            "text": "任务启动、暂停和立即执行均写审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理页使用真实 API 展示运行中、成功和失败状态。"
+            "text": "管理页使用真实 API 展示运行中、成功和失败状态。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Quartz持久任务定义、执行与审计；管理能力和接口权限同时授权，输入和版本经正式API验证。",
@@ -8784,7 +9173,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -8811,7 +9200,14 @@
         "limitations": [
           "初始化失败不当任务产品失败；生产任务源码本轮未改。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T14:37:18Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -8828,34 +9224,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "同一调度触发不会造成重复业务副作用。"
+            "text": "同一调度触发不会造成重复业务副作用。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "失败任务按策略重试并记录每次结果。"
+            "text": "失败任务按策略重试并记录每次结果。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "节点故障后任务可被其他节点接管。"
+            "text": "节点故障后任务可被其他节点接管。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "测试覆盖锁竞争、重启、超时和最终状态。"
+            "text": "测试覆盖锁竞争、重启、超时和最终状态。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "至少一次调度结合业务事务幂等收据；短事务领取和唯一owner防止旧节点覆盖接管结果。",
@@ -9063,7 +9467,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -9090,7 +9494,14 @@
         "limitations": [
           "业务副作用一次依赖处理器在自身事务原子提交幂等收据；不承诺任意外部副作用exactly-once。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T15:01:06Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -9108,34 +9519,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "按配置周期生成新 key 并安全切换 kid。"
+            "text": "按配置周期生成新 key 并安全切换 kid。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "轮换任务幂等，失败时不破坏当前有效 key。"
+            "text": "轮换任务幂等，失败时不破坏当前有效 key。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "旧 key 保留到令牌验证窗口结束。"
+            "text": "旧 key 保留到令牌验证窗口结束。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "管理端可查看轮换任务、状态和审计记录。"
+            "text": "管理端可查看轮换任务、状态和审计记录。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Quartz集群周期触发既有轮换事务；失败回滚后在新事务记录状态、退避与安全审计。",
@@ -9527,7 +9946,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -9554,7 +9973,14 @@
         "limitations": [
           "到期时间夹具不是自然等待90天；成功/失败批和旧手动轮换不合并为新全量。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T15:30:54Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -9571,34 +9997,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "只有有权用户能订阅对应任务事件。"
+            "text": "只有有权用户能订阅对应任务事件。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "断线后使用 Last-Event-ID 恢复，不重复发送不可重复副作用。"
+            "text": "断线后使用 Last-Event-ID 恢复，不重复发送不可重复副作用。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "租户隔离、连接上限、背压和资源释放可验证。"
+            "text": "租户隔离、连接上限、背压和资源释放可验证。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "Summer UI 任务页面真实显示进度和失败状态。"
+            "text": "Summer UI 任务页面真实显示进度和失败状态。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "Cookie EventSource按持久事件ID恢复，实时授权与会话复查，发送池和连接数有界。",
@@ -9708,7 +10142,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -9735,7 +10169,14 @@
         "limitations": [
           "历史窗口最多500，越界resync；中间虚拟线程绿非最终实现，容量等待失败原记录保留。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T16:07:12Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -9752,34 +10193,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "连接建立时校验认证主体、租户和 Capability。"
+            "text": "连接建立时校验认证主体、租户和 Capability。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "消息支持发送、确认、重复检测和有序处理。"
+            "text": "消息支持发送、确认、重复检测和有序处理。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "多节点连接可通过可靠事件或即时通知转发。"
+            "text": "多节点连接可通过可靠事件或即时通知转发。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "断线、超时、超连接数和未授权消息均安全关闭。"
+            "text": "断线、超时、超连接数和未授权消息均安全关闭。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "持久序号和企业行锁保证消息顺序与幂等，连接按当前成员/权限和会话lease复查。",
@@ -10076,7 +10525,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -10103,7 +10552,14 @@
         "limitations": [
           "发送阻塞只由专用测试覆盖，真实网络未耗尽内核缓冲；超长输入客户端阻止不证明连接关闭。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T11:17:38Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -10121,34 +10577,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "字典发布后已打开页面收到更新通知。"
+            "text": "字典发布后已打开页面收到更新通知。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "页面重新读取仅使用当前有权访问的版本。"
+            "text": "页面重新读取仅使用当前有权访问的版本。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "用户未提交表单不因自动刷新丢失。"
+            "text": "用户未提交表单不因自动刷新丢失。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "通知失败时页面可恢复并显示可诊断状态。"
+            "text": "通知失败时页面可恢复并显示可诊断状态。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "字典生命周期只推失效元数据，页面重新读取当前有权版本；断线保留草稿按游标追赶。",
@@ -10293,7 +10757,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -10320,7 +10784,14 @@
         "limitations": [
           "功能绿不代表原runner全绿；0业务清理探针不计功能，不以T29覆盖本票。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T16:58:39Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -10337,34 +10808,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "可安全降级的读请求有明确 fallback 和过期边界。"
+            "text": "可安全降级的读请求有明确 fallback 和过期边界。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "写入、权限判断和密钥操作失败关闭，不返回假成功。"
+            "text": "写入、权限判断和密钥操作失败关闭，不返回假成功。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "熔断、重试和限流指标可查询。"
+            "text": "熔断、重试和限流指标可查询。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "测试覆盖超时、持续失败、恢复和并发隔离。"
+            "text": "测试覆盖超时、持续失败、恢复和并发隔离。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "仅安全读取允许有权限/版本/TTL证明的fallback；调用方TimeLimiter结果计入熔断，写入失败关闭。",
@@ -10546,7 +11025,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -10573,7 +11052,14 @@
         "limitations": [
           "41业务绿后的UNPAUSE超时补清单列；真实retry0按原值显示；密钥故障沿用T21不重跑。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T17:21:32Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -10592,34 +11078,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "健康检查分别标识 MySQL、Redis 和已接入模块；未接入模块明确为不可用/未接入，不报告假健康。"
+            "text": "健康检查分别标识 MySQL、Redis 和已接入模块；未接入模块明确为不可用/未接入，不报告假健康。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "提供 HTTP 延迟、错误率、数据库/Redis 状态和审计指标；认证、缓存及实时连接指标在相应模块接入时启用。"
+            "text": "提供 HTTP 延迟、错误率、数据库/Redis 状态和审计指标；认证、缓存及实时连接指标在相应模块接入时启用。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "traceId/requestId 可从 API 错误关联到请求日志和审计。"
+            "text": "traceId/requestId 可从 API 错误关联到请求日志和审计。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "监控输出不含密码、Token、私钥或完整敏感请求。"
+            "text": "监控输出不含密码、Token、私钥或完整敏感请求。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "真实OTel span、Micrometer模块指标和安全审计关联，监控入口复查持久权限。",
@@ -11592,7 +12086,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -11619,7 +12113,14 @@
         "limitations": [
           "未配置外部OTLP Collector；指标AVAILABLE不等于全链健康；部分原JUnit仅锁内解析记录无原XML。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T16:47:06Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -11636,34 +12137,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "统计结果按当前用户、租户和组织权限过滤。"
+            "text": "统计结果按当前用户、租户和组织权限过滤。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "统计口径和时间范围明确，查询支持分页或聚合边界。"
+            "text": "统计口径和时间范围明确，查询支持分页或聚合边界。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "任务和审计统计来自真实持久化数据。"
+            "text": "任务和审计统计来自真实持久化数据。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "页面加载失败、无权限和空数据状态可区分。"
-          },
-          {
-            "checked": false,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
-          },
-          {
-            "checked": false,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "页面加载失败、无权限和空数据状态可区分。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": false
+          },
+          {
+            "checked": true,
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": false
+          },
+          {
+            "checked": true,
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "统计采用业务审计表和现有DataScope/有效成员口径，共享企业选择与角色/事件请求企业一致。",
@@ -12599,7 +13108,7 @@
         ]
       },
       "acceptance": {
-        "status": "CLOSED/COMPLETED；root已推送6c024b52并回读7/7",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "OPEN",
         "comments": [
           {
@@ -12667,7 +13176,14 @@
         "limitations": [
           "原11批与所有错误保留；事件native06用A门禁不证明B撤权；候选02补批才验证B旧JWT，root已于关闭评论6200616278回读关闭。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T19:33:18Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -12685,34 +13201,42 @@
         "criteria": [
           {
             "checked": true,
-            "text": "插件只有注册且受信任后才能启用。"
+            "text": "插件只有注册且受信任后才能启用。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "插件菜单、API 和配置声明均经过权限校验。"
+            "text": "插件菜单、API 和配置声明均经过权限校验。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "插件不能绕过认证、审计、数据权限和错误契约。"
+            "text": "插件不能绕过认证、审计、数据权限和错误契约。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "插件版本不兼容时阻止启用并提供诊断结果。"
+            "text": "插件版本不兼容时阻止启用并提供诊断结果。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": true
           },
           {
             "checked": true,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": true
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "随包受信任插件通过摘要/版本注册，复用参数字典、菜单、权限、DataScope和审计。",
@@ -13145,7 +13669,7 @@
         ]
       },
       "acceptance": {
-        "status": "历史CLOSED；当前最终回读待root",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "CLOSED",
         "comments": [
           {
@@ -13180,7 +13704,14 @@
         "limitations": [
           "无任意代码上传/前端动态装载；部分Chrome强制回收；新9不冒称旧105重跑。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-15T17:57:13Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        }
       }
     },
     {
@@ -13198,35 +13729,43 @@
         "scope": "关联用户故事：49、50、51、52。\n汇总 Flyway 升级预检、备份恢复、滚动升级、两节点一致性和未来微服务拆分边界，形成最终验收门禁。\n\n### 范围与契约\n- 交付升级预检和结果页面、Flyway expand/contract 演练、关键数据恢复和多节点故障证据；实际拆分微服务及生产 Kubernetes 部署清单不在范围内。",
         "criteria": [
           {
-            "checked": false,
-            "text": "迁移、配置、密钥、权限、任务、实时连接和插件版本均有升级检查。"
+            "checked": true,
+            "text": "迁移、配置、密钥、权限、任务、实时连接和插件版本均有升级检查。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "备份恢复演练能够恢复关键数据和权限状态。"
+            "checked": true,
+            "text": "备份恢复演练能够恢复关键数据和权限状态。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "两节点滚动升级期间 API、会话、缓存和事件行为满足兼容窗口。"
+            "checked": true,
+            "text": "两节点滚动升级期间 API、会话、缓存和事件行为满足兼容窗口。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "输出需求—设计—实现—测试—缺陷—验收追踪和未完成项清单。"
+            "checked": true,
+            "text": "输出需求—设计—实现—测试—缺陷—验收追踪和未完成项清单。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。"
+            "checked": true,
+            "text": "验证所需迁移、后端真实 HTTP 行为和 Summer UI 流程；含成功、无权限、无效输入或故障路径，不以 mock 或零用例通过替代验收。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。"
+            "checked": true,
+            "text": "复用 Parameter contract、Unified/Raw response、Request correlation 与领域术语；框架错误使用 SUMMER_ 命名空间，敏感值不得进入日志、Issue 或测试快照。",
+            "checkedAtRequirementSnapshot": false
           },
           {
-            "checked": false,
-            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。"
+            "checked": true,
+            "text": "记录本票用户故事—设计—实现—测试—缺陷—验收证据；报告实际 tests/failures/errors/skipped，保留既有用户改动。",
+            "checkedAtRequirementSnapshot": false
           }
         ],
-        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json"
+        "criteriaSource": ".git/summer4-closeout-20261015/ticket-ac-readback-before-final-fixes.json",
+        "currentChecklistSource": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
       },
       "design": {
         "decision": "模块化单体保留稳定契约，十项预检与真实备份恢复/expand-contract/兼容窗口分开取证。",
@@ -14813,7 +15352,7 @@
         ]
       },
       "acceptance": {
-        "status": "本地技术验收证据通过；待root集成审阅/提交/关票",
+        "status": "CLOSED/COMPLETED；最终回读7/7",
         "sourceLedgerState": "OPEN",
         "comments": [],
         "reports": [
@@ -14851,7 +15390,15 @@
         "limitations": [
           "候选02原scope/迁移/滚动/cache批复用而非03新跑；两版制品与每批失败/退出/Chrome强制回收均保留。本地演练不代表生产Kubernetes或任意历史版本升级。",
           "历史候选和分批计数不作为当前候选02全量通过；源码链接仅为实现定位。"
-        ]
+        ],
+        "finalReadback": {
+          "state": "closed",
+          "stateReason": "completed",
+          "closedAt": "2026-10-16T01:40:37Z",
+          "checkedAC": 7,
+          "source": ".git/summer4-closeout-20261015/all36-issues-final-live.json"
+        },
+        "finalClosureComment": "https://github.com/abluepoint/summer/issues/144#issuecomment-6206080335"
       }
     }
   ],
@@ -14877,14 +15424,14 @@
     {
       "id": "G4",
       "scope": "#109 #117 #133历史AC同步",
-      "state": "PUBLIC_REVIEW_COMPLETE_CHECKBOX_SYNC_PENDING",
-      "action": "公开historical-ac-109-117-133报告已逐项映射21AC及边界，root负责同步复选框。旧525/47/7不是本次重跑；缓存原生故障与当前T36结果分列。"
+      "state": "COMPLETE",
+      "action": "109/117/133原21AC已按公开历史映射同步，均CLOSED/COMPLETED且7/7；原历史计数与当前T36分列。"
     },
     {
       "id": "G5",
       "scope": "父#108最终状态",
-      "state": "ROOT_CLOSEOUT_PENDING",
-      "action": "本地技术证据已闭合；root完成最终集成审阅/提交后逐票回读36票/252AC并实际关闭144及108，禁止预造关闭时刻。"
+      "state": "COMPLETE",
+      "action": "实际API回读36/36 CLOSED/COMPLETED、252/252AC，144与108均已关闭；回执见summer4-final-closeout.md/json。"
     }
   ],
   "evidencePolicy": [
@@ -14922,5 +15469,6 @@
       "affectedRevalidation": "Real Cookie Redis timeout, pure Bearer readiness, recovery,403,WS in independent candidate03 batch"
     }
   },
-  "rootCloseout": "Issue144/108关闭、历史21AC复选框同步、精确提交与最终状态回读由root执行；本文件不预造关闭时刻。"
+  "rootCloseout": "实际API回读36/36 CLOSED/COMPLETED、252/252AC，144与108已关闭；交付4c22178已推送，最终关票回执见summer4-final-closeout.md/json。",
+  "finalCloseoutReport": "docs/acceptance/summer4-final-closeout.json"
 }

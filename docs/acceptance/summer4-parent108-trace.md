@@ -1,26 +1,26 @@
 # Summer 4 父方案108需求到验收追踪
 
-本追踪基线覆盖父方案的52个用户故事和36张工作票，提供需求、设计、实现、测试、缺陷及验收证据之间的双向索引。候选03受影响原生补验已通过，候选02未受影响批按字节一致性明确复用。技术证据与Issue状态分开：144/108关闭、最终提交与回读仍由root执行；不以本文件宣称CMMI认证。
+本追踪基线覆盖父方案的52个用户故事和36张工作票，提供需求、设计、实现、测试、缺陷及验收证据之间的双向索引。候选03受影响原生补验已通过，候选02未受影响批按字节一致性明确复用。root已推送交付提交4c22178，实际回读36/36完成关闭、252/252AC，并关闭144/108；[最终关票回执](summer4-final-closeout.md)记录实际时间和评论。不以本文件宣称CMMI认证。
 
 日期为2026年10月16日，时区Asia/Shanghai。需求和七项AC取自root保存的Issue快照；提交祖先与评论引用只是配置管理线索，验收结论以各票的实际候选、运行批次和限制为准。配套[结构化追踪JSON](summer4-parent108-trace.json)保存每票七项原AC、源码摘要和分批结果字段。
 
 关联公开报告：[最终门禁与执行/缓存边界](summer4-final-gates-144-v2.md)；[历史21AC逐项复核](summer4-historical-ac-109-117-133.md)。
 
-## 技术证据状态与root收口事项
+## 技术证据与实际收口状态
 
 | 编号 | 范围 | 状态和下一步 |
 | --- | --- | --- |
 | G1 | T36 #144 故事49–52 | TECHNICAL_EVIDENCE_PASSED：候选02scope93、迁移54、cache故障76与综合前213通过；候选03受影响补批85/0/0/0、Chrome5/0/0/0验证会话Redis503及恢复。原失败保留，未受影响02证据按字节码/资源/依赖一致复用。 |
 | G2 | #142整合 | CLOSED_COMPLETED：root已推送6c024b5270437ce811cdc9ac36bb1e8f7d953be0，评论6200616278关闭；7/7。原117/0/2/0与补42/0/0/0分列。 |
 | G3 | 最终集成门禁 | FINAL_BACKEND06_PASSED：root最终backend06为775/0/0/0、181suites、730输入稳定；644本轮执行/131缓存，基线767无缺失、新增8均Session新类。历史05为767=652执行/115缓存，前端02/03复用见公开v2，不跨批加总。 |
-| G4 | #109 #117 #133历史AC同步 | PUBLIC_REVIEW_COMPLETE_CHECKBOX_SYNC_PENDING：公开historical-ac-109-117-133报告已逐项映射21AC及边界，root负责同步复选框。旧525/47/7不是本次重跑；缓存原生故障与当前T36结果分列。 |
-| G5 | 父#108最终状态 | ROOT_CLOSEOUT_PENDING：本地技术证据已闭合；root完成最终集成审阅/提交后逐票回读36票/252AC并实际关闭144及108，禁止预造关闭时刻。 |
+| G4 | #109 #117 #133历史AC同步 | COMPLETE：原21条AC已按公开逐项证据同步，三票7/7；历史与当前计数仍分列。 |
+| G5 | 父#108最终状态 | COMPLETE：实际API回读36/36完成关闭、252/252AC，#144/#108均CLOSED/COMPLETED；见最终关票回执。 |
 
 ## 验收证据使用规则
 
 - tests/failures/errors/skipped依各原始批次，HTTP命名断言、Chrome、JUnit、组件和清理探针分层，不跨候选/重复夹具累加。
 - 原失败、超时、零执行、强制回收、历史与当前范围保持；报告中READY是当时交接状态，不自动等于最新Issue状态。
-- 本追踪基线只整理已有证据和路径，未重跑产品、未更改Java/UI/Gradle、未提交或修改Issue。
+- 追踪基线整理不新增测试或更改Java/UI/Gradle；root收口后补录实际提交、Issue状态和评论，原测试与历史快照保持。
 - 本地源码/报告链接已验证存在；GitHub评论及提交来自root缓存台账，不以本轮网络访问成功作背书。
 
 版本基线：最终候选03为`e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e`，受影响补批85/0/0/0；旧候选02为`8a2ec5987b60d7356cf2207b964a0e878d8434f903e59e887500a866ad09fb7e`。543个构建输入与源码一致，40份迁移资源含MySQL39份，历史31份MySQL资源字节未变；制品核验与实际升级分列：migration-native-attempt-02已真实完成31→39，54/0/0/0，旧源库仍31。root原校验器误将总资源数要求为39，其失败记录和更正均保留。
@@ -77,10 +77,10 @@
 | 46 | 作为产品管理员，我希望查看用户、角色、接口权限、字典、任务和审计的基础统计，以便了解系统使用和风险趋势。 | [#142](https://github.com/abluepoint/summer/issues/142) | 追踪覆盖已建立；实际验收按各关联票及其候选/批次判断 |
 | 47 | 作为插件开发者，我希望通过受信任的插件注册接口声明能力、配置、菜单和权限，以便扩展不破坏核心边界。 | [#143](https://github.com/abluepoint/summer/issues/143) | 追踪覆盖已建立；实际验收按各关联票及其候选/批次判断 |
 | 48 | 作为安全管理员，我希望插件不能绕过统一认证、审计和数据权限，以便扩展能力仍遵守安全控制。 | [#143](https://github.com/abluepoint/summer/issues/143) | 追踪覆盖已建立；实际验收按各关联票及其候选/批次判断 |
-| 49 | 作为发布管理员，我希望每次数据库结构变化都有可追踪的 Flyway 迁移，以便升级过程可回放、可核对。 | [#110](https://github.com/abluepoint/summer/issues/110)、[#116](https://github.com/abluepoint/summer/issues/116)、[#118](https://github.com/abluepoint/summer/issues/118)、[#119](https://github.com/abluepoint/summer/issues/119)、[#144](https://github.com/abluepoint/summer/issues/144) | T36本地技术证据闭合；父票最终状态待root实际回读 |
-| 50 | 作为发布管理员，我希望升级遵循 expand/contract、备份、健康检查和兼容窗口，以便降低版本升级风险。 | [#110](https://github.com/abluepoint/summer/issues/110)、[#118](https://github.com/abluepoint/summer/issues/118)、[#119](https://github.com/abluepoint/summer/issues/119)、[#143](https://github.com/abluepoint/summer/issues/143)、[#144](https://github.com/abluepoint/summer/issues/144) | T36本地技术证据闭合；父票最终状态待root实际回读 |
-| 51 | 作为架构师，我希望模块先在单体内保持稳定契约，未来再按独立伸缩、发布、数据 ownership 或故障隔离需求拆分微服务，以便避免过早分布式化。 | [#144](https://github.com/abluepoint/summer/issues/144) | T36本地技术证据闭合；父票最终状态待root实际回读 |
-| 52 | 作为质量负责人，我希望每个里程碑都有需求、设计、实现、验证、缺陷和度量记录，以便满足 CMMI 过程可追踪性。 | [#141](https://github.com/abluepoint/summer/issues/141)、[#142](https://github.com/abluepoint/summer/issues/142)、[#144](https://github.com/abluepoint/summer/issues/144) | T36本地技术证据闭合；父票最终状态待root实际回读 |
+| 49 | 作为发布管理员，我希望每次数据库结构变化都有可追踪的 Flyway 迁移，以便升级过程可回放、可核对。 | [#110](https://github.com/abluepoint/summer/issues/110)、[#116](https://github.com/abluepoint/summer/issues/116)、[#118](https://github.com/abluepoint/summer/issues/118)、[#119](https://github.com/abluepoint/summer/issues/119)、[#144](https://github.com/abluepoint/summer/issues/144) | T36及父票已完成关闭；实际回读36票/252AC |
+| 50 | 作为发布管理员，我希望升级遵循 expand/contract、备份、健康检查和兼容窗口，以便降低版本升级风险。 | [#110](https://github.com/abluepoint/summer/issues/110)、[#118](https://github.com/abluepoint/summer/issues/118)、[#119](https://github.com/abluepoint/summer/issues/119)、[#143](https://github.com/abluepoint/summer/issues/143)、[#144](https://github.com/abluepoint/summer/issues/144) | T36及父票已完成关闭；实际回读36票/252AC |
+| 51 | 作为架构师，我希望模块先在单体内保持稳定契约，未来再按独立伸缩、发布、数据 ownership 或故障隔离需求拆分微服务，以便避免过早分布式化。 | [#144](https://github.com/abluepoint/summer/issues/144) | T36及父票已完成关闭；实际回读36票/252AC |
+| 52 | 作为质量负责人，我希望每个里程碑都有需求、设计、实现、验证、缺陷和度量记录，以便满足 CMMI 过程可追踪性。 | [#141](https://github.com/abluepoint/summer/issues/141)、[#142](https://github.com/abluepoint/summer/issues/142)、[#144](https://github.com/abluepoint/summer/issues/144) | T36及父票已完成关闭；实际回读36票/252AC |
 
 ## 三十六张工作票的完整追踪
 
@@ -102,7 +102,7 @@
 
 **关闭或补救评论与提交**：[评论6185696796](https://github.com/abluepoint/summer/issues/109#issuecomment-6185696796)（[ef96e13b](https://github.com/abluepoint/summer/commit/ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3)）
 
-**状态与批次局限**：历史CLOSED；公开21AC逐项复核已完成，复选框同步待root。原历史21AC已由root独立逐项核对并输出公开报告，复选框同步仍由root负责；本次T36原生结果与历史计数分列。
+**状态与批次局限**：CLOSED/COMPLETED；历史21AC已依证据同步，本票7/7。原历史21AC已由root独立逐项核对并输出公开报告，复选框已由root按证据同步；本次T36原生结果与历史计数分列。
 
 ### T02 Customer 在 MySQL 中持久化
 
@@ -120,7 +120,7 @@
 
 **关闭或补救评论与提交**：[评论6189360475](https://github.com/abluepoint/summer/issues/110#issuecomment-6189360475)（[045a22a7](https://github.com/abluepoint/summer/commit/045a22a77189d1b129e28f6270db8c01a15862ed)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。浏览器流程段数不是JUnit数量；随机隔离库不代表生产部署。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。浏览器流程段数不是JUnit数量；随机隔离库不代表生产部署。
 
 ### T03 Redis 配置与运行诊断
 
@@ -138,7 +138,7 @@
 
 **关闭或补救评论与提交**：[评论6189362439](https://github.com/abluepoint/summer/issues/111#issuecomment-6189362439)（[045a22a7](https://github.com/abluepoint/summer/commit/045a22a77189d1b129e28f6270db8c01a15862ed)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。故障作用于独立Redis；不改变共享实例或将健康200当全部业务通过。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。故障作用于独立Redis；不改变共享实例或将健康200当全部业务通过。
 
 ### T04 操作流水持久化与查询
 
@@ -156,7 +156,7 @@
 
 **关闭或补救评论与提交**：[评论6189364905](https://github.com/abluepoint/summer/issues/112#issuecomment-6189364905)（[045a22a7](https://github.com/abluepoint/summer/commit/045a22a77189d1b129e28f6270db8c01a15862ed)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。应用追加/API只读不等于防DBA修改；最终全量中测试修复由root独立记录。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。应用追加/API只读不等于防DBA修改；最终全量中测试修复由root独立记录。
 
 ### T05 类型化系统参数管理
 
@@ -174,7 +174,7 @@
 
 **关闭或补救评论与提交**：[评论6190065288](https://github.com/abluepoint/summer/issues/113#issuecomment-6190065288)（[06cd7dc8](https://github.com/abluepoint/summer/commit/06cd7dc89ff0b13ebe389f9d149f13e6bdb2d5f5)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。补验46含重复夹具，不与135累加；后续参数页改动由T07/T10另验。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。补验46含重复夹具，不与135累加；后续参数页改动由T07/T10另验。
 
 ### T06 字典管理与表单消费
 
@@ -192,7 +192,7 @@
 
 **关闭或补救评论与提交**：[评论6190699779](https://github.com/abluepoint/summer/issues/114#issuecomment-6190699779)（[c88eb236](https://github.com/abluepoint/summer/commit/c88eb236da12e4c95a634ce0483c308b29d87012)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。基础157与补充92含重复设置，不累加；完整版本历史/实时通知分别属于T11/T31。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。基础157与补充92含重复设置，不累加；完整版本历史/实时通知分别属于T11/T31。
 
 ### T07 增强查询与参数筛选
 
@@ -210,7 +210,7 @@
 
 **关闭或补救评论与提交**：[评论6194324720](https://github.com/abluepoint/summer/issues/115#issuecomment-6194324720)（[fc74f566](https://github.com/abluepoint/summer/commit/fc74f566ed2a062696c0319ad6fbb86eb2111e79)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。旧整批375/0/1/0的浏览器错误保留；各候选/夹具/组件不得加成一次全量。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。旧整批375/0/1/0的浏览器错误保留；各候选/夹具/组件不得加成一次全量。
 
 ### T08 参数变更的可靠事件投递
 
@@ -228,7 +228,7 @@
 
 **关闭或补救评论与提交**：[评论6195683599](https://github.com/abluepoint/summer/issues/116#issuecomment-6195683599)（[562510bd](https://github.com/abluepoint/summer/commit/562510bdb42239d247f8b8933d91e440183a5fac)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。XCLAIM IDLE是时间夹具；只重放保留事件，非exactly-once；首条空流丢失未复现。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。XCLAIM IDLE是时间夹具；只重放保留事件，非exactly-once；首条空流丢失未复现。
 
 ### T09 参数与字典二级缓存
 
@@ -246,7 +246,7 @@
 
 **关闭或补救评论与提交**：[评论6185697881](https://github.com/abluepoint/summer/issues/117#issuecomment-6185697881)（[ef96e13b](https://github.com/abluepoint/summer/commit/ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3)）
 
-**状态与批次局限**：历史CLOSED；公开21AC逐项复核已完成，复选框同步待root。原历史21AC已由root独立逐项核对并输出公开报告，复选框同步仍由root负责；本次T36原生结果与历史计数分列。
+**状态与批次局限**：CLOSED/COMPLETED；历史21AC已依证据同步，本票7/7。原历史21AC已由root独立逐项核对并输出公开报告，复选框已由root按证据同步；本次T36原生结果与历史计数分列。
 
 ### T10 系统参数发布与回滚
 
@@ -264,7 +264,7 @@
 
 **关闭或补救评论与提交**：[评论6193848344](https://github.com/abluepoint/summer/issues/118#issuecomment-6193848344)（[9c278d60](https://github.com/abluepoint/summer/commit/9c278d605c7c6de246a84f62dcf6e655affd712c)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。不将T07独立count或其他菜单修复计入本票；批次各自报告。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。不将T07独立count或其他菜单修复计入本票；批次各自报告。
 
 ### T11 字典版本发布与更新
 
@@ -282,7 +282,7 @@
 
 **关闭或补救评论与提交**：[评论6194259613](https://github.com/abluepoint/summer/issues/119#issuecomment-6194259613)（[f440eedd](https://github.com/abluepoint/summer/commit/f440eedd18cef11e27b1a0ae017b0e6f2c089bfe)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。原Chrome10/2/1/0及提示超时原因未证实；主动重读不替代T31实时通知。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。原Chrome10/2/1/0及提示超时原因未证实；主动重读不替代T31实时通知。
 
 ### T12 持久化用户与真实登录
 
@@ -300,7 +300,7 @@
 
 **关闭或补救评论与提交**：[评论6189408554](https://github.com/abluepoint/summer/issues/120#issuecomment-6189408554)（[045a22a7](https://github.com/abluepoint/summer/commit/045a22a77189d1b129e28f6270db8c01a15862ed)、[985c5c24](https://github.com/abluepoint/summer/commit/985c5c24af7525926b643fedc1135620188a332e)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。共用112不能按两票重复计；自然闲置75秒仅对应配置15秒场景。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。共用112不能按两票重复计；自然闲置75秒仅对应配置15秒场景。
 
 ### T13 租户、组织与成员管理
 
@@ -318,7 +318,7 @@
 
 **关闭或补救评论与提交**：[评论6189410667](https://github.com/abluepoint/summer/issues/121#issuecomment-6189410667)（[045a22a7](https://github.com/abluepoint/summer/commit/045a22a77189d1b129e28f6270db8c01a15862ed)、[985c5c24](https://github.com/abluepoint/summer/commit/985c5c24af7525926b643fedc1135620188a332e)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。193项广泛回归早于最终碰撞保护19；UI内存企业选择不等于服务端组织上下文切换。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。193项广泛回归早于最终碰撞保护19；UI内存企业选择不等于服务端组织上下文切换。
 
 ### T14 完整接口资源目录
 
@@ -336,7 +336,7 @@
 
 **关闭或补救评论与提交**：[评论6189702773](https://github.com/abluepoint/summer/issues/122#issuecomment-6189702773)（[906e5498](https://github.com/abluepoint/summer/commit/906e5498399c05ae4f180213373117482fe09c54)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。未知映射仍报告不完整；管理健康存在不等于目录完整，旧27中1失败保留。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。未知映射仍报告不完整；管理健康存在不等于目录完整，旧27中1失败保留。
 
 ### T15 角色与接口授权
 
@@ -354,7 +354,7 @@
 
 **关闭或补救评论与提交**：[评论6190730911](https://github.com/abluepoint/summer/issues/123#issuecomment-6190730911)（[49c10c71](https://github.com/abluepoint/summer/commit/49c10c71041db48a0b7ed9902218133c1d51f7e0)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。Chrome功能8绿但旧退出-15保留；独立生命周期0业务不算功能；重启JVM非重启MySQL。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。Chrome功能8绿但旧退出-15保留；独立生命周期0业务不算功能；重启JVM非重启MySQL。
 
 ### T16 菜单 manifest 与动作权限
 
@@ -372,7 +372,7 @@
 
 **关闭或补救评论与提交**：[评论6194509367](https://github.com/abluepoint/summer/issues/124#issuecomment-6194509367)（[fcde16b7](https://github.com/abluepoint/summer/commit/fcde16b7883c4dc2e12105033f4fefff1802359c)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。最终Chrome有界强制回收如实保留；前端隐藏不替代服务端授权。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。最终Chrome有界强制回收如实保留；前端隐藏不替代服务端授权。
 
 ### T17 基础行级数据权限
 
@@ -390,7 +390,7 @@
 
 **关闭或补救评论与提交**：[评论6195539306](https://github.com/abluepoint/summer/issues/125#issuecomment-6195539306)（[97d58065](https://github.com/abluepoint/summer/commit/97d58065aeef7957d88211bffe019c05aa88bed7)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。后端不因本票改动；独立快照仅历史对照，最终以共享工作区回放为准。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。后端不因本票改动；独立快照仅历史对照，最终以共享工作区回放为准。
 
 ### T18 组合数据策略与有效权限预览
 
@@ -408,7 +408,7 @@
 
 **关闭或补救评论与提交**：[评论6196239453](https://github.com/abluepoint/summer/issues/126#issuecomment-6196239453)（[2498fc1b](https://github.com/abluepoint/summer/commit/2498fc1be2701a3f529e47c62b6fc764f56fc434)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。9f还包含T29变更；未重跑旧123；审计故障仅证明本资源回滚，不扩称全outbox。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。9f还包含T29变更；未重跑旧123；审计故障仅证明本资源回滚，不扩称全outbox。
 
 ### T19 参数与字典的授权读取
 
@@ -426,7 +426,7 @@
 
 **关闭或补救评论与提交**：[评论6196982699](https://github.com/abluepoint/summer/issues/127#issuecomment-6196982699)（[b56135c8](https://github.com/abluepoint/summer/commit/b56135c8e1fac4b02f088630aced29141c250737)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。故障回滚范围为覆盖行及相应审计，未证明全部业务表/outbox；无本票生产修复。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。故障回滚范围为覆盖行及相应审计，未证明全部业务表/outbox；无本票生产修复。
 
 ### T20 权限变更跨节点生效
 
@@ -444,7 +444,7 @@
 
 **关闭或补救评论与提交**：[评论6197171978](https://github.com/abluepoint/summer/issues/128#issuecomment-6197171978)（[f771837e](https://github.com/abluepoint/summer/commit/f771837e9481f8b1e70b74920c8b8249ce02bb13)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。后台节流不承诺硬实时；本票旧记录不证明后续发现的事件B作用域缺陷，见T34补救。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。后台节流不承诺硬实时；本票旧记录不证明后续发现的事件B作用域缺陷，见T34补救。
 
 ### T21 数据库密钥与稳定签发
 
@@ -462,7 +462,7 @@
 
 **关闭或补救评论与提交**：[评论6190703221](https://github.com/abluepoint/summer/issues/129#issuecomment-6190703221)（[c88eb236](https://github.com/abluepoint/summer/commit/c88eb236da12e4c95a634ce0483c308b29d87012)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。Raw500只有关联头无业务信封；不把新9项冒称整个旧矩阵重跑。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。Raw500只有关联头无业务信封；不把新9项冒称整个旧矩阵重跑。
 
 ### T22 引用型密钥接入
 
@@ -480,7 +480,7 @@
 
 **关闭或补救评论与提交**：[评论6193624404](https://github.com/abluepoint/summer/issues/130#issuecomment-6193624404)（[821b0859](https://github.com/abluepoint/summer/commit/821b0859de39c24708a7c3f2048daca32bea0859)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。Secret由K8s Pod注入后供本机JVM，应用未部署K8s；引用模式轮换不在本票承诺中。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。Secret由K8s Pod注入后供本机JVM，应用未部署K8s；引用模式轮换不在本票承诺中。
 
 ### T23 手动密钥轮换
 
@@ -498,7 +498,7 @@
 
 **关闭或补救评论与提交**：[评论6194583784](https://github.com/abluepoint/summer/issues/131#issuecomment-6194583784)（[94a49e95](https://github.com/abluepoint/summer/commit/94a49e95892b9b62036e5988118034a244a4150e)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。GRACE截止使用时间夹具，不冒称自然等待或独立人工停用完整能力。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。GRACE截止使用时间夹具，不冒称自然等待或独立人工停用完整能力。
 
 ### T24 OAuth 客户端与授权持久化
 
@@ -516,7 +516,7 @@
 
 **关闭或补救评论与提交**：[评论6195495044](https://github.com/abluepoint/summer/issues/132#issuecomment-6195495044)（[338128e5](https://github.com/abluepoint/summer/commit/338128e596957bf8a7494eb5f7691f886ad3e7aa)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。不同运行去重59不是61；离线审计不算新增HTTP，过期为时间夹具。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。不同运行去重59不是61；离线审计不算新增HTTP，过期为时间夹具。
 
 ### T25 共享登录会话与撤销
 
@@ -534,7 +534,7 @@
 
 **关闭或补救评论与提交**：[评论6185698881](https://github.com/abluepoint/summer/issues/133#issuecomment-6185698881)（[ef96e13b](https://github.com/abluepoint/summer/commit/ef96e13bf879b4aa5a3bbaf2fc8f98d67c5d75b3)）
 
-**状态与批次局限**：历史CLOSED；公开21AC逐项复核已完成，复选框同步待root。原历史21AC已由root独立逐项核对并输出公开报告，复选框同步仍由root负责；本次T36原生结果与历史计数分列。
+**状态与批次局限**：CLOSED/COMPLETED；历史21AC已依证据同步，本票7/7。原历史21AC已由root独立逐项核对并输出公开报告，复选框已由root按证据同步；本次T36原生结果与历史计数分列。
 
 ### T26 定时任务配置与执行
 
@@ -552,7 +552,7 @@
 
 **关闭或补救评论与提交**：[评论6194685283](https://github.com/abluepoint/summer/issues/134#issuecomment-6194685283)（[df437af3](https://github.com/abluepoint/summer/commit/df437af3f0006e73154c35e4092af064c6ee6e7a)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。初始化失败不当任务产品失败；生产任务源码本轮未改。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。初始化失败不当任务产品失败；生产任务源码本轮未改。
 
 ### T27 任务重试与集群故障恢复
 
@@ -570,7 +570,7 @@
 
 **关闭或补救评论与提交**：[评论6195190396](https://github.com/abluepoint/summer/issues/135#issuecomment-6195190396)（[b8a950d8](https://github.com/abluepoint/summer/commit/b8a950d889b0107523a5cb8171a006f6a69c1e88)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。业务副作用一次依赖处理器在自身事务原子提交幂等收据；不承诺任意外部副作用exactly-once。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。业务副作用一次依赖处理器在自身事务原子提交幂等收据；不承诺任意外部副作用exactly-once。
 
 ### T28 自动密钥轮换
 
@@ -588,7 +588,7 @@
 
 **关闭或补救评论与提交**：[评论6195835345](https://github.com/abluepoint/summer/issues/136#issuecomment-6195835345)（[de0115c8](https://github.com/abluepoint/summer/commit/de0115c8e9d9d6aac3698575b79caf44bc54bf41)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。到期时间夹具不是自然等待90天；成功/失败批和旧手动轮换不合并为新全量。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。到期时间夹具不是自然等待90天；成功/失败批和旧手动轮换不合并为新全量。
 
 ### T29 SSE 任务进度与恢复
 
@@ -606,7 +606,7 @@
 
 **关闭或补救评论与提交**：[评论6196583113](https://github.com/abluepoint/summer/issues/137#issuecomment-6196583113)（[9b48457a](https://github.com/abluepoint/summer/commit/9b48457a83cb506d29c80d7d2e56844989f38c64)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。历史窗口最多500，越界resync；中间虚拟线程绿非最终实现，容量等待失败原记录保留。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。历史窗口最多500，越界resync；中间虚拟线程绿非最终实现，容量等待失败原记录保留。
 
 ### T30 WebSocket 双向消息
 
@@ -624,7 +624,7 @@
 
 **关闭或补救评论与提交**：[评论6190789741](https://github.com/abluepoint/summer/issues/138#issuecomment-6190789741)（[9da9e009](https://github.com/abluepoint/summer/commit/9da9e0091669eb94ee6de700f1c890be8e7a914b)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。发送阻塞只由专用测试覆盖，真实网络未耗尽内核缓冲；超长输入客户端阻止不证明连接关闭。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。发送阻塞只由专用测试覆盖，真实网络未耗尽内核缓冲；超长输入客户端阻止不证明连接关闭。
 
 ### T31 字典更新实时通知前端
 
@@ -642,7 +642,7 @@
 
 **关闭或补救评论与提交**：[评论6197613319](https://github.com/abluepoint/summer/issues/139#issuecomment-6197613319)（[cdb80094](https://github.com/abluepoint/summer/commit/cdb80094af4060da5ac2c2655a2c9e18dc6f50eb)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。功能绿不代表原runner全绿；0业务清理探针不计功能，不以T29覆盖本票。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。功能绿不代表原runner全绿；0业务清理探针不计功能，不以T29覆盖本票。
 
 ### T32 依赖故障下的受控降级
 
@@ -660,7 +660,7 @@
 
 **关闭或补救评论与提交**：[评论6198053860](https://github.com/abluepoint/summer/issues/140#issuecomment-6198053860)（[cdec1f04](https://github.com/abluepoint/summer/commit/cdec1f04af75d738f0ee8269d0b6526789ce2d5e)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。41业务绿后的UNPAUSE超时补清单列；真实retry0按原值显示；密钥故障沿用T21不重跑。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。41业务绿后的UNPAUSE超时补清单列；真实retry0按原值显示；密钥故障沿用T21不重跑。
 
 ### T33 运行监控与链路定位
 
@@ -678,7 +678,7 @@
 
 **关闭或补救评论与提交**：[评论6197383278](https://github.com/abluepoint/summer/issues/141#issuecomment-6197383278)（[1cc57d2d](https://github.com/abluepoint/summer/commit/1cc57d2d24d93e3896fa2cc1ca516f62ed60bd6a)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。未配置外部OTLP Collector；指标AVAILABLE不等于全链健康；部分原JUnit仅锁内解析记录无原XML。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。未配置外部OTLP Collector；指标AVAILABLE不等于全链健康；部分原JUnit仅锁内解析记录无原XML。
 
 ### T34 基础业务统计
 
@@ -696,7 +696,7 @@
 
 **关闭或补救评论与提交**：[评论6199149251](https://github.com/abluepoint/summer/issues/142#issuecomment-6199149251)（[53c4b015](https://github.com/abluepoint/summer/commit/53c4b015db2424a75c8189b6c83019fb599ec370)）；[评论6199311541](https://github.com/abluepoint/summer/issues/142#issuecomment-6199311541)（[35bdb130](https://github.com/abluepoint/summer/commit/35bdb13088be55ad3ecb7377a56bb4f763f80896)、[53c4b015](https://github.com/abluepoint/summer/commit/53c4b015db2424a75c8189b6c83019fb599ec370)）；[评论6200616278](https://github.com/abluepoint/summer/issues/142#issuecomment-6200616278)（[6c024b52](https://github.com/abluepoint/summer/commit/6c024b5270437ce811cdc9ac36bb1e8f7d953be0)）
 
-**状态与批次局限**：CLOSED/COMPLETED；root已推送6c024b52并回读7/7。原11批与所有错误保留；事件native06用A门禁不证明B撤权；候选02补批才验证B旧JWT，root已于关闭评论6200616278回读关闭。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7（142补救提交6c024b52）。原11批与所有错误保留；事件native06用A门禁不证明B撤权；候选02补批才验证B旧JWT，root已于关闭评论6200616278回读关闭。
 
 ### T35 受信任插件启停与升级
 
@@ -714,7 +714,7 @@
 
 **关闭或补救评论与提交**：[评论6198171002](https://github.com/abluepoint/summer/issues/143#issuecomment-6198171002)（[35bdb130](https://github.com/abluepoint/summer/commit/35bdb13088be55ad3ecb7377a56bb4f763f80896)）；[评论6198735952](https://github.com/abluepoint/summer/issues/143#issuecomment-6198735952)（[9feba275](https://github.com/abluepoint/summer/commit/9feba2753fb10883fe800bc4df5146db28c93473)）
 
-**状态与批次局限**：历史CLOSED；当前最终回读待root。无任意代码上传/前端动态装载；部分Chrome强制回收；新9不冒称旧105重跑。
+**状态与批次局限**：CLOSED/COMPLETED；最终回读7/7。无任意代码上传/前端动态装载；部分Chrome强制回收；新9不冒称旧105重跑。
 
 ### T36 升级与水平扩展验收
 
@@ -732,7 +732,7 @@
 
 **关闭或补救评论与提交**：本票尚无本轮关闭评论或提交，保持开放。
 
-**状态与批次局限**：本地技术验收证据通过；待root集成审阅/提交/关票。候选02原scope/迁移/滚动/cache批复用而非03新跑；两版制品与每批失败/退出/Chrome强制回收均保留。本地演练不代表生产Kubernetes或任意历史版本升级。
+**状态与批次局限**：CLOSED/COMPLETED；交付已推送，最终回读7/7。候选02原scope/迁移/滚动/cache批复用而非03新跑；两版制品与每批失败/退出/Chrome强制回收均保留。本地演练不代表生产Kubernetes或任意历史版本升级。
 
 ## 最终状态与复用边界
 

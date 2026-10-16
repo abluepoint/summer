@@ -1,0 +1,399 @@
+{
+  "status": "COMPLETE",
+  "observedAtUtc": "2026-10-16T01:42:15.829641+00:00",
+  "deliveryCommit": "4c221785afbacffda4f6fd8e3cef814411bed5fd",
+  "branch": "summer4",
+  "parent": {
+    "number": 108,
+    "state": "closed",
+    "stateReason": "completed",
+    "closedAt": "2026-10-16T01:41:10Z",
+    "url": "https://github.com/abluepoint/summer/issues/108"
+  },
+  "tickets": [
+    {
+      "number": 109,
+      "title": "T01｜认证存储扩展点预重构",
+      "url": "https://github.com/abluepoint/summer/issues/109",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T06:08:31Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 110,
+      "title": "T02｜Customer 在 MySQL 中持久化",
+      "url": "https://github.com/abluepoint/summer/issues/110",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T09:54:38Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 111,
+      "title": "T03｜Redis 配置与运行诊断",
+      "url": "https://github.com/abluepoint/summer/issues/111",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T09:54:45Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 112,
+      "title": "T04｜操作流水持久化与查询",
+      "url": "https://github.com/abluepoint/summer/issues/112",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T09:54:53Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 113,
+      "title": "T05｜类型化系统参数管理",
+      "url": "https://github.com/abluepoint/summer/issues/113",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T10:35:01Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 114,
+      "title": "T06｜字典管理与表单消费",
+      "url": "https://github.com/abluepoint/summer/issues/114",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T11:12:34Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 115,
+      "title": "T07｜增强查询与参数筛选",
+      "url": "https://github.com/abluepoint/summer/issues/115",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T14:20:34Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 116,
+      "title": "T08｜参数变更的可靠事件投递",
+      "url": "https://github.com/abluepoint/summer/issues/116",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T15:23:34Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 117,
+      "title": "T09｜参数与字典二级缓存",
+      "url": "https://github.com/abluepoint/summer/issues/117",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T06:08:36Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 118,
+      "title": "T10｜系统参数发布与回滚",
+      "url": "https://github.com/abluepoint/summer/issues/118",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T13:57:55Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 119,
+      "title": "T11｜字典版本发布与更新",
+      "url": "https://github.com/abluepoint/summer/issues/119",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T14:17:26Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 120,
+      "title": "T12｜持久化用户与真实登录",
+      "url": "https://github.com/abluepoint/summer/issues/120",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T09:57:28Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 121,
+      "title": "T13｜租户、组织与成员管理",
+      "url": "https://github.com/abluepoint/summer/issues/121",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T09:57:35Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 122,
+      "title": "T14｜完整接口资源目录",
+      "url": "https://github.com/abluepoint/summer/issues/122",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T10:14:03Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 123,
+      "title": "T15｜角色与接口授权",
+      "url": "https://github.com/abluepoint/summer/issues/123",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T11:14:19Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 124,
+      "title": "T16｜菜单 manifest 与动作权限",
+      "url": "https://github.com/abluepoint/summer/issues/124",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T14:29:07Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 125,
+      "title": "T17｜基础行级数据权限",
+      "url": "https://github.com/abluepoint/summer/issues/125",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T15:16:55Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 126,
+      "title": "T18｜组合数据策略与有效权限预览",
+      "url": "https://github.com/abluepoint/summer/issues/126",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T15:50:29Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 127,
+      "title": "T19｜参数与字典的授权读取",
+      "url": "https://github.com/abluepoint/summer/issues/127",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T16:26:45Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 128,
+      "title": "T20｜权限变更跨节点生效",
+      "url": "https://github.com/abluepoint/summer/issues/128",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T16:36:17Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 129,
+      "title": "T21｜数据库密钥与稳定签发",
+      "url": "https://github.com/abluepoint/summer/issues/129",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T11:12:46Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 130,
+      "title": "T22｜引用型密钥接入",
+      "url": "https://github.com/abluepoint/summer/issues/130",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T13:47:34Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 131,
+      "title": "T23｜手动密钥轮换",
+      "url": "https://github.com/abluepoint/summer/issues/131",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T14:32:26Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 132,
+      "title": "T24｜OAuth 客户端与授权持久化",
+      "url": "https://github.com/abluepoint/summer/issues/132",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T15:14:54Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 133,
+      "title": "T25｜共享登录会话与撤销",
+      "url": "https://github.com/abluepoint/summer/issues/133",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T06:08:40Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 134,
+      "title": "T26｜定时任务配置与执行",
+      "url": "https://github.com/abluepoint/summer/issues/134",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T14:37:18Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 135,
+      "title": "T27｜任务重试与集群故障恢复",
+      "url": "https://github.com/abluepoint/summer/issues/135",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T15:01:06Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 136,
+      "title": "T28｜自动密钥轮换",
+      "url": "https://github.com/abluepoint/summer/issues/136",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T15:30:54Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 137,
+      "title": "T29｜SSE 任务进度与恢复",
+      "url": "https://github.com/abluepoint/summer/issues/137",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T16:07:12Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 138,
+      "title": "T30｜WebSocket 双向消息",
+      "url": "https://github.com/abluepoint/summer/issues/138",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T11:17:38Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 139,
+      "title": "T31｜字典更新实时通知前端",
+      "url": "https://github.com/abluepoint/summer/issues/139",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T16:58:39Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 140,
+      "title": "T32｜依赖故障下的受控降级",
+      "url": "https://github.com/abluepoint/summer/issues/140",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T17:21:32Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 141,
+      "title": "T33｜运行监控与链路定位",
+      "url": "https://github.com/abluepoint/summer/issues/141",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T16:47:06Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 142,
+      "title": "T34｜基础业务统计",
+      "url": "https://github.com/abluepoint/summer/issues/142",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T19:33:18Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 143,
+      "title": "T35｜受信任插件启停与升级",
+      "url": "https://github.com/abluepoint/summer/issues/143",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-15T17:57:13Z",
+      "checkedAC": 7
+    },
+    {
+      "number": 144,
+      "title": "T36｜升级与水平扩展验收",
+      "url": "https://github.com/abluepoint/summer/issues/144",
+      "state": "closed",
+      "stateReason": "completed",
+      "closedAt": "2026-10-16T01:40:37Z",
+      "checkedAC": 7
+    }
+  ],
+  "ticketCount": 36,
+  "checkedAcceptanceCriteria": 252,
+  "stories": 52,
+  "historicalACSynced": 21,
+  "closureComments": {
+    "144": "https://github.com/abluepoint/summer/issues/144#issuecomment-6206080335",
+    "109": "https://github.com/abluepoint/summer/issues/109#issuecomment-6206082069",
+    "117": "https://github.com/abluepoint/summer/issues/117#issuecomment-6206083371",
+    "133": "https://github.com/abluepoint/summer/issues/133#issuecomment-6206084536",
+    "108": "https://github.com/abluepoint/summer/issues/108#issuecomment-6206087372"
+  },
+  "backend": {
+    "tests": 775,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 181,
+    "executedTaskRecords": 644,
+    "cacheTaskRecords": 131,
+    "sourceInputs": 730
+  },
+  "candidate03": {
+    "sha256": "e9d1ff6ef33b74c1c8ffef9bc6417b06554d92490f8b1e814c5dec49d3d2f28e",
+    "nativeChecks": 85,
+    "chromeChecksSeparate": 5,
+    "allPassed": true,
+    "temporaryResourcesCleaned": true
+  },
+  "limits": [
+    "Two default-disabled BFF/strict methods return early; not external journeys.",
+    "Candidate02 unaffected scope93/migration54/cache76/rolling first213 reused explicitly; failed original batches retained.",
+    "No productionKubernetes deployment or actual microservice split.",
+    "User source and original993 index entries preserved; workspace not declared clean."
+  ],
+  "evidence": [
+    {
+      "path": ".git/summer4-closeout-20261015/all36-issues-final-live.json",
+      "sha256": "6a8ccc749f72009e4e7dcbcbc94a340778ab9be360786b1b3dcf91af6e9ca7e4"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/issue-108-after-final-close.json",
+      "sha256": "a71199f820aaa4d429b3c98d029c7c3da442ba35ace8fdd644884bf7cd4eea74"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/issue-144-after-final-apply.json",
+      "sha256": "7db962deb6ce6c0f31015bcaafe59f92a2896ad46c8733a69166708b7c8bf136"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/issue-109-after-final-apply.json",
+      "sha256": "9e7a183602636f7c90d22098decad41628af0a0087c4a5840ea353199e5f9055"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/issue-117-after-final-apply.json",
+      "sha256": "e186435f6378347d5450dc703509e8252ba9a5411ad1e8a5e3abdf9eccd074db"
+    },
+    {
+      "path": ".git/summer4-closeout-20261015/issue-133-after-final-apply.json",
+      "sha256": "cbffd2419f1602bc39bb02913e192a564ce6b63b48b6df5bbf3a18682d56ee01"
+    }
+  ]
+}
