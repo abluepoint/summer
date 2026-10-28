@@ -1,3 +1,4 @@
+import type { MemberDetail, MemberPage } from './types';
 import type { ApiFailure } from '@/api/types';
 import { businessData as request } from '@/api/client';
 import axios from 'axios';
@@ -13,9 +14,6 @@ export const selectOrganizationContext = (enterpriseId: string, organizationId: 
 export const getOrganizationMembers = (enterpriseId: string, organizationId: string) => request<{ items: OrganizationMember[] }>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/org-units/${encodeURIComponent(organizationId)}/members`));
 
 export type UnitDraft = Pick<OrganizationUnit, 'parentId' | 'unitType' | 'name' | 'code' | 'leaderMemberId' | 'description' | 'sortOrder' | 'status'>;
-export type TenantMember = { memberId: string; displayName: string; email: string; status: string };
-export type MemberDetail = TenantMember & { enterpriseId: string; revision: string };
-export type MemberPage = { items: TenantMember[]; page: number; size: number; total: number; revision: string };
 export type AssignmentDraft = { memberIds: string[]; organizationIds: string[]; primaryOrganizationId: string | null };
 const root = (enterprise: string) => `/api/v1/enterprises/${encodeURIComponent(enterprise)}`;
 const units = (enterprise: string) => `${root(enterprise)}/org-units`;

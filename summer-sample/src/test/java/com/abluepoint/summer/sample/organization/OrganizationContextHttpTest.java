@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class OrganizationContextHttpTest {
     @Autowired MockMvc mvc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory directory;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory directory;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test void readsClearsAndRevalidatesTheSelectedContext() throws Exception {

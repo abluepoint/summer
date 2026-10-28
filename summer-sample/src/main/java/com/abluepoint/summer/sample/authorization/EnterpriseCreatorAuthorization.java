@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.enterprise.EnterpriseCreated;
+import com.abluepoint.summer.sample.enterprise.application.EnterpriseCreated;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;

@@ -35,9 +35,9 @@ class ModulithArchitectureTest {
     }
 
     @Test
-    void applicationAndAgentOwnFrameworkFreeDomainRules() {
+    void migratedResponsibilitiesOwnFrameworkFreeDomainRules() {
         var classes = new ClassFileImporter().importPackages("com.abluepoint.summer.sample");
-        for (String responsibility : Set.of("application", "agent")) {
+        for (String responsibility : Set.of("application", "agent", "enterprise", "member")) {
             String domain = "com.abluepoint.summer.sample." + responsibility + ".domain";
             var rules = classes.stream().filter(type -> type.getPackageName().startsWith(domain)).toList();
             assertThat(rules).as("%s domain rules exist", responsibility).isNotEmpty();

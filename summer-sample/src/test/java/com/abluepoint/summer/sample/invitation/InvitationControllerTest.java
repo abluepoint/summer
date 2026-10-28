@@ -28,7 +28,7 @@ class InvitationControllerTest {
 
     @Autowired
     MockMvc mockMvc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory directory;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory directory;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test

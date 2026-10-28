@@ -31,7 +31,7 @@ class CustomerAuditLedgerHttpTest {
     MockMvc mockMvc;
 
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
     @Autowired AuditOrganizationContext organizationContext;
 
     @Test

@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrganizationReadBoundaryHttpTest {
     @Autowired MockMvc mvc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
     private JwtRequestPostProcessor reader() {
         return jwt().jwt(j -> j.subject("alice").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.read"))))

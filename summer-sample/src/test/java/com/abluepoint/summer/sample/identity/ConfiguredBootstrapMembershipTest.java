@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class ConfiguredBootstrapMembershipTest {
     @Autowired LocalConsoleIdentityClaims identities;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
     @Autowired JdbcTemplate jdbc;
     @Test void configuredBootstrapUsesADurableMembershipAndDisablingItRemovesGrants() {
         String username = "configured-bootstrap-admin";

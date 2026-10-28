@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.*;
 @Transactional
 class LocalConsoleIdentityClaimsTest {
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
     @Autowired AuthUserService users;
     @Autowired LocalConsoleIdentityClaims identities;
     @Autowired jakarta.persistence.EntityManager entityManager;

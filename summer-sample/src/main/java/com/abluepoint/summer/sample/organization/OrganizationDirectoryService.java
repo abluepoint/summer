@@ -5,7 +5,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.abluepoint.summer.sample.enterprise.EnterpriseRegistry;
+import com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -26,15 +26,15 @@ class OrganizationDirectoryService {
 
     private final Map<String, UnitRecord> units = new LinkedHashMap<>();
     private final Map<String, Assignment> assignments = new LinkedHashMap<>();
-    private final com.abluepoint.summer.sample.member.MemberDirectory memberDirectory;
-    private final com.abluepoint.summer.sample.enterprise.DirectoryJournal journal;
+    private final com.abluepoint.summer.sample.member.infrastructure.MemberDirectory memberDirectory;
+    private final com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal;
     private final EnterpriseRegistry enterprises;
     private final OrganizationUnitRepository unitRepository;
     private final OrganizationMembershipRepository membershipRepository;
     private final OrganizationContextRepository contextRepository;
     private final com.abluepoint.summer.sample.authorization.AuthorizationService authorization;
 
-    OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository, com.abluepoint.summer.sample.member.MemberDirectory memberDirectory, com.abluepoint.summer.sample.enterprise.DirectoryJournal journal, com.abluepoint.summer.sample.authorization.AuthorizationService authorization) {
+    OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository, com.abluepoint.summer.sample.member.infrastructure.MemberDirectory memberDirectory, com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal, com.abluepoint.summer.sample.authorization.AuthorizationService authorization) {
         this.authorization = authorization;
         this.journal = journal;
         this.memberDirectory = memberDirectory;
@@ -397,7 +397,7 @@ class OrganizationDirectoryService {
     private static void requireKey(String key) { if (key == null || key.isBlank() || key.length() > 128) throw new OrganizationIdempotencyConflictException("Idempotency-Key is required"); }
     private void remember(String enterpriseId, String key, String fingerprint, Object result) { journal.remember(enterpriseId, "organization.mutation", key, fingerprint, result); }
 
-    private <T> T replay(com.abluepoint.summer.sample.enterprise.DirectoryJournal.Receipt receipt, String fingerprint, Class<T> type) {
+    private <T> T replay(com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryReceipt receipt, String fingerprint, Class<T> type) {
         if (!receipt.fingerprint().equals(fingerprint)) throw new OrganizationIdempotencyConflictException("Idempotency-Key was already used for another mutation");
         return journal.decode(receipt, type);
     }

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.organization;
 
-import com.abluepoint.summer.sample.enterprise.EnterpriseRegistry;
-import com.abluepoint.summer.sample.member.MemberDirectory;
+import com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry;
+import com.abluepoint.summer.sample.member.infrastructure.MemberDirectory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

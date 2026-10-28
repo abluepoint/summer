@@ -39,7 +39,7 @@ class DictionaryMySqlIntegrationTest {
 
     @Autowired
     MockMvc mockMvc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
 
     @Test
     void flywayCreatesDictionaryTablesAndRealHttpReadUsesPublishedRows() throws Exception {

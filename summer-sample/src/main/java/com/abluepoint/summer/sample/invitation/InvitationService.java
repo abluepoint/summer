@@ -17,12 +17,12 @@ class InvitationService {
     private final Map<String, InvitationRecord> invitations = new LinkedHashMap<>();
     private final Map<String, String> tokenIndex = new HashMap<>();
     private final Map<String, JoinRecord> applications = new LinkedHashMap<>();
-    private final com.abluepoint.summer.sample.member.MemberDirectory memberDirectory;
+    private final com.abluepoint.summer.sample.member.infrastructure.MemberDirectory memberDirectory;
     private final com.abluepoint.summer.sample.organization.OrganizationMembershipProvisioner organizationMemberships;
-    private final com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises;
-    InvitationService(com.abluepoint.summer.sample.member.MemberDirectory memberDirectory,
+    private final com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry enterprises;
+    InvitationService(com.abluepoint.summer.sample.member.infrastructure.MemberDirectory memberDirectory,
                       com.abluepoint.summer.sample.organization.OrganizationMembershipProvisioner organizationMemberships,
-                      com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises) {
+                      com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry enterprises) {
         this.memberDirectory = memberDirectory; this.organizationMemberships = organizationMemberships; this.enterprises = enterprises;
     }
     private final Map<String, Receipt> idempotency = new HashMap<>();

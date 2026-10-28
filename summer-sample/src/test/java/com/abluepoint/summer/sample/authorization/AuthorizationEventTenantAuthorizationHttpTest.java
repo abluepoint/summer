@@ -27,7 +27,7 @@ class AuthorizationEventTenantAuthorizationHttpTest {
     private static final String A = "ent-acme", READ = "enterprise.roles.read", WRITE = "enterprise.roles.write";
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
     @Autowired AuthorizationChangeEventService events;
     String b, subject, eventA, eventB;
     RequestPostProcessor oldJwt;

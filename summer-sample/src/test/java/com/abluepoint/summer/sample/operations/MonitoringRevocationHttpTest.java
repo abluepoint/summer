@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MonitoringRevocationHttpTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
 
     @ParameterizedTest
     @ValueSource(strings = {"/actuator/prometheus", "/actuator/metrics", "/internal/v1/diagnostics/runtime"})

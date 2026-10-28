@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PersistedMembershipAuthorizationHttpTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.member.infrastructure.MemberDirectory members;
     @Test void theSameOldJwtLosesTaskAndDictionaryAccessAfterMemberOrEnterpriseRevocation() throws Exception {
         String subject="membership-revocation";
         members.provision("ent-acme", "member-revocation", subject, "Revocation fixture", "revocation@example.test");
