@@ -1,11 +1,11 @@
-import type { MemberPage, TenantMember } from './types';
+import type { MemberPage, TenantMember, AssignmentDraft, OrganizationApiError, OrganizationMember, OrganizationTree, OrganizationUnit, UnitDraft } from './types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { Alert, Button, Card, Drawer, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tree } from '@arco-design/web-react';
 import { isAuthRedirecting } from '@/auth/oidc';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 import useOrganizationAccess from './useAccess';
-import { AssignmentDraft, OrganizationApiError, OrganizationMember, OrganizationTree, OrganizationUnit, UnitDraft, assignOrganizations, changeMemberStatus, createOrganization, deleteOrganization, getOrganizationContext, getOrganizationDetail, getOrganizationMembers, getOrganizationTree, getTenantMember, listTenantMembers, selectOrganizationContext, updateOrganization } from './api';
+import { assignOrganizations, changeMemberStatus, createOrganization, deleteOrganization, getOrganizationContext, getOrganizationDetail, getOrganizationMembers, getOrganizationTree, getTenantMember, listTenantMembers, selectOrganizationContext, updateOrganization } from './api';
 
 const empty: UnitDraft = { parentId: null, unitType: 'DEPARTMENT', name: '', code: '', leaderMemberId: '', description: '', sortOrder: 0, status: 'ACTIVE' };
 const emptyAssignment: AssignmentDraft = { memberIds: [], organizationIds: [], primaryOrganizationId: null };

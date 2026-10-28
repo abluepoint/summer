@@ -1,20 +1,13 @@
-import type { MemberDetail, MemberPage } from './types';
-import type { ApiFailure } from '@/api/types';
+import type { OrganizationUnit, OrganizationTree, OrganizationMember, UnitDraft, AssignmentDraft, MemberDetail, MemberPage } from './types';
 import { businessData as request } from '@/api/client';
 import axios from 'axios';
 
-export type OrganizationUnit = { id: string; enterpriseId: string; parentId: string | null; unitType: 'COMPANY' | 'DEPARTMENT' | 'TEAM'; name: string; code: string; leaderMemberId?: string; description?: string; sortOrder: number; status: 'ACTIVE' | 'DISABLED'; memberCount: number; children: OrganizationUnit[] };
-export type OrganizationTree = { enterpriseId: string; revision: string; items: OrganizationUnit[] };
-export type OrganizationMember = { memberId: string; displayName: string; email: string; status: string; primary: boolean };
-export type OrganizationApiError = Pick<ApiFailure, 'status' | 'code' | 'message' | 'requestId'>;
 
 export const getOrganizationTree = (enterpriseId: string) => request<OrganizationTree>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/org-tree`));
 export const getOrganizationContext = (enterpriseId: string) => request<{ enterpriseId: string; organizationId: string | null }>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/context`));
 export const selectOrganizationContext = (enterpriseId: string, organizationId: string | null) => request<{ enterpriseId: string; organizationId: string | null }>(() => axios.put(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/context`, { organizationId }));
 export const getOrganizationMembers = (enterpriseId: string, organizationId: string) => request<{ items: OrganizationMember[] }>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/org-units/${encodeURIComponent(organizationId)}/members`));
 
-export type UnitDraft = Pick<OrganizationUnit, 'parentId' | 'unitType' | 'name' | 'code' | 'leaderMemberId' | 'description' | 'sortOrder' | 'status'>;
-export type AssignmentDraft = { memberIds: string[]; organizationIds: string[]; primaryOrganizationId: string | null };
 const root = (enterprise: string) => `/api/v1/enterprises/${encodeURIComponent(enterprise)}`;
 const units = (enterprise: string) => `${root(enterprise)}/org-units`;
 const headers = (key: string, etag?: string) => ({ 'Idempotency-Key': key, ...(etag ? { 'If-Match': etag } : {}) });

@@ -100,7 +100,7 @@ public final class AuthorizationRequestInterceptor implements HandlerInterceptor
     }
 
     private static boolean isApplicantEndpoint(HandlerMethod method, String permissionCode, JwtAuthenticationToken jwt) {
-        if (!method.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")) return false;
+        if (!method.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.api.InvitationController")) return false;
         String scope = APPLICANT_ENDPOINT_SCOPES.get(permissionCode);
         if (scope == null) return false;
         if (jwt.getAuthorities().stream().noneMatch(authority -> ("SCOPE_" + scope).equals(authority.getAuthority()))) {
