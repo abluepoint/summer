@@ -5,6 +5,7 @@ import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import jakarta.servlet.http.HttpServletRequest;
+import com.abluepoint.summer.security.context.SummerSecurityContext;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -37,7 +38,7 @@ final class SessionController {
     @RawResponse
     ResponseEntity<ApiResponse<SessionSnapshot>> session(Authentication authentication, HttpServletRequest request) {
         try {
-            if (sessionIndex != null && !com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository.hasBearerCredentials(request))
+            if (sessionIndex != null && !SummerSecurityContext.hasBearerCredentials(request))
                 sessionIndex.assertActive(request, authentication);
             SessionSnapshot snapshot = snapshotService.snapshot(authentication);
             String etag = quote(snapshot.revision());

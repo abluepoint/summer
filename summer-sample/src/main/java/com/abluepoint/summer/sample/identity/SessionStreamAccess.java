@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository;
+import com.abluepoint.summer.security.context.SummerSecurityContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
@@ -25,7 +25,7 @@ public final class SessionStreamAccess {
 
     public BooleanSupplier capture(HttpServletRequest request, Authentication authentication) {
         // A bearer request remains independent of any login cookie sent alongside it.
-        if (BearerOrSessionSecurityContextRepository.hasBearerCredentials(request)) return () -> true;
+        if (SummerSecurityContext.hasBearerCredentials(request)) return () -> true;
         var session = request.getSession(false);
         if (session == null || authentication == null) return () -> false;
         String sessionId = session.getId();

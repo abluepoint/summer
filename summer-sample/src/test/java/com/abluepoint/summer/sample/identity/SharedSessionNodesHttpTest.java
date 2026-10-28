@@ -313,7 +313,7 @@ class SharedSessionNodesHttpTest {
         @RequestMapping("/api/probe") Map<String, String> probe(Authentication authentication,
                 jakarta.servlet.http.HttpServletRequest request) {
             return Map.of("principal", authentication.getName(), "reference",
-                    com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository.hasBearerCredentials(request)
+                    com.abluepoint.summer.security.context.SummerSecurityContext.hasBearerCredentials(request)
                             ? "" : SessionIndexService.reference(request.getSession().getId()));
         }
     }

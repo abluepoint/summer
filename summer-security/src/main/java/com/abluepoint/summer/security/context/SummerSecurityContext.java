@@ -1,5 +1,6 @@
 package com.abluepoint.summer.security.context;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -10,6 +11,16 @@ import java.util.stream.Collectors;
 public final class SummerSecurityContext {
 
     private SummerSecurityContext() {
+    }
+
+    /**
+     * Whether the request presents bearer credentials and must stay independent of
+     * a login cookie. This identifies the credential path, not token validity;
+     * malformed bearer credentials still belong to the bearer authentication path.
+     */
+    public static boolean hasBearerCredentials(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        return header != null && header.regionMatches(true, 0, "Bearer", 0, 6);
     }
 
     public static String principalName() {

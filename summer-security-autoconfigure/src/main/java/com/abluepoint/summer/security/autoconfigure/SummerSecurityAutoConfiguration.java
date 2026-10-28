@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -294,56 +295,70 @@ public class SummerSecurityAutoConfiguration {
         return http.build();
     }
 
+    /**
+     * Shared resource authentication for application-owned chains. Applications keep
+     * their request matcher, authorization and CSRF policy; runtime composition stays here.
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "summerResourceServerSecurity")
+    @ConditionalOnProperty(prefix = "summer.security.resource-server", name = "enabled", havingValue = "true")
+    Customizer<HttpSecurity> summerResourceServerSecurity(
+            JsonAuthenticationEntryPoint authenticationEntryPoint,
+            JsonAccessDeniedHandler accessDeniedHandler,
+            ObjectProvider<SecurityContextRepository> sessionStores,
+            ObjectProvider<org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter> jwtConverters
+    ) {
+        return http -> {
+            var bearerConverter = new org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationConverter();
+            // Avoid WebAuthenticationDetails(request), which reads HttpSession for bearer credentials.
+            bearerConverter.setAuthenticationDetailsSource(request ->
+                    new org.springframework.security.web.authentication.WebAuthenticationDetails(request.getRemoteAddr(), null));
+            try {
+                http.addFilterBefore(new com.abluepoint.summer.security.autoconfigure.storage.BearerSessionIsolationFilter(),
+                                org.springframework.security.web.context.SecurityContextHolderFilter.class)
+                        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                        .securityContext(context -> context.securityContextRepository(
+                                new BearerOrSessionSecurityContextRepository(sessionStores.getIfAvailable(DefaultSummerSessionStore::new))))
+                        .requestCache(cache -> cache.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
+                        .exceptionHandling(exceptions -> exceptions
+                                .authenticationEntryPoint(authenticationEntryPoint)
+                                .accessDeniedHandler(accessDeniedHandler))
+                        .oauth2ResourceServer(oauth2 -> oauth2
+                                .authenticationConverter(bearerConverter)
+                                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverters.getIfAvailable(
+                                        org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter::new)))
+                                .authenticationEntryPoint(authenticationEntryPoint)
+                                .accessDeniedHandler(accessDeniedHandler));
+            } catch (Exception exception) {
+                throw new IllegalStateException("Unable to configure Summer resource server security", exception);
+            }
+        };
+    }
+
     @Bean
     @Order(2)
     @ConditionalOnProperty(prefix = "summer.security.resource-server", name = "enabled", havingValue = "true")
     SecurityFilterChain summerResourceServerSecurityFilterChain(
             HttpSecurity http,
             SummerSecurityProperties properties,
-            JsonAuthenticationEntryPoint authenticationEntryPoint,
-            JsonAccessDeniedHandler accessDeniedHandler,
-            ObjectProvider<SecurityContextRepository> sessionStores,
-            ObjectProvider<org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter> jwtConverters
+            @Qualifier("summerResourceServerSecurity")
+            Customizer<HttpSecurity> resourceServerSecurity
     ) throws Exception {
-        var bearerConverter = new org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationConverter();
-        // The default WebAuthenticationDetails(request) reads HttpSession even for
-        // bearer credentials. Keep token validation independent of session storage.
-        bearerConverter.setAuthenticationDetailsSource(request ->
-                new org.springframework.security.web.authentication.WebAuthenticationDetails(request.getRemoteAddr(), null));
         String[] protectedPaths = properties.getResourceServer().getProtectedPaths().toArray(String[]::new);
         if (protectedPaths.length == 0) {
             throw new IllegalStateException("At least one summer.security.resource-server.protected-paths entry is required");
         }
+        resourceServerSecurity.customize(http);
         http.securityMatcher(protectedPaths)
-                .addFilterBefore(new com.abluepoint.summer.security.autoconfigure.storage.BearerSessionIsolationFilter(),
-                        org.springframework.security.web.context.SecurityContextHolderFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         // Logout remains idempotent when a Product Session has expired.
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/session").permitAll()
                         .anyRequest().authenticated())
-                // Keep the resource server bearer-token path compatible with the
-                // local form-login session used by the sample console. A bearer
-                // token remains supported, while a successful /login can also
-                // establish the normal servlet SecurityContext session.
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .securityContext(context -> context.securityContextRepository(
-                        new BearerOrSessionSecurityContextRepository(sessionStores.getIfAvailable(DefaultSummerSessionStore::new))))
-                .requestCache(cache -> cache.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
-                // Only ambient servlet credentials need CSRF protection. A newly
-                // created session cannot authenticate a request without a client session id.
+                // Only ambient servlet credentials need CSRF protection.
                 .csrf(csrf -> csrf.requireCsrfProtectionMatcher(request ->
                         org.springframework.security.web.csrf.CsrfFilter.DEFAULT_CSRF_MATCHER.matches(request)
                                 && request.getRequestedSessionId() != null
-                                && !BearerOrSessionSecurityContextRepository.hasBearerCredentials(request)))
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler))
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .authenticationConverter(bearerConverter)
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverters.getIfAvailable(
-                                org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter::new)))
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler));
+                                && !com.abluepoint.summer.security.context.SummerSecurityContext.hasBearerCredentials(request)));
         return http.build();
     }
 
