@@ -1,10 +1,11 @@
-package com.abluepoint.summer.sample.configuration;
+package com.abluepoint.summer.sample.configuration.infrastructure;
 
 import com.abluepoint.summer.sample.authorization.infrastructure.EnterpriseRequestContext;
 import org.springframework.security.core.Authentication;
 import java.util.Set;
 
 /** Configuration-facing facade; request identity selection belongs to authorization. */
+@org.springframework.modulith.NamedInterface("context")
 public final class ConfigurationTenantContext {
     private ConfigurationTenantContext() {}
     public static String resolve(Authentication authentication) {

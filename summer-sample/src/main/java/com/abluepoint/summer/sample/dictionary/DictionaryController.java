@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.dictionary;
 
+import com.abluepoint.summer.sample.configuration.api.request.ConfigurationOverrideRequest;
+import com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView;
+
 import com.abluepoint.summer.mvc.parameter.api.Field;
 import com.abluepoint.summer.mvc.parameter.api.FieldContract;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
@@ -99,9 +102,9 @@ class DictionaryController {
     @PutMapping({"/api/dictionaries/{code}/overrides/{organization}", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/overrides/{organization}"})
     @com.abluepoint.summer.sample.resource.api.ResourcePermission("platform.dictionary.publish")
     @PreAuthorize("hasAnyAuthority('SCOPE_platform.dictionary.publish','SCOPE_platform.dictionary.write')")
-    com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(@PathVariable String code, @PathVariable String organization,
-            @RequestBody com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth) {
-        return versions.override(code, organization, request, auth, requestId.currentRequestId());
+    com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView override(@PathVariable String code, @PathVariable String organization,
+            @RequestBody com.abluepoint.summer.sample.configuration.api.request.ConfigurationOverrideRequest request, Authentication auth) {
+        return versions.override(code, organization, request.toCommand(), auth, requestId.currentRequestId());
     }
 
     @GetMapping({"/public/dictionaries/{code}", "/public/enterprises/{enterpriseId}/dictionaries/{code}"})

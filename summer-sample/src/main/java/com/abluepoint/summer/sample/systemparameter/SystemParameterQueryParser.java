@@ -1,6 +1,8 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+
+import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 
 import com.abluepoint.summer.mvc.parameter.api.FieldValues;
 import org.springframework.security.core.Authentication;

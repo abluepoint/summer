@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.dictionary;
 
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+
 import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
@@ -33,7 +36,7 @@ class DictionaryNotificationService {
     private final DictionaryNotificationRepository repository;
     private final DictionaryTypeRepository types;
     private final DataScopeService dataScopes;
-    private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
+    private final com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher events;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, runnable -> {
@@ -46,7 +49,7 @@ class DictionaryNotificationService {
 
     DictionaryNotificationService(DictionaryNotificationRepository repository, DictionaryTypeRepository types,
                                    DataScopeService dataScopes, ObjectMapper objectMapper,
-                                   ApplicationEventPublisher events, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions) {
+                                   ApplicationEventPublisher events, com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions) {
         this.repository = repository;
         this.types = types;
         this.dataScopes = dataScopes;
@@ -102,7 +105,7 @@ class DictionaryNotificationService {
     }
 
     private void requireReadable(String enterpriseId, String dictionaryCode, Authentication authentication) {
-        com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(enterpriseId, authentication);
+        com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.requireMembership(enterpriseId, authentication);
         actions.requirePublic(enterpriseId, "dictionaries", authentication);
         DataScopeService.ScopeFilter scope = dataScopes.filter(enterpriseId, "dictionaries", authentication);
         boolean visible = types.findScoped(dictionaryCode, scope).isPresent();

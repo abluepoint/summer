@@ -1,15 +1,16 @@
-package com.abluepoint.summer.sample.configuration;
+package com.abluepoint.summer.sample.configuration.infrastructure;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import org.springframework.stereotype.Component;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.AccessDeniedException;
 
 @Component
+@org.springframework.modulith.NamedInterface("access")
 public class ConfigurationActionAccess {
     private final AuthorizationService authorization;
-    ConfigurationActionAccess(AuthorizationService authorization) { this.authorization=authorization; }
+    public ConfigurationActionAccess(AuthorizationService authorization) { this.authorization=authorization; }
     public void requirePublic(String resource, Authentication auth) {
         requirePublic(resolve(auth), resource, auth);
     }

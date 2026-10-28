@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.sample.configuration.api.request.ConfigurationOverrideRequest;
+import com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView;
+
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -240,10 +243,10 @@ class SystemParameterController {
     @RawResponse
     @com.abluepoint.summer.sample.resource.api.ResourcePermission("system.parameter.publish")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
-    ResponseEntity<ApiResponse<com.abluepoint.summer.sample.configuration.ConfigurationOverrideView>> override(
+    ResponseEntity<ApiResponse<com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView>> override(
             @PathVariable String key, @PathVariable String organization,
-            @RequestBody com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth) {
-        try { return body(HttpStatus.OK, service.override(key, organization, request, auth, rid())); }
+            @RequestBody com.abluepoint.summer.sample.configuration.api.request.ConfigurationOverrideRequest request, Authentication auth) {
+        try { return body(HttpStatus.OK, service.override(key, organization, request.toCommand(), auth, rid())); }
         catch (SystemParameterValidationException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", e.getMessage(), violations(e.violations())); }
         catch (SystemParameterNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", "The requested resource was not found", List.of()); }
     }

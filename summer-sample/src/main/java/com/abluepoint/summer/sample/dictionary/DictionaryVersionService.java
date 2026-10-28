@@ -1,6 +1,12 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand;
+import com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService;
+import com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+
+import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import com.abluepoint.summer.sample.resilience.service.ResilientReadService;
@@ -27,14 +33,14 @@ class DictionaryVersionService {
     private final ResilientReadService resilientReads;
     private final com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard;
     private final DictionaryNotificationService notifications;
-    private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
-    private final com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides;
+    private final com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions;
+    private final com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService overrides;
 
     DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              DataScopeService dataScopes, ObjectMapper objectMapper,
-                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard) {
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard) {
         this.types = types;
         this.items = items;
         this.versions = versions;
@@ -153,8 +159,8 @@ class DictionaryVersionService {
     }
 
     @Transactional
-    com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(String code, String organization,
-            com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth, String requestId) {
+    com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView override(String code, String organization,
+            com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand request, Authentication auth, String requestId) {
         scopedType(code, auth);
         if (request == null || !(request.value() instanceof java.util.Collection<?> values) || values.size() > 200)
             throw invalidOverride();
@@ -166,7 +172,7 @@ class DictionaryVersionService {
         if (options.stream().anyMatch(i -> i.value() == null || !allowed.contains(i.value()) || i.label() == null || i.label().isBlank() || i.label().length() > 200 || i.sortOrder() < 0)
                 || options.stream().map(DictionaryItemView::value).distinct().count() != options.size())
             throw invalidOverride();
-        return overrides.save("dictionaries", code, organization, new com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest(options, request.publicReadable(), request.enabled(), request.expectedVersion()), auth, requestId);
+        return overrides.save("dictionaries", code, organization, new com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand(options, request.publicReadable(), request.enabled(), request.expectedVersion()), auth, requestId);
     }
 
     private DictionaryTypeEntity scopedType(String code, Authentication authentication) {

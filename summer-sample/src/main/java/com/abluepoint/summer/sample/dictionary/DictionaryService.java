@@ -1,6 +1,9 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+
+import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.CommonErrorCode;
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
@@ -21,10 +24,10 @@ class DictionaryService {
     private final VersionedTwoLevelCache cache;
     private final DataScopeService dataScopes;
 
-    private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
+    private final com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions;
 
     DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
-                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions) {
+                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions) {
         this.types = types;
         this.actions = actions;
         this.items = items;

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.response.api.RawResponse;
@@ -28,7 +30,7 @@ class SystemParameterEventController {
     @RawResponse
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
     ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(required = false) String key, org.springframework.security.core.Authentication auth) {
-        SystemParameterEventPage page = service.list(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), key);
+        SystemParameterEventPage page = service.list(com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve(auth), key);
         return body(HttpStatus.OK, Map.of("items", page.items(), "totalElements", page.totalElements()));
     }
 
@@ -38,7 +40,7 @@ class SystemParameterEventController {
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
     ResponseEntity<ApiResponse<SystemParameterEventView>> retry(@PathVariable String eventId, org.springframework.security.core.Authentication auth) {
         try {
-            return body(HttpStatus.OK, service.retry(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), eventId));
+            return body(HttpStatus.OK, service.retry(com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve(auth), eventId));
         } catch (SystemParameterEventNotFoundException exception) {
             return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage());
         }

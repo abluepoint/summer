@@ -1,5 +1,5 @@
 package com.abluepoint.summer.sample.dictionary;
-import com.abluepoint.summer.sample.configuration.ConfigurationValueValidator;
+import com.abluepoint.summer.sample.configuration.application.port.ConfigurationValueValidator;
 import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import com.abluepoint.summer.common.error.api.*;
 import org.springframework.security.core.Authentication;

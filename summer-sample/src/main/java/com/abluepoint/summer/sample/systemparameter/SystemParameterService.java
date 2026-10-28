@@ -1,6 +1,12 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand;
+import com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService;
+import com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+
+import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
@@ -35,14 +41,14 @@ class SystemParameterService {
     private final SystemParameterReleaseService releases;
     private final ResilientReadService resilientReads;
     private final com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard;
-    private final com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides;
+    private final com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService overrides;
 
-    private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
+    private final com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions;
 
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
                            CustomerAuditService audit, SystemParameterEventService events,
                            VersionedTwoLevelCache cache, DataScopeService dataScopes,
-                           SystemParameterReleaseService releases, ResilientReadService resilientReads, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard) {
+                           SystemParameterReleaseService releases, ResilientReadService resilientReads, com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard) {
         this.repository = repository;
         this.actions = actions;
         this.objectMapper = objectMapper;
@@ -184,8 +190,8 @@ class SystemParameterService {
     }
 
     @Transactional
-    com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(String key, String organization,
-            com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth, String requestId) {
+    com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView override(String key, String organization,
+            com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand request, Authentication auth, String requestId) {
         SystemParameterEntity row = repository.findScoped(key, dataScopes.filter(resolve(auth), "system-parameters", auth))
                 .orElseThrow(() -> new SystemParameterNotFoundException(key));
         List<SummerException.Violation> violations = validate(row.key(), row.type(), request.value(), row.required(), row.min(), row.max(), row.pattern());

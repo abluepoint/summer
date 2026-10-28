@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.resilience.service;
 
 import com.abluepoint.summer.sample.authorization.application.DataScopeService;
-import com.abluepoint.summer.sample.configuration.ConfigurationActionAccess;
+import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
