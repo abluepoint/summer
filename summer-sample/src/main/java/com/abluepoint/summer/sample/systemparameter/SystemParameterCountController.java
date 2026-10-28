@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;

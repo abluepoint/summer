@@ -8,8 +8,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.abluepoint.summer.common.response.ApiResponse;
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiError;
 import tools.jackson.databind.ObjectMapper;
 
 /** Covers failures from Spring Session, which runs before Spring Security and MVC. */

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.dictionary;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.resilience.ResilientReadService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
@@ -128,7 +128,7 @@ class DictionaryVersionService {
         DataScopeService.ScopeFilter scope = dataScopes.filter(tenant, "dictionaries", authentication);
         DictionaryTypeEntity type = types.findScoped(code, scope)
                 .filter(t -> t.enabled() && t.publicReadable() && t.published())
-                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND));
         // Recheck both type and item scope before any cache/fallback read. Snapshot values remain immutable.
         List<DictionaryItemEntity> visible = items.findScoped(code, scope);
         java.util.Set<String> allowedValues = visible.stream().map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
@@ -142,9 +142,9 @@ class DictionaryVersionService {
                     .map(i -> new DictionaryItemView(i.value(), i.label(), i.sortOrder(), i.enabled())).toList(), 0);
         }
         DictionaryVersionEntity version = versions.findByTenantIdAndDictionaryCodeAndVersion(tenant, code, type.publishedVersion())
-                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND));
         DictionarySnapshot snapshot = objectMapper.readValue(version.snapshotJson(), DictionarySnapshot.class);
-        if (!snapshot.publicReadable() || !snapshot.enabled()) throw new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
+        if (!snapshot.publicReadable() || !snapshot.enabled()) throw new SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND);
         String cacheKey = tenant + ":" + code + ":" + (authentication == null ? "" : authentication.getName()) + ":" + version.version() + ":" + scope.fingerprint() + ":" + new java.util.TreeSet<>(allowedValues);
         return resilientReads.read(ResilientReadService.DICTIONARIES, cacheKey, () -> cache.get(tenant, "dictionary", cacheKey, PublicDictionaryView.class,
                 () -> new PublicDictionaryView(code, snapshot.items().stream().filter(DictionaryItemView::enabled)
@@ -172,7 +172,7 @@ class DictionaryVersionService {
     private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
         DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
         return types.findScoped(code, scope)
-                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND));
     }
 
     private String snapshot(DictionaryTypeEntity type, String code) {

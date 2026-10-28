@@ -1,4 +1,4 @@
-package com.abluepoint.summer.common.error;
+package com.abluepoint.summer.common.error.api;
 
 import org.junit.jupiter.api.Test;
 

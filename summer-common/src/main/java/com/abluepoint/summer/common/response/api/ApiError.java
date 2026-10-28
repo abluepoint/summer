@@ -1,4 +1,4 @@
-package com.abluepoint.summer.common.response;
+package com.abluepoint.summer.common.response.api;
 
 import java.util.List;
 

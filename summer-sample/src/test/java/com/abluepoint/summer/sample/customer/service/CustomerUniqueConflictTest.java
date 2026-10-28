@@ -4,7 +4,7 @@ import com.abluepoint.summer.sample.customer.model.command.CustomerCreateCommand
 import com.abluepoint.summer.sample.customer.model.entity.CustomerEntity;
 import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
 
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.SummerException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;

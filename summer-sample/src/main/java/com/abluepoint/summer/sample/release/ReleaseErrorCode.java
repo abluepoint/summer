@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.release;
 
-import com.abluepoint.summer.common.error.ErrorCategory;
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCategory;
+import com.abluepoint.summer.common.error.api.ErrorCode;
 
 /** Keeps the published application code independent of its HTTP transport policy. */
 enum ReleaseErrorCode implements ErrorCode {

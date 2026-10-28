@@ -1,6 +1,6 @@
-package com.abluepoint.summer.common.message;
+package com.abluepoint.summer.common.message.spi;
 
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCode;
 
 import java.util.Locale;
 

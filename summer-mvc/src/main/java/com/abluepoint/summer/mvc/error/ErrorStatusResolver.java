@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.error;
 
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCode;
 import org.springframework.http.HttpStatus;
 
 @FunctionalInterface

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
@@ -63,7 +63,7 @@ class SystemParameterService {
         if (!violations.isEmpty()) throw new SystemParameterValidationException(violations);
         if (repository.existsByTenantIdAndKey(resolve(authentication), request.key())) {
             if (repository.findScoped(request.key(), dataScopes.filter(resolve(authentication), "system-parameters", authentication)).isEmpty())
-                throw new com.abluepoint.summer.common.error.SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
+                throw new com.abluepoint.summer.common.error.api.SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND);
             throw new SystemParameterConflictException("System parameter key is already in use");
         }
         dataScopes.assertWrite(resolve(authentication), "system-parameters", authentication, request.organizationId());

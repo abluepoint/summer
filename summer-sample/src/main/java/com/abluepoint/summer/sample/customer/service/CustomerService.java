@@ -8,8 +8,8 @@ import com.abluepoint.summer.sample.customer.model.view.CustomerPage;
 import com.abluepoint.summer.sample.customer.model.view.CustomerView;
 import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
 
-import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
+import com.abluepoint.summer.common.error.api.SummerException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;

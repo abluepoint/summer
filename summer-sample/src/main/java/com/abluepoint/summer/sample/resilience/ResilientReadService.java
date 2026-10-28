@@ -126,8 +126,8 @@ public class ResilientReadService {
     static boolean isBusinessFailure(Throwable failure) {
         Throwable cause = unwrap(failure);
         return cause instanceof org.springframework.security.access.AccessDeniedException
-                || (cause instanceof com.abluepoint.summer.common.error.SummerException business
-                && business.errorCode().category() != com.abluepoint.summer.common.error.ErrorCategory.INTERNAL_ERROR);
+                || (cause instanceof com.abluepoint.summer.common.error.api.SummerException business
+                && business.errorCode().category() != com.abluepoint.summer.common.error.api.ErrorCategory.INTERNAL_ERROR);
     }
 
     private static Throwable unwrap(Throwable failure) {

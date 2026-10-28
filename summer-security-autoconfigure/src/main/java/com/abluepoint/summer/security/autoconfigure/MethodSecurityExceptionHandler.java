@@ -1,8 +1,8 @@
 package com.abluepoint.summer.security.autoconfigure;
 
-import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;

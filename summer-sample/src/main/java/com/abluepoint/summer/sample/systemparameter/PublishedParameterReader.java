@@ -18,8 +18,8 @@ public class PublishedParameterReader {
             return Optional.of(new Value(value.value(), value.version()));
         } catch (SystemParameterNotFoundException absent) {
             return Optional.empty();
-        } catch (com.abluepoint.summer.common.error.SummerException failure) {
-            if (failure.errorCode().category() == com.abluepoint.summer.common.error.ErrorCategory.NOT_FOUND) return Optional.empty();
+        } catch (com.abluepoint.summer.common.error.api.SummerException failure) {
+            if (failure.errorCode().category() == com.abluepoint.summer.common.error.api.ErrorCategory.NOT_FOUND) return Optional.empty();
             throw failure;
         }
     }

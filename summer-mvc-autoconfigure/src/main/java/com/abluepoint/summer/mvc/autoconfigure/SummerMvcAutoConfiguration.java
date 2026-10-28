@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.autoconfigure;
 
-import com.abluepoint.summer.common.message.MessageResolver;
+import com.abluepoint.summer.common.message.spi.MessageResolver;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.filter.CachedBodyFilter;

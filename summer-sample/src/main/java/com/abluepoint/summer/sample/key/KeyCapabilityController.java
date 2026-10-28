@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
@@ -78,7 +78,7 @@ class KeyCapabilityController {
 
     private ResponseEntity<ApiResponse<Map<String, Object>>> failure(HttpStatus status, String code, String message) {
         return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.failure(new com.abluepoint.summer.common.response.ApiError(code, message, List.of()), requestId.currentRequestId()));
+                .body(ApiResponse.failure(new com.abluepoint.summer.common.response.api.ApiError(code, message, List.of()), requestId.currentRequestId()));
     }
 
     private void auditFailure(Authentication authentication, String code) {

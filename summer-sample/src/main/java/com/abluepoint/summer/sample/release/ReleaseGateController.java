@@ -1,10 +1,10 @@
 package com.abluepoint.summer.sample.release;
 
-import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCode;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.http.*;

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.plugin;
 
-import com.abluepoint.summer.common.error.ErrorCategory;
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCategory;
+import com.abluepoint.summer.common.error.api.ErrorCode;
 
 enum PluginErrorCode implements ErrorCode {
     INVALID("SAMPLE_PLUGIN_INVALID", "The plugin request is invalid", ErrorCategory.INVALID_ARGUMENT),

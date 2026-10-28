@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.SummerException;
 
 import java.util.List;
 

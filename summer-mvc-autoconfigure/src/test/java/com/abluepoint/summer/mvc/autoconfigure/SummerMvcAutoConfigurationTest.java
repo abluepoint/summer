@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.autoconfigure;
 
-import com.abluepoint.summer.common.message.MessageResolver;
+import com.abluepoint.summer.common.message.spi.MessageResolver;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
 import com.abluepoint.summer.mvc.annotation.FieldList;

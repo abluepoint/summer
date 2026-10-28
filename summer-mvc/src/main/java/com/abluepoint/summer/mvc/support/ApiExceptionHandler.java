@@ -1,10 +1,10 @@
 package com.abluepoint.summer.mvc.support;
 
-import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.common.message.MessageResolver;
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
+import com.abluepoint.summer.common.error.api.SummerException;
+import com.abluepoint.summer.common.message.spi.MessageResolver;
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;

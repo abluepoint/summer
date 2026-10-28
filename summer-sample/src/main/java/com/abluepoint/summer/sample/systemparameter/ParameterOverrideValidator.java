@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 import com.abluepoint.summer.sample.configuration.ConfigurationValueValidator;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
-import com.abluepoint.summer.common.error.*;
+import com.abluepoint.summer.common.error.api.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 @Component

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.mvc.support;
 
 import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.io.ByteArrayResource;

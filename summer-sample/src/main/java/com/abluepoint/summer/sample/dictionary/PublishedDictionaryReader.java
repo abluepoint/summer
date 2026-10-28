@@ -1,8 +1,8 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.common.error.ErrorCategory;
-import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.api.SummerException;
+import com.abluepoint.summer.common.error.api.ErrorCategory;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import java.util.List;

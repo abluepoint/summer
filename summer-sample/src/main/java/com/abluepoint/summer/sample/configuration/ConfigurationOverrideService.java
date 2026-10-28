@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.configuration;
 
-import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
+import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;

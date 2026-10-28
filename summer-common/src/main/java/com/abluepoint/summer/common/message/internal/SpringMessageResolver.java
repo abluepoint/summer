@@ -1,11 +1,13 @@
-package com.abluepoint.summer.common.message;
+package com.abluepoint.summer.common.message.internal;
 
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCode;
+import com.abluepoint.summer.common.message.spi.MessageResolver;
 import org.springframework.context.MessageSource;
 
 import java.util.Locale;
 import java.util.Objects;
 
+/** Framework-internal adapter, public for use by the Common autoconfiguration module. */
 public final class SpringMessageResolver implements MessageResolver {
 
     private final MessageSource messageSource;

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.resilience;
 
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;

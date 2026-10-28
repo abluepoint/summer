@@ -1,4 +1,4 @@
-package com.abluepoint.summer.common.error;
+package com.abluepoint.summer.common.error.api;
 
 /** Stable cross-module error contract. */
 public interface ErrorCode {

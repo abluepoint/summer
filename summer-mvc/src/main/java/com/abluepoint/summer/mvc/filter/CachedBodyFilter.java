@@ -1,7 +1,7 @@
 package com.abluepoint.summer.mvc.filter;
 
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

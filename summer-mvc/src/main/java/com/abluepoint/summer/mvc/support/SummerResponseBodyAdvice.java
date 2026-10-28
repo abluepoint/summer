@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.support;
 
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import jakarta.servlet.DispatcherType;

@@ -1,4 +1,4 @@
-package com.abluepoint.summer.common.error;
+package com.abluepoint.summer.common.error.api;
 
 public enum CommonErrorCode implements ErrorCode {
     INVALID_ARGUMENT("SUMMER_INVALID_ARGUMENT", "The request is invalid", ErrorCategory.INVALID_ARGUMENT),

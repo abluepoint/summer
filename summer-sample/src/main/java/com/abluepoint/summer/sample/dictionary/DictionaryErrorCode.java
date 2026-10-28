@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import com.abluepoint.summer.common.error.ErrorCategory;
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.api.ErrorCategory;
+import com.abluepoint.summer.common.error.api.ErrorCode;
 
 enum DictionaryErrorCode implements ErrorCode {
     INVALID("SUMMER_DICTIONARY_INVALID", "The dictionary request is invalid", ErrorCategory.INVALID_ARGUMENT),

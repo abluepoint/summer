@@ -22,11 +22,11 @@ class AuthUserController {
 
     @ExceptionHandler(AuthUserConflictException.class)
     @com.abluepoint.summer.mvc.api.RawResponse
-    org.springframework.http.ResponseEntity<com.abluepoint.summer.common.response.ApiResponse<Void>> duplicate() {
+    org.springframework.http.ResponseEntity<com.abluepoint.summer.common.response.api.ApiResponse<Void>> duplicate() {
         return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
                 .header("X-Request-Id", requestId.currentRequestId())
-                .body(com.abluepoint.summer.common.response.ApiResponse.failure(
-                        new com.abluepoint.summer.common.response.ApiError("SUMMER_USER_CONFLICT", "Username already exists", List.of()),
+                .body(com.abluepoint.summer.common.response.api.ApiResponse.failure(
+                        new com.abluepoint.summer.common.response.api.ApiError("SUMMER_USER_CONFLICT", "Username already exists", List.of()),
                         requestId.currentRequestId()));
     }
 

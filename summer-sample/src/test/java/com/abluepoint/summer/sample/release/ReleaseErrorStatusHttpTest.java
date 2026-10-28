@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.release;
 
-import com.abluepoint.summer.common.error.ErrorCategory;
+import com.abluepoint.summer.common.error.api.ErrorCategory;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import org.junit.jupiter.api.Test;

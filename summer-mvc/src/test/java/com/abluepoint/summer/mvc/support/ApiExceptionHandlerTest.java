@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.support;
 
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ class ApiExceptionHandlerTest {
         assertThat(response.getBody().error().code()).isEqualTo("SUMMER_INVALID_ARGUMENT");
         assertThat(response.getBody().requestId()).isEqualTo("request-123");
         assertThat(response.getBody().error().violations()).containsExactly(
-                new com.abluepoint.summer.common.response.ApiError.FieldViolation(
+                new com.abluepoint.summer.common.response.api.ApiError.FieldViolation(
                         "items[0].quantity",
                         "must be an integer"
                 )

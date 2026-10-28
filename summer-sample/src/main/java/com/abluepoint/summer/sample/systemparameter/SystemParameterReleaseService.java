@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
-import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;

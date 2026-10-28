@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.error;
 
-import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.api.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 

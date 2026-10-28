@@ -12,6 +12,6 @@ class PublicSystemParameterController {
     @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param="key", style="systemParameterKeyStyle")
     PublicSystemParameterView read(@PathVariable String key, Authentication auth) { try { return service.publicRead(key, auth); }
-        catch (SystemParameterNotFoundException e) { throw new com.abluepoint.summer.common.error.SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND); } }
+        catch (SystemParameterNotFoundException e) { throw new com.abluepoint.summer.common.error.api.SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND); } }
 }
 record PublicSystemParameterView(String key, Object value, long version) {}

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.common.autoconfigure;
 
-import com.abluepoint.summer.common.message.MessageResolver;
-import com.abluepoint.summer.common.message.SpringMessageResolver;
+import com.abluepoint.summer.common.message.internal.SpringMessageResolver;
+import com.abluepoint.summer.common.message.spi.MessageResolver;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
