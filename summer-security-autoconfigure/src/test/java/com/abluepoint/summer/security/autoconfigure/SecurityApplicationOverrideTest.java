@@ -5,7 +5,7 @@ import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.annotation.Order;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.security.config.Customizer;
+import com.abluepoint.summer.security.access.api.ResourceServerSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -193,7 +193,7 @@ class SecurityApplicationOverrideTest {
         SecurityFilterChain applicationMonitoringChain(
                 HttpSecurity http,
                 @Qualifier("summerResourceServerSecurity")
-                Customizer<HttpSecurity> security)
+                ResourceServerSecurity security)
                 throws Exception {
             security.customize(http);
             http.securityMatcher("/monitor").authorizeHttpRequests(requests -> requests.anyRequest().hasAuthority("diagnostics"));

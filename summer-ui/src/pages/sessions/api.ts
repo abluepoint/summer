@@ -1,20 +1,9 @@
+import type { SessionItem, SessionPage } from './types';
+export type { SessionItem, SessionPage } from './types';
 import axios from 'axios';
 import { SummerApiError } from '@/api/errors';
 import { businessData } from '@/api/client';
 import type { ApiFailure } from '@/api/types';
-
-export type SessionItem = {
-  sessionRef: string;
-  principal: string;
-  clientId: string;
-  status: 'ACTIVE' | 'REVOKED';
-  createdAt: string;
-  lastSeenAt: string;
-  expiresAt: string;
-  current: boolean;
-};
-
-export type SessionPage = { availability: 'AVAILABLE' | 'UNAVAILABLE'; items: SessionItem[] };
 
 export class SessionApiError extends SummerApiError {
   constructor(failure: ApiFailure) {

@@ -42,7 +42,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
+import com.abluepoint.summer.security.access.api.ResourceServerSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -312,10 +312,11 @@ public class SummerSecurityAutoConfiguration {
      * Shared resource authentication for application-owned chains. Applications keep
      * their request matcher, authorization and CSRF policy; runtime composition stays here.
      */
+    // A dedicated type avoids Spring Security applying Customizer beans to every HttpSecurity.
     @Bean
     @ConditionalOnMissingBean(name = "summerResourceServerSecurity")
     @ConditionalOnProperty(prefix = "summer.security.resource-server", name = "enabled", havingValue = "true")
-    Customizer<HttpSecurity> summerResourceServerSecurity(
+    ResourceServerSecurity summerResourceServerSecurity(
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler,
             ObjectProvider<SecurityContextRepository> sessionStores,
@@ -355,7 +356,7 @@ public class SummerSecurityAutoConfiguration {
             HttpSecurity http,
             SummerSecurityProperties properties,
             @Qualifier("summerResourceServerSecurity")
-            Customizer<HttpSecurity> resourceServerSecurity
+            ResourceServerSecurity resourceServerSecurity
     ) throws Exception {
         String[] protectedPaths = properties.getResourceServer().getProtectedPaths().toArray(String[]::new);
         if (protectedPaths.length == 0) {

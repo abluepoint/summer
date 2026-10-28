@@ -5,7 +5,7 @@ import com.abluepoint.summer.sample.authorization.application.AuthorizationServi
 import com.abluepoint.summer.sample.authorization.infrastructure.EnterpriseRequestContext;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.security.config.Customizer;
+import com.abluepoint.summer.security.access.api.ResourceServerSecurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -20,7 +20,7 @@ class MonitoringSecurityConfiguration {
     @Bean
     @Order(0)
     SecurityFilterChain monitoringSecurityFilterChain(HttpSecurity http,
-            @Qualifier("summerResourceServerSecurity") Customizer<HttpSecurity> resourceServerSecurity,
+            @Qualifier("summerResourceServerSecurity") ResourceServerSecurity resourceServerSecurity,
             AuthorizationService authorization, RequestIdAccessor requestId)
             throws Exception {
         resourceServerSecurity.customize(http);

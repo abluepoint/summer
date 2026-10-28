@@ -52,7 +52,7 @@ public final class AuthorizationRequestInterceptor implements HandlerInterceptor
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof JwtAuthenticationToken jwt)) return true;
         String permissionCode = permissionCode(request, method);
-        if (method.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+        if (method.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.api.SessionController")
                 && ("GET:/api/v1/session".equals(permissionCode) || "DELETE:/api/v1/session".equals(permissionCode))) {
             // Reading or destroying one's own session does not require a tenant role.
             // The controller retains authentication, revocation and current-session checks.

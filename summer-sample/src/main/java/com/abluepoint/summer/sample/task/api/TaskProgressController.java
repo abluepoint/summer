@@ -24,10 +24,10 @@ import java.util.List;
 public class TaskProgressController {
     private final TaskProgressEventService progress;
     private final RequestIdAccessor requestId;
-    private final com.abluepoint.summer.sample.identity.SessionStreamAccess sessionAccess;
+    private final com.abluepoint.summer.sample.identity.infrastructure.stream.SessionStreamAccess sessionAccess;
 
     TaskProgressController(TaskProgressEventService progress, RequestIdAccessor requestId,
-                           com.abluepoint.summer.sample.identity.SessionStreamAccess sessionAccess) {
+                           com.abluepoint.summer.sample.identity.infrastructure.stream.SessionStreamAccess sessionAccess) {
         this.progress = progress; this.requestId = requestId;
         this.sessionAccess = sessionAccess;
     }

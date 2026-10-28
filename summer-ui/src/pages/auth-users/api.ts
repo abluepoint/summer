@@ -1,8 +1,7 @@
+import type { AuthUser, UserFailure, CreateUser } from './types';
+export type { AuthUser, UserFailure, CreateUser } from './types';
 import axios from 'axios';
 import { businessData } from '@/api/client';
-export type AuthUser = { username: string; role: 'ADMIN' | 'USER'; active: boolean };
-export type UserFailure = { status: number; requestId: string };
-export type CreateUser = { username: string; password: string; role: AuthUser['role'] };
 async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
   try { return await businessData<T>(call); }
   catch (error) {

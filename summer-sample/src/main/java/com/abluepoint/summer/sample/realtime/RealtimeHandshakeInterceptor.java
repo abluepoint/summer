@@ -17,10 +17,10 @@ import java.util.Map;
 @Component
 class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
     private final RealtimeAccess access;
-    private final com.abluepoint.summer.sample.identity.SessionStreamAccess sessions;
+    private final com.abluepoint.summer.sample.identity.infrastructure.stream.SessionStreamAccess sessions;
 
     RealtimeHandshakeInterceptor(RealtimeAccess access,
-                                 com.abluepoint.summer.sample.identity.SessionStreamAccess sessions) {
+                                 com.abluepoint.summer.sample.identity.infrastructure.stream.SessionStreamAccess sessions) {
         this.access = access;
         this.sessions = sessions;
     }

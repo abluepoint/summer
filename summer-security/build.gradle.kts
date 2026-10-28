@@ -6,6 +6,7 @@ dependencies {
     api(platform(project(":summer-dependencies")))
     api(project(":summer-common"))
     api("org.springframework.security:spring-security-web")
+    api("org.springframework.security:spring-security-config")
     api("org.springframework.security:spring-security-oauth2-core")
     api("org.springframework.security:spring-security-oauth2-authorization-server")
     api("org.springframework.security:spring-security-oauth2-jose")

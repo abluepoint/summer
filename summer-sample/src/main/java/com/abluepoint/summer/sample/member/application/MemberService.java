@@ -21,8 +21,8 @@ public class MemberService {
     private final MemberDirectory directory;
     private final com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry enterprises;
     private final com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal;
-    private final com.abluepoint.summer.sample.identity.LocalIdentityDirectory identities;
-    MemberService(MemberDirectory directory, com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry enterprises, com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal, com.abluepoint.summer.sample.identity.LocalIdentityDirectory identities) {
+    private final com.abluepoint.summer.sample.identity.application.directory.LocalIdentityDirectory identities;
+    MemberService(MemberDirectory directory, com.abluepoint.summer.sample.enterprise.application.EnterpriseRegistry enterprises, com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal, com.abluepoint.summer.sample.identity.application.directory.LocalIdentityDirectory identities) {
         this.journal = journal;
         this.identities = identities;
         this.directory = directory; this.enterprises = enterprises;
