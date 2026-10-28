@@ -4,7 +4,7 @@ import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.sample.systemparameter.PublishedParameterReader;
 import com.abluepoint.summer.sample.dictionary.PublishedDictionaryReader;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;

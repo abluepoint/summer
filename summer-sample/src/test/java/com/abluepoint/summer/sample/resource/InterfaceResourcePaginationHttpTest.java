@@ -9,7 +9,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 
 import java.util.List;
 import java.util.stream.IntStream;

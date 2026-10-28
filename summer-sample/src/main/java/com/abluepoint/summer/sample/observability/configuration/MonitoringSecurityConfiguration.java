@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.observability.configuration;
 
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.sample.authorization.EnterpriseRequestContext;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

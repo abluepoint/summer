@@ -8,8 +8,8 @@ import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;

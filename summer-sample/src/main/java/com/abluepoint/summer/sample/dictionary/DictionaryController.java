@@ -1,8 +1,8 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import com.abluepoint.summer.mvc.annotation.Field;
-import com.abluepoint.summer.mvc.annotation.FieldContract;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.parameter.api.Field;
+import com.abluepoint.summer.mvc.parameter.api.FieldContract;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;

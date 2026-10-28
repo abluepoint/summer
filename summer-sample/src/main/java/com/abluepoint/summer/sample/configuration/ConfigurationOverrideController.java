@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.configuration;
 import com.abluepoint.summer.sample.resource.ResourcePermission;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;

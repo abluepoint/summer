@@ -4,8 +4,8 @@ import com.abluepoint.summer.sample.operations.model.view.RedisDiagnosticView;
 import com.abluepoint.summer.sample.operations.service.RedisDiagnosticService;
 
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;

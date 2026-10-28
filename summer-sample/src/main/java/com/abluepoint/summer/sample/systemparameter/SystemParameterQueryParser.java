@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.systemparameter;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 
-import com.abluepoint.summer.mvc.validate.FieldValues;
+import com.abluepoint.summer.mvc.parameter.api.FieldValues;
 import org.springframework.security.core.Authentication;
 
 final class SystemParameterQueryParser {

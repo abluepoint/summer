@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
 

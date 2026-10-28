@@ -1,8 +1,6 @@
 package com.abluepoint.summer.sample.release;
 
-import com.abluepoint.summer.common.error.api.ErrorCategory;
-import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
-import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
+import com.abluepoint.summer.mvc.error.spi.ErrorStatusResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,8 +39,14 @@ class ReleaseErrorStatusHttpTest {
     @TestConfiguration
     static class TransportPolicy {
         @Bean @Primary ErrorStatusResolver releaseTransportPolicy() {
-            var defaults = new DefaultErrorStatusResolver();
-            return code -> code.category() == ErrorCategory.INVALID_ARGUMENT ? HttpStatus.valueOf(422) : defaults.resolve(code);
+            return code -> switch (code.category()) {
+                case INVALID_ARGUMENT -> HttpStatus.UNPROCESSABLE_CONTENT;
+                case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
+                case FORBIDDEN -> HttpStatus.FORBIDDEN;
+                case NOT_FOUND -> HttpStatus.NOT_FOUND;
+                case CONFLICT -> HttpStatus.CONFLICT;
+                case INTERNAL_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
+            };
         }
     }
 }

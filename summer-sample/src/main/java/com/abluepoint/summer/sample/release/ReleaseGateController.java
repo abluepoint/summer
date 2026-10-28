@@ -2,11 +2,11 @@ package com.abluepoint.summer.sample.release;
 
 import com.abluepoint.summer.common.error.api.CommonErrorCode;
 import com.abluepoint.summer.common.error.api.ErrorCode;
-import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
+import com.abluepoint.summer.mvc.error.spi.ErrorStatusResolver;
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;

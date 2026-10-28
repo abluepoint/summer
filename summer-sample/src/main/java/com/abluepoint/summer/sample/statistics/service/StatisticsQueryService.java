@@ -34,11 +34,11 @@ public class StatisticsQueryService {
     private final AuthorizationService authorization;
     private final DataScopeService dataScopes;
     private final RequestMappingHandlerMapping mappings;
-    private final com.abluepoint.summer.mvc.request.RequestIdAccessor requestId;
+    private final com.abluepoint.summer.mvc.request.api.RequestIdAccessor requestId;
 
     StatisticsQueryService(JdbcTemplate jdbc, AuthorizationService authorization, DataScopeService dataScopes,
                       @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mappings,
-                      com.abluepoint.summer.mvc.request.RequestIdAccessor requestId) {
+                      com.abluepoint.summer.mvc.request.api.RequestIdAccessor requestId) {
         this.jdbc = jdbc; this.authorization = authorization; this.dataScopes = dataScopes; this.mappings = mappings; this.requestId = requestId;
     }
 

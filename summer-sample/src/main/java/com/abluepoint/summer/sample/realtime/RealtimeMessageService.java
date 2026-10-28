@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.realtime;
 
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;

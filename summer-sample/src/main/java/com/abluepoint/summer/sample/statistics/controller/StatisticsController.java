@@ -7,9 +7,9 @@ import com.abluepoint.summer.common.error.api.CommonErrorCode;
 import com.abluepoint.summer.common.error.api.ErrorCode;
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.error.spi.ErrorStatusResolver;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,11 +37,11 @@ final class StatisticsController {
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/statistics")
     @RawResponse
-    @com.abluepoint.summer.mvc.annotation.FieldContract
-    @com.abluepoint.summer.mvc.annotation.Field(param="enterpriseId", style="statisticsIdentifierStyle")
-    @com.abluepoint.summer.mvc.annotation.Field(param="organizationId", required=false, style="statisticsIdentifierStyle")
-    @com.abluepoint.summer.mvc.annotation.Field(param="from", required=false, style="statisticsInstantStyle")
-    @com.abluepoint.summer.mvc.annotation.Field(param="to", required=false, style="statisticsInstantStyle")
+    @com.abluepoint.summer.mvc.parameter.api.FieldContract
+    @com.abluepoint.summer.mvc.parameter.api.Field(param="enterpriseId", style="statisticsIdentifierStyle")
+    @com.abluepoint.summer.mvc.parameter.api.Field(param="organizationId", required=false, style="statisticsIdentifierStyle")
+    @com.abluepoint.summer.mvc.parameter.api.Field(param="from", required=false, style="statisticsInstantStyle")
+    @com.abluepoint.summer.mvc.parameter.api.Field(param="to", required=false, style="statisticsInstantStyle")
     ResponseEntity<ApiResponse<StatisticsView>> read(
             @PathVariable String enterpriseId,
             @RequestParam(required = false) String from,

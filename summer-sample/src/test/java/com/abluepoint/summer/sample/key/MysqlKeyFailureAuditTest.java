@@ -5,7 +5,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
-import com.abluepoint.summer.mvc.filter.RequestCorrelationFilter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = "summer.security.storage.keys=mysql")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class MysqlKeyFailureAuditTest {
+    private static final String REQUEST_ID_ATTRIBUTE = "com.abluepoint.summer.requestId";
     @DynamicPropertySource
     static void keyProperties(DynamicPropertyRegistry properties) {
         String master = UUID.randomUUID().toString();
@@ -56,8 +56,8 @@ class MysqlKeyFailureAuditTest {
         MDC.put("requestId", "key-fault-request");
         RequestAttributes request = RequestContextHolder.getRequestAttributes();
         if (request != null) {
-            previousRequestId = request.getAttribute(RequestCorrelationFilter.REQUEST_ID_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
-            request.setAttribute(RequestCorrelationFilter.REQUEST_ID_ATTRIBUTE, "key-fault-request", RequestAttributes.SCOPE_REQUEST);
+            previousRequestId = request.getAttribute(REQUEST_ID_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+            request.setAttribute(REQUEST_ID_ATTRIBUTE, "key-fault-request", RequestAttributes.SCOPE_REQUEST);
         }
     }
 
@@ -66,8 +66,8 @@ class MysqlKeyFailureAuditTest {
         MDC.remove("requestId");
         RequestAttributes request = RequestContextHolder.getRequestAttributes();
         if (request != null) {
-            if (previousRequestId == null) request.removeAttribute(RequestCorrelationFilter.REQUEST_ID_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
-            else request.setAttribute(RequestCorrelationFilter.REQUEST_ID_ATTRIBUTE, previousRequestId, RequestAttributes.SCOPE_REQUEST);
+            if (previousRequestId == null) request.removeAttribute(REQUEST_ID_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+            else request.setAttribute(REQUEST_ID_ATTRIBUTE, previousRequestId, RequestAttributes.SCOPE_REQUEST);
         }
         logger.detachAppender(events);
         events.stop();

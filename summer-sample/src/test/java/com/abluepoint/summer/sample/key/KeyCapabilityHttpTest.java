@@ -35,6 +35,7 @@ class KeyCapabilityHttpTest {
     @Autowired JwtDecoder jwtDecoder;
     @Autowired SummerKeyStore keyStore;
     @Autowired KeyMaterialRepository repository;
+    @Autowired KeyFailureAudit failureAudit;
 
     @Test
     void exposesOnlyKeyMetadataAndProtectsItByCapability() throws Exception {
@@ -65,7 +66,7 @@ class KeyCapabilityHttpTest {
         String kid = keyStore.get(new com.nimbusds.jose.jwk.JWKSelector(new com.nimbusds.jose.jwk.JWKMatcher.Builder().build()), null).get(0).getKeyID();
         org.assertj.core.api.Assertions.assertThat(repository.findById(kid).orElseThrow().ciphertext())
                 .doesNotContain("BEGIN", "PRIVATE KEY");
-        MysqlSummerKeyStore restarted = new MysqlSummerKeyStore(repository, "test-only-runtime-master-key-32-bytes");
+        MysqlSummerKeyStore restarted = new MysqlSummerKeyStore(repository, null, "test-only-runtime-master-key-32-bytes", 90, 30, failureAudit);
         org.assertj.core.api.Assertions.assertThat(restarted.get(new com.nimbusds.jose.jwk.JWKSelector(new com.nimbusds.jose.jwk.JWKMatcher.Builder().build()), null).get(0).getKeyID()).isEqualTo(kid);
     }
 

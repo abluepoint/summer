@@ -1,8 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
 import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
-import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
-import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;
@@ -37,16 +35,6 @@ class MysqlSummerKeyStore implements SummerKeyStore {
     private final KeyFailureAudit failureAudit;
     private volatile JWKSet current;
     private final ConcurrentMap<String, Rotation> completedRotations = new ConcurrentHashMap<>();
-
-    MysqlSummerKeyStore(KeyMaterialRepository repository, String masterKey) {
-        this(repository, null, masterKey, 90, 30);
-    }
-
-    MysqlSummerKeyStore(KeyMaterialRepository repository, KeyRotationStateRepository rotationStates,
-                        String masterKey, int rotationPeriodDays, int rotationRetentionDays) {
-        this(repository, rotationStates, masterKey, rotationPeriodDays, rotationRetentionDays,
-                new KeyFailureAudit(new Slf4jSecurityAuditLogger(), new ServletRequestIdAccessor()));
-    }
 
     MysqlSummerKeyStore(KeyMaterialRepository repository, KeyRotationStateRepository rotationStates,
                         String masterKey, int rotationPeriodDays, int rotationRetentionDays, KeyFailureAudit failureAudit) {

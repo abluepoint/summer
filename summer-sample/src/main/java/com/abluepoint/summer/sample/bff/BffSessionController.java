@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.bff;
 
 import jakarta.servlet.http.Cookie;
-import com.abluepoint.summer.mvc.api.RawResponse;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;

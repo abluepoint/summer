@@ -164,16 +164,12 @@ class SessionFailureConfigurationTest {
             org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration.class,
             org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration.class,
             org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration.class,
-            org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration.class
+            org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration.class,
+            com.abluepoint.summer.common.autoconfigure.SummerCommonAutoConfiguration.class,
+            com.abluepoint.summer.mvc.autoconfigure.SummerMvcAutoConfiguration.class
     })
     @org.springframework.context.annotation.Import(SessionFailureConfiguration.class)
     static class HttpFixture {
-        @org.springframework.context.annotation.Bean
-        com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice responseAdvice(tools.jackson.databind.ObjectMapper mapper) {
-            return new com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice(mapper,
-                    new com.abluepoint.summer.mvc.request.ServletRequestIdAccessor());
-        }
-
         @org.springframework.context.annotation.Bean
         org.springframework.boot.web.servlet.FilterRegistrationBean<SessionRepositoryFilter<MapSession>> sessionFilter() {
             @SuppressWarnings("unchecked")

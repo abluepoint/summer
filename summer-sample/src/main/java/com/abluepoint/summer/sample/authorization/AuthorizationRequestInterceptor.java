@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.authorization;
 
 import com.abluepoint.summer.sample.resource.ResourcePermission;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.AnnotatedElementUtils;

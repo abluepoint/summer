@@ -1,6 +1,6 @@
 package com.abluepoint.summer.mvc.autoconfigure;
 
-import com.abluepoint.summer.mvc.filter.CachedBodyHttpServletRequest;
+import com.abluepoint.summer.mvc.request.internal.CachedBodyHttpServletRequest;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.LinkedHashSet;

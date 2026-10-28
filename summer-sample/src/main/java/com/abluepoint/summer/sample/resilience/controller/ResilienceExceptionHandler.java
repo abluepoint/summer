@@ -4,7 +4,7 @@ import com.abluepoint.summer.sample.resilience.exception.DependencyDegradedExcep
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -2,8 +2,8 @@ package com.abluepoint.summer.sample.systemparameter;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

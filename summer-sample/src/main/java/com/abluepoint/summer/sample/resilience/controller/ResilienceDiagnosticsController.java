@@ -4,8 +4,8 @@ import com.abluepoint.summer.sample.resilience.model.view.ResilienceDiagnosticsV
 import com.abluepoint.summer.sample.resilience.service.ResilientReadService;
 
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.sample.authorization.EnterpriseRequestContext;
 import org.springframework.http.ResponseEntity;

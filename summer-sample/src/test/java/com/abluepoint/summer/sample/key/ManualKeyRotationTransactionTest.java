@@ -35,6 +35,7 @@ class ManualKeyRotationTransactionTest {
     @Autowired PlatformTransactionManager transactions;
     @Autowired KeyMaterialRepository materials;
     @Autowired KeyRotationStateRepository states;
+    @Autowired KeyFailureAudit failureAudit;
 
     @Test
     void retryAfterRollbackSwitchesToTheKeyReportedByTheSuccessfulResponse() throws Exception {
@@ -56,8 +57,8 @@ class ManualKeyRotationTransactionTest {
 
     @Test
     void independentNodesCompetingForOneVersionReturnOneSuccessAndOneConflict() throws Exception {
-        MysqlSummerKeyStore first = new MysqlSummerKeyStore(materials, states, MASTER, 90, 30);
-        MysqlSummerKeyStore second = new MysqlSummerKeyStore(materials, states, MASTER, 90, 30);
+        MysqlSummerKeyStore first = new MysqlSummerKeyStore(materials, states, MASTER, 90, 30, failureAudit);
+        MysqlSummerKeyStore second = new MysqlSummerKeyStore(materials, states, MASTER, 90, 30, failureAudit);
         int version = store.currentVersion();
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);

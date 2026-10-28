@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.authorization;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

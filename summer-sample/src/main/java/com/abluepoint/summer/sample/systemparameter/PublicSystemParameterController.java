@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.systemparameter;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-import com.abluepoint.summer.mvc.annotation.Field;
+import com.abluepoint.summer.mvc.parameter.api.Field;
 
 @RestController
 class PublicSystemParameterController {

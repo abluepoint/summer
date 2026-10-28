@@ -6,7 +6,7 @@ import com.abluepoint.summer.sample.operations.model.view.RuntimeHttpMetricsView
 import com.abluepoint.summer.sample.operations.model.view.RuntimeMetricSnapshotView;
 import com.abluepoint.summer.sample.operations.model.view.RuntimeModuleMetricsView;
 
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import com.abluepoint.summer.sample.observability.service.AuditObservation;
 import com.abluepoint.summer.sample.observability.service.TraceCorrelation;
 import io.micrometer.core.instrument.Meter;

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.observability.service;
 
-import com.abluepoint.summer.mvc.logging.RequestLogRecord;
-import com.abluepoint.summer.mvc.logging.RequestLogSink;
+import com.abluepoint.summer.mvc.logging.api.RequestLogRecord;
+import com.abluepoint.summer.mvc.logging.spi.RequestLogSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

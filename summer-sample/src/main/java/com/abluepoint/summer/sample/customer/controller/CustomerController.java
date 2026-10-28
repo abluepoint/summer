@@ -9,15 +9,15 @@ import com.abluepoint.summer.sample.customer.model.view.CustomerPage;
 import com.abluepoint.summer.sample.customer.model.view.CustomerView;
 import com.abluepoint.summer.sample.customer.service.CustomerService;
 
-import com.abluepoint.summer.mvc.annotation.Field;
-import com.abluepoint.summer.mvc.annotation.FieldContract;
-import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.validate.FieldValues;
+import com.abluepoint.summer.mvc.parameter.api.Field;
+import com.abluepoint.summer.mvc.parameter.api.FieldContract;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.parameter.api.FieldValues;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.mvc.validate.Style;
-import com.abluepoint.summer.mvc.validate.Styles;
+import com.abluepoint.summer.mvc.parameter.spi.Style;
+import com.abluepoint.summer.mvc.parameter.api.Styles;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

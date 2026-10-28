@@ -3,7 +3,7 @@ package com.abluepoint.summer.sample.observability.configuration;
 import com.abluepoint.summer.sample.observability.controller.TraceResponseFilter;
 import com.abluepoint.summer.sample.observability.service.TracedRequestLogSink;
 
-import com.abluepoint.summer.mvc.logging.RequestLogSink;
+import com.abluepoint.summer.mvc.logging.spi.RequestLogSink;
 import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.realtime.RealtimeWebSocketHub;
 import io.micrometer.core.instrument.FunctionCounter;
