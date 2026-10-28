@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample;
 
-import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
+import com.abluepoint.summer.data.jpa.query.api.JpaSqlTemplate;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

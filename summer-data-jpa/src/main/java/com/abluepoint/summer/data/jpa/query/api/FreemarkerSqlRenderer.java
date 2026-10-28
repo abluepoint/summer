@@ -1,4 +1,4 @@
-package com.abluepoint.summer.data.jpa.template;
+package com.abluepoint.summer.data.jpa.query.api;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;

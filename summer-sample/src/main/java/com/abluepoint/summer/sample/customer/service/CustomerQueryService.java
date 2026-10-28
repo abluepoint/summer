@@ -4,7 +4,7 @@ import com.abluepoint.summer.sample.customer.model.request.CustomerListRequest;
 import com.abluepoint.summer.sample.customer.model.view.CustomerSummaryView;
 import com.abluepoint.summer.sample.customer.model.view.CustomerView;
 
-import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
+import com.abluepoint.summer.data.jpa.query.api.JpaSqlTemplate;
 import com.abluepoint.summer.sample.SampleDataProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

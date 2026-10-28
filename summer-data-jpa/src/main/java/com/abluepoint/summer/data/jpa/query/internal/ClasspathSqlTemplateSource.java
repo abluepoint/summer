@@ -1,4 +1,6 @@
-package com.abluepoint.summer.data.jpa.template;
+package com.abluepoint.summer.data.jpa.query.internal;
+
+import com.abluepoint.summer.data.jpa.query.spi.SqlTemplateSource;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;

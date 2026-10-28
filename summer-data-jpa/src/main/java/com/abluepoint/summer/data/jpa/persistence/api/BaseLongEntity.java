@@ -1,4 +1,4 @@
-package com.abluepoint.summer.data.jpa.entity;
+package com.abluepoint.summer.data.jpa.persistence.api;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;

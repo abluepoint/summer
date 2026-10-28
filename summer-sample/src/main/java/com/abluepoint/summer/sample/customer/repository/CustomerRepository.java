@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.customer.repository;
 
 import com.abluepoint.summer.sample.customer.model.entity.CustomerEntity;
-import com.abluepoint.summer.data.jpa.repository.BaseRepository;
+import com.abluepoint.summer.data.jpa.persistence.api.BaseRepository;
 import java.util.Optional;
 public interface CustomerRepository extends BaseRepository<CustomerEntity, Long> {
     Optional<CustomerEntity> findByUsername(String username);

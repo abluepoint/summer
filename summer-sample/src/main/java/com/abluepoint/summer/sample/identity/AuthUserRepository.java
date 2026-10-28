@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.data.jpa.repository.BaseRepository;
+import com.abluepoint.summer.data.jpa.persistence.api.BaseRepository;
 import java.util.List;
 import java.util.Optional;
 

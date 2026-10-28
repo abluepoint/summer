@@ -1,9 +1,9 @@
 package com.abluepoint.summer.data.jpa.autoconfigure;
 
-import com.abluepoint.summer.data.jpa.template.ClasspathSqlTemplateSource;
-import com.abluepoint.summer.data.jpa.template.FreemarkerSqlRenderer;
-import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
-import com.abluepoint.summer.data.jpa.template.SqlTemplateSource;
+import com.abluepoint.summer.data.jpa.query.internal.ClasspathSqlTemplateSource;
+import com.abluepoint.summer.data.jpa.query.api.FreemarkerSqlRenderer;
+import com.abluepoint.summer.data.jpa.query.api.JpaSqlTemplate;
+import com.abluepoint.summer.data.jpa.query.spi.SqlTemplateSource;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

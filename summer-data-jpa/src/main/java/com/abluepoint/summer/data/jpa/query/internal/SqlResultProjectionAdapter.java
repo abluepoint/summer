@@ -1,4 +1,4 @@
-package com.abluepoint.summer.data.jpa.template;
+package com.abluepoint.summer.data.jpa.query.internal;
 
 import jakarta.persistence.Tuple;
 import jakarta.persistence.TupleElement;
@@ -21,12 +21,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-final class SqlResultProjectionAdapter {
+/** Internal collaborator of JpaSqlTemplate, public only for cross-package query execution. */
+public final class SqlResultProjectionAdapter {
 
     private final ProjectionFactory projectionFactory;
     private final ConversionService conversionService;
 
-    SqlResultProjectionAdapter() {
+    public SqlResultProjectionAdapter() {
         this(new SpelAwareProxyProjectionFactory(), DefaultConversionService.getSharedInstance());
     }
 
@@ -35,7 +36,7 @@ final class SqlResultProjectionAdapter {
         this.conversionService = conversionService;
     }
 
-    <T> T project(Tuple tuple, Class<T> targetType) {
+    public <T> T project(Tuple tuple, Class<T> targetType) {
         if (Tuple.class == targetType) {
             return targetType.cast(tuple);
         }

@@ -1,4 +1,4 @@
-package com.abluepoint.summer.data.jpa.template;
+package com.abluepoint.summer.data.jpa.query.internal;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ByteArrayResource;

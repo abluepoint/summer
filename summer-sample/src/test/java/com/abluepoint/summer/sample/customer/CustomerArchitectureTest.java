@@ -9,7 +9,7 @@ import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
 import com.abluepoint.summer.sample.customer.service.CustomerQueryService;
 import com.abluepoint.summer.sample.customer.service.CustomerService;
 
-import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
+import com.abluepoint.summer.data.jpa.query.api.JpaSqlTemplate;
 import com.abluepoint.summer.mvc.parameter.api.FieldValues;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

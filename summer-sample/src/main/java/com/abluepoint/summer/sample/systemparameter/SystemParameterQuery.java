@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
+import com.abluepoint.summer.data.jpa.query.api.JpaSqlTemplate;
 import com.abluepoint.summer.sample.SampleDataProperties;
 import org.springframework.stereotype.Component;
 

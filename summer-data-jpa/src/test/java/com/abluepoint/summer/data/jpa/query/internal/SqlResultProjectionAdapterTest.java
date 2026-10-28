@@ -1,4 +1,4 @@
-package com.abluepoint.summer.data.jpa.template;
+package com.abluepoint.summer.data.jpa.query.internal;
 
 import jakarta.persistence.Tuple;
 import jakarta.persistence.TupleElement;

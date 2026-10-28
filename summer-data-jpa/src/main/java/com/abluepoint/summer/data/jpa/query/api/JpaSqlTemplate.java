@@ -1,4 +1,7 @@
-package com.abluepoint.summer.data.jpa.template;
+package com.abluepoint.summer.data.jpa.query.api;
+
+import com.abluepoint.summer.data.jpa.query.internal.SqlResultProjectionAdapter;
+import com.abluepoint.summer.data.jpa.query.spi.SqlTemplateSource;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;

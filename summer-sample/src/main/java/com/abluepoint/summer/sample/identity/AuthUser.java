@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.data.jpa.entity.BaseLongEntity;
+import com.abluepoint.summer.data.jpa.persistence.api.BaseLongEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
