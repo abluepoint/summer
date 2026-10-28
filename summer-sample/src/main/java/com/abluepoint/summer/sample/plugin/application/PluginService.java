@@ -13,7 +13,7 @@ import com.abluepoint.summer.sample.plugin.domain.PluginMenu;
 
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import com.abluepoint.summer.sample.systemparameter.PublishedParameterReader;
-import com.abluepoint.summer.sample.dictionary.PublishedDictionaryReader;
+import com.abluepoint.summer.sample.dictionary.application.PublishedDictionaryReader;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.jdbc.core.JdbcTemplate;

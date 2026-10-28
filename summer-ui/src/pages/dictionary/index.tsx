@@ -1,10 +1,11 @@
+import type { DictionaryOption, DictionaryStreamState } from './types';
 import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
 import { Alert, Button, Card, Form, Select, Tag, Input, InputNumber } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { DictionaryOption, getPublicDictionary, getPublicDictionaryItem, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
+import { getPublicDictionary, getPublicDictionaryItem, subscribeDictionaryNotifications, saveDictionaryOverride } from './api';
 
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 const dictionaryCode = 'customer-segment';

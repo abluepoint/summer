@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "summer_dictionary_type", uniqueConstraints = @jakarta.persistence.UniqueConstraint(columnNames = {"tenant_id", "code"}))
-class DictionaryTypeEntity {
+public class DictionaryTypeEntity {
     @Id
     @Column(length = 36, nullable = false, updatable = false)
     private String id;
@@ -30,7 +30,7 @@ class DictionaryTypeEntity {
 
     protected DictionaryTypeEntity() {}
 
-    DictionaryTypeEntity(String tenantId, String id, String code, String name, boolean published, boolean publicReadable, boolean enabled, String organizationId, String createdBy, String ownerId) {
+    public DictionaryTypeEntity(String tenantId, String id, String code, String name, boolean published, boolean publicReadable, boolean enabled, String organizationId, String createdBy, String ownerId) {
         this.id = id;
         this.tenantId = tenantId; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.code = code;
@@ -40,24 +40,24 @@ class DictionaryTypeEntity {
         this.enabled = enabled;
     }
 
-    String tenantId(){return tenantId;} String organizationId(){return organizationId;} String createdBy(){return createdBy;} String ownerId(){return ownerId;}
-    String code() { return code; }
-    String name() { return name; }
-    boolean published() { return published; }
-    boolean publicReadable() { return publicReadable; }
-    boolean enabled() { return enabled; }
-    Long publishedVersion() { return publishedVersion; }
-    void change(String name, boolean published, boolean publicReadable, boolean enabled) {
+    public String tenantId(){return tenantId;} public String organizationId(){return organizationId;} public String createdBy(){return createdBy;} public String ownerId(){return ownerId;}
+    public String code() { return code; }
+    public String name() { return name; }
+    public boolean published() { return published; }
+    public boolean publicReadable() { return publicReadable; }
+    public boolean enabled() { return enabled; }
+    public Long publishedVersion() { return publishedVersion; }
+    public void change(String name, boolean published, boolean publicReadable, boolean enabled) {
         this.name = name;
         this.published = published;
         this.publicReadable = publicReadable;
         this.enabled = enabled;
     }
 
-    void publish(long version) {
+    public void publish(long version) {
         this.published = true;
         this.publishedVersion = version;
     }
 
-    void disable() { this.published = false; }
+    public void disable() { this.published = false; }
 }

@@ -1,11 +1,30 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.application;
+
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryRules;
+
+import com.abluepoint.summer.sample.dictionary.application.command.DictionaryVersionCommand;
+import com.abluepoint.summer.sample.dictionary.application.view.DictionaryItemView;
+import com.abluepoint.summer.sample.dictionary.application.view.DictionaryTypeVersionView;
+import com.abluepoint.summer.sample.dictionary.application.view.DictionaryVersionView;
+import com.abluepoint.summer.sample.dictionary.application.view.PublicDictionaryView;
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryErrorCode;
+import com.abluepoint.summer.sample.dictionary.infrastructure.DictionaryAuditService;
+import com.abluepoint.summer.sample.dictionary.infrastructure.DictionaryEvent;
+import com.abluepoint.summer.sample.dictionary.infrastructure.DictionaryNotificationService;
+import com.abluepoint.summer.sample.dictionary.infrastructure.DictionarySnapshot;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryItemEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryItemRepository;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryOutboxEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryOutboxRepository;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryTypeEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryTypeRepository;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryVersionEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryVersionRepository;
 
 import com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand;
 import com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService;
 import com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView;
 import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
-import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
-
 import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.authorization.application.DataScopeService;
@@ -16,12 +35,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-
 import java.util.List;
 import java.util.UUID;
 
 @Service
-class DictionaryVersionService {
+public class DictionaryVersionService {
     private final DictionaryTypeRepository types;
     private final DictionaryItemRepository items;
     private final DictionaryVersionRepository versions;
@@ -36,7 +54,7 @@ class DictionaryVersionService {
     private final com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions;
     private final com.abluepoint.summer.sample.configuration.application.ConfigurationOverrideService overrides;
 
-    DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
+    public DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              DataScopeService dataScopes, ObjectMapper objectMapper,
@@ -57,7 +75,7 @@ class DictionaryVersionService {
     }
 
     @Transactional
-    DictionaryTypeVersionView publish(String code, DictionaryVersionRequest request, String requestId,
+    public DictionaryTypeVersionView publish(String code, DictionaryVersionCommand request, String requestId,
                                       Authentication authentication) {
         DictionaryTypeEntity type = scopedType(code, authentication);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_PUBLISHED");
@@ -77,16 +95,14 @@ class DictionaryVersionService {
     }
 
     @Transactional
-    DictionaryTypeVersionView disable(String code, DictionaryVersionRequest request, String requestId,
+    public DictionaryTypeVersionView disable(String code, DictionaryVersionCommand request, String requestId,
                                       Authentication authentication) {
         DictionaryTypeEntity type = scopedType(code, authentication);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_DISABLED");
         if (replay != null) return replay;
         long current = currentVersion(type);
         requireExpected(request, current);
-        if (type.publishedVersion() == null || !type.published()) {
-            throw invalidState("Dictionary is not published");
-        }
+        DictionaryRules.disable(type.publishedVersion(),type.published());
         type.disable();
         types.saveAndFlush(type);
         evidence(code, current, "DICTIONARY_DISABLED", requestId, request == null ? null : request.idempotencyKey(), authentication);
@@ -94,17 +110,14 @@ class DictionaryVersionService {
     }
 
     @Transactional
-    DictionaryTypeVersionView rollback(String code, DictionaryVersionRequest request, String requestId,
+    public DictionaryTypeVersionView rollback(String code, DictionaryVersionCommand request, String requestId,
                                        Authentication authentication) {
         DictionaryTypeEntity type = scopedType(code, authentication);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_ROLLED_BACK");
         if (replay != null) return replay;
         long current = currentVersion(type);
         requireExpected(request, current);
-        if (request == null || request.targetVersion() == null || request.targetVersion() <= 0
-                || request.targetVersion() == current) {
-            throw invalidState("Rollback target is not a previous version");
-        }
+        DictionaryRules.rollback(request == null ? null : request.targetVersion(),current);
         DictionaryVersionEntity target = versions.findByTenantIdAndDictionaryCodeAndVersion(
                         resolve(authentication), code, request.targetVersion())
                 .orElseThrow(() -> invalidState("Rollback target does not exist"));
@@ -115,7 +128,7 @@ class DictionaryVersionService {
     }
 
     @Transactional(readOnly = true)
-    List<DictionaryVersionView> list(String code, Authentication authentication) {
+    public List<DictionaryVersionView> list(String code, Authentication authentication) {
         scopedType(code, authentication);
         return versions.findAllByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code).stream()
                 .map(value -> new DictionaryVersionView(value.version(), value.status(), value.createdAt(), value.createdBy()))
@@ -123,17 +136,17 @@ class DictionaryVersionService {
     }
 
     @Transactional(readOnly = true)
-    PublicDictionaryView publicRead(String code) { return publicRead(code, null); }
+    public PublicDictionaryView publicRead(String code) { return publicRead(code, null); }
 
     @Transactional(readOnly = true)
-    PublicDictionaryView publicRead(String code, Authentication authentication) { return publicRead(resolve(authentication), code, authentication); }
+    public PublicDictionaryView publicRead(String code, Authentication authentication) { return publicRead(resolve(authentication), code, authentication); }
 
     @Transactional(readOnly = true)
-    PublicDictionaryView publicRead(String tenant, String code, Authentication authentication) {
+    public PublicDictionaryView publicRead(String tenant, String code, Authentication authentication) {
         actions.requirePublic(tenant, "dictionaries", authentication);
         DataScopeService.ScopeFilter scope = dataScopes.filter(tenant, "dictionaries", authentication);
         DictionaryTypeEntity type = types.findScoped(code, scope)
-                .filter(t -> t.enabled() && t.publicReadable() && t.published())
+                .filter(t -> DictionaryRules.readable(t.enabled(),t.publicReadable(),t.published()))
                 .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.api.CommonErrorCode.NOT_FOUND));
         // Recheck both type and item scope before any cache/fallback read. Snapshot values remain immutable.
         List<DictionaryItemEntity> visible = items.findScoped(code, scope);
@@ -159,7 +172,7 @@ class DictionaryVersionService {
     }
 
     @Transactional
-    com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView override(String code, String organization,
+    public com.abluepoint.summer.sample.configuration.application.view.ConfigurationOverrideView override(String code, String organization,
             com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand request, Authentication auth, String requestId) {
         scopedType(code, auth);
         if (request == null || !(request.value() instanceof java.util.Collection<?> values) || values.size() > 200)
@@ -169,7 +182,7 @@ class DictionaryVersionService {
         catch (RuntimeException e) { throw invalidOverride(); }
         java.util.Set<String> allowed = items.findScoped(code, dataScopes.filter(resolve(auth), "dictionaries", auth))
                 .stream().map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
-        if (options.stream().anyMatch(i -> i.value() == null || !allowed.contains(i.value()) || i.label() == null || i.label().isBlank() || i.label().length() > 200 || i.sortOrder() < 0)
+        if (options.stream().anyMatch(i -> !DictionaryRules.validOverrideItem(i.value(),i.label(),i.sortOrder(),allowed.contains(i.value())))
                 || options.stream().map(DictionaryItemView::value).distinct().count() != options.size())
             throw invalidOverride();
         return overrides.save("dictionaries", code, organization, new com.abluepoint.summer.sample.configuration.application.command.ConfigurationOverrideSaveCommand(options, request.publicReadable(), request.enabled(), request.expectedVersion()), auth, requestId);
@@ -204,7 +217,7 @@ class DictionaryVersionService {
         }
     }
 
-    private DictionaryTypeVersionView replay(String code, DictionaryVersionRequest request, DictionaryTypeEntity type, String eventType) {
+    private DictionaryTypeVersionView replay(String code, DictionaryVersionCommand request, DictionaryTypeEntity type, String eventType) {
         String key = request == null ? null : request.idempotencyKey();
         if (key == null || key.isBlank()) return null;
         DictionaryOutboxEntity event = outbox.findByTenantIdAndDictionaryCodeAndIdempotencyKey(type.tenantId(), code, key).orElse(null);
@@ -214,13 +227,9 @@ class DictionaryVersionService {
         return view(type, version);
     }
 
-    private static long currentVersion(DictionaryTypeEntity type) { return type.publishedVersion() == null ? 0 : type.publishedVersion(); }
+    private static long currentVersion(DictionaryTypeEntity type) { return DictionaryRules.currentVersion(type.publishedVersion()); }
 
-    private static void requireExpected(DictionaryVersionRequest request, long current) {
-        if (request == null || request.expectedVersion() == null || request.expectedVersion() != current) {
-            throw new SummerException(DictionaryErrorCode.VERSION_CONFLICT);
-        }
-    }
+    private static void requireExpected(DictionaryVersionCommand request,long current) { DictionaryRules.expected(request == null ? null : request.expectedVersion(),current); }
 
     private static SummerException invalidOverride() {
         return new SummerException(DictionaryErrorCode.INVALID,
@@ -242,7 +251,3 @@ class DictionaryVersionService {
         return new DictionaryTypeVersionView(type.code(), type.name(), number, status);
     }
 }
-
-record DictionarySnapshot(String name, boolean publicReadable, boolean enabled, List<DictionaryItemView> items) {}
-record DictionaryEvent(String eventId, String tenantId, String dictionaryCode, String eventType,
-                       long version, String requestId) {}

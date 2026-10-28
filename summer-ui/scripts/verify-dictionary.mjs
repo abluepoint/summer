@@ -4,16 +4,17 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ui = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const [api, page, routes, vite] = await Promise.all([
+const [api, page, routes, vite, types] = await Promise.all([
   readFile(resolve(ui, 'src/pages/dictionary/api.ts'), 'utf8'),
   readFile(resolve(ui, 'src/pages/dictionary/index.tsx'), 'utf8'),
   readFile(resolve(ui, 'src/routes.ts'), 'utf8'),
   readFile(resolve(ui, 'vite.config.ts'), 'utf8'),
+  readFile(resolve(ui, 'src/pages/dictionary/types.ts'), 'utf8'),
 ]);
 
 assert.match(api, /\/public\/dictionaries/);
 assert.match(api, /businessData/);
-assert.match(api, /version\?: number/);
+assert.match(types, /version\?: number/);
 assert.match(page, /getPublicDictionary/);
 assert.match(page, /Select/);
 assert.match(page, /dictionary\.refresh/);

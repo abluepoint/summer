@@ -1,4 +1,8 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.application;
+
+import com.abluepoint.summer.sample.dictionary.application.view.DictionaryItemView;
+import com.abluepoint.summer.sample.dictionary.application.view.PublicDictionaryView;
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryErrorCode;
 
 import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
 
@@ -12,10 +16,11 @@ import java.util.Map;
 
 /** Exposes only currently authorized options from the effective published snapshot. */
 @Service
+@org.springframework.modulith.NamedInterface("published")
 public class PublishedDictionaryReader {
     private final DictionaryVersionService dictionaries;
-    PublishedDictionaryReader(DictionaryVersionService dictionaries) { this.dictionaries = dictionaries; }
-    DictionaryItemView readItem(String code, String value, Authentication auth) {
+    public PublishedDictionaryReader(DictionaryVersionService dictionaries) { this.dictionaries = dictionaries; }
+    public DictionaryItemView readItem(String code, String value, Authentication auth) {
         PublicDictionaryView published = dictionaries.publicRead(code, auth);
         if (value == null || !value.matches("[a-z0-9][a-z0-9._-]{0,78}[a-z0-9]")) {
             throw new SummerException(DictionaryErrorCode.INVALID,

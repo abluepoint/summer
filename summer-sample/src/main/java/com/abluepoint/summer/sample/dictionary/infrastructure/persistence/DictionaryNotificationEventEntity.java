@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +11,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "summer_dictionary_notification_event")
-class DictionaryNotificationEventEntity {
+public class DictionaryNotificationEventEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "event_id", nullable = false, updatable = false)
@@ -33,7 +33,7 @@ class DictionaryNotificationEventEntity {
 
     protected DictionaryNotificationEventEntity() {}
 
-    DictionaryNotificationEventEntity(String tenantId, String dictionaryCode, String eventType,
+    public DictionaryNotificationEventEntity(String tenantId, String dictionaryCode, String eventType,
                                        long version, String requestId, String payloadJson) {
         this.tenantId = tenantId;
         this.dictionaryCode = dictionaryCode;
@@ -44,14 +44,14 @@ class DictionaryNotificationEventEntity {
         this.createdAt = Instant.now();
     }
 
-    void assignEventId(Long eventId) { this.eventId = eventId; }
+    public void assignEventId(Long eventId) { this.eventId = eventId; }
 
-    Long eventId() { return eventId; }
-    String tenantId() { return tenantId; }
-    String dictionaryCode() { return dictionaryCode; }
-    String eventType() { return eventType; }
-    long version() { return version; }
-    String requestId() { return requestId; }
-    String payloadJson() { return payloadJson; }
-    Instant createdAt() { return createdAt; }
+    public Long eventId() { return eventId; }
+    public String tenantId() { return tenantId; }
+    public String dictionaryCode() { return dictionaryCode; }
+    public String eventType() { return eventType; }
+    public long version() { return version; }
+    public String requestId() { return requestId; }
+    public String payloadJson() { return payloadJson; }
+    public Instant createdAt() { return createdAt; }
 }

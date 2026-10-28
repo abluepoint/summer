@@ -1,7 +1,19 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.application;
+
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryRules;
+
+import com.abluepoint.summer.sample.dictionary.application.command.DictionaryItemCommand;
+import com.abluepoint.summer.sample.dictionary.application.command.DictionaryTypeCommand;
+import com.abluepoint.summer.sample.dictionary.application.view.DictionaryItemView;
+import com.abluepoint.summer.sample.dictionary.application.view.DictionaryTypeView;
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryErrorCode;
+import com.abluepoint.summer.sample.dictionary.infrastructure.DictionaryAuditService;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryItemEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryItemRepository;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryTypeEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryTypeRepository;
 
 import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
-import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
 
 import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.CommonErrorCode;
@@ -17,7 +29,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-class DictionaryService {
+public class DictionaryService {
     private final DictionaryTypeRepository types;
     private final DictionaryItemRepository items;
     private final DictionaryAuditService audit;
@@ -26,7 +38,7 @@ class DictionaryService {
 
     private final com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions;
 
-    DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
+    public DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
                       VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions) {
         this.types = types;
         this.actions = actions;
@@ -37,15 +49,15 @@ class DictionaryService {
     }
 
     @Transactional(readOnly = true)
-    List<DictionaryTypeView> list(Authentication authentication) {
+    public List<DictionaryTypeView> list(Authentication authentication) {
         DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
         return types.findScoped(scope).stream().map(type -> view(type, scope)).toList();
     }
     @Transactional(readOnly = true)
-    List<DictionaryTypeView> list() { return list(null); }
+    public List<DictionaryTypeView> list() { return list(null); }
 
     @Transactional
-    DictionaryTypeView createType(DictionaryTypeRequest request, String requestId, Authentication authentication) {
+    public DictionaryTypeView createType(DictionaryTypeCommand request, String requestId, Authentication authentication) {
         dataScopes.assertWrite(resolve(authentication), "dictionaries", authentication, request == null ? null : request.organizationId());
         validateCode(request == null ? null : request.code());
         String code = request.code().trim();
@@ -68,7 +80,7 @@ class DictionaryService {
     }
 
     @Transactional
-    DictionaryTypeView updateType(String code, DictionaryTypeRequest request, String requestId, Authentication authentication) {
+    public DictionaryTypeView updateType(String code, DictionaryTypeCommand request, String requestId, Authentication authentication) {
         DictionaryTypeEntity type = scopedType(code, authentication);
         if (request == null || blank(request.name())) throw invalid("name");
         if (request.organizationId() != null && !java.util.Objects.equals(request.organizationId(), type.organizationId())) throw invalid("organizationId");
@@ -84,7 +96,7 @@ class DictionaryService {
     }
 
     @Transactional
-    DictionaryItemView createItem(String code, DictionaryItemRequest request, String requestId, Authentication authentication) {
+    public DictionaryItemView createItem(String code, DictionaryItemCommand request, String requestId, Authentication authentication) {
         DictionaryTypeEntity type = scopedType(code, authentication);
         if (type.published() && type.publishedVersion() == null) actions.require("dictionaries", "publish", authentication);
         dataScopes.assertWrite(resolve(authentication), "dictionaries", authentication, type.organizationId());
@@ -104,12 +116,10 @@ class DictionaryService {
     }
 
     @Transactional
-    DictionaryItemView updateItem(String code, String value, DictionaryItemRequest request, String requestId, Authentication authentication) {
+    public DictionaryItemView updateItem(String code, String value, DictionaryItemCommand request, String requestId, Authentication authentication) {
         DictionaryTypeEntity type = scopedType(code, authentication);
         if (type.published() && type.publishedVersion() == null) actions.require("dictionaries", "publish", authentication);
-        if (request == null || blank(request.label()) || request.sortOrder() == null || request.sortOrder() < 0) {
-            throw invalid("item");
-        }
+        DictionaryRules.itemChange(request == null ? null : request.label(),request == null ? null : request.sortOrder());
         DictionaryItemEntity item = items.findScoped(code, value, dataScopes.filter(resolve(authentication), "dictionaries", authentication))
                 .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
         if (request.enabled() != null && request.enabled() != item.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", authentication);
@@ -136,14 +146,9 @@ class DictionaryService {
         return new DictionaryItemView(item.value(), item.label(), item.sortOrder(), item.enabled());
     }
 
-    private static void validateCode(String code) {
-        if (code == null || !code.matches("[a-z][a-z0-9-]{1,78}[a-z0-9]")) throw invalid("code");
-    }
+    private static void validateCode(String code) { DictionaryRules.code(code); }
 
-    private static void validateItem(DictionaryItemRequest request) {
-        if (request == null || request.value() == null || !request.value().matches("[a-z0-9][a-z0-9._-]{0,78}[a-z0-9]")) throw invalid("value");
-        if (blank(request.label()) || request.sortOrder() == null || request.sortOrder() < 0) throw invalid("item");
-    }
+    private static void validateItem(DictionaryItemCommand request) { DictionaryRules.item(request == null ? null : request.value(),request == null ? null : request.label(),request == null ? null : request.sortOrder()); }
 
     private static SummerException invalid(String field) {
         return new SummerException(DictionaryErrorCode.INVALID,

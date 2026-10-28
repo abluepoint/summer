@@ -1,6 +1,4 @@
-package com.abluepoint.summer.sample.dictionary;
-
-import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
+package com.abluepoint.summer.sample.dictionary.infrastructure;
 
 import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,15 +10,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
-class DictionaryAuditService {
+public class DictionaryAuditService {
     private final JdbcTemplate jdbcTemplate;
 
-    DictionaryAuditService(JdbcTemplate jdbcTemplate) {
+    public DictionaryAuditService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional
-    void recordSuccess(String code, String action, String requestId, Authentication authentication) {
+    public void recordSuccess(String code, String action, String requestId, Authentication authentication) {
         String principal = authentication == null || authentication.getName() == null
                 ? "system" : authentication.getName();
         jdbcTemplate.update("""

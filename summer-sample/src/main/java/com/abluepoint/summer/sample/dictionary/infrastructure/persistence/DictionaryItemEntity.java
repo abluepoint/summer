@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +10,7 @@ import jakarta.persistence.UniqueConstraint;
 @Table(name = "summer_dictionary_item", uniqueConstraints = {
         @UniqueConstraint(name = "uk_summer_dictionary_item_value", columnNames = {"tenant_id", "dictionary_code", "item_value"})
 })
-class DictionaryItemEntity {
+public class DictionaryItemEntity {
     @Id
     @Column(length = 36, nullable = false, updatable = false)
     private String id;
@@ -31,7 +31,7 @@ class DictionaryItemEntity {
 
     protected DictionaryItemEntity() {}
 
-    DictionaryItemEntity(String tenantId, String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled, String organizationId, String createdBy, String ownerId) {
+    public DictionaryItemEntity(String tenantId, String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled, String organizationId, String createdBy, String ownerId) {
         this.id = id;
         this.tenantId = tenantId; this.organizationId = organizationId; this.createdBy = createdBy; this.ownerId = ownerId;
         this.dictionaryCode = dictionaryCode;
@@ -41,14 +41,14 @@ class DictionaryItemEntity {
         this.enabled = enabled;
     }
 
-    String id() { return id; }
-    String tenantId(){return tenantId;} String organizationId(){return organizationId;} String createdBy(){return createdBy;} String ownerId(){return ownerId;}
-    String dictionaryCode() { return dictionaryCode; }
-    String value() { return value; }
-    String label() { return label; }
-    int sortOrder() { return sortOrder; }
-    boolean enabled() { return enabled; }
-    void change(String label, int sortOrder, boolean enabled) {
+    public String id() { return id; }
+    public String tenantId(){return tenantId;} public String organizationId(){return organizationId;} public String createdBy(){return createdBy;} public String ownerId(){return ownerId;}
+    public String dictionaryCode() { return dictionaryCode; }
+    public String value() { return value; }
+    public String label() { return label; }
+    public int sortOrder() { return sortOrder; }
+    public boolean enabled() { return enabled; }
+    public void change(String label, int sortOrder, boolean enabled) {
         this.label = label;
         this.sortOrder = sortOrder;
         this.enabled = enabled;

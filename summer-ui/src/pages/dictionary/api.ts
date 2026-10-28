@@ -3,28 +3,8 @@ import { getAccessTokenFromMemory } from '@/auth/oidc';
 import { businessData } from '@/api/client';
 import { SummerApiError } from '@/api/errors';
 
-export type DictionaryOption = {
-  value: string;
-  label: string;
-  sortOrder: number;
-  enabled: boolean;
-};
-
-export type PublicDictionary = {
-  code: string;
-  items: DictionaryOption[];
-  version?: number;
-};
-
-export type DictionaryNotification = {
-  id: number;
-  dictionaryCode: string;
-  eventType: string;
-  version: number;
-  requestId?: string;
-};
-
-export type DictionaryStreamState = 'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CLOSED';
+import type { DictionaryOption, PublicDictionary, DictionaryNotification, DictionaryStreamState } from './types';
+export type { DictionaryOption, PublicDictionary, DictionaryNotification, DictionaryStreamState } from './types';
 
 const publicDictionaryPath = (code: string, enterpriseId?: string) => enterpriseId ? `/public/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}` : `/public/dictionaries/${encodeURIComponent(code)}`;
 

@@ -1,4 +1,8 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.api;
+
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryNotificationConnectionLimitException;
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryNotificationNotFoundException;
+import com.abluepoint.summer.sample.dictionary.infrastructure.DictionaryNotificationService;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -14,16 +18,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
 @RestController
-class DictionaryNotificationController {
+public class DictionaryNotificationController {
     private final DictionaryNotificationService notifications;
     private final RequestIdAccessor requestId;
 
-    DictionaryNotificationController(DictionaryNotificationService notifications, RequestIdAccessor requestId) {
+    public DictionaryNotificationController(DictionaryNotificationService notifications, RequestIdAccessor requestId) {
         this.notifications = notifications;
         this.requestId = requestId;
     }
@@ -33,7 +36,7 @@ class DictionaryNotificationController {
     @RawResponse
     @com.abluepoint.summer.sample.resource.api.ResourcePermission("platform.dictionary.read")
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
-    ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String code,
+    public ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String code,
                                 @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
                                 Authentication authentication) {
         try {

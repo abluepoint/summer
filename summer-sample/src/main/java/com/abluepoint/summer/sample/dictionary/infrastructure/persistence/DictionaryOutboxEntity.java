@@ -1,4 +1,6 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.infrastructure.persistence;
+
+import com.abluepoint.summer.sample.dictionary.application.DictionaryOutboxStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,12 +9,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
-
 import java.time.Instant;
 
 @Entity
 @Table(name = "summer_dictionary_outbox")
-class DictionaryOutboxEntity {
+public class DictionaryOutboxEntity {
     @Id
     @Column(name = "event_id", length = 36, nullable = false, updatable = false)
     private String eventId;
@@ -39,7 +40,7 @@ class DictionaryOutboxEntity {
 
     protected DictionaryOutboxEntity() {}
 
-    DictionaryOutboxEntity(String eventId, String tenantId, String dictionaryCode, String eventType,
+    public DictionaryOutboxEntity(String eventId, String tenantId, String dictionaryCode, String eventType,
                            long version, String requestId, String idempotencyKey, String payloadJson) {
         this.eventId = eventId;
         this.tenantId = tenantId;
@@ -52,16 +53,14 @@ class DictionaryOutboxEntity {
         this.createdAt = Instant.now();
     }
 
-    String eventId() { return eventId; }
-    String tenantId() { return tenantId; }
-    String dictionaryCode() { return dictionaryCode; }
-    String eventType() { return eventType; }
-    long version() { return version; }
-    String requestId() { return requestId; }
-    String idempotencyKey() { return idempotencyKey; }
-    String payloadJson() { return payloadJson; }
-    DictionaryOutboxStatus status() { return status; }
-    Instant createdAt() { return createdAt; }
+    public String eventId() { return eventId; }
+    public String tenantId() { return tenantId; }
+    public String dictionaryCode() { return dictionaryCode; }
+    public String eventType() { return eventType; }
+    public long version() { return version; }
+    public String requestId() { return requestId; }
+    public String idempotencyKey() { return idempotencyKey; }
+    public String payloadJson() { return payloadJson; }
+    public DictionaryOutboxStatus status() { return status; }
+    public Instant createdAt() { return createdAt; }
 }
-
-enum DictionaryOutboxStatus { PENDING, PUBLISHED }

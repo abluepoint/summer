@@ -1,8 +1,8 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.api.request;
 
-import java.time.Instant;
+import com.abluepoint.summer.sample.dictionary.application.command.DictionaryVersionCommand;
 
-final class DictionaryVersionRequest {
+public final class DictionaryVersionRequest {
     private Long expectedVersion;
     private Long targetVersion;
     private String idempotencyKey;
@@ -16,7 +16,6 @@ final class DictionaryVersionRequest {
     public void setTargetVersion(Long value) { targetVersion = value; }
     public void setRollbackVersion(Long value) { targetVersion = value; }
     public void setIdempotencyKey(String value) { idempotencyKey = value; }
-}
 
-record DictionaryVersionView(long version, String status, Instant createdAt, String createdBy) {}
-record DictionaryTypeVersionView(String code, String name, long version, String status) {}
+    public com.abluepoint.summer.sample.dictionary.application.command.DictionaryVersionCommand toCommand() { return new com.abluepoint.summer.sample.dictionary.application.command.DictionaryVersionCommand(expectedVersion,targetVersion,idempotencyKey); }
+}

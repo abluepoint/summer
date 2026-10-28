@@ -1,11 +1,15 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.infrastructure;
+
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryNotificationConnectionLimitException;
+import com.abluepoint.summer.sample.dictionary.domain.DictionaryNotificationNotFoundException;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryNotificationEventEntity;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryNotificationRepository;
+import com.abluepoint.summer.sample.dictionary.infrastructure.persistence.DictionaryTypeRepository;
 
 import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess;
 import com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext;
-
 import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -13,7 +17,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.Collection;
@@ -28,7 +31,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Service
-class DictionaryNotificationService {
+public class DictionaryNotificationService {
     private static final int MAX_CONNECTIONS_PER_ENTERPRISE = 32;
     private static final int MAX_REPLAY_EVENTS = 500;
     private static final long HEARTBEAT_SECONDS = 15L;
@@ -47,7 +50,7 @@ class DictionaryNotificationService {
     private final Map<String, Set<Connection>> connections = new ConcurrentHashMap<>();
     private final Object subscriptionLock = new Object();
 
-    DictionaryNotificationService(DictionaryNotificationRepository repository, DictionaryTypeRepository types,
+    public DictionaryNotificationService(DictionaryNotificationRepository repository, DictionaryTypeRepository types,
                                    DataScopeService dataScopes, ObjectMapper objectMapper,
                                    ApplicationEventPublisher events, com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationActionAccess actions) {
         this.repository = repository;
@@ -58,7 +61,7 @@ class DictionaryNotificationService {
         this.actions = actions;
     }
 
-    void record(String tenantId, String dictionaryCode, String eventType, long version, String requestId) {
+    public void record(String tenantId, String dictionaryCode, String eventType, long version, String requestId) {
         String payload = payload(tenantId, dictionaryCode, eventType, version, requestId);
         DictionaryNotificationEventEntity event = repository.saveAndFlush(new DictionaryNotificationEventEntity(
                 tenantId, dictionaryCode, eventType, version, requestId, payload));
@@ -66,7 +69,7 @@ class DictionaryNotificationService {
                 event.dictionaryCode(), event.eventType(), event.version(), event.payloadJson()));
     }
 
-    SseEmitter subscribe(String enterpriseId, String dictionaryCode, long lastEventId, Authentication authentication) {
+    public SseEmitter subscribe(String enterpriseId, String dictionaryCode, long lastEventId, Authentication authentication) {
         requireReadable(enterpriseId, dictionaryCode, authentication);
         SseEmitter emitter = new SseEmitter(TimeUnit.MINUTES.toMillis(30));
         Connection connection = new Connection(enterpriseId, dictionaryCode, emitter, authentication, lastEventId);
@@ -91,7 +94,7 @@ class DictionaryNotificationService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    void publishAfterCommit(DictionaryNotificationCreated event) {
+    public void publishAfterCommit(DictionaryNotificationCreated event) {
         synchronized (subscriptionLock) {
             Set<Connection> active = connections.get(event.tenantId());
             if (active == null) return;
@@ -182,7 +185,7 @@ class DictionaryNotificationService {
     }
 
     @PreDestroy
-    void shutdown() {
+    public void shutdown() {
         scheduler.shutdownNow();
         connections.values().stream().flatMap(Collection::stream).forEach(c -> c.emitter.complete());
     }
@@ -203,9 +206,6 @@ class DictionaryNotificationService {
         }
     }
 
-    record DictionaryNotificationCreated(Long eventId, String tenantId, String dictionaryCode,
+    public record DictionaryNotificationCreated(Long eventId, String tenantId, String dictionaryCode,
                                          String eventType, long version, String payloadJson) {}
 }
-
-final class DictionaryNotificationConnectionLimitException extends RuntimeException {}
-final class DictionaryNotificationNotFoundException extends RuntimeException {}

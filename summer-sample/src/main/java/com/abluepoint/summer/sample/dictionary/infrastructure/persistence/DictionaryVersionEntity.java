@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.dictionary;
+package com.abluepoint.summer.sample.dictionary.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +11,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "summer_dictionary_version", uniqueConstraints = @UniqueConstraint(
         name = "uk_summer_dictionary_version_number", columnNames = {"tenant_id", "dictionary_code", "version_number"}))
-class DictionaryVersionEntity {
+public class DictionaryVersionEntity {
     @Id
     @Column(name = "version_id", length = 36, nullable = false, updatable = false)
     private String id;
@@ -34,7 +34,7 @@ class DictionaryVersionEntity {
 
     protected DictionaryVersionEntity() {}
 
-    DictionaryVersionEntity(String id, String tenantId, String dictionaryCode, long version,
+    public DictionaryVersionEntity(String id, String tenantId, String dictionaryCode, long version,
                             String status, String snapshotJson, String createdBy, String requestId) {
         this.id = id;
         this.tenantId = tenantId;
@@ -47,13 +47,13 @@ class DictionaryVersionEntity {
         this.createdAt = Instant.now();
     }
 
-    String id() { return id; }
-    String tenantId() { return tenantId; }
-    String dictionaryCode() { return dictionaryCode; }
-    long version() { return version; }
-    String status() { return status; }
-    String snapshotJson() { return snapshotJson; }
-    String createdBy() { return createdBy; }
-    String requestId() { return requestId; }
-    Instant createdAt() { return createdAt; }
+    public String id() { return id; }
+    public String tenantId() { return tenantId; }
+    public String dictionaryCode() { return dictionaryCode; }
+    public long version() { return version; }
+    public String status() { return status; }
+    public String snapshotJson() { return snapshotJson; }
+    public String createdBy() { return createdBy; }
+    public String requestId() { return requestId; }
+    public Instant createdAt() { return createdAt; }
 }
