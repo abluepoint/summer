@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.infrastructure;
+
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +11,7 @@ import java.util.Arrays;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSocket
-class RealtimeWebSocketConfiguration implements WebSocketConfigurer {
+public class RealtimeWebSocketConfiguration implements WebSocketConfigurer {
     private final RealtimeWebSocketHandler handler;
     private final RealtimeHandshakeInterceptor interceptor;
     private final String[] allowedOrigins;

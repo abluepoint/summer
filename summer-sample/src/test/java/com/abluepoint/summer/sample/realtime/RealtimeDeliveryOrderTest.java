@@ -1,4 +1,9 @@
 package com.abluepoint.summer.sample.realtime;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeAccess;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageView;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeWebSocketHub;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessagePageView;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -24,7 +29,7 @@ class RealtimeDeliveryOrderTest {
         when(provider.getObject()).thenReturn(service);
         when(service.list(eq("ent-acme"), anyLong(), any())).thenAnswer(invocation -> {
             long after = invocation.getArgument(1);
-            return new RealtimeMessagePage(List.of(message(1), message(2), message(3)).stream()
+            return new RealtimeMessagePageView(List.of(message(1), message(2), message(3)).stream()
                     .filter(message -> message.sequence() > after).toList(), 3, false);
         });
         var hub = new RealtimeWebSocketHub(new ObjectMapper(), mock(RealtimeAccess.class), provider);

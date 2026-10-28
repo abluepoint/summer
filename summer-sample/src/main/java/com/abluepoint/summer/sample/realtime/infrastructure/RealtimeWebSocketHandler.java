@@ -1,4 +1,10 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.infrastructure;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageView;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeConnectionLimitException;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageValidationException;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageNotFoundException;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageCreateCommand;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -13,12 +19,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 @Component
-class RealtimeWebSocketHandler extends TextWebSocketHandler {
+public class RealtimeWebSocketHandler extends TextWebSocketHandler {
     private final RealtimeWebSocketHub hub;
     private final RealtimeMessageService messages;
     private final ObjectMapper objectMapper;
 
-    RealtimeWebSocketHandler(RealtimeWebSocketHub hub, RealtimeMessageService messages, ObjectMapper objectMapper) {
+    public RealtimeWebSocketHandler(RealtimeWebSocketHub hub, RealtimeMessageService messages, ObjectMapper objectMapper) {
         this.hub = hub; this.messages = messages; this.objectMapper = objectMapper;
     }
 
@@ -47,7 +53,7 @@ class RealtimeWebSocketHandler extends TextWebSocketHandler {
         try {
             if ("ping".equals(type)) { hub.send(session, Map.of("type", "pong")); return; }
             if ("send".equals(type)) {
-                RealtimeMessageCreateRequest request = new RealtimeMessageCreateRequest(
+                RealtimeMessageCreateCommand request = new RealtimeMessageCreateCommand(
                         string(command.get("clientMessageId")), string(command.get("recipient")),
                         command.get("payload") instanceof Map<?, ?> map ? castMap(map) : Map.of(),
                         command.get("ttlSeconds") instanceof Number n ? n.intValue() : null);

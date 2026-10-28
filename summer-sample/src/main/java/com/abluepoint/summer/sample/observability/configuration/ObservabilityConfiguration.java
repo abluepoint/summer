@@ -5,7 +5,7 @@ import com.abluepoint.summer.sample.observability.service.TracedRequestLogSink;
 
 import com.abluepoint.summer.mvc.logging.spi.RequestLogSink;
 import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
-import com.abluepoint.summer.sample.realtime.RealtimeWebSocketHub;
+import com.abluepoint.summer.sample.realtime.application.RealtimeConnectionMetrics;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
@@ -48,7 +48,7 @@ class ObservabilityConfiguration {
 
     @Bean
     MeterBinder sampleModuleMetrics(ObjectProvider<VersionedTwoLevelCache> caches,
-                                    ObjectProvider<RealtimeWebSocketHub> hubs) {
+                                    ObjectProvider<RealtimeConnectionMetrics> hubs) {
         return registry -> {
             caches.ifAvailable(cache -> {
                 FunctionCounter.builder("summer.cache.requests", cache, c -> c.statistics().requests()).register(registry);
@@ -59,7 +59,7 @@ class ObservabilityConfiguration {
                 Gauge.builder("summer.cache.entries", cache, c -> c.statistics().localEntries()).tag("tier", "local").register(registry);
             });
             hubs.ifAvailable(hub -> Gauge.builder("summer.realtime.connections", hub,
-                    RealtimeWebSocketHub::activeConnectionCount).register(registry));
+                    RealtimeConnectionMetrics::activeConnectionCount).register(registry));
         };
     }
 }

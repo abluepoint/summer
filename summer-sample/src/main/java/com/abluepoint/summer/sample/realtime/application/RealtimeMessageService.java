@@ -1,4 +1,11 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.application;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeMessageNodeRelay;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeMessageRepository;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeAccess;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageCursorException;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageValidationException;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageNotFoundException;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeMessageEntity;
 
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -13,14 +20,15 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageRules;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Service
-class RealtimeMessageService {
-    static final String READ = "enterprise.messages.read";
-    static final String WRITE = "enterprise.messages.write";
+public class RealtimeMessageService {
+    public static final String READ = "enterprise.messages.read";
+    public static final String WRITE = "enterprise.messages.write";
     private static final int MAX_PAYLOAD_BYTES = 64 * 1024;
     private static final int MAX_TTL_SECONDS = 24 * 60 * 60;
     private final RealtimeMessageRepository repository;
@@ -29,19 +37,19 @@ class RealtimeMessageService {
     private final RequestIdAccessor requestId;
     private final ObjectProvider<RealtimeMessageNodeRelay> nodeRelay;
     private final RealtimeAccess access;
-    private final JdbcTemplate jdbc;
+    private final com.abluepoint.summer.sample.realtime.infrastructure.RealtimeTenantLock tenantLock;
     private final TransactionTemplate writes;
 
-    RealtimeMessageService(RealtimeMessageRepository repository, ObjectMapper objectMapper,
+    public RealtimeMessageService(RealtimeMessageRepository repository, ObjectMapper objectMapper,
                            ApplicationEventPublisher events, RequestIdAccessor requestId,
                            ObjectProvider<RealtimeMessageNodeRelay> nodeRelay, RealtimeAccess access,
-                           JdbcTemplate jdbc, PlatformTransactionManager transactions) {
+                           com.abluepoint.summer.sample.realtime.infrastructure.RealtimeTenantLock tenantLock, PlatformTransactionManager transactions) {
         this.repository = repository; this.objectMapper = objectMapper; this.events = events; this.requestId = requestId; this.nodeRelay = nodeRelay;
-        this.access = access; this.jdbc = jdbc; this.writes = new TransactionTemplate(transactions);
+        this.access = access; this.tenantLock = tenantLock; this.writes = new TransactionTemplate(transactions);
         this.writes.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    RealtimeMessageView send(String enterpriseId, RealtimeMessageCreateRequest request, Authentication auth) {
+    public RealtimeMessageView send(String enterpriseId, RealtimeMessageCreateCommand request, Authentication auth) {
         require(enterpriseId, auth, WRITE);
         validate(request);
         RealtimeMessageView result = writes.execute(status -> {
@@ -65,7 +73,7 @@ class RealtimeMessageService {
         return result;
     }
 
-    RealtimeMessageView acknowledge(String enterpriseId, String messageId, Authentication auth) {
+    public RealtimeMessageView acknowledge(String enterpriseId, String messageId, Authentication auth) {
         require(enterpriseId, auth, WRITE);
         return writes.execute(status -> {
             lockEnterprise(enterpriseId);
@@ -79,30 +87,26 @@ class RealtimeMessageService {
 
     private void lockEnterprise(String enterpriseId) {
         // All JVMs serialize sequence allocation and deduplication on the same durable tenant row.
-        jdbc.queryForObject("select enterprise_id from summer_enterprise where enterprise_id=? for update", String.class, enterpriseId);
+        tenantLock.acquire(enterpriseId);
     }
 
-    RealtimeMessagePage list(String enterpriseId, long after, Authentication auth) {
+    public RealtimeMessagePageView list(String enterpriseId, long after, Authentication auth) {
         require(enterpriseId, auth, READ);
         List<RealtimeMessageEntity> entities = after == 0
                 ? repository.findTop500ByEnterpriseIdOrderBySequenceAsc(enterpriseId)
                 : repository.findTop500ByEnterpriseIdAndSequenceGreaterThanOrderBySequenceAsc(enterpriseId, after);
         long latest = entities.stream().mapToLong(RealtimeMessageEntity::sequence).max()
                 .orElseGet(() -> repository.findFirstByEnterpriseIdOrderBySequenceDesc(enterpriseId).map(RealtimeMessageEntity::sequence).orElse(after));
-        return new RealtimeMessagePage(entities.stream().map(e -> view(e, false)).toList(), latest, entities.size() == 500);
+        return new RealtimeMessagePageView(entities.stream().map(e -> view(e, false)).toList(), latest, entities.size() == 500);
     }
 
-    RealtimeMessageView find(String enterpriseId, String messageId, Authentication auth) {
+    public RealtimeMessageView find(String enterpriseId, String messageId, Authentication auth) {
         require(enterpriseId, auth, READ);
         return view(repository.findById(messageId).filter(e -> enterpriseId.equals(e.enterpriseId()))
                 .orElseThrow(RealtimeMessageNotFoundException::new), false);
     }
 
-    static long cursor(String raw) {
-        if (raw == null || raw.isBlank()) return 0;
-        try { long value = Long.parseLong(raw.trim()); if (value < 0) throw new NumberFormatException(); return value; }
-        catch (NumberFormatException e) { throw new RealtimeMessageCursorException(); }
-    }
+    public static long cursor(String raw) { return RealtimeMessageRules.cursor(raw); }
 
     private RealtimeMessageView view(RealtimeMessageEntity e, boolean duplicate) {
         Map<String, Object> payload;
@@ -115,21 +119,17 @@ class RealtimeMessageService {
     private String encode(Map<String, Object> payload) {
         try {
             String result = objectMapper.writeValueAsString(payload);
-            if (result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES) throw new RealtimeMessageValidationException("Message payload is too large");
+            RealtimeMessageRules.requirePayloadSize(result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
             return result;
         } catch (JacksonException e) { throw new RealtimeMessageValidationException("Message payload is invalid"); }
     }
 
-    private static void validate(RealtimeMessageCreateRequest request) {
-        if (request == null || blank(request.clientMessageId()) || !request.clientMessageId().matches("[A-Za-z0-9._:-]{1,128}"))
-            throw new RealtimeMessageValidationException("clientMessageId is required and must be a safe identifier");
-        if (request.payload() == null || request.payload().isEmpty()) throw new RealtimeMessageValidationException("payload must not be empty");
-        if (request.ttlSeconds() != null && (request.ttlSeconds() < 1 || request.ttlSeconds() > MAX_TTL_SECONDS))
-            throw new RealtimeMessageValidationException("ttlSeconds is outside the supported range");
-        if (!blank(request.recipient()) && request.recipient().trim().length() > 128) throw new RealtimeMessageValidationException("recipient is too long");
+    private static void validate(RealtimeMessageCreateCommand request) {
+        if (request == null) throw new RealtimeMessageValidationException("clientMessageId is required and must be a safe identifier");
+        RealtimeMessageRules.validate(request.clientMessageId(),request.recipient(),request.payload(),request.ttlSeconds());
     }
 
-    void require(String enterpriseId, Authentication authentication, String capability) {
+    public void require(String enterpriseId, Authentication authentication, String capability) {
         access.require(enterpriseId, authentication, capability);
     }
 

@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.realtime;
 
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;

@@ -1,4 +1,10 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.infrastructure;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageView;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeConnectionLimitException;
+import com.abluepoint.summer.sample.realtime.application.RealtimeConnectionView;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessagePageView;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessagePublishedEvent;
 
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -20,7 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class RealtimeWebSocketHub {
+public class RealtimeWebSocketHub implements com.abluepoint.summer.sample.realtime.application.RealtimeConnectionMetrics {
     static final int MAX_CONNECTIONS_PER_ENTERPRISE = 32;
     private final ObjectMapper objectMapper;
     private final RealtimeAccess access;
@@ -34,7 +40,7 @@ public class RealtimeWebSocketHub {
         Thread t = new Thread(r, "summer-realtime-heartbeat"); t.setDaemon(true); return t;
     });
 
-    RealtimeWebSocketHub(ObjectMapper objectMapper, RealtimeAccess access,
+    public RealtimeWebSocketHub(ObjectMapper objectMapper, RealtimeAccess access,
                          org.springframework.beans.factory.ObjectProvider<RealtimeMessageService> messages) {
         this.objectMapper = objectMapper;
         this.access = access;
@@ -43,7 +49,7 @@ public class RealtimeWebSocketHub {
         heartbeats.scheduleAtFixedRate(this::expireIdleConnections, 1, 1, TimeUnit.SECONDS);
     }
 
-    void register(String enterpriseId, WebSocketSession session) {
+    public void register(String enterpriseId, WebSocketSession session) {
         requireCurrent(session);
         touch(session);
         session.setTextMessageSizeLimit(128 * 1024);
@@ -60,14 +66,14 @@ public class RealtimeWebSocketHub {
         });
     }
 
-    void remove(String enterpriseId, WebSocketSession session) {
+    public void remove(String enterpriseId, WebSocketSession session) {
         sessions.computeIfPresent(enterpriseId, (key, active) -> {
             active.remove(session);
             return active.isEmpty() ? null : active;
         });
     }
 
-    void broadcast(String enterpriseId, Object payload) {
+    public void broadcast(String enterpriseId, Object payload) {
         Set<WebSocketSession> active = sessions.getOrDefault(enterpriseId, Set.of());
         // Notifications may arrive twice or out of order. Read the durable stream from
         // each connection's cursor instead of forwarding notification arrival order.
@@ -75,11 +81,11 @@ public class RealtimeWebSocketHub {
     }
 
     @EventListener
-    void messagePublished(RealtimeMessagePublishedEvent event) {
+    public void messagePublished(RealtimeMessagePublishedEvent event) {
         broadcast(event.message().enterpriseId(), Map.of("type", "message", "message", event.message()));
     }
 
-    RealtimeConnectionView status(String enterpriseId) {
+    public RealtimeConnectionView status(String enterpriseId) {
         return new RealtimeConnectionView(enterpriseId, sessions.getOrDefault(enterpriseId, Set.of()).size(),
                 MAX_CONNECTIONS_PER_ENTERPRISE, "AVAILABLE");
     }
@@ -97,7 +103,7 @@ public class RealtimeWebSocketHub {
         });
     }
 
-    void touch(WebSocketSession session) {
+    public void touch(WebSocketSession session) {
         session.getAttributes().put("lastClientActivity", System.nanoTime());
     }
 
@@ -116,12 +122,12 @@ public class RealtimeWebSocketHub {
         });
     }
 
-    void send(WebSocketSession session, Object payload) {
+    public void send(WebSocketSession session, Object payload) {
         try { send(session, objectMapper.writeValueAsString(payload)); }
         catch (JacksonException failed) { closeFailed(session); }
     }
 
-    void connected(WebSocketSession session, Object payload) {
+    public void connected(WebSocketSession session, Object payload) {
         synchronized (session) {
             send(session, payload);
             session.getAttributes().put("deliveryReady", true);
@@ -129,7 +135,7 @@ public class RealtimeWebSocketHub {
         }
     }
 
-    void replay(WebSocketSession session) {
+    public void replay(WebSocketSession session) {
         if (!session.isOpen() || Boolean.TRUE.equals(session.getAttributes().get("deliveryClosed"))) return;
         try {
             synchronized (session) {
@@ -138,7 +144,7 @@ public class RealtimeWebSocketHub {
                 String tenant = (String) session.getAttributes().get("enterpriseId");
                 var auth = (org.springframework.security.core.Authentication) session.getAttributes().get("authentication");
                 long cursor = ((Number) session.getAttributes().getOrDefault("deliveredAfter", session.getAttributes().getOrDefault("after", 0L))).longValue();
-                RealtimeMessagePage page;
+                RealtimeMessagePageView page;
                 do {
                     page = messages.getObject().list(tenant, cursor, auth);
                     for (RealtimeMessageView message : page.items()) {
@@ -172,7 +178,7 @@ public class RealtimeWebSocketHub {
         close(session, CloseStatus.SERVER_ERROR);
     }
 
-    void requireCurrent(WebSocketSession session) {
+    public void requireCurrent(WebSocketSession session) {
         try {
             Object lease = session.getAttributes().get("sessionActive");
             if (!(lease instanceof java.util.function.BooleanSupplier active) || !active.getAsBoolean()) {
@@ -186,7 +192,7 @@ public class RealtimeWebSocketHub {
         }
     }
 
-    void closeDenied(WebSocketSession session) {
+    public void closeDenied(WebSocketSession session) {
         close(session, CloseStatus.POLICY_VIOLATION);
     }
 
@@ -198,10 +204,9 @@ public class RealtimeWebSocketHub {
     }
 
     @PreDestroy
-    void shutdown() {
+    public void shutdown() {
         heartbeats.shutdownNow();
         sessions.values().stream().flatMap(Collection::stream).forEach(s -> { try { s.close(CloseStatus.GOING_AWAY); } catch (IOException ignored) {} });
     }
 }
 
-final class RealtimeConnectionLimitException extends RuntimeException {}

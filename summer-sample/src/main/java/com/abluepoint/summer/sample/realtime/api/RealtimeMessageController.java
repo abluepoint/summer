@@ -1,4 +1,13 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.api;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageCursorException;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageView;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageValidationException;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeWebSocketHub;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageNotFoundException;
+import com.abluepoint.summer.sample.realtime.application.RealtimeConnectionView;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessagePageView;
+
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -16,7 +25,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/enterprises/{enterpriseId}/messages")
-class RealtimeMessageController {
+public class RealtimeMessageController {
     private final RealtimeMessageService service;
     private final RealtimeWebSocketHub hub;
     private final RequestIdAccessor requestId;
@@ -32,7 +41,7 @@ class RealtimeMessageController {
                                                             @RequestBody RealtimeMessageCreateRequest request,
                                                             Authentication authentication) {
         try {
-            RealtimeMessageView result = service.send(enterpriseId, request, authentication);
+            RealtimeMessageView result = service.send(enterpriseId,request.toCommand(), authentication);
             return body(result.duplicate() ? HttpStatus.OK : HttpStatus.CREATED, result);
         } catch (RealtimeMessageValidationException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_MESSAGE_INVALID", e.getMessage()); }
         catch (AccessDeniedException e) { return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", "Message capability denied"); }
@@ -41,7 +50,7 @@ class RealtimeMessageController {
     @GetMapping
     @RawResponse
     @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.read')")
-    ResponseEntity<ApiResponse<RealtimeMessagePage>> list(@PathVariable String enterpriseId,
+    ResponseEntity<ApiResponse<RealtimeMessagePageView>> list(@PathVariable String enterpriseId,
                                                             @RequestParam(required = false) String after,
                                                             Authentication authentication) {
         try { return body(HttpStatus.OK, service.list(enterpriseId, RealtimeMessageService.cursor(after), authentication)); }

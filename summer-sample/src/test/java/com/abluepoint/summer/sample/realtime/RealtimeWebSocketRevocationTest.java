@@ -1,4 +1,8 @@
 package com.abluepoint.summer.sample.realtime;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeAccess;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeWebSocketHub;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeWebSocketHandler;
 
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 
@@ -56,7 +60,7 @@ class RealtimeWebSocketRevocationTest {
     @AfterEach void shutdown() { hub.shutdown(); }
 
     @Test void revokedSessionCannotRespondToPing() throws Exception {
-        handler.handleTextMessage(session, new TextMessage("{\"type\":\"ping\"}"));
+        handler.handleMessage(session, new TextMessage("{\"type\":\"ping\"}"));
         verify(session).close(CloseStatus.POLICY_VIOLATION);
         verify(session, never()).sendMessage(any());
     }
@@ -77,7 +81,7 @@ class RealtimeWebSocketRevocationTest {
         session.getAttributes().put("sessionActive", (BooleanSupplier) () -> {
             throw new IllegalStateException("session storage unavailable");
         });
-        handler.handleTextMessage(session, new TextMessage("{\"type\":\"ping\"}"));
+        handler.handleMessage(session, new TextMessage("{\"type\":\"ping\"}"));
         verify(session).close(CloseStatus.POLICY_VIOLATION);
         verify(session, never()).sendMessage(any());
     }

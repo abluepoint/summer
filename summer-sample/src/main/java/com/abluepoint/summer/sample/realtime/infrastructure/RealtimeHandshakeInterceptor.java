@@ -1,4 +1,6 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.infrastructure;
+import com.abluepoint.summer.sample.realtime.domain.RealtimeMessageCursorException;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -15,11 +17,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Map;
 
 @Component
-class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
+public class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
     private final RealtimeAccess access;
     private final com.abluepoint.summer.sample.identity.infrastructure.stream.SessionStreamAccess sessions;
 
-    RealtimeHandshakeInterceptor(RealtimeAccess access,
+    public RealtimeHandshakeInterceptor(RealtimeAccess access,
                                  com.abluepoint.summer.sample.identity.infrastructure.stream.SessionStreamAccess sessions) {
         this.access = access;
         this.sessions = sessions;

@@ -1,4 +1,6 @@
 package com.abluepoint.summer.sample.realtime;
+import com.abluepoint.summer.sample.realtime.infrastructure.RealtimeAccess;
+import com.abluepoint.summer.sample.realtime.application.RealtimeMessageService;
 
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import org.junit.jupiter.api.Test;

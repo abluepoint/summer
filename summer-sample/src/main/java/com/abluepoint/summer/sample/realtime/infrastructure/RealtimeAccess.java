@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.realtime;
+package com.abluepoint.summer.sample.realtime.infrastructure;
+
 
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import org.springframework.security.access.AccessDeniedException;
@@ -12,18 +13,18 @@ import java.util.Map;
 
 /** Checks current membership and persisted grants as well as the signed token. */
 @Component
-final class RealtimeAccess {
+public final class RealtimeAccess {
     private final AuthorizationService authorization;
 
-    RealtimeAccess(AuthorizationService authorization) { this.authorization = authorization; }
+    public RealtimeAccess(AuthorizationService authorization) { this.authorization = authorization; }
 
-    void require(String enterpriseId, Authentication authentication, String capability) {
+    public void require(String enterpriseId, Authentication authentication, String capability) {
         if (!(authentication instanceof JwtAuthenticationToken jwt)
                 || enterpriseId == null || enterpriseId.isBlank()
-                || jwt.getToken().getExpiresAt() == null
-                || !jwt.getToken().getExpiresAt().isAfter(Instant.now())
-                || !claimedMember(jwt, enterpriseId) || !claimedCapability(jwt, enterpriseId, capability)
-                || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))) {
+                || !com.abluepoint.summer.sample.realtime.domain.RealtimeMessageRules.validClaim(
+                    enterpriseId, jwt.getToken().getExpiresAt(), claimedMember(jwt,enterpriseId),
+                    claimedCapability(jwt,enterpriseId,capability),
+                    jwt.getAuthorities().stream().anyMatch(authority -> ("SCOPE_" + capability).equals(authority.getAuthority())), Instant.now())) {
             throw new AccessDeniedException("Message capability denied or expired");
         }
         authorization.requireEnterpriseMembership(enterpriseId, authentication);
