@@ -1,3 +1,4 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -8,7 +9,6 @@ import {
   Input,
   Select,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
@@ -66,7 +66,7 @@ export default function AuditPageScreen() {
       .finally(() => setExporting(false));
   }
 
-  if (loading && !page) return <Spin />;
+  if (loading && !page) return <AppLoading fullScreen={false} />;
   if (error && !page) {
     return <Alert type="error" title={error.status === 403 ? t['audit.forbidden'] : t['audit.error']} content={error.message || t['audit.error']} />;
   }
@@ -111,7 +111,7 @@ export default function AuditPageScreen() {
         ]}
       />
       <Drawer title={t['audit.details']} visible={Boolean(detail) || detailLoading} onCancel={() => setDetail(null)} width={560} footer={null}>
-        {detailLoading ? <Spin /> : detail && <Space direction="vertical" size="medium" style={{ width: '100%' }}>
+        {detailLoading ? <AppLoading fullScreen={false} /> : detail && <Space direction="vertical" size="medium" style={{ width: '100%' }}>
           <Typography.Text>eventId: {detail.eventId}</Typography.Text>
           <Typography.Text>tenantId: {detail.tenantId}</Typography.Text>
           <Typography.Text>organizationId: {detail.organizationId || '—'}</Typography.Text>

@@ -162,6 +162,18 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         return current;
     }
 
+    InterfaceResourceCatalogPage readPage(Authentication authentication, int page, int size, Long revision, boolean rescan) {
+        requirePlatformRead(authentication);
+        InterfaceResourceCatalogPage.validate(page, size);
+        if (revision != null && revision < 1) throw new IllegalArgumentException("revision must be positive");
+        if (rescan && revision != null) throw new IllegalArgumentException("a fresh scan cannot select a historical revision");
+        // Lifecycle events keep this immutable snapshot current. Paging must not
+        // rediscover mappings or deserialize every stored revision on each click.
+        InterfaceResourceCatalogView view = rescan ? read(authentication) : current;
+        if (revision != null && revision != view.revision()) view = history.read(revision);
+        return InterfaceResourceCatalogPage.of(view, page, size);
+    }
+
     InterfaceResourceCatalog snapshot() {
         return catalog;
     }

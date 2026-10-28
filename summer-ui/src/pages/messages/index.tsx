@@ -24,10 +24,21 @@ function MessagesBody({ enterpriseId, onDirtyChange }: { enterpriseId: string; o
   const [sending, setSending] = useState(false);
   const pending = useRef<{ id: string; text: string }>();
   const socket = useRef<RealtimeSocket>();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const merge = (current: RealtimeMessage[], received: RealtimeMessage[]) =>
     Array.from(new Map([...current, ...received].map(item => [item.messageId, item])).values())
       .sort((first, second) => first.sequence - second.sequence);
-  const refresh = () => listMessages(enterpriseId).then((page) => { setItems(current => merge(current, page.items)); setError(null); }).catch(setError);
+  const refresh = () => listMessages(enterpriseId).then((page) => {
+    if (!mounted.current) return;
+    setItems(current => merge(current, page.items)); setError(null);
+  }).catch(e => { if (mounted.current) setError(e); });
+  const acknowledge = (messageId: string) => acknowledgeMessage(enterpriseId, messageId).then((updated) => {
+    if (mounted.current) setItems(current => current.map(entry => entry.messageId === updated.messageId ? updated : entry));
+  }).catch(e => { if (mounted.current) setError(e); });
   useEffect(() => { onDirtyChange(Boolean(text)); }, [text, onDirtyChange]);
   useEffect(() => {
     let alive = true;
@@ -55,9 +66,9 @@ function MessagesBody({ enterpriseId, onDirtyChange }: { enterpriseId: string; o
           pending.current = undefined; setSending(false); setError(null);
           setText(current => current.trim() === confirmed ? '' : current);
         }
-      }, setState);
+      }, next => { if (alive) setState(next); });
     }).catch(e => { if (alive) setError(e); });
-    return () => { alive = false; socket.current?.close(); };
+    return () => { alive = false; socket.current?.close(); socket.current = undefined; };
   }, [enterpriseId]);
   const send = () => {
     const trimmed = text.trim();
@@ -80,7 +91,7 @@ function MessagesBody({ enterpriseId, onDirtyChange }: { enterpriseId: string; o
       { title: t['messages.sender'], dataIndex: 'sender' },
       { title: t['messages.payload'], render: (_, item) => String(item.payload?.text || '') },
       { title: t['messages.status'], dataIndex: 'status' },
-      { title: t['messages.actions'], render: (_, item) => item.status === 'ACKED' || !canWrite ? null : <Button size="small" onClick={() => acknowledgeMessage(enterpriseId, item.messageId).then((updated) => setItems((current) => current.map((entry) => entry.messageId === updated.messageId ? updated : entry))).catch(setError)}>{t['messages.ack']}</Button> },
+      { title: t['messages.actions'], render: (_, item) => item.status === 'ACKED' || !canWrite ? null : <Button size="small" onClick={() => acknowledge(item.messageId)}>{t['messages.ack']}</Button> },
     ]} />
   </Card>;
 }

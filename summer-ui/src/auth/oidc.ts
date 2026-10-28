@@ -25,6 +25,7 @@ const AUTH_NOTICE_KEY = 'summer.auth.notice';
 let clearAuthenticatedUi: (() => void) | undefined;
 let customerDraftProvider: (() => object) | undefined;
 let redirecting = false;
+let manualLoginPending = false;
 const setting = (value: unknown, fallback: string) =>
   typeof value === 'string' && value ? value : fallback;
 
@@ -107,6 +108,36 @@ export async function startLogin(
     state: { returnTo: safeReturnTo(returnTo) },
     nonce,
   });
+}
+
+// Explicit user action starts a new bounded recovery cycle. Keep pending PKCE
+// state intact: the login form may be completing a saved authorization request.
+export function prepareManualLogin() {
+  preserveCustomerDraft();
+  clearRecoveryState(storage);
+  redirecting = false;
+}
+
+export async function restartLoginManually(
+  returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`
+) {
+  if (manualLoginPending) return false;
+  manualLoginPending = true;
+  prepareManualLogin();
+  redirecting = true;
+  try {
+    clearAuthenticatedUi?.();
+    await oidcManager.removeUser();
+    claimLoginStart(storage);
+    await startLogin(returnTo);
+    return true;
+  } catch (error) {
+    storage.removeItem(LOGIN_START_KEY);
+    redirecting = false;
+    throw error;
+  } finally {
+    manualLoginPending = false;
+  }
 }
 
 export async function completeLoginCallback(url = window.location.href) {

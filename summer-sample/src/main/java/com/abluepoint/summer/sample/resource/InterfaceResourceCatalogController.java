@@ -35,14 +35,27 @@ final class InterfaceResourceCatalogController {
 
     @GetMapping("/api/v1/platform/interface-resources")
     @RawResponse
-    ResponseEntity<ApiResponse<InterfaceResourceCatalogView>> read(
+    ResponseEntity<?> read(
             Authentication authentication,
-            HttpServletRequest request
+            HttpServletRequest request,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Long revision,
+            @RequestParam(defaultValue = "false") boolean refresh
     ) {
         String requestId = requestIdAccessor.currentRequestId();
         try {
-            InterfaceResourceCatalogView view = service.read(authentication);
-            String etag = "\"" + view.revision() + "\"";
+            Object view;
+            String etag;
+            if (page != null || size != null) {
+                var slice = service.readPage(authentication, page == null ? 0 : page, size == null ? 10 : size, revision, refresh);
+                view = slice;
+                etag = "\"" + slice.revision() + "-p" + slice.page() + "-s" + slice.size() + "\"";
+            } else {
+                var catalog = service.read(authentication);
+                view = catalog;
+                etag = "\"" + catalog.revision() + "\"";
+            }
             if (etag.equals(request.getHeader("If-None-Match"))) {
                 return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                         .eTag(etag)
@@ -58,6 +71,12 @@ final class InterfaceResourceCatalogController {
                     .header("X-Request-Id", requestId)
                     .body(ApiResponse.failure(
                             new ApiError("SUMMER_FORBIDDEN", exception.getMessage(), List.of()), requestId));
+        } catch (IllegalArgumentException invalid) {
+            return ResponseEntity.badRequest().header("X-Request-Id", requestId).body(ApiResponse.failure(
+                    new ApiError("SUMMER_RESOURCE_PAGE_INVALID", invalid.getMessage(), List.of()), requestId));
+        } catch (InterfaceResourceHistory.RevisionNotFoundException missing) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).header("X-Request-Id", requestId).body(ApiResponse.failure(
+                    new ApiError("SUMMER_RESOURCE_REVISION_NOT_FOUND", "Interface resource revision was not found", List.of()), requestId));
         }
     }
     @GetMapping("/api/v1/platform/interface-resources/history")
@@ -69,8 +88,10 @@ final class InterfaceResourceCatalogController {
 
     @GetMapping("/api/v1/platform/interface-resources/history/{revision}")
     @RawResponse
-    ResponseEntity<?> revision(Authentication authentication, @PathVariable long revision) {
-        return historyResponse(authentication, () -> history.read(revision));
+    ResponseEntity<?> revision(Authentication authentication, @PathVariable long revision,
+                               @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
+        return historyResponse(authentication, () -> page == null && size == null ? history.read(revision)
+                : InterfaceResourceCatalogPage.of(history.read(revision), page == null ? 0 : page, size == null ? 10 : size));
     }
 
     @GetMapping("/api/v1/platform/interface-resources/diff")

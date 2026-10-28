@@ -1,5 +1,6 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Space, Spin, Table, Tag, Typography } from '@arco-design/web-react';
+import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { getRuntimeDiagnostics, RuntimeDiagnostics, RuntimeDiagnosticsError, RuntimeModuleMetrics } from './api';
 
@@ -28,7 +29,7 @@ export default function RuntimeDiagnosticsPage() {
 
   useEffect(() => load(), [load]);
 
-  if (loading && !data) return <Spin />;
+  if (loading && !data) return <AppLoading fullScreen={false} />;
   if (error) {
     return <Alert type="error" title={error.status === 403 ? t['diagnostics.runtime.forbidden'] : t['diagnostics.runtime.error']} content={<Space direction="vertical"><Typography.Text>{error.message || t['diagnostics.runtime.error']}</Typography.Text>{error.requestId && <Typography.Text>requestId: {error.requestId}</Typography.Text>}{error.traceId && <Typography.Text>traceId: {error.traceId}</Typography.Text>}<Button size="mini" onClick={load}>{t['diagnostics.runtime.retry']}</Button></Space>} />;
   }

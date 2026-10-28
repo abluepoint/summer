@@ -16,6 +16,8 @@ outbox event is enqueued, preserving the mutation-to-event order.
 
 ## Redis 重建与前端权限收敛
 
+前端定时读取策略已由 [ADR 0033](0033-refresh-menus-on-context-and-return-events.md) 替代；以下保留原决策背景。服务端 outbox、Redis Stream 与鉴权策略保持有效。
+
 消费组不存在时从 `0-0` 建组，先处理已有 pending，再读取新条目。不能从
 `latest` 建组：Redis 丢失数据后，outbox 可能先恢复发布首条事件，晚建组会跳过它。
 已有流记录可重新投递；持久化 receipt 保持幂等，节点仍先清除本地投影，

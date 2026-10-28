@@ -1,6 +1,7 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Switch, Route, Redirect, useHistory } from 'react-router-dom';
-import { Alert, Layout, Menu, Breadcrumb, Spin } from '@arco-design/web-react';
+import { Alert, Button, Layout, Menu, Breadcrumb } from '@arco-design/web-react';
 import cs from 'classnames';
 import {
   IconDashboard,
@@ -31,6 +32,7 @@ import {
   authenticationStatus,
   getAuthenticatedUser,
   isAuthRedirecting,
+  restartLoginManually,
   startLoginForUnavailable,
 } from './auth/oidc';
 
@@ -42,6 +44,17 @@ const Content = Layout.Content;
 
 function CustomerReadRoute({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
+  const [retryingLogin, setRetryingLogin] = useState(false);
+  const retryLogin = async () => {
+    setRetryingLogin(true);
+    try {
+      await restartLoginManually();
+    } catch {
+      setAccess('failed');
+    } finally {
+      setRetryingLogin(false);
+    }
+  };
   const [access, setAccess] = useState<
     'checking' | 'allowed' | 'forbidden' | 'failed' | 'limited'
   >('checking');
@@ -74,11 +87,10 @@ function CustomerReadRoute({ children }: { children: React.ReactNode }) {
 
   if (access === 'forbidden')
     return <Alert type="error" content={locale['customer.error.403']} />;
-  if (access === 'failed')
-    return <Alert type="error" content={locale['auth.startFailed']} />;
-  if (access === 'limited')
-    return <Alert type="error" content={locale['auth.restartLimit']} />;
-  return access === 'allowed' ? <>{children}</> : <Spin />;
+  if (access === 'failed' || access === 'limited')
+    return <Alert type="error" content={locale[access === 'failed' ? 'auth.startFailed' : 'auth.restartLimit']}
+      action={<Button type="primary" loading={retryingLogin} onClick={retryLogin}>{locale['auth.signInAgain']}</Button>} />;
+  return access === 'allowed' ? <>{children}</> : <AppLoading fullScreen={false} />;
 }
 
 function getIconFromKey(key) {
@@ -265,7 +277,7 @@ function PageLayout() {
         <Navbar show={showNavbar} />
       </div>
       {userLoading ? (
-        <Spin className={styles['spin']} />
+        <AppLoading fullScreen={false} />
       ) : (
         <Layout>
           {showMenu && (

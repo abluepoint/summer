@@ -1,7 +1,8 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
-import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber } from '@arco-design/web-react';
+import { Alert, Button, Card, Form, Select, Tag, Input, InputNumber } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { DictionaryOption, getPublicDictionary, getPublicDictionaryItem, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
 
@@ -119,7 +120,7 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
         </span>
       )}
     >
-      {loading && !options.length ? <Spin /> : (
+      {loading && !options.length ? <AppLoading fullScreen={false} /> : (
         <Form layout="vertical" style={{ maxWidth: 520 }}>
           <Alert type="info" content="覆盖优先级：组织 > 租户 > 基础值。高优先级覆盖不可访问时不会回退；发布覆盖需要独立授权。" style={{ marginBottom: 16 }} />
           {error && <Alert type="error" content={error} style={{ marginBottom: 16 }} />}

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Spin } from '@arco-design/web-react';
+import { Alert, Button } from '@arco-design/web-react';
 import { useHistory } from 'react-router-dom';
 import { completeLoginCallback, clearTemporaryAuthState } from '@/auth/oidc';
 import useLocale from '@/utils/useLocale';
+import AppLoading from '@/components/AppLoading';
 
 export default function OidcCallback() {
   const t = useLocale();
@@ -23,7 +24,7 @@ export default function OidcCallback() {
       });
   }, [history]);
 
-  if (!failed) return <Spin tip={t['oauth2.callback.processing']} />;
+  if (!failed) return <AppLoading />;
   return (
     <Alert
       type="error"

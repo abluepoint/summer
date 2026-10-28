@@ -1,5 +1,6 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Card, Empty, Grid, Select, Space, Spin, Statistic, Typography } from '@arco-design/web-react';
+import { Alert, Button, Card, Empty, Grid, Select, Space, Statistic, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 import { getStatistics, Statistics, StatisticsError } from './api';
@@ -10,7 +11,7 @@ export default function StatisticsPage() {
   const tenant = useActiveEnterprise();
   const t = useLocale(locale);
   return <><Select aria-label={t['statistics.tenant']} placeholder={t['statistics.chooseTenant']} value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} style={{ width: 240, marginBottom: 16 }} />
-    {tenant.enterpriseId ? <StatisticsContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} /> : tenant.ready ? <Alert type="info" content={t['statistics.chooseTenant']} /> : <Spin />}</>;
+    {tenant.enterpriseId ? <StatisticsContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} /> : tenant.ready ? <Alert type="info" content={t['statistics.chooseTenant']} /> : <AppLoading fullScreen={false} />}</>;
 }
 function StatisticsContent({ enterpriseId }: { enterpriseId: string }) {
   const t = { ...useLocale(), ...useLocale(locale) };
@@ -26,7 +27,7 @@ function StatisticsContent({ enterpriseId }: { enterpriseId: string }) {
     }).finally(() => { if (generation.current === current) setLoading(false); });
   }, [enterpriseId]);
   useEffect(() => { load(); return () => { generation.current++; }; }, [load]);
-  if (loading) return <Spin />;
+  if (loading) return <AppLoading fullScreen={false} />;
   if (failure) {
     const forbidden = failure.status === 403 || failure.code === 'SUMMER_FORBIDDEN';
     return <Alert type={forbidden ? 'warning' : 'error'} title={forbidden ? t['statistics.forbidden'] : t['statistics.error']} content={<Space direction="vertical"><Typography.Text>{failure.message || (forbidden ? t['statistics.forbidden'] : t['statistics.error'])}</Typography.Text>{failure.requestId && <Typography.Text>requestId: {failure.requestId}</Typography.Text>}<Button size="mini" onClick={load}>{t['statistics.retry']}</Button></Space>} />;

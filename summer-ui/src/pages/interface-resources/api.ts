@@ -27,6 +27,11 @@ export type InterfaceResourceCatalog = {
   complete: boolean;
   issues: DiscoveryIssue[];
 };
+export type InterfaceResourcePage = InterfaceResourceCatalog & {
+  total: number;
+  page: number;
+  size: number;
+};
 export type CatalogRevision = {
   revision: number;
   fingerprint: string;
@@ -64,7 +69,7 @@ export class InterfaceResourceApiError extends Error {
 const root = '/api/v1/platform/interface-resources';
 async function request<T>(
   path: string,
-  params?: Record<string, number>
+  params?: Record<string, number | boolean>
 ): Promise<T> {
   try {
     const response = await axios.get(root + path, { params });
@@ -84,11 +89,17 @@ async function request<T>(
     );
   }
 }
-export const listInterfaceResources = () =>
-  request<InterfaceResourceCatalog>('');
+export const listInterfaceResources = (
+  page = 0,
+  size = 10,
+  options: { revision?: number; refresh?: boolean } = {}
+) => request<InterfaceResourcePage>('', { page, size, ...options });
 export const listInterfaceResourceHistory = (page = 0, size = 20) =>
   request<CatalogHistory>('/history', { page, size });
-export const getInterfaceResourceRevision = (revision: number) =>
-  request<InterfaceResourceCatalog>(`/history/${revision}`);
+export const getInterfaceResourceRevision = (
+  revision: number,
+  page = 0,
+  size = 10
+) => request<InterfaceResourcePage>(`/history/${revision}`, { page, size });
 export const compareInterfaceResourceRevisions = (from: number, to: number) =>
   request<CatalogDifference>('/diff', { from, to });

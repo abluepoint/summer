@@ -1,5 +1,6 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Spin } from '@arco-design/web-react';
+import { Alert, Button, Card, Descriptions } from '@arco-design/web-react';
 import { useLocation } from 'react-router-dom';
 import useLocale from '@/utils/useLocale';
 import useActiveEnterprise from '@/pages/data-scopes/useActiveEnterprise';
@@ -54,13 +55,13 @@ export default function CustomerInsightsPage() {
     return () => { currentRequest.current += 1; };
   }, [tenant.ready, load]);
 
-  if (!tenant.ready) return <Spin />;
+  if (!tenant.ready) return <AppLoading fullScreen={false} />;
   if (pathname !== pluginPath || !tenant.enterpriseId) return <Alert type="error" content={t['plugins.unavailable']} />;
   const insights = result?.enterpriseId === tenant.enterpriseId ? result.insights : null;
   return <Card title={t['plugins.exampleTitle']} extra={<Button loading={loading} onClick={load}>{t['plugins.refresh']}</Button>}>
     {error && <Alert type="error" content={`${error.message || t['plugins.error']}${error.requestId ? ` (${error.requestId})` : ''}`} style={{ marginBottom: 16 }} />}
     {unavailable && <Alert type="warning" content={t['plugins.unavailable']} />}
-    {loading && <Spin />}
+    {loading && <AppLoading fullScreen={false} />}
     {insights && <Descriptions column={1} data={[
       { label: t['plugins.enterprise'], value: tenant.enterpriseId },
       { label: t['plugins.version'], value: insights.version },

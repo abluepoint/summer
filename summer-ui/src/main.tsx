@@ -3,12 +3,13 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { createStore } from 'redux';
 import { Provider } from 'react-redux';
-import { Alert, Card, ConfigProvider, Message, Select, Spin } from '@arco-design/web-react';
+import { Alert, Button, Card, ConfigProvider, Message, Select } from '@arco-design/web-react';
 import zhCN from '@arco-design/web-react/es/locale/zh-CN';
 import enUS from '@arco-design/web-react/es/locale/en-US';
 import { BrowserRouter, Switch, Route } from 'react-router-dom';
 import rootReducer from './store';
 import PageLayout from './layout';
+import AppLoading from './components/AppLoading';
 import { GlobalContext } from './context';
 import Login from './pages/login';
 import OidcCallback from './pages/oauth2/callback';
@@ -18,6 +19,7 @@ import {
   getAuthenticatedUser,
   isAuthRedirecting,
   onAuthenticatedUiClear,
+  restartLoginManually,
   startLoginForUnavailable,
 } from './auth/oidc';
 import { authText, configureBusinessApiAuth } from './auth/requests';
@@ -46,6 +48,18 @@ function AuthenticatedLayout() {
   const [menuItems, setMenuItems] = useState<VisibleMenuItem[]>([]);
   const [settledContext, setSettledContext] = useState(-1);
   const t = useLocale();
+  const [retryingLogin, setRetryingLogin] = useState(false);
+  const retryLogin = async () => {
+    setRetryingLogin(true);
+    try {
+      await restartLoginManually();
+    } catch {
+      setStatus('failed');
+      setSettledContext(activeEnterpriseSelection.getSnapshot().contextVersion);
+    } finally {
+      setRetryingLogin(false);
+    }
+  };
   const [status, setStatus] = useState<
     'loading' | 'ready' | 'failed' | 'limited'
   >('loading');
@@ -112,8 +126,8 @@ function AuthenticatedLayout() {
         });
         setStatus('ready');
         setSettledContext(tenant.contextVersion);
-        // Notifications can be lost. Re-read the server's effective actions while
-        // this page is visible, including when returning from a background tab.
+        // Re-read effective actions when the user returns to the app. Elapsed
+        // time alone must not trigger menu-manifest requests.
         let refreshing = false;
         const refreshPermissions = async () => {
           if (!isCurrent() || refreshing || document.visibilityState === 'hidden')
@@ -150,11 +164,9 @@ function AuthenticatedLayout() {
             refreshing = false;
           }
         };
-        const interval = window.setInterval(refreshPermissions, 10000);
         window.addEventListener('focus', refreshPermissions);
         document.addEventListener('visibilitychange', refreshPermissions);
         stopPermissionRefresh = () => {
-          window.clearInterval(interval);
           window.removeEventListener('focus', refreshPermissions);
           document.removeEventListener('visibilitychange', refreshPermissions);
         };
@@ -176,11 +188,10 @@ function AuthenticatedLayout() {
     };
   }, [tenant.ready, tenant.enterpriseId, tenant.contextVersion]);
   // Unmount old tenant pages in this render, before passive-effect cleanup.
-  if (!tenant.ready || settledContext !== tenant.contextVersion) return <Spin />;
-  if (status === 'failed')
-    return <Alert type="error" content={t['auth.startFailed']} />;
-  if (status === 'limited')
-    return <Alert type="error" content={t['auth.restartLimit']} />;
+  if (!tenant.ready || settledContext !== tenant.contextVersion) return <AppLoading />;
+  if (status === 'failed' || status === 'limited')
+    return <Alert type="error" content={t[status === 'failed' ? 'auth.startFailed' : 'auth.restartLimit']}
+      action={<Button type="primary" loading={retryingLogin} onClick={retryLogin}>{t['auth.signInAgain']}</Button>} />;
   if (!tenant.enterpriseId)
     return <Card title="选择活动租户">
       <Select aria-label="活动租户" placeholder="选择活动租户" options={tenant.options} value={undefined} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240 }} />
@@ -191,7 +202,7 @@ function AuthenticatedLayout() {
       <PageLayout key={tenant.contextVersion} />
     </MenuAccessContext.Provider>
   ) : (
-    <Spin />
+    <AppLoading />
   );
 }
 
@@ -226,6 +237,9 @@ function Index() {
       <ConfigProvider
         locale={getArcoLocale()}
         componentConfig={{
+          Spin: {
+            size: 28,
+          },
           Card: {
             bordered: false,
           },

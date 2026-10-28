@@ -39,6 +39,10 @@
 
 | [0032](0032-persist-enterprise-members-and-organization-context.md) | 持久化企业成员、组织上下文与企业目录 | 角色绑定不代替成员资格；邀请接桥、目录/审核共用持久记录；保留原邀请码生命周期边界 |
 
+| [0033](0033-refresh-menus-on-context-and-return-events.md) | 菜单按上下文与返回事件读取，取消定时轮询 | 替代 0027 的前端每 10 秒刷新策略；后端逐请求鉴权不变 |
+
+| [0034](0034-organize-packages-by-responsibility-and-role.md) | 外层按职责，内层按框架角色或业务复杂度分层 | 已决定；安全 SPI/默认实现归能力模块，当前仅文档，源码尚未迁移 |
+
 ## 来源与适用范围
 
 2026-09-22 整理时，本工作树只有 ADR 0001–0013。通过 `git worktree list` 找到 `core` 工作树中的未提交 ADR 0014–0016，并与 2026-09-08 的 [Issue #69](https://github.com/abluepoint/summer/issues/69) 核对；本次将三份 ADR 原文同步到 `summer4`，同时补入其新增领域词汇。未修改来源工作树，也未把未提交文件描述为远端提交。

@@ -1,3 +1,4 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -5,7 +6,6 @@ import {
   Card,
   Descriptions,
   Space,
-  Spin,
   Tag,
   Typography,
 } from '@arco-design/web-react';
@@ -45,7 +45,7 @@ export default function RedisDiagnosticsPage() {
 
   useEffect(() => load(), [load]);
 
-  if (loading && !data) return <Spin />;
+  if (loading && !data) return <AppLoading fullScreen={false} />;
   if (error) {
     return (
       <Alert

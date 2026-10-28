@@ -53,10 +53,10 @@ const user = (memberships = ['company-a', 'company-b'], extra = {}, subject = 'c
 // Real React 17, its installed host reconciler, and the actual shell controller.
 // Host widgets and the routed-page output are controlled render boundaries: this
 // tests shell lifecycle/transport races, not Arco pixels, routing, or real OIDC.
-function shellFixture(identity) {
+function shellFixture(identity, { retryLogin = async () => true } = {}) {
   let batch = (fn) => fn();
   let pageTenant;
-  const f = fixture(identity, undefined, (fn) => batch(fn)), reads = [], focus = new Set(), commits = [];
+  const f = fixture(identity, undefined, (fn) => batch(fn)), reads = [], focus = new Set(), commits = [], intervals = new Map();
   const menuContext = React.createContext([]);
   const redux = { state: { userInfo: { permissions: {} } }, dispatch(action) { this.state = { ...this.state, ...action.payload }; }, getState() { return this.state; } };
   const permissionsSource = readFileSync(new URL('../src/menu/permissions.ts', import.meta.url), 'utf8');
@@ -79,14 +79,15 @@ function shellFixture(identity) {
     useActiveEnterprise: f.useEnterprise, activeEnterpriseSelection: f.selection,
     getAuthenticatedUser: f.getUser, authenticationStatus: async () => 'missing',
     startLoginForUnavailable: async () => false, isAuthRedirecting: () => false,
+    restartLoginManually: retryLogin, Button: 'button',
     consumeAuthNotice: () => null, authText: (key) => key, useLocale: () => ({}),
     store: redux, menuManifest: { manifestVersion: 1, items: [] },
     loadMenuPermissions: permissionExports.loadMenuPermissions,
     syncMenuManifest: async () => {},
     getVisibleMenuManifest: (enterpriseId) => new Promise((resolve, reject) => reads.push({ enterpriseId, resolve, reject })),
     PageLayout: RoutedPage, MenuAccessContext: menuContext,
-    Spin: 'spinner', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },
-    window: { setInterval: () => 1, clearInterval() {}, addEventListener: (type, fn) => { if (type === 'focus') focus.add(fn); }, removeEventListener: (type, fn) => { if (type === 'focus') focus.delete(fn); } },
+    Spin: 'spinner', AppLoading: 'app-loading', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },
+    window: { setInterval: (fn, delay) => { const id = Symbol(); intervals.set(id, { fn, delay }); return id; }, clearInterval: id => intervals.delete(id), addEventListener: (type, fn) => { if (type === 'focus') focus.add(fn); }, removeEventListener: (type, fn) => { if (type === 'focus') focus.delete(fn); } },
     document: { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} },
   });
   const append = (parent, child) => { parent.children.push(child); };
@@ -110,11 +111,31 @@ function shellFixture(identity) {
   batch = renderer.batchedUpdates;
   renderer.updateContainer(React.createElement(shellExports.Component), root, null, () => {});
   return { ...f, reads, redux, find, commits, pageTenant: () => pageTenant, focus: () => focus.forEach((fn) => fn()),
+    elapse: (ms) => { for (const { fn, delay } of intervals.values()) for (let elapsed = delay; elapsed <= ms; elapsed += delay) fn(); },
     flush: async () => { for (let i = 0; i < 4; i++) { renderer.flushPassiveEffects(); await tick(); } },
     close: () => { renderer.updateContainer(null, root, null, () => {}); renderer.flushPassiveEffects(); },
   };
 }
 const manifest = (id) => ({ manifestVersion: 1, items: [{ menuId: id, enabled: true, actions: ['read'] }] });
+
+test('startup keeps one loading surface until menus settle and does not return to it on background reads', async () => {
+  const f = shellFixture(user(['company-a']));
+  try {
+    assert.ok(f.find('app-loading'), 'Identity bootstrap must use the same surface as the callback');
+    await f.flush();
+    assert.equal(f.reads.length, 1);
+    assert.ok(f.find('app-loading'), 'Menu bootstrap must retain the startup surface');
+    assert.equal(f.find('routed-page'), undefined);
+    f.reads[0].resolve(manifest('messages')); await f.flush();
+    assert.equal(f.find('app-loading'), undefined);
+    const page = f.find('routed-page');
+    f.focus(); await f.flush();
+    assert.equal(f.find('routed-page'), page, 'Background permission refresh must retain the mounted page');
+    assert.equal(f.find('app-loading'), undefined);
+    f.reads[1].resolve(manifest('messages')); await f.flush();
+    assert.equal(f.find('routed-page'), page);
+  } finally { f.close(); }
+});
 
 test('the authenticated shell offers explicit enterprise selection before any tenant menu is available', async () => {
   const f = shellFixture(user());
@@ -252,4 +273,43 @@ test('unmounted hook consumers release only their own guard and ignore delayed s
     assert.equal(f.selection.getSnapshot().busy, false, 'Late callbacks cannot recreate an unmounted page guard');
     assert.equal(f.selection.getSnapshot().dirty, true);
   } finally { f.selection.releaseGuard(other); keep(); f.close(); }
+});
+
+
+test('an exhausted login cycle renders a usable manual retry and keeps it usable after failure', async () => {
+  let attempts = 0;
+  const f = shellFixture(null, { retryLogin: async () => { attempts++; throw new Error('offline'); } });
+  try {
+    await f.flush();
+    assert.equal(attempts, 0, 'exhaustion must not create an automatic redirect loop');
+    let retry = f.find('alert')?.props.action;
+    assert.equal(retry?.type, 'button', 'the blocked shell must offer a sign-in action');
+    await retry.props.onClick();
+    await f.flush();
+    assert.equal(attempts, 1);
+    retry = f.find('alert')?.props.action;
+    assert.equal(retry?.type, 'button', 'a failed redirect must not strand the shell on a spinner');
+    assert.equal(retry.props.loading, false);
+    await retry.props.onClick();
+    assert.equal(attempts, 2, 'each explicit click may retry once');
+  } finally { f.close(); }
+});
+
+
+test('an idle authenticated shell never polls the menu manifest, while focus still refreshes it', async () => {
+  const f = shellFixture(user(['company-a']));
+  try {
+    await f.flush();
+    assert.equal(f.reads.length, 1);
+    f.reads[0].resolve(manifest('messages')); await f.flush();
+    const page = f.find('routed-page');
+    f.elapse(60000); await f.flush();
+    assert.equal(f.reads.length, 1, 'Elapsed time alone must not request the menu manifest');
+    f.focus(); await f.flush();
+    assert.equal(f.reads.length, 2, 'Returning to the app must still refresh effective permissions');
+    f.reads[1].resolve(manifest('messages')); await f.flush();
+    assert.equal(f.find('routed-page'), page);
+    f.elapse(60000); await f.flush();
+    assert.equal(f.reads.length, 2, 'An event refresh must not start a polling loop');
+  } finally { f.close(); }
 });
