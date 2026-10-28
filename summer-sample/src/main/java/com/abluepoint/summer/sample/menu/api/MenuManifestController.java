@@ -1,4 +1,13 @@
-package com.abluepoint.summer.sample.menu;
+package com.abluepoint.summer.sample.menu.api;
+
+import com.abluepoint.summer.sample.menu.api.request.MenuManifestOverrideRequest;
+import com.abluepoint.summer.sample.menu.api.request.MenuManifestSyncRequest;
+import com.abluepoint.summer.sample.menu.application.MenuManifestService;
+import com.abluepoint.summer.sample.menu.application.view.MenuManifestItemView;
+import com.abluepoint.summer.sample.menu.application.view.MenuManifestView;
+import com.abluepoint.summer.sample.menu.domain.exception.MenuManifestConflictException;
+import com.abluepoint.summer.sample.menu.domain.exception.MenuManifestPreconditionException;
+import com.abluepoint.summer.sample.menu.domain.exception.MenuManifestValidationException;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -11,12 +20,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-final class MenuManifestController {
+public final class MenuManifestController {
     private final MenuManifestService service;
     private final RequestIdAccessor requestId;
 
@@ -36,7 +44,7 @@ final class MenuManifestController {
     ResponseEntity<ApiResponse<MenuManifestView>> sync(@RequestBody MenuManifestSyncRequest body,
                                                         @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                         Authentication authentication) {
-        try { MenuManifestView view = service.sync(body, key, authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
+        try { MenuManifestView view = service.sync(body == null ? null : body.toCommand(), key, authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
         catch (Exception e) { return error(e); }
     }
 
@@ -63,7 +71,7 @@ final class MenuManifestController {
                                                                  @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                                                  @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                                  Authentication authentication) {
-        try { MenuManifestItemView view = service.override(enterpriseId, menuId, body, ifMatch, key, authentication); return result(HttpStatus.OK, view, view.version()); }
+        try { MenuManifestItemView view = service.override(enterpriseId, menuId, body == null ? null : body.toCommand(), ifMatch, key, authentication); return result(HttpStatus.OK, view, view.version()); }
         catch (Exception e) { return error(e); }
     }
 

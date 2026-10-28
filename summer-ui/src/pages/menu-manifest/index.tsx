@@ -3,8 +3,9 @@ import { Alert, Button, Card, Input, InputNumber, Message, Modal, Select, Space,
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
 import { getVisibleMenuManifest, MenuManifest, VisibleMenuItem } from '@/menu/api';
-import { getManagedManifest, getPlatformManifest, MenuError, MenuOverride, saveOverride, savePlatformManifest } from './api';
-import MenuEditor from './MenuEditor';
+import { getManagedManifest, getPlatformManifest, saveOverride, savePlatformManifest } from './api';
+import MenuEditor from './components/MenuEditor';
+import type { MenuError, MenuOverride } from './types';
 
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 export default function MenuManifestPage() {

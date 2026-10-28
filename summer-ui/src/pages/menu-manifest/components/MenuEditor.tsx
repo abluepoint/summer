@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Drawer, Form, Input, InputNumber, Switch } from '@arco-design/web-react';
-import { MenuOverride } from './api';
+import { MenuOverride } from '../types';
 import { VisibleMenuItem } from '@/menu/api';
 type Props = { item: VisibleMenuItem; value: MenuOverride; onChange: (value: MenuOverride) => void; onSave: () => void; onClose: () => void; saving: boolean };
 export default function MenuEditor({ item, value, onChange, onSave, onClose, saving }: Props) {

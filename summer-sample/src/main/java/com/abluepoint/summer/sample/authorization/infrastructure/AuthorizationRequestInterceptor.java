@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.infrastructure;
 
+import com.abluepoint.summer.sample.menu.api.MenuManifestController;
+
 import com.abluepoint.summer.sample.authorization.api.AuthorizationChangeEventController;
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 
@@ -69,7 +71,7 @@ public final class AuthorizationRequestInterceptor implements HandlerInterceptor
             throw new AccessDeniedException("Inactive enterprise membership");
         }
         if ("GET:/api/v1/enterprises/{enterpriseId}/menu-manifest".equals(permissionCode)
-                && method.getBeanType().getName().equals("com.abluepoint.summer.sample.menu.MenuManifestController")) {
+                && method.getBeanType().getName().equals("com.abluepoint.summer.sample.menu.api.MenuManifestController")) {
             return true;
         }
         // Global Sample business and platform resources share the Sample's fixed tenant boundary.

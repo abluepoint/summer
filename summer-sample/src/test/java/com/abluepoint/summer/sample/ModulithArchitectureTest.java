@@ -88,4 +88,19 @@ class ModulithArchitectureTest {
         assertThat(forbidden).isEmpty();
     }
 
+    @Test
+    void menuDomainIsIndependentOfFrameworksAndOuterLayers() {
+        var classes = new ClassFileImporter().importPackages("com.abluepoint.summer.sample.menu.domain");
+        assertThat(classes).isNotEmpty();
+        var forbidden = classes.stream().flatMap(type -> type.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> {
+                    String target = dependency.getTargetClass().getPackageName();
+                    return target.startsWith("org.springframework") || target.startsWith("jakarta.persistence")
+                            || target.startsWith("com.abluepoint.summer.sample.menu.api")
+                            || target.startsWith("com.abluepoint.summer.sample.menu.application")
+                            || target.startsWith("com.abluepoint.summer.sample.menu.infrastructure");
+                }).map(Object::toString).toList();
+        assertThat(forbidden).isEmpty();
+    }
+
 }
