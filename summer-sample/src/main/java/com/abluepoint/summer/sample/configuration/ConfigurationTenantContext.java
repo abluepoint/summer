@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.configuration;
 
-import com.abluepoint.summer.sample.authorization.EnterpriseRequestContext;
+import com.abluepoint.summer.sample.authorization.infrastructure.EnterpriseRequestContext;
 import org.springframework.security.core.Authentication;
 import java.util.Set;
 

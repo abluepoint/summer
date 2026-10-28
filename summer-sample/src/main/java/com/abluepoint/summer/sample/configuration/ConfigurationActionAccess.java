@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.configuration;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import org.springframework.stereotype.Component;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.AccessDeniedException;

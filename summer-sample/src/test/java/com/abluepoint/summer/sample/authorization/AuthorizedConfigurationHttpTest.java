@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

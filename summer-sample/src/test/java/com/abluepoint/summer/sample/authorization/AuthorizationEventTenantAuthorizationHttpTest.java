@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.infrastructure.AuthorizationRequestInterceptor;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

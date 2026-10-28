@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.realtime;
 
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

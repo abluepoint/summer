@@ -4,7 +4,7 @@ import static com.abluepoint.summer.sample.configuration.ConfigurationTenantCont
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import com.abluepoint.summer.sample.resilience.service.ResilientReadService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;

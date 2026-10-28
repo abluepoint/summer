@@ -1,5 +1,10 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.application.command.RoleCreateCommand;
+import com.abluepoint.summer.sample.authorization.application.command.UserRoleAssignmentCommand;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationChangeEventOutboxRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,7 +41,7 @@ class AuthorizationAuditPersistenceTest {
 
     @Test
     void committedMutationAuditCanBeReadByAnIndependentServiceInstance() {
-        var role = authorization.createRole(ENTERPRISE, new RoleCreateRequest("Reader", "audit-reader", List.of(), null),
+        var role = authorization.createRole(ENTERPRISE, new RoleCreateCommand("Reader", "audit-reader", List.of(), null),
                 "audit-create", "audit-request", admin());
 
         var rows = freshService().audit(ENTERPRISE, role.roleId(), admin());
@@ -53,7 +58,7 @@ class AuthorizationAuditPersistenceTest {
         AtomicReference<String> roleId = new AtomicReference<>();
         long originalEvents = outbox.count();
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            var role = authorization.createRole(ENTERPRISE, new RoleCreateRequest("Rollback", "audit-rollback", List.of(), null),
+            var role = authorization.createRole(ENTERPRISE, new RoleCreateCommand("Rollback", "audit-rollback", List.of(), null),
                     "audit-rollback", "audit-rollback-request", admin());
             roleId.set(role.roleId());
             assertThat(authorization.audit(ENTERPRISE, role.roleId(), admin())).hasSize(1);
@@ -68,9 +73,9 @@ class AuthorizationAuditPersistenceTest {
 
     @Test
     void authorizationDecisionsRemainDurableWhenAnOuterTransactionRollsBack() {
-        var role = authorization.createRole(ENTERPRISE, new RoleCreateRequest("Customer reader", "audit-decision-reader",
+        var role = authorization.createRole(ENTERPRISE, new RoleCreateCommand("Customer reader", "audit-decision-reader",
                 List.of("GET:/api/customers"), null), "audit-decision-role", "role-request", admin());
-        authorization.assignUserRoles(ENTERPRISE, "alice", new UserRoleAssignmentRequest(List.of(role.roleId()),
+        authorization.assignUserRoles(ENTERPRISE, "alice", new UserRoleAssignmentCommand(List.of(role.roleId()),
                 List.of("POST:/api/customers")), "\"1\"", "audit-decision-binding", "binding-request", admin());
 
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
@@ -130,7 +135,7 @@ class AuthorizationAuditPersistenceTest {
         var bootstrap = withClaims(principal("summer-user", "enterprise.roles.write"), Map.of(
                 "summer_identity_source", "local-user", "platform_capabilities", List.of("platform.capabilities.write")));
         authorization.decision(bootstrap, ENTERPRISE, "POST:/api/v1/enterprises/{enterpriseId}/roles", "bootstrap-request");
-        authorization.assignUserRoles(ENTERPRISE, "inactive", new UserRoleAssignmentRequest(List.of(), List.of()),
+        authorization.assignUserRoles(ENTERPRISE, "inactive", new UserRoleAssignmentCommand(List.of(), List.of()),
                 "\"1\"", "inactive-binding", "inactive-binding-request", admin());
         authorization.decision(withClaims(principal("inactive"), Map.of("enterprise_memberships",
                 List.of(Map.of("enterpriseId", ENTERPRISE, "status", "DISABLED")))),

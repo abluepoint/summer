@@ -1,5 +1,17 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.application.command.RoleCreateCommand;
+import com.abluepoint.summer.sample.authorization.application.command.RoleUpdateCommand;
+import com.abluepoint.summer.sample.authorization.application.command.UserRoleAssignmentCommand;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationAuditStore;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.view.AuthorizationChangeEventView;
+import com.abluepoint.summer.sample.authorization.domain.exception.AuthorizationPreconditionException;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationCapabilityRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationRoleRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -53,7 +65,7 @@ class AuthorizationVersionConcurrencyTest {
     void twoNodesUpdatingTheSameVersionHaveOneWinnerAndOneMutationRecord() throws Exception {
         var tx = new TransactionTemplate(transactions);
         var setup = node();
-        var role = tx.execute(s -> setup.createRole("ent-acme", new RoleCreateRequest("Original", "race-" + UUID.randomUUID(), List.of(), null), "create-race", "created", admin()));
+        var role = tx.execute(s -> setup.createRole("ent-acme", new RoleCreateCommand("Original", "race-" + UUID.randomUUID(), List.of(), null), "create-race", "created", admin()));
         var left = node();
         var right = node();
         var barrier = new CyclicBarrier(2);
@@ -76,7 +88,7 @@ class AuthorizationVersionConcurrencyTest {
     private String update(TransactionTemplate tx, AuthorizationService node, String id, String name, CyclicBarrier barrier) throws Exception {
         barrier.await(10, TimeUnit.SECONDS);
         try {
-            return tx.execute(s -> node.updateRole("ent-acme", id, new RoleUpdateRequest(name, null, null, null, null), "\"1\"", name, name, admin()).name());
+            return tx.execute(s -> node.updateRole("ent-acme", id, new RoleUpdateCommand(name, null, null, null, null), "\"1\"", name, name, admin()).name());
         } catch (AuthorizationPreconditionException expected) {
             return "PRECONDITION_FAILED";
         }
@@ -86,8 +98,8 @@ class AuthorizationVersionConcurrencyTest {
     void rolledBackRoleChangePublishesNeitherProjectionReceiptAuditNorOutbox() {
         var tx = new TransactionTemplate(transactions);
         var node = node();
-        var role = tx.execute(s -> node.createRole("ent-acme", new RoleCreateRequest("Original", "rollback-" + UUID.randomUUID(), List.of(), null), "create-rollback", "created", admin()));
-        var change = new RoleUpdateRequest("Changed", null, null, List.of("GET:/rollback-only"), null);
+        var role = tx.execute(s -> node.createRole("ent-acme", new RoleCreateCommand("Original", "rollback-" + UUID.randomUUID(), List.of(), null), "create-rollback", "created", admin()));
+        var change = new RoleUpdateCommand("Changed", null, null, List.of("GET:/rollback-only"), null);
         tx.executeWithoutResult(s -> {
             node.updateRole("ent-acme", role.roleId(), change, "\"1\"", "rollback-update", "rolled-back", admin());
             s.setRollbackOnly();
@@ -106,7 +118,7 @@ class AuthorizationVersionConcurrencyTest {
         var tx = new TransactionTemplate(transactions);
         var setup = node();
         String username = "binding-" + UUID.randomUUID();
-        tx.execute(s -> setup.assignUserRoles("ent-acme", username, new UserRoleAssignmentRequest(List.of(), List.of()), "\"1\"", "binding-create", "binding-created", admin()));
+        tx.execute(s -> setup.assignUserRoles("ent-acme", username, new UserRoleAssignmentCommand(List.of(), List.of()), "\"1\"", "binding-create", "binding-created", admin()));
         var left = node(); var right = node(); var barrier = new CyclicBarrier(2);
         try (var workers = Executors.newFixedThreadPool(2)) {
             var first = workers.submit(() -> updateBinding(tx, left, username, "binding-a", barrier));
@@ -125,7 +137,7 @@ class AuthorizationVersionConcurrencyTest {
     private String updateBinding(TransactionTemplate tx, AuthorizationService node, String username, String name, CyclicBarrier barrier) throws Exception {
         barrier.await(10, TimeUnit.SECONDS);
         try {
-            tx.execute(s -> node.assignUserRoles("ent-acme", username, new UserRoleAssignmentRequest(List.of(), List.of(name)), "\"1\"", name, name, admin()));
+            tx.execute(s -> node.assignUserRoles("ent-acme", username, new UserRoleAssignmentCommand(List.of(), List.of(name)), "\"1\"", name, name, admin()));
             return name;
         } catch (AuthorizationPreconditionException expected) {
             return "PRECONDITION_FAILED";

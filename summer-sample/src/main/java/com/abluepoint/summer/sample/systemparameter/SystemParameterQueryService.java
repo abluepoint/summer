@@ -3,7 +3,7 @@ package com.abluepoint.summer.sample.systemparameter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 

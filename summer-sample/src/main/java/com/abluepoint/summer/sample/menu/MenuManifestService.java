@@ -1,8 +1,8 @@
 package com.abluepoint.summer.sample.menu;
 
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
-import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
-import com.abluepoint.summer.sample.authorization.AuthorizationAuditStore;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationAuditStore;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;

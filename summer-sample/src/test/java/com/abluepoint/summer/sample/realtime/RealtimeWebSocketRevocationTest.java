@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.realtime;
 
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,9 +32,9 @@ class RealtimeWebSocketRevocationTest {
 
     @BeforeEach void connect() {
         var mapper = new ObjectMapper();
-        var authorization = mock(com.abluepoint.summer.sample.authorization.AuthorizationService.class);
+        var authorization = mock(com.abluepoint.summer.sample.authorization.application.AuthorizationService.class);
         when(authorization.decision(any(), any(), any(), any())).thenReturn(
-                new com.abluepoint.summer.sample.authorization.AuthorizationService.Decision(true, "ROLE_ALLOW"));
+                new com.abluepoint.summer.sample.authorization.application.AuthorizationService.Decision(true, "ROLE_ALLOW"));
         hub = new RealtimeWebSocketHub(mapper, new RealtimeAccess(authorization), mock(org.springframework.beans.factory.ObjectProvider.class));
         handler = new RealtimeWebSocketHandler(hub, mock(RealtimeMessageService.class), mapper);
         var jwt = Jwt.withTokenValue("realtime-session-fixture").header("alg", "none")

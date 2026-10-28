@@ -1,5 +1,13 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.application.AuthorizationAuditStore;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationCapabilityRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationRoleRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;

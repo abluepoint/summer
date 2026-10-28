@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.plugin;
 
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import com.abluepoint.summer.sample.systemparameter.PublishedParameterReader;
 import com.abluepoint.summer.sample.dictionary.PublishedDictionaryReader;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;

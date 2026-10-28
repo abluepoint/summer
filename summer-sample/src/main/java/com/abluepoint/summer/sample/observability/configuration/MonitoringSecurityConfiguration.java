@@ -1,8 +1,8 @@
 package com.abluepoint.summer.sample.observability.configuration;
 
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
-import com.abluepoint.summer.sample.authorization.EnterpriseRequestContext;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.infrastructure.EnterpriseRequestContext;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.config.Customizer;

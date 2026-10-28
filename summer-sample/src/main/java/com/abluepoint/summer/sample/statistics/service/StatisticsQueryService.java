@@ -4,8 +4,8 @@ import com.abluepoint.summer.sample.statistics.model.view.StatisticsScopeView;
 import com.abluepoint.summer.sample.statistics.model.view.StatisticsView;
 import com.abluepoint.summer.sample.statistics.model.view.StatisticsWindowView;
 
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.DataScopeService;
 import com.abluepoint.summer.sample.resource.api.ResourcePermission;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.AnnotatedElementUtils;

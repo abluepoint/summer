@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.sample.authorization.application.DataScopeService;
+
 import com.abluepoint.summer.data.jpa.query.api.JpaSqlTemplate;
 import com.abluepoint.summer.sample.SampleDataProperties;
 import org.springframework.stereotype.Component;
@@ -83,7 +85,7 @@ record SystemParameterListQuery(
         SortDirection direction,
         Projection projection,
         String tenantId,
-        com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope
+        com.abluepoint.summer.sample.authorization.application.DataScopeService.ScopeFilter scope
 ) {
     static final int DEFAULT_PAGE = 0;
     static final int DEFAULT_SIZE = 20;
@@ -95,7 +97,7 @@ record SystemParameterListQuery(
         if (tenantId == null || tenantId.isBlank()) throw new IllegalArgumentException("tenantId is required");
     }
 
-    SystemParameterListQuery withScope(com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope) {
+    SystemParameterListQuery withScope(com.abluepoint.summer.sample.authorization.application.DataScopeService.ScopeFilter scope) {
         return new SystemParameterListQuery(page, size, key, type, status, publicValue, sort, direction, projection, tenantId, scope);
     }
 

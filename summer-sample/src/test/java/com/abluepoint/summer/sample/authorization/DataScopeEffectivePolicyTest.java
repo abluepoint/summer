@@ -1,5 +1,20 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.api.request.DataScopePreviewRequest;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.application.DataScopeService;
+import com.abluepoint.summer.sample.authorization.application.view.DataScopePreviewView;
+import com.abluepoint.summer.sample.authorization.domain.DataScopeExpression;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationRoleEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationRoleRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationUserBindingRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.DataScopeBindingEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.DataScopeBindingRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.DataScopePolicyAuditRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.DataScopePolicyEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.DataScopePolicyRepository;
+
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -190,11 +205,7 @@ class DataScopeEffectivePolicyTest {
 
     private static DataScopeBindingEntity binding(String type, String subject, String rules) {
         DataScopeBindingEntity binding = new DataScopeBindingEntity();
-        binding.subjectType = type;
-        binding.subjectId = subject;
-        binding.operator = "OR";
-        binding.rulesJson = rules;
-        binding.conditionsJson = "null";
+        binding.update(ENTERPRISE, RESOURCE, type, subject, "OR", rules, "null", "fixture");
         return binding;
     }
 
@@ -203,8 +214,8 @@ class DataScopeEffectivePolicyTest {
     }
 
     private DataScopePreviewView preview(String creator, String organization) {
-        return service.preview(ENTERPRISE, RESOURCE, new DataScopePreviewRequest("alice", organization, creator,
-                null, List.of(), List.of()), principal("alice"));
+        return service.preview(ENTERPRISE, RESOURCE, "alice", organization, creator,
+                null, List.of(), List.of(), List.of(), principal("alice"));
     }
 
     private static JwtAuthenticationToken principal(String subject) {

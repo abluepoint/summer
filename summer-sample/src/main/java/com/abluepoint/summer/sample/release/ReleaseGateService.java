@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.release;
 
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;

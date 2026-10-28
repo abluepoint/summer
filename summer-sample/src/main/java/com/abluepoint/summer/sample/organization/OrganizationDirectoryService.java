@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -32,9 +34,9 @@ class OrganizationDirectoryService {
     private final OrganizationUnitRepository unitRepository;
     private final OrganizationMembershipRepository membershipRepository;
     private final OrganizationContextRepository contextRepository;
-    private final com.abluepoint.summer.sample.authorization.AuthorizationService authorization;
+    private final com.abluepoint.summer.sample.authorization.application.AuthorizationService authorization;
 
-    OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository, com.abluepoint.summer.sample.member.infrastructure.MemberDirectory memberDirectory, com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal, com.abluepoint.summer.sample.authorization.AuthorizationService authorization) {
+    OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository, com.abluepoint.summer.sample.member.infrastructure.MemberDirectory memberDirectory, com.abluepoint.summer.sample.enterprise.infrastructure.DirectoryJournal journal, com.abluepoint.summer.sample.authorization.application.AuthorizationService authorization) {
         this.authorization = authorization;
         this.journal = journal;
         this.memberDirectory = memberDirectory;

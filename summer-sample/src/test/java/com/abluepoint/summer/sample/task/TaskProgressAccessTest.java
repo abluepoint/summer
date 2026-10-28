@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.task;
 import com.abluepoint.summer.sample.task.infrastructure.TaskProgressAccess;
 
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

@@ -1,5 +1,15 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEvent;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventConsumeResult;
+import com.abluepoint.summer.sample.authorization.infrastructure.AuthorizationChangeEventConsumer;
+import com.abluepoint.summer.sample.authorization.application.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.domain.AuthorizationChangeEventStatus;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationChangeEventOutboxEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationChangeEventOutboxRepository;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationChangeEventReceiptEntity;
+import com.abluepoint.summer.sample.authorization.infrastructure.persistence.AuthorizationChangeEventReceiptRepository;
+
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -14,7 +24,7 @@ class AuthorizationChangeEventTerminalTest {
         receipt.retry("failed", false); receipt.retry("failed", false); receipt.retry("failed", true);
         when(receipts.findById("event")).thenReturn(Optional.of(receipt));
         var consumer = new AuthorizationChangeEventConsumer(receipts);
-        var event = new AuthorizationChangeEventBody("event", "ent-acme", "ROLE", "role", "UPDATED", 1, "request");
+        var event = new AuthorizationChangeEvent("event", "ent-acme", "ROLE", "role", "UPDATED", 1, "request");
         assertThat(consumer.consume(event, ignored -> { throw new AssertionError("terminal event was executed"); }))
                 .isEqualTo(AuthorizationChangeEventConsumeResult.DEAD_LETTER);
         assertThat(receipt.attempts()).isEqualTo(3);
