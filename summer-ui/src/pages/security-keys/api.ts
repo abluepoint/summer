@@ -1,36 +1,8 @@
+import type { SecurityKey, SecurityKeyRotation, SecurityKeyRotationSchedule, SecurityKeyState } from './types';
+export type { SecurityKey, SecurityKeyRotation, SecurityKeyRotationSchedule, SecurityKeyState } from './types';
 import axios from 'axios';
 import { businessData } from '@/api/client';
 import { responseRequestId, SummerApiError } from '@/api/errors';
-
-export type SecurityKey = {
-  kid: string;
-  algorithm: string;
-  source: string;
-  status: string;
-  version: number;
-  health: string;
-  graceUntil?: string;
-};
-
-export type SecurityKeyRotation = {
-  activeKid: string;
-  version: number;
-  retentionDays: number;
-};
-export type SecurityKeyRotationSchedule = {
-  status: string;
-  periodDays: number;
-  retentionDays: number;
-  nextRotationAt: string;
-  lastAttemptAt?: string;
-  lastSuccessAt?: string;
-  failureCount: number;
-  lastError?: string;
-};
-export type SecurityKeyState = {
-  items: SecurityKey[];
-  rotation: SecurityKeyRotationSchedule;
-};
 
 function isSecurityKey(value: unknown): value is SecurityKey {
   if (!value || typeof value !== 'object') return false;
