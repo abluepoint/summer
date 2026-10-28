@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.configuration;
 
 import com.abluepoint.summer.mvc.validate.Style;
 import com.abluepoint.summer.mvc.validate.Styles;

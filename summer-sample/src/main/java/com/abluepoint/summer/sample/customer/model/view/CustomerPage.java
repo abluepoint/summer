@@ -1,8 +1,8 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.model.view;
 
 import java.util.List;
 
-record CustomerPage(
+public record CustomerPage(
         List<?> items,
         int page,
         int size,

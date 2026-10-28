@@ -1,4 +1,11 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.service;
+
+import com.abluepoint.summer.sample.customer.exception.CustomerAuditNotFoundException;
+import com.abluepoint.summer.sample.customer.model.entity.CustomerAuditEventEntity;
+import com.abluepoint.summer.sample.customer.model.query.CustomerAuditQuery;
+import com.abluepoint.summer.sample.customer.model.view.CustomerAuditEventView;
+import com.abluepoint.summer.sample.customer.model.view.CustomerAuditPage;
+import com.abluepoint.summer.sample.customer.repository.CustomerAuditEventRepository;
 
 import io.opentelemetry.api.trace.Span;
 import jakarta.persistence.criteria.Predicate;
@@ -19,9 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@org.springframework.modulith.NamedInterface("audit")
 @Service
 public class CustomerAuditService {
-    static final String TENANT_ID = "ent-acme";
+    public static final String TENANT_ID = "ent-acme";
     private final CustomerAuditEventRepository repository;
     private final ObjectMapper objectMapper;
     private final AuditOrganizationContext organizationContext;
@@ -73,14 +81,14 @@ public class CustomerAuditService {
     }
 
     @Transactional(readOnly = true)
-    CustomerAuditPage search(CustomerAuditQuery query, Pageable pageable) {
+    public CustomerAuditPage search(CustomerAuditQuery query, Pageable pageable) {
         Page<CustomerAuditEventEntity> page = repository.findAll(specification(query), pageable);
         return new CustomerAuditPage(page.getContent().stream().map(this::view).toList(),
                 page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
     }
 
     @Transactional(readOnly = true)
-    String export(CustomerAuditQuery query) {
+    public String export(CustomerAuditQuery query) {
         Page<CustomerAuditEventEntity> page = repository.findAll(specification(query),
                 org.springframework.data.domain.PageRequest.of(0, 1000,
                         org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "occurredAt")));
@@ -110,7 +118,7 @@ public class CustomerAuditService {
     }
 
     @Transactional(readOnly = true)
-    CustomerAuditEventView find(String eventId) {
+    public CustomerAuditEventView find(String eventId) {
         return repository.findById(eventId).filter(event -> TENANT_ID.equals(event.tenantId()))
                 .map(this::view).orElseThrow(() -> new CustomerAuditNotFoundException("Audit event not found"));
     }
@@ -163,9 +171,3 @@ public class CustomerAuditService {
     }
 }
 
-record CustomerAuditQuery(String principal, String resource, String action, String result,
-                          String requestId, Instant from, Instant to) {}
-
-final class CustomerAuditNotFoundException extends RuntimeException {
-    CustomerAuditNotFoundException(String message) { super(message); }
-}

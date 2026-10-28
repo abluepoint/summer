@@ -1,4 +1,12 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.service;
+
+import com.abluepoint.summer.sample.customer.model.command.CustomerCreateCommand;
+import com.abluepoint.summer.sample.customer.model.command.CustomerUpdateCommand;
+import com.abluepoint.summer.sample.customer.model.entity.CustomerEntity;
+import com.abluepoint.summer.sample.customer.model.request.CustomerListRequest;
+import com.abluepoint.summer.sample.customer.model.view.CustomerPage;
+import com.abluepoint.summer.sample.customer.model.view.CustomerView;
+import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
@@ -12,37 +20,37 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-class CustomerService {
+public class CustomerService {
     private final CustomerRepository repository;
-    private final CustomerQuery customerQuery;
+    private final CustomerQueryService customerQuery;
     private final CustomerAuditService audit;
 
-    CustomerService(CustomerRepository repository, CustomerQuery customerQuery) {
+    public CustomerService(CustomerRepository repository, CustomerQueryService customerQuery) {
         this(repository, customerQuery, null);
     }
 
     @Autowired
-    CustomerService(CustomerRepository repository, CustomerQuery customerQuery, CustomerAuditService audit) {
+    public CustomerService(CustomerRepository repository, CustomerQueryService customerQuery, CustomerAuditService audit) {
         this.repository = repository;
         this.customerQuery = customerQuery;
         this.audit = audit;
     }
 
-    @Transactional(readOnly=true) CustomerView findByUsername(String username) { return toView(repository.findByUsername(username).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND))); }
-    @Transactional(readOnly=true) CustomerPage list(CustomerListQuery query) { long total=customerQuery.count(query); return new CustomerPage(customerQuery.list(query),query.page(),query.size(),total,total==0?0:((total-1)/query.size())+1,query.projection().name().toLowerCase(java.util.Locale.ROOT)); }
+    @Transactional(readOnly=true) public CustomerView findByUsername(String username) { return toView(repository.findByUsername(username).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND))); }
+    @Transactional(readOnly=true) public CustomerPage list(CustomerListRequest query) { long total=customerQuery.count(query); return new CustomerPage(customerQuery.list(query),query.page(),query.size(),total,total==0?0:((total-1)/query.size())+1,query.projection().name().toLowerCase(java.util.Locale.ROOT)); }
 
     @Transactional
-    CustomerView create(CreateCustomerCommand c) {
+    public CustomerView create(CustomerCreateCommand c) {
         return create(c, null, null);
     }
 
     @Transactional
-    CustomerView create(CreateCustomerCommand c, String requestId, Authentication authentication) {
+    public CustomerView create(CustomerCreateCommand c, String requestId, Authentication authentication) {
         String username = c == null ? "unknown" : c.username();
         try {
             if (repository.existsByUsername(c.username())) throw conflict("username");
             if (repository.existsByEmail(c.email())) throw conflict("email");
-            CustomerView result = toView(repository.saveAndFlush(new Customer(c.username(),c.email(),c.displayName())));
+            CustomerView result = toView(repository.saveAndFlush(new CustomerEntity(c.username(),c.email(),c.displayName())));
             recordSuccess(username, "CUSTOMER_CREATED", requestId, authentication);
             return result;
         } catch (DataIntegrityViolationException e) {
@@ -56,15 +64,15 @@ class CustomerService {
     }
 
     @Transactional
-    CustomerView update(String username, UpdateCustomerCommand c) {
+    public CustomerView update(String username, CustomerUpdateCommand c) {
         return update(username, c, null, null);
     }
 
     @Transactional
-    CustomerView update(String username, UpdateCustomerCommand c, String requestId, Authentication authentication) {
+    public CustomerView update(String username, CustomerUpdateCommand c, String requestId, Authentication authentication) {
         String action = "CUSTOMER_UPDATED";
         try {
-            Customer x=repository.findByUsername(username).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+            CustomerEntity x=repository.findByUsername(username).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
             boolean previousActive = x.isActive();
             if (c.emailPresent() && repository.existsByEmailAndUsernameNot(c.email(), username)) throw conflict("email");
             if(c.emailPresent()) x.changeEmail(c.email());
@@ -87,14 +95,14 @@ class CustomerService {
     }
 
     @Transactional
-    void delete(String username) {
+    public void delete(String username) {
         delete(username, null, null);
     }
 
     @Transactional
-    void delete(String username, String requestId, Authentication authentication) {
+    public void delete(String username, String requestId, Authentication authentication) {
         try {
-            Customer x=repository.findByUsername(username).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+            CustomerEntity x=repository.findByUsername(username).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
             recordSuccess(username, "CUSTOMER_DELETED", requestId, authentication);
             repository.delete(x);
         } catch (RuntimeException e) {
@@ -117,7 +125,7 @@ class CustomerService {
         }
     }
 
-    private CustomerView toView(Customer c) { return new CustomerView(c.getId(),c.getUsername(),c.getEmail(),c.getDisplayName(),c.isActive()); }
+    private CustomerView toView(CustomerEntity c) { return new CustomerView(c.getId(),c.getUsername(),c.getEmail(),c.getDisplayName(),c.isActive()); }
 
     private static SummerException conflict(String field) {
         return new SummerException(CommonErrorCode.CONFLICT,

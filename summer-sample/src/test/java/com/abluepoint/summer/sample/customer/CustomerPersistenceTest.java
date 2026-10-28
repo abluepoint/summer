@@ -1,5 +1,10 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.sample.customer.model.entity.CustomerEntity;
+import com.abluepoint.summer.sample.customer.model.request.CustomerListRequest;
+import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
+import com.abluepoint.summer.sample.customer.service.CustomerQueryService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,11 +20,11 @@ class CustomerPersistenceTest {
     CustomerRepository repository;
 
     @Autowired
-    CustomerQuery customerQuery;
+    CustomerQueryService customerQuery;
 
     @Test
     void initializesEntityIdentityAndAuditFieldsWhenPersisted() {
-        Customer saved = repository.saveAndFlush(new Customer("audit", "audit@summer.local", "Audit Customer"));
+        CustomerEntity saved = repository.saveAndFlush(new CustomerEntity("audit", "audit@summer.local", "Audit Customer"));
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getCreatedAt()).isNotNull();
@@ -28,14 +33,14 @@ class CustomerPersistenceTest {
 
     @Test
     void complexReadsUseNarrowSummaryAndDetailProjections() {
-        repository.saveAndFlush(new Customer("projection", "projection@summer.local", "Projection Customer"));
+        repository.saveAndFlush(new CustomerEntity("projection", "projection@summer.local", "Projection Customer"));
 
-        List<?> summary = customerQuery.list(new CustomerListQuery(
-                0, 20, null, CustomerListQuery.SortField.USERNAME,
-                CustomerListQuery.SortDirection.ASC, CustomerListQuery.Projection.SUMMARY));
-        List<?> detail = customerQuery.list(new CustomerListQuery(
-                0, 20, null, CustomerListQuery.SortField.USERNAME,
-                CustomerListQuery.SortDirection.ASC, CustomerListQuery.Projection.DETAIL));
+        List<?> summary = customerQuery.list(new CustomerListRequest(
+                0, 20, null, CustomerListRequest.SortField.USERNAME,
+                CustomerListRequest.SortDirection.ASC, CustomerListRequest.Projection.SUMMARY));
+        List<?> detail = customerQuery.list(new CustomerListRequest(
+                0, 20, null, CustomerListRequest.SortField.USERNAME,
+                CustomerListRequest.SortDirection.ASC, CustomerListRequest.Projection.DETAIL));
 
         assertThat(summary).isNotEmpty().allMatch(row -> row.getClass().getSimpleName().equals("CustomerSummaryView"));
         assertThat(detail).isNotEmpty().allMatch(row -> row.getClass().getSimpleName().equals("CustomerView"));

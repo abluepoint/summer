@@ -4,7 +4,7 @@ import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;

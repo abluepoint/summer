@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.task;
 
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import org.quartz.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

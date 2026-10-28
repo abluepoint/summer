@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;

@@ -1,5 +1,14 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.sample.customer.controller.CustomerController;
+import com.abluepoint.summer.sample.customer.model.command.CustomerCreateCommand;
+import com.abluepoint.summer.sample.customer.model.command.CustomerUpdateCommand;
+import com.abluepoint.summer.sample.customer.model.request.CustomerListRequest;
+import com.abluepoint.summer.sample.customer.model.view.CustomerPage;
+import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
+import com.abluepoint.summer.sample.customer.service.CustomerQueryService;
+import com.abluepoint.summer.sample.customer.service.CustomerService;
+
 import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import com.abluepoint.summer.mvc.validate.FieldValues;
 import io.micrometer.core.instrument.Counter;
@@ -37,14 +46,14 @@ class CustomerArchitectureTest {
     void customerServiceOwnsReadAndWriteTransactionBoundaries() throws Exception {
         assertThat(CustomerService.class.getDeclaredMethod("findByUsername", String.class)
                 .getAnnotation(Transactional.class).readOnly()).isTrue();
-        assertThat(CustomerService.class.getDeclaredMethod("list", CustomerListQuery.class)
+        assertThat(CustomerService.class.getDeclaredMethod("list", CustomerListRequest.class)
                 .getAnnotation(Transactional.class).readOnly()).isTrue();
-        assertThat(CustomerService.class.getDeclaredMethod("create", CreateCustomerCommand.class)
+        assertThat(CustomerService.class.getDeclaredMethod("create", CustomerCreateCommand.class)
                 .getAnnotation(Transactional.class).readOnly()).isFalse();
         assertThat(CustomerService.class.getDeclaredMethod(
                 "update",
                 String.class,
-                UpdateCustomerCommand.class
+                CustomerUpdateCommand.class
         )
                 .getAnnotation(Transactional.class).readOnly()).isFalse();
         assertThat(CustomerService.class.getDeclaredMethod("delete", String.class)
@@ -55,7 +64,7 @@ class CustomerArchitectureTest {
 
     @Test
     void customerQueryIsTheOnlyCustomerComponentThatOwnsJpaSqlTemplate() {
-        assertThat(Arrays.stream(CustomerQuery.class.getDeclaredFields()).map(Field::getType))
+        assertThat(Arrays.stream(CustomerQueryService.class.getDeclaredFields()).map(Field::getType))
                 .contains(JpaSqlTemplate.class);
         assertThat(Stream.of(CustomerService.class, CustomerController.class)
                 .flatMap(type -> Arrays.stream(type.getDeclaredFields()))

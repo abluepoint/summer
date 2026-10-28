@@ -1,6 +1,6 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.model.request;
 
-record CustomerListQuery(
+public record CustomerListRequest(
         int page,
         int size,
         Boolean active,
@@ -12,7 +12,7 @@ record CustomerListQuery(
     static final int DEFAULT_PAGE = 0;
     static final int DEFAULT_SIZE = 20;
 
-    CustomerListQuery {
+    public CustomerListRequest {
         if (page < 0) {
             throw new IllegalArgumentException("page must not be negative");
         }
@@ -21,23 +21,23 @@ record CustomerListQuery(
         }
     }
 
-    long offset() {
+    public long offset() {
         return Math.multiplyExact((long) page, size);
     }
 
-    enum SortField {
+    public enum SortField {
         USERNAME,
         EMAIL,
         DISPLAY_NAME,
         ACTIVE
     }
 
-    enum SortDirection {
+    public enum SortDirection {
         ASC,
         DESC
     }
 
-    enum Projection {
+    public enum Projection {
         SUMMARY,
         DETAIL
     }

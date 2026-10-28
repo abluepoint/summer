@@ -1,4 +1,8 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.service;
+
+import com.abluepoint.summer.sample.customer.model.command.CustomerCreateCommand;
+import com.abluepoint.summer.sample.customer.model.entity.CustomerEntity;
+import com.abluepoint.summer.sample.customer.repository.CustomerRepository;
 
 import com.abluepoint.summer.common.error.SummerException;
 import org.hibernate.exception.ConstraintViolationException;
@@ -30,9 +34,9 @@ class CustomerUniqueConflictTest {
     @Test
     void createMapsAConstraintRaceAfterPrechecks() {
         CustomerRepository repository = mock(CustomerRepository.class);
-        when(repository.saveAndFlush(any(Customer.class))).thenThrow(databaseFailure("uk_summer_customer_email"));
-        CustomerService service = new CustomerService(repository, mock(CustomerQuery.class));
-        assertThatThrownBy(() -> service.create(new CreateCustomerCommand("race", "race@summer.local", "Race")))
+        when(repository.saveAndFlush(any(CustomerEntity.class))).thenThrow(databaseFailure("uk_summer_customer_email"));
+        CustomerService service = new CustomerService(repository, mock(CustomerQueryService.class));
+        assertThatThrownBy(() -> service.create(new CustomerCreateCommand("race", "race@summer.local", "Race")))
                 .isInstanceOfSatisfying(SummerException.class, conflict ->
                         assertThat(conflict.violations()).extracting(violation -> violation.field()).containsExactly("email"));
     }

@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.model.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +11,7 @@ import java.time.Instant;
 /** Append-only audit projection for Customer lifecycle operations. */
 @Entity
 @Table(name = "summer_audit_event")
-class CustomerAuditEventEntity {
+public class CustomerAuditEventEntity {
     @Id
     @Column(name = "event_id", nullable = false, updatable = false, length = 36)
     private String eventId;
@@ -39,7 +39,7 @@ class CustomerAuditEventEntity {
     protected CustomerAuditEventEntity() {
     }
 
-    CustomerAuditEventEntity(String eventId, String tenantId, String organizationId, String principal,
+    public CustomerAuditEventEntity(String eventId, String tenantId, String organizationId, String principal,
                              String resource, String action, String result, String requestId,
                              String traceId, String detailJson, Instant occurredAt) {
         this.eventId = eventId;
@@ -60,15 +60,15 @@ class CustomerAuditEventEntity {
         throw new IllegalStateException("Customer audit events are append-only");
     }
 
-    String eventId() { return eventId; }
-    String tenantId() { return tenantId; }
-    String organizationId() { return organizationId; }
-    String principal() { return principal; }
-    String resource() { return resource; }
-    String action() { return action; }
-    String result() { return result; }
-    String requestId() { return requestId; }
-    String traceId() { return traceId; }
-    String detailJson() { return detailJson; }
-    Instant occurredAt() { return occurredAt; }
+    public String eventId() { return eventId; }
+    public String tenantId() { return tenantId; }
+    public String organizationId() { return organizationId; }
+    public String principal() { return principal; }
+    public String resource() { return resource; }
+    public String action() { return action; }
+    public String result() { return result; }
+    public String requestId() { return requestId; }
+    public String traceId() { return traceId; }
+    public String detailJson() { return detailJson; }
+    public Instant occurredAt() { return occurredAt; }
 }

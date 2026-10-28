@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.task;
 
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import org.junit.jupiter.api.Test;
 import org.quartz.*;
 import tools.jackson.databind.ObjectMapper;

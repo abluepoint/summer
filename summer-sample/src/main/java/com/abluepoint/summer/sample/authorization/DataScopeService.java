@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;

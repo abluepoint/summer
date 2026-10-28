@@ -1,4 +1,8 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.service;
+
+import com.abluepoint.summer.sample.customer.model.request.CustomerListRequest;
+import com.abluepoint.summer.sample.customer.model.view.CustomerSummaryView;
+import com.abluepoint.summer.sample.customer.model.view.CustomerView;
 
 import com.abluepoint.summer.data.jpa.template.JpaSqlTemplate;
 import com.abluepoint.summer.sample.SampleDataProperties;
@@ -11,20 +15,20 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-class CustomerQuery {
+public class CustomerQueryService {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomerQuery.class);
+    private static final Logger log = LoggerFactory.getLogger(CustomerQueryService.class);
 
     private final JpaSqlTemplate sqlTemplate;
     private final SampleDataProperties dataProperties;
 
-    CustomerQuery(JpaSqlTemplate sqlTemplate, SampleDataProperties dataProperties) {
+    public CustomerQueryService(JpaSqlTemplate sqlTemplate, SampleDataProperties dataProperties) {
         this.sqlTemplate = sqlTemplate;
         this.dataProperties = dataProperties;
     }
 
-    List<?> list(CustomerListQuery query) {
-        List<?> customers = query.projection() == CustomerListQuery.Projection.SUMMARY
+    public List<?> list(CustomerListRequest query) {
+        List<?> customers = query.projection() == CustomerListRequest.Projection.SUMMARY
                 ? sqlTemplate.query(
                         dataProperties.sqlResource(),
                         "listCustomers",
@@ -43,7 +47,7 @@ class CustomerQuery {
         return customers;
     }
 
-    long count(CustomerListQuery query) {
+    public long count(CustomerListRequest query) {
         return sqlTemplate.count(
                 dataProperties.sqlResource(),
                 "countCustomers",
@@ -52,19 +56,19 @@ class CustomerQuery {
         );
     }
 
-    private Map<String, Object> templateParameters(CustomerListQuery query) {
+    private Map<String, Object> templateParameters(CustomerListRequest query) {
         return Map.of(
                 "filterByActive", query.active() != null,
-                "sortByUsername", query.sort() == CustomerListQuery.SortField.USERNAME,
-                "sortByEmail", query.sort() == CustomerListQuery.SortField.EMAIL,
-                "sortByDisplayName", query.sort() == CustomerListQuery.SortField.DISPLAY_NAME,
-                "sortByActive", query.sort() == CustomerListQuery.SortField.ACTIVE,
-                "descending", query.direction() == CustomerListQuery.SortDirection.DESC,
-                "detailProjection", query.projection() == CustomerListQuery.Projection.DETAIL
+                "sortByUsername", query.sort() == CustomerListRequest.SortField.USERNAME,
+                "sortByEmail", query.sort() == CustomerListRequest.SortField.EMAIL,
+                "sortByDisplayName", query.sort() == CustomerListRequest.SortField.DISPLAY_NAME,
+                "sortByActive", query.sort() == CustomerListRequest.SortField.ACTIVE,
+                "descending", query.direction() == CustomerListRequest.SortDirection.DESC,
+                "detailProjection", query.projection() == CustomerListRequest.Projection.DETAIL
         );
     }
 
-    private Map<String, Object> bindingParameters(CustomerListQuery query) {
+    private Map<String, Object> bindingParameters(CustomerListRequest query) {
         Map<String, Object> bindings = new LinkedHashMap<>();
         if (query.active() != null) {
             bindings.put("active", query.active());
@@ -74,7 +78,7 @@ class CustomerQuery {
         return bindings;
     }
 
-    private Map<String, Object> countBindingParameters(CustomerListQuery query) {
+    private Map<String, Object> countBindingParameters(CustomerListRequest query) {
         return query.active() == null
                 ? Map.of()
                 : Map.of("active", query.active());

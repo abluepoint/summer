@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.service;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;

@@ -44,7 +44,7 @@ class KeyCapabilityConfiguration {
                                                              KeyRotationStateRepository rotationStates,
                                                              SecurityAuditLogger audit,
                                                              org.springframework.transaction.PlatformTransactionManager transactions,
-                                                             com.abluepoint.summer.sample.customer.CustomerAuditService ledger) {
+                                                             com.abluepoint.summer.sample.customer.service.CustomerAuditService ledger) {
         return new AutomaticKeyRotationService(store, rotationStates, audit, transactions, ledger);
     }
 

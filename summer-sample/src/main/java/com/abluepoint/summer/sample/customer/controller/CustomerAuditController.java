@@ -1,4 +1,10 @@
-package com.abluepoint.summer.sample.customer;
+package com.abluepoint.summer.sample.customer.controller;
+
+import com.abluepoint.summer.sample.customer.exception.CustomerAuditNotFoundException;
+import com.abluepoint.summer.sample.customer.model.query.CustomerAuditQuery;
+import com.abluepoint.summer.sample.customer.model.view.CustomerAuditEventView;
+import com.abluepoint.summer.sample.customer.model.view.CustomerAuditPage;
+import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;

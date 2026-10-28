@@ -80,7 +80,7 @@ class AutomaticKeyRotationServiceTest {
         return manager;
     }
 
-    private static com.abluepoint.summer.sample.customer.CustomerAuditService ledger() {
-        return mock(com.abluepoint.summer.sample.customer.CustomerAuditService.class);
+    private static com.abluepoint.summer.sample.customer.service.CustomerAuditService ledger() {
+        return mock(com.abluepoint.summer.sample.customer.service.CustomerAuditService.class);
     }
 }
