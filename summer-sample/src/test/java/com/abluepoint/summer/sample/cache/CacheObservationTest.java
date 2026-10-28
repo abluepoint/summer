@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.cache;
 
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;

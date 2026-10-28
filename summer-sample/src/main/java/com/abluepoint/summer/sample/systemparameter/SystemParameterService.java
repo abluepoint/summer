@@ -2,10 +2,10 @@ package com.abluepoint.summer.sample.systemparameter;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.SummerException;
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
-import com.abluepoint.summer.sample.resilience.ResilientReadService;
+import com.abluepoint.summer.sample.resilience.service.ResilientReadService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.Authentication;
@@ -34,7 +34,7 @@ class SystemParameterService {
     private final DataScopeService dataScopes;
     private final SystemParameterReleaseService releases;
     private final ResilientReadService resilientReads;
-    private final com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard;
+    private final com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard;
     private final com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides;
 
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
@@ -42,7 +42,7 @@ class SystemParameterService {
     SystemParameterService(SystemParameterRepository repository, ObjectMapper objectMapper,
                            CustomerAuditService audit, SystemParameterEventService events,
                            VersionedTwoLevelCache cache, DataScopeService dataScopes,
-                           SystemParameterReleaseService releases, ResilientReadService resilientReads, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard) {
+                           SystemParameterReleaseService releases, ResilientReadService resilientReads, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard) {
         this.repository = repository;
         this.actions = actions;
         this.objectMapper = objectMapper;

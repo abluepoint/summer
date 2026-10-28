@@ -5,7 +5,7 @@ import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 
 import java.time.Duration;
 import java.time.Instant;

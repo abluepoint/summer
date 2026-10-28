@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCacheProperties;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.configuration.VersionedTwoLevelCacheProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

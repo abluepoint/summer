@@ -3,7 +3,7 @@ package com.abluepoint.summer.sample.dictionary;
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.CommonErrorCode;
 import com.abluepoint.summer.common.error.api.SummerException;
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;

@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCacheProperties;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.configuration.VersionedTwoLevelCacheProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.stream.Consumer;

@@ -3,8 +3,8 @@ package com.abluepoint.summer.sample.dictionary;
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.SummerException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
-import com.abluepoint.summer.sample.resilience.ResilientReadService;
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.resilience.service.ResilientReadService;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
@@ -25,7 +25,7 @@ class DictionaryVersionService {
     private final DataScopeService dataScopes;
     private final ObjectMapper objectMapper;
     private final ResilientReadService resilientReads;
-    private final com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard;
+    private final com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard;
     private final DictionaryNotificationService notifications;
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
     private final com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides;
@@ -34,7 +34,7 @@ class DictionaryVersionService {
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              DataScopeService dataScopes, ObjectMapper objectMapper,
-                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard) {
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.service.ConfigurationFallbackGuard fallbackGuard) {
         this.types = types;
         this.items = items;
         this.versions = versions;

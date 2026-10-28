@@ -315,7 +315,12 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         if (packageValue == null) {
             return "application";
         }
-        String[] parts = packageValue.getName().split("\\.");
+        String packageName = packageValue.getName();
+        String samplePrefix = "com.abluepoint.summer.sample.";
+        if (packageName.startsWith(samplePrefix)) {
+            return packageName.substring(samplePrefix.length()).split("\\.")[0];
+        }
+        String[] parts = packageName.split("\\.");
         return parts.length == 0 ? "application" : parts[parts.length - 1];
     }
 

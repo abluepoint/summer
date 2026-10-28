@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
+import com.abluepoint.summer.sample.cache.service.VersionedTwoLevelCache;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.StringRedisTemplate;

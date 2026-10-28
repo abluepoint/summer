@@ -45,6 +45,7 @@ class InterfaceResourceCatalogHttpTest {
         List<Map<String, Object>> items = JsonPath.read(result.getResponse().getContentAsString(), "$.data.items");
         assertThat(items).anySatisfy(item -> assertThat(item)
                 .containsEntry("normalizedPath", "/api/customers")
+                .containsEntry("module", "customer")
                 .containsEntry("httpMethod", "GET")
                 .containsEntry("resourceType", "BUSINESS")
                 .containsEntry("configurable", true)
