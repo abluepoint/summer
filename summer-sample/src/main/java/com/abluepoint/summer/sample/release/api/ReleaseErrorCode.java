@@ -1,10 +1,11 @@
-package com.abluepoint.summer.sample.release;
+package com.abluepoint.summer.sample.release.api;
+
 
 import com.abluepoint.summer.common.error.api.ErrorCategory;
 import com.abluepoint.summer.common.error.api.ErrorCode;
 
 /** Keeps the published application code independent of its HTTP transport policy. */
-enum ReleaseErrorCode implements ErrorCode {
+public enum ReleaseErrorCode implements ErrorCode {
     INVALID;
 
     @Override public String code() { return "IAM_RELEASE_INVALID"; }

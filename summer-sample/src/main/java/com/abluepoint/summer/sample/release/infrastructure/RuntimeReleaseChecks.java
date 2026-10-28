@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.release;
+package com.abluepoint.summer.sample.release.infrastructure;
+import com.abluepoint.summer.sample.release.domain.ReadinessCheck;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;
@@ -16,7 +17,7 @@ import com.nimbusds.jose.jwk.JWKSelector;
 
 /** Runtime prerequisites only. CI, browser, backup and rolling evidence are separate gates. */
 @Component
-class RuntimeReleaseChecks {
+public class RuntimeReleaseChecks implements com.abluepoint.summer.sample.release.domain.ReleaseReadinessPort {
     private final JdbcTemplate jdbc;
     private final StringRedisTemplate redis;
     private final ObjectProvider<Flyway> migrations;
@@ -24,14 +25,14 @@ class RuntimeReleaseChecks {
     private final ObjectProvider<SummerKeyStore> keys;
     private final Environment env;
     private final ApplicationContext context;
-    RuntimeReleaseChecks(JdbcTemplate jdbc, StringRedisTemplate redis, ObjectProvider<Flyway> migrations,
+    public RuntimeReleaseChecks(JdbcTemplate jdbc, StringRedisTemplate redis, ObjectProvider<Flyway> migrations,
             ObjectProvider<Scheduler> schedulers, ObjectProvider<SummerKeyStore> keys,
             Environment env, ApplicationContext context) {
         this.jdbc=jdbc; this.redis=redis; this.migrations=migrations; this.schedulers=schedulers;
         this.keys=keys; this.env=env; this.context=context;
     }
 
-    List<ReadinessCheck> snapshot() {
+    public List<ReadinessCheck> snapshot() {
         List<ReadinessCheck> checks=new ArrayList<>();
         checks.add(check("database", () -> Integer.valueOf(1).equals(jdbc.queryForObject("select 1",Integer.class)), "SQL connection"));
         checks.add(check("migrations", () -> {

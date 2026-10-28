@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.release;
 
+
 import com.abluepoint.summer.security.autoconfigure.SummerSecurityProperties;
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
