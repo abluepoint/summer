@@ -1,4 +1,9 @@
-package com.abluepoint.summer.sample.agent;
+package com.abluepoint.summer.sample.agent.api;
+
+import com.abluepoint.summer.sample.agent.application.*;
+import com.abluepoint.summer.sample.agent.domain.*;
+import com.abluepoint.summer.sample.agent.infrastructure.*;
+
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -27,7 +32,7 @@ class AgentController {
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/agents", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse
     ResponseEntity<ApiResponse<AgentView>> create(@PathVariable String enterpriseId, @RequestBody AgentCreateRequest request,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication auth) {
-        try { AgentView view = service.create(enterpriseId, request, key, rid(), auth); return body(HttpStatus.CREATED, view, view.version()); }
+        try { AgentView view = service.create(enterpriseId, request == null ? null : request.command(), key, rid(), auth); return body(HttpStatus.CREATED, view, view.version()); }
         catch (Exception e) { return error(e); }
     }
 
@@ -41,7 +46,7 @@ class AgentController {
     ResponseEntity<ApiResponse<AgentView>> update(@PathVariable String enterpriseId, @PathVariable String agentId,
                                                    @RequestBody AgentUpdateRequest request, @RequestHeader("If-Match") String ifMatch,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication auth) {
-        try { AgentView view = service.update(enterpriseId, agentId, request, ifMatch, key, rid(), auth); return body(HttpStatus.OK, view, view.version()); }
+        try { AgentView view = service.update(enterpriseId, agentId, request == null ? null : request.command(), ifMatch, key, rid(), auth); return body(HttpStatus.OK, view, view.version()); }
         catch (Exception e) { return error(e); }
     }
 
@@ -64,13 +69,13 @@ class AgentController {
 
     @PostMapping(value = "/internal/v1/agent-instances", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse
     ResponseEntity<ApiResponse<AgentInstanceView>> register(@RequestBody AgentInstanceRegisterRequest request, Authentication auth) {
-        try { AgentInstanceView view = service.registerInstance(request, rid(), auth); return body(HttpStatus.CREATED, view, view.version()); }
+        try { AgentInstanceView view = service.registerInstance(request == null ? null : request.command(), rid(), auth); return body(HttpStatus.CREATED, view, view.version()); }
         catch (Exception e) { return error(e); }
     }
 
     @PostMapping(value = "/internal/v1/agent-instances/{instanceId}:heartbeat", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse
     ResponseEntity<ApiResponse<AgentInstanceView>> heartbeat(@PathVariable String instanceId, @RequestBody(required = false) AgentInstanceHeartbeatRequest request, Authentication auth) {
-        try { AgentInstanceView view = service.heartbeat(instanceId, request, rid(), auth); return body(HttpStatus.OK, view, view.version()); }
+        try { AgentInstanceView view = service.heartbeat(instanceId, request == null ? null : request.command(), rid(), auth); return body(HttpStatus.OK, view, view.version()); }
         catch (Exception e) { return error(e); }
     }
 

@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.application;
+package com.abluepoint.summer.sample.application.api;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
