@@ -1,0 +1,70 @@
+package com.abluepoint.summer.sample.task.api;
+import com.abluepoint.summer.sample.task.domain.TaskProgressConnectionLimitException;
+import com.abluepoint.summer.sample.task.domain.TaskNotFoundException;
+import com.abluepoint.summer.sample.task.application.TaskProgressEventService;
+
+import com.abluepoint.summer.common.response.api.ApiError;
+import com.abluepoint.summer.common.response.api.ApiResponse;
+import com.abluepoint.summer.mvc.response.api.RawResponse;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
+
+@RestController
+public class TaskProgressController {
+    private final TaskProgressEventService progress;
+    private final RequestIdAccessor requestId;
+    private final com.abluepoint.summer.sample.identity.SessionStreamAccess sessionAccess;
+
+    TaskProgressController(TaskProgressEventService progress, RequestIdAccessor requestId,
+                           com.abluepoint.summer.sample.identity.SessionStreamAccess sessionAccess) {
+        this.progress = progress; this.requestId = requestId;
+        this.sessionAccess = sessionAccess;
+    }
+
+    @GetMapping(value = "/api/v1/enterprises/{enterpriseId}/tasks/{taskId}/events",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RawResponse
+    @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
+    ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String taskId,
+                                @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
+                                Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
+        try {
+            long id = parseLastEventId(lastEventId);
+            return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM)
+                    .header("Cache-Control", "no-cache")
+                    .header("X-Request-Id", requestId.currentRequestId())
+                    .body(progress.subscribe(enterpriseId, taskId, id, authentication,
+                            sessionAccess.capture(request, authentication)));
+        } catch (TaskNotFoundException exception) {
+            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", "Task was not found");
+        } catch (TaskProgressConnectionLimitException exception) {
+            return failure(HttpStatus.TOO_MANY_REQUESTS, "SUMMER_TASK_SSE_LIMIT", "Too many task progress connections");
+        } catch (IllegalArgumentException exception) {
+            return failure(HttpStatus.BAD_REQUEST, "SUMMER_TASK_SSE_LAST_EVENT_ID", "Last-Event-ID must be a non-negative integer");
+        }
+    }
+
+    private static long parseLastEventId(String value) {
+        if (value == null || value.isBlank()) return 0;
+        long parsed = Long.parseLong(value.trim());
+        if (parsed < 0) throw new IllegalArgumentException();
+        return parsed;
+    }
+
+    private ResponseEntity<ApiResponse<Void>> failure(HttpStatus status, String code, String message) {
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON)
+                .header("X-Request-Id", requestId.currentRequestId())
+                .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
+    }
+}

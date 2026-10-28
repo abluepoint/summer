@@ -1,4 +1,5 @@
 package com.abluepoint.summer.sample.task;
+import com.abluepoint.summer.sample.task.infrastructure.TaskProgressAccess;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import org.junit.jupiter.api.Test;

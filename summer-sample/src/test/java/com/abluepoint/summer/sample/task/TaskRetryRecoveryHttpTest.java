@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.task;
 
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

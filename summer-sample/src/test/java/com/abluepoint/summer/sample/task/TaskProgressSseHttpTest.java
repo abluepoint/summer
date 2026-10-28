@@ -1,4 +1,7 @@
 package com.abluepoint.summer.sample.task;
+import com.abluepoint.summer.sample.task.infrastructure.TaskProgressEventEntity;
+import com.abluepoint.summer.sample.task.application.TaskExecutionService;
+import com.abluepoint.summer.sample.task.infrastructure.TaskProgressEventRepository;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;

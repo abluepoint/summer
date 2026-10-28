@@ -1,4 +1,14 @@
 package com.abluepoint.summer.sample.task;
+import com.abluepoint.summer.sample.task.infrastructure.QuartzTaskSchedulingAdapter;
+import com.abluepoint.summer.sample.task.infrastructure.TaskDefinitionEntity;
+import com.abluepoint.summer.sample.task.infrastructure.TaskTriggerReceiptRepository;
+import com.abluepoint.summer.sample.task.domain.TaskConflictException;
+import com.abluepoint.summer.sample.task.infrastructure.TaskAttemptRepository;
+import com.abluepoint.summer.sample.task.infrastructure.TaskTriggerReceiptEntity;
+import com.abluepoint.summer.sample.task.application.TaskSchedulerService;
+import com.abluepoint.summer.sample.task.infrastructure.TaskExecutionRepository;
+import com.abluepoint.summer.sample.task.infrastructure.TrustedTaskRegistry;
+import com.abluepoint.summer.sample.task.infrastructure.TaskDefinitionRepository;
 
 import com.abluepoint.summer.sample.customer.service.CustomerAuditService;
 import org.junit.jupiter.api.Test;
@@ -24,7 +34,7 @@ class TaskTriggerDispatchRecoveryTest {
         doThrow(new SchedulerException("test scheduler outage")).doReturn(new java.util.Date())
                 .when(scheduler).scheduleJob(any(Trigger.class));
         var service = new TaskSchedulerService(definitions, executions, mock(TaskAttemptRepository.class), receipts,
-                new TrustedTaskRegistry(), scheduler, new ObjectMapper(), mock(CustomerAuditService.class));
+                new TrustedTaskRegistry(), new QuartzTaskSchedulingAdapter(scheduler), new ObjectMapper(), mock(CustomerAuditService.class));
         assertThatThrownBy(() -> service.trigger("ent-acme", "task", "retry-key", "request", null))
                 .isInstanceOf(TaskConflictException.class);
         service.trigger("ent-acme", "task", "retry-key", "request", null);

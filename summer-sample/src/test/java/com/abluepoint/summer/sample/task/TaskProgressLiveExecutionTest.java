@@ -1,4 +1,12 @@
 package com.abluepoint.summer.sample.task;
+import com.abluepoint.summer.sample.task.infrastructure.TaskDefinitionEntity;
+import com.abluepoint.summer.sample.task.infrastructure.TaskExecutionEntity;
+import com.abluepoint.summer.sample.task.infrastructure.TaskProgressEventEntity;
+import com.abluepoint.summer.sample.task.application.TaskExecutionService;
+import com.abluepoint.summer.sample.task.infrastructure.TaskProgressEventRepository;
+import com.abluepoint.summer.sample.task.domain.TaskExecutionStatus;
+import com.abluepoint.summer.sample.task.infrastructure.TaskExecutionRepository;
+import com.abluepoint.summer.sample.task.infrastructure.TaskDefinitionRepository;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

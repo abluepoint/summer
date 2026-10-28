@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.task;
 
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.test.context.SpringBootTest;
