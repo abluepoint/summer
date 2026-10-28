@@ -1,9 +1,10 @@
-package com.abluepoint.summer.sample.plugin;
+package com.abluepoint.summer.sample.plugin.api;
+
 
 import com.abluepoint.summer.common.error.api.ErrorCategory;
 import com.abluepoint.summer.common.error.api.ErrorCode;
 
-enum PluginErrorCode implements ErrorCode {
+public enum PluginErrorCode implements ErrorCode {
     INVALID("SAMPLE_PLUGIN_INVALID", "The plugin request is invalid", ErrorCategory.INVALID_ARGUMENT),
     UNTRUSTED("SAMPLE_PLUGIN_UNTRUSTED", "The plugin artifact is not trusted", ErrorCategory.CONFLICT),
     INCOMPATIBLE("SAMPLE_PLUGIN_INCOMPATIBLE", "The plugin is incompatible with the supported contract", ErrorCategory.CONFLICT);

@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.plugin;
+package com.abluepoint.summer.sample.plugin.domain;
+
 
 import java.util.List;
 

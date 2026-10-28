@@ -1,4 +1,15 @@
-package com.abluepoint.summer.sample.plugin;
+package com.abluepoint.summer.sample.plugin.api;
+import com.abluepoint.summer.sample.plugin.application.PluginView;
+import com.abluepoint.summer.sample.plugin.application.PluginInsightsView;
+import com.abluepoint.summer.sample.plugin.domain.PluginValidationException;
+
+import com.abluepoint.summer.sample.plugin.application.PluginPageView;
+
+import com.abluepoint.summer.sample.plugin.application.PluginDiagnosticView;
+import com.abluepoint.summer.sample.plugin.domain.PluginTrustException;
+import com.abluepoint.summer.sample.plugin.domain.PluginCompatibilityException;
+import com.abluepoint.summer.sample.plugin.domain.PluginNotFoundException;
+import com.abluepoint.summer.sample.plugin.application.PluginService;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -19,7 +30,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-class PluginController {
+public class PluginController {
     private final PluginService service;
     private final RequestIdAccessor requestId;
     private final ErrorStatusResolver errorStatus;
@@ -33,13 +44,13 @@ class PluginController {
     @GetMapping("/v1/platform/plugins")
     @RawResponse
     @PreAuthorize("hasAuthority('SCOPE_platform.plugins.read')")
-    ResponseEntity<ApiResponse<PluginPage>> list(Authentication authentication) { return ok(service.platformList(authentication)); }
+    ResponseEntity<ApiResponse<PluginPageView>> list(Authentication authentication) { return ok(service.platformList(authentication)); }
 
     @PostMapping(value = "/v1/platform/plugins", consumes = "application/json")
     @RawResponse
     @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
     ResponseEntity<ApiResponse<PluginView>> register(@RequestBody PluginRegisterRequest body, Authentication authentication) {
-        try { return body(HttpStatus.CREATED, service.register(body, authentication)); } catch (Exception e) { return error(e); }
+        try { return body(HttpStatus.CREATED, service.register(body.toCommand(), authentication)); } catch (Exception e) { return error(e); }
     }
 
     @PostMapping("/v1/platform/plugins/{pluginId}:enable")
@@ -55,7 +66,7 @@ class PluginController {
     @PostMapping(value = "/v1/platform/plugins/{pluginId}:upgrade", consumes = "application/json")
     @RawResponse
     @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
-    ResponseEntity<ApiResponse<PluginView>> upgrade(@PathVariable String pluginId, @RequestBody PluginUpgradeRequest body, Authentication authentication) { return lifecycle(() -> service.upgrade(pluginId, body, authentication)); }
+    ResponseEntity<ApiResponse<PluginView>> upgrade(@PathVariable String pluginId, @RequestBody PluginUpgradeRequest body, Authentication authentication) { return lifecycle(() -> service.upgrade(pluginId,body.toCommand(), authentication)); }
 
     @GetMapping("/v1/platform/plugins/{pluginId}/diagnostic")
     @RawResponse
@@ -65,7 +76,7 @@ class PluginController {
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins")
     @RawResponse
     @ResourcePermission("enterprise.plugins.read")
-    ResponseEntity<ApiResponse<PluginPage>> enterpriseList(@PathVariable String enterpriseId, Authentication authentication) { return lifecycle(() -> service.enterpriseList(enterpriseId, authentication)); }
+    ResponseEntity<ApiResponse<PluginPageView>> enterpriseList(@PathVariable String enterpriseId, Authentication authentication) { return lifecycle(() -> service.enterpriseList(enterpriseId, authentication)); }
 
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins/customer-insights/summary")
     @RawResponse

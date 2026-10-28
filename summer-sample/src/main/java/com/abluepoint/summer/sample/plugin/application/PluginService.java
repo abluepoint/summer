@@ -1,4 +1,15 @@
-package com.abluepoint.summer.sample.plugin;
+package com.abluepoint.summer.sample.plugin.application;
+import com.abluepoint.summer.sample.plugin.domain.PluginStatus;
+import com.abluepoint.summer.sample.plugin.infrastructure.PluginRepository;
+import com.abluepoint.summer.sample.plugin.domain.PluginValidationException;
+import com.abluepoint.summer.sample.plugin.domain.TrustedPluginCatalog;
+import com.abluepoint.summer.sample.plugin.domain.PluginDescriptor;
+import com.abluepoint.summer.sample.plugin.infrastructure.PluginEntity;
+import com.abluepoint.summer.sample.plugin.domain.PluginConfiguration;
+import com.abluepoint.summer.sample.plugin.domain.PluginTrustException;
+import com.abluepoint.summer.sample.plugin.domain.PluginCompatibilityException;
+import com.abluepoint.summer.sample.plugin.domain.PluginNotFoundException;
+import com.abluepoint.summer.sample.plugin.domain.PluginMenu;
 
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import com.abluepoint.summer.sample.systemparameter.PublishedParameterReader;
@@ -13,39 +24,40 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import static com.abluepoint.summer.sample.plugin.domain.PluginLifecycleRules.*;
 
 @Service
 public class PluginService {
     private static final String FRAMEWORK_MAJOR = "4";
     private final PluginRepository repository;
-    private final PluginCatalog catalog;
+    private final TrustedPluginCatalog catalog;
     private final AuthorizationService authorization;
     private final PublishedParameterReader parameters;
     private final PublishedDictionaryReader dictionaries;
     private final CustomerAuditService audit;
-    private final JdbcTemplate jdbc;
+    private final com.abluepoint.summer.sample.plugin.infrastructure.PluginInsightsQueryService insights;
     private final RequestIdAccessor requestId;
 
-    PluginService(PluginRepository repository, PluginCatalog catalog, AuthorizationService authorization,
-                  PublishedParameterReader parameters, PublishedDictionaryReader dictionaries, CustomerAuditService audit, JdbcTemplate jdbc,
+    public PluginService(PluginRepository repository, TrustedPluginCatalog catalog, AuthorizationService authorization,
+                  PublishedParameterReader parameters, PublishedDictionaryReader dictionaries, CustomerAuditService audit, com.abluepoint.summer.sample.plugin.infrastructure.PluginInsightsQueryService insights,
                   RequestIdAccessor requestId) {
         this.repository = repository; this.catalog = catalog; this.authorization = authorization;
-        this.parameters = parameters; this.dictionaries = dictionaries; this.audit = audit; this.jdbc = jdbc; this.requestId = requestId;
+        this.parameters = parameters; this.dictionaries = dictionaries; this.audit = audit; this.insights = insights; this.requestId = requestId;
     }
 
     @Transactional(readOnly = true)
-    PluginPage platformList(Authentication authentication) {
+    public PluginPageView platformList(Authentication authentication) {
         requirePlatform(authentication, "platform.plugins.read");
         List<PluginView> values = repository.findAll().stream().sorted(Comparator.comparing(PluginEntity::pluginId)).map(this::view).toList();
-        return new PluginPage(values, values.stream().mapToLong(PluginView::revision).max().orElse(0));
+        return new PluginPageView(values, values.stream().mapToLong(PluginView::revision).max().orElse(0));
     }
 
     @Transactional
-    PluginView register(PluginRegisterRequest request, Authentication authentication) {
+    public PluginView register(PluginRegisterCommand request, Authentication authentication) {
         requirePlatform(authentication, "platform.plugins.write");
         validate(request);
         PluginDescriptor descriptor = trustedDescriptor(request.pluginId(), request.artifactDigest());
-        PluginStatus status = compatible(descriptor, request.version()) ? PluginStatus.REGISTERED : PluginStatus.INCOMPATIBLE;
+        PluginStatus status = registrationStatus(descriptor, request.version());
         String diagnostic = status == PluginStatus.REGISTERED ? "Trusted artifact accepted" : incompatibleMessage(descriptor, request.version());
         PluginEntity entity = repository.findById(request.pluginId()).orElse(null);
         if (entity == null) entity = new PluginEntity(request.pluginId(), request.version(), request.artifactDigest(), status, true, diagnostic, authentication.getName());
@@ -56,10 +68,10 @@ public class PluginService {
     }
 
     @Transactional
-    PluginView enable(String pluginId, Authentication authentication) {
+    public PluginView enable(String pluginId, Authentication authentication) {
         requirePlatform(authentication, "platform.plugins.write");
         PluginEntity entity = requireEntity(pluginId);
-        if (!entity.trusted()) throw new PluginTrustException("Plugin artifact is not trusted");
+        requireTrusted(entity.trusted());
         PluginDescriptor descriptor = trustedDescriptor(entity.pluginId(), entity.artifactDigest());
         if (!compatible(descriptor, entity.version())) {
             entity.setStatus(PluginStatus.INCOMPATIBLE, incompatibleMessage(descriptor, entity.version()));
@@ -73,10 +85,10 @@ public class PluginService {
     }
 
     @Transactional
-    PluginView disable(String pluginId, Authentication authentication) {
+    public PluginView disable(String pluginId, Authentication authentication) {
         requirePlatform(authentication, "platform.plugins.write");
         PluginEntity entity = requireEntity(pluginId);
-        if (!entity.trusted()) throw new PluginTrustException("Plugin artifact is not trusted");
+        requireTrusted(entity.trusted());
         entity.setStatus(PluginStatus.DISABLED, "Disabled by platform operator");
         PluginEntity saved = repository.saveAndFlush(entity);
         audit.recordResourceSuccess("plugin:" + pluginId, "PLUGIN_DISABLED", requestId.currentRequestId(), authentication);
@@ -84,12 +96,12 @@ public class PluginService {
     }
 
     @Transactional
-    PluginView upgrade(String pluginId, PluginUpgradeRequest request, Authentication authentication) {
+    public PluginView upgrade(String pluginId, PluginUpgradeCommand request, Authentication authentication) {
         requirePlatform(authentication, "platform.plugins.write");
         if (request == null || blank(request.version()) || blank(request.artifactDigest())) throw new PluginValidationException("version and artifactDigest are required");
         PluginEntity entity = requireEntity(pluginId);
         PluginDescriptor descriptor = trustedDescriptor(pluginId, request.artifactDigest());
-        PluginStatus status = compatible(descriptor, request.version()) ? PluginStatus.DISABLED : PluginStatus.INCOMPATIBLE;
+        PluginStatus status = upgradeStatus(descriptor, request.version());
         String diagnostic = status == PluginStatus.DISABLED ? "Trusted upgrade is ready to enable" : incompatibleMessage(descriptor, request.version());
         entity.update(request.version(), request.artifactDigest(), status, true, diagnostic, authentication.getName());
         PluginEntity saved = repository.saveAndFlush(entity);
@@ -98,7 +110,7 @@ public class PluginService {
     }
 
     @Transactional(readOnly = true)
-    PluginDiagnosticView diagnostic(String pluginId, Authentication authentication) {
+    public PluginDiagnosticView diagnostic(String pluginId, Authentication authentication) {
         requirePlatform(authentication, "platform.plugins.read");
         PluginEntity entity = requireEntity(pluginId);
         PluginDescriptor descriptor = catalog.find(pluginId);
@@ -111,25 +123,25 @@ public class PluginService {
     }
 
     @Transactional(readOnly = true)
-    PluginPage enterpriseList(String enterpriseId, Authentication authentication) {
+    public PluginPageView enterpriseList(String enterpriseId, Authentication authentication) {
         requireEnterprise(enterpriseId, authentication, "enterprise.plugins.read");
         List<PluginView> values = repository.findAll().stream().filter(entity -> entity.status() == PluginStatus.ENABLED)
                 .sorted(Comparator.comparing(PluginEntity::pluginId)).map(entity -> enterpriseView(entity, enterpriseId, authentication)).toList();
-        return new PluginPage(values, values.stream().mapToLong(PluginView::revision).max().orElse(0));
+        return new PluginPageView(values, values.stream().mapToLong(PluginView::revision).max().orElse(0));
     }
 
     // Each controlled read owns its transaction; an absent optional value must not roll back the audit.
-    PluginInsightsView customerInsights(String enterpriseId, Authentication authentication) {
+    public PluginInsightsView customerInsights(String enterpriseId, Authentication authentication) {
         requireEnterprise(enterpriseId, authentication, "enterprise.plugins.customer-insights.read");
         requireEnterprise(enterpriseId, authentication, "customer.read");
         PluginEntity entity = repository.findById("customer-insights").orElseThrow(() -> new PluginNotFoundException("Plugin is not registered"));
-        if (entity.status() != PluginStatus.ENABLED) throw new PluginCompatibilityException("Plugin is not enabled");
-        long activeCustomers = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_customer where active = true", Long.class)).orElse(0L);
+        requireEnabled(entity.status());
+        long activeCustomers = insights.activeCustomers();
         List<Map<String, Object>> configuration = readConfiguration(enterpriseId, entity, authentication);
         PluginDictionaryView dictionary = new PluginDictionaryView("customer-segment", dictionaries.read(enterpriseId, "customer-segment", authentication));
         String rid = requestId.currentRequestId();
         audit.recordTenantResourceSuccess(enterpriseId, "plugin:customer-insights", "PLUGIN_CUSTOMER_INSIGHTS_READ", rid, authentication);
-        long auditRevision = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_audit_event where tenant_id = ? and resource = ?", Long.class, enterpriseId, "plugin:customer-insights")).orElse(0L);
+        long auditRevision = insights.auditRevision(enterpriseId);
         return new PluginInsightsView(entity.pluginId(), entity.version(), rid, activeCustomers, configuration, dictionary, auditRevision);
     }
 
@@ -164,8 +176,7 @@ public class PluginService {
 
     private boolean menuAllowed(String enterpriseId, String capability, Authentication authentication) {
         AuthorizationService.Decision decision = authorization.decision(authentication, enterpriseId, capability, requestId.currentRequestId());
-        return decision.allowed() && (!"LEGACY_SCOPE".equals(decision.reasonCode())
-                || authentication.getAuthorities().stream().anyMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority())));
+        return tenantCapability(decision.allowed(),decision.reasonCode(),authentication.getAuthorities().stream().anyMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority())));
     }
 
     private PluginView view(PluginEntity entity) {
@@ -175,12 +186,10 @@ public class PluginService {
     }
 
     private PluginEntity requireEntity(String pluginId) { if (blank(pluginId)) throw new PluginValidationException("pluginId is required"); return repository.findById(pluginId).orElseThrow(() -> new PluginTrustException("Plugin must be registered before lifecycle actions")); }
-    private PluginDescriptor trustedDescriptor(String pluginId, String digest) { PluginDescriptor descriptor = catalog.find(pluginId); if (descriptor == null || !descriptor.artifactDigest().equals(digest)) throw new PluginTrustException("Plugin artifact is not in the trusted catalog"); return descriptor; }
-    private static boolean compatible(PluginDescriptor descriptor, String version) { return descriptor != null && descriptor.version().equals(version) && descriptor.requiredFrameworkVersion().startsWith(FRAMEWORK_MAJOR); }
-    private static String incompatibleMessage(PluginDescriptor descriptor, String version) { return descriptor == null ? "Plugin is not registered in the trusted catalog" : "Plugin version " + version + " is incompatible with the supported contract " + descriptor.version(); }
-    private static void validate(PluginRegisterRequest request) { if (request == null || blank(request.pluginId()) || !request.pluginId().matches("[a-z][a-z0-9-]{2,119}") || blank(request.version()) || blank(request.artifactDigest())) throw new PluginValidationException("pluginId, version and artifactDigest are required"); }
+    private PluginDescriptor trustedDescriptor(String pluginId, String digest) { return trusted(catalog.find(pluginId), digest); }
+    private static void validate(PluginRegisterCommand request) { if(request == null) throw new PluginValidationException("pluginId, version and artifactDigest are required"); com.abluepoint.summer.sample.plugin.domain.PluginLifecycleRules.validate(request.pluginId(),request.version(),request.artifactDigest()); }
     private static void requirePlatform(Authentication authentication, String capability) { if (!(authentication instanceof JwtAuthenticationToken jwt) || !hasClaim(jwt, capability) || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))) throw new AccessDeniedException("Platform plugin capability denied"); }
-    private void requireEnterprise(String enterpriseId, Authentication authentication, String capability) { authorization.requireEnterpriseMembership(enterpriseId, authentication); AuthorizationService.Decision decision = authorization.decision(authentication, enterpriseId, capability, requestId.currentRequestId()); if (!decision.allowed() || ("LEGACY_SCOPE".equals(decision.reasonCode()) && authentication.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority())))) throw new AccessDeniedException("Plugin capability denied"); }
+    private void requireEnterprise(String enterpriseId, Authentication authentication, String capability) { authorization.requireEnterpriseMembership(enterpriseId, authentication); AuthorizationService.Decision decision = authorization.decision(authentication, enterpriseId, capability, requestId.currentRequestId()); if (!tenantCapability(decision.allowed(),decision.reasonCode(),authentication.getAuthorities().stream().anyMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority())))) throw new AccessDeniedException("Plugin capability denied"); }
     private static boolean hasClaim(JwtAuthenticationToken jwt, String capability) { Object values = jwt.getToken().getClaims().get("platform_capabilities"); return values instanceof Collection<?> c && c.stream().map(String::valueOf).anyMatch(capability::equals); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
 }

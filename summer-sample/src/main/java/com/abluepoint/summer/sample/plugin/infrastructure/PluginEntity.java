@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.plugin;
+package com.abluepoint.summer.sample.plugin.infrastructure;
+import com.abluepoint.summer.sample.plugin.domain.PluginStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +12,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "summer_plugin")
-class PluginEntity {
+public class PluginEntity {
     @Id @Column(name = "plugin_id", length = 120, nullable = false) private String pluginId;
     @Column(name = "version", length = 40, nullable = false) private String version;
     @Column(name = "artifact_digest", length = 180, nullable = false) private String artifactDigest;
@@ -25,19 +26,19 @@ class PluginEntity {
 
     protected PluginEntity() {}
 
-    PluginEntity(String pluginId, String version, String artifactDigest, PluginStatus status,
+    public PluginEntity(String pluginId, String version, String artifactDigest, PluginStatus status,
                  boolean trusted, String diagnostic, String registeredBy) {
         this.pluginId = pluginId; this.version = version; this.artifactDigest = artifactDigest;
         this.status = status; this.trusted = trusted; this.diagnostic = diagnostic;
         this.registeredBy = registeredBy; this.revision = 1; this.createdAt = Instant.now(); this.updatedAt = createdAt;
     }
 
-    void update(String version, String artifactDigest, PluginStatus status, boolean trusted, String diagnostic, String registeredBy) {
+    public void update(String version, String artifactDigest, PluginStatus status, boolean trusted, String diagnostic, String registeredBy) {
         this.version = version; this.artifactDigest = artifactDigest; this.status = status; this.trusted = trusted;
         this.diagnostic = diagnostic; this.registeredBy = registeredBy; this.revision++; this.updatedAt = Instant.now();
     }
-    void setStatus(PluginStatus status, String diagnostic) { this.status = status; this.diagnostic = diagnostic; this.revision++; this.updatedAt = Instant.now(); }
-    String pluginId() { return pluginId; } String version() { return version; } String artifactDigest() { return artifactDigest; }
-    PluginStatus status() { return status; } boolean trusted() { return trusted; } String diagnostic() { return diagnostic; }
-    long revision() { return revision; }
+    public void setStatus(PluginStatus status, String diagnostic) { this.status = status; this.diagnostic = diagnostic; this.revision++; this.updatedAt = Instant.now(); }
+    public String pluginId() { return pluginId; } public String version() { return version; } public String artifactDigest() { return artifactDigest; }
+    public PluginStatus status() { return status; } public boolean trusted() { return trusted; } public String diagnostic() { return diagnostic; }
+    public long revision() { return revision; }
 }

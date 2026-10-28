@@ -57,7 +57,7 @@ class ModulithArchitectureTest {
 
     @Test
     void connectionLifecycleDomainsRemainIndependentOfFrameworkAndAdapters() {
-        var modules = Set.of("connection", "delegation", "mcpauthorization", "physicalconnection", "auditledger", "task", "realtime");
+        var modules = Set.of("connection", "delegation", "mcpauthorization", "physicalconnection", "auditledger", "task", "realtime", "plugin");
         var dependencies = new ClassFileImporter().importPackages("com.abluepoint.summer.sample").stream()
                 .filter(type -> modules.stream().anyMatch(module -> type.getPackageName()
                         .startsWith("com.abluepoint.summer.sample." + module + ".domain")))
