@@ -1,4 +1,6 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.infrastructure;
+import com.abluepoint.summer.sample.auditledger.application.AuditLedgerPersistenceAdapter;
+import com.abluepoint.summer.sample.auditledger.application.AuditEventView;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -11,12 +13,12 @@ import java.time.Instant;
 /** Production adapter enabled with the {@code audit-durable} Spring profile. */
 @Component
 @Profile("audit-durable")
-class JpaAuditLedgerPersistenceAdapter implements AuditLedgerPersistenceAdapter {
+public class JpaAuditLedgerPersistenceAdapter implements AuditLedgerPersistenceAdapter {
     private final AuditEventStore eventStore;
     private final AuditOutboxStore outboxStore;
     private final ObjectMapper objectMapper;
 
-    JpaAuditLedgerPersistenceAdapter(AuditEventStore eventStore, AuditOutboxStore outboxStore,
+    public JpaAuditLedgerPersistenceAdapter(AuditEventStore eventStore, AuditOutboxStore outboxStore,
                                      ObjectMapper objectMapper) {
         this.eventStore = eventStore;
         this.outboxStore = outboxStore;

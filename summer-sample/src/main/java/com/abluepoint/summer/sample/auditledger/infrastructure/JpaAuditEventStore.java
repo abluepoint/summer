@@ -1,14 +1,15 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.infrastructure;
+import com.abluepoint.summer.sample.auditledger.application.AuditRetentionStore;
 
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-class JpaAuditEventStore implements AuditEventStore, AuditReconciliationStore, AuditRetentionStore {
+public class JpaAuditEventStore implements AuditEventStore, AuditReconciliationStore, AuditRetentionStore {
     private final AuditEventRepository repository;
 
-    JpaAuditEventStore(AuditEventRepository repository) {
+    public JpaAuditEventStore(AuditEventRepository repository) {
         this.repository = repository;
     }
 

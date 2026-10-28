@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.infrastructure;
+import com.abluepoint.summer.sample.auditledger.infrastructure.AuditOutboxStatus;
 
 import org.springframework.stereotype.Repository;
 
@@ -6,10 +7,10 @@ import java.time.Instant;
 import java.util.List;
 
 @Repository
-class JpaAuditOutboxStore implements AuditOutboxStore {
+public class JpaAuditOutboxStore implements AuditOutboxStore {
     private final AuditOutboxRepository repository;
 
-    JpaAuditOutboxStore(AuditOutboxRepository repository) {
+    public JpaAuditOutboxStore(AuditOutboxRepository repository) {
         this.repository = repository;
     }
 

@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.infrastructure;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -63,4 +63,3 @@ public class AuditOutboxEntity {
     void deadLetter() { this.status = AuditOutboxStatus.DEAD_LETTER; this.attempts++; }
 }
 
-enum AuditOutboxStatus { PENDING, PUBLISHED, DEAD_LETTER }

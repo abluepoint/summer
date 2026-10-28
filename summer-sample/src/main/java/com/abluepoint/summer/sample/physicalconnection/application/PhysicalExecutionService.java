@@ -12,8 +12,8 @@ import com.abluepoint.summer.sample.mcpauthorization.domain.PublicPermitSnapshot
 import com.abluepoint.summer.sample.physicalconnection.domain.PhysicalExecutionConflictException;
 import com.abluepoint.summer.sample.physicalconnection.domain.PhysicalExecutionValidationException;
 
-import com.abluepoint.summer.sample.auditledger.AuditLedgerService;
-import com.abluepoint.summer.sample.auditledger.ExecutionEvidence;
+import com.abluepoint.summer.sample.auditledger.application.AuditLedgerService;
+import com.abluepoint.summer.sample.auditledger.domain.ExecutionEvidence;
 import com.abluepoint.summer.sample.connection.domain.ConnectionServicePort;
 import com.abluepoint.summer.sample.connection.domain.ConnectionSession;
 import com.abluepoint.summer.sample.connection.domain.ConnectionSessionRequest;

@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.application;
+
 
 import java.time.Instant;
 

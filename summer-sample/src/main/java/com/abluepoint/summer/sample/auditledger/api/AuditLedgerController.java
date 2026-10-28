@@ -1,4 +1,17 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.api;
+import com.abluepoint.summer.sample.auditledger.domain.AuditContradictoryReceiptException;
+import com.abluepoint.summer.sample.auditledger.domain.AuditLedgerIdempotencyConflictException;
+
+import com.abluepoint.summer.sample.auditledger.application.AuditEventPageView;
+import com.abluepoint.summer.sample.auditledger.domain.AuditLedgerValidationException;
+import com.abluepoint.summer.sample.auditledger.domain.AuditEventImmutableException;
+
+
+import com.abluepoint.summer.sample.auditledger.domain.AuditLedgerConflictException;
+import com.abluepoint.summer.sample.auditledger.application.AuditQuery;
+import com.abluepoint.summer.sample.auditledger.application.AuditLedgerService;
+import com.abluepoint.summer.sample.auditledger.application.AuditEventView;
+import com.abluepoint.summer.sample.auditledger.application.McpInvocationView;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -16,7 +29,7 @@ import java.util.List;
 
 @RestController
 @PreAuthorize("isAuthenticated()")
-class AuditLedgerController {
+public class AuditLedgerController {
     private final AuditLedgerService service;
     private final RequestIdAccessor requestId;
 
@@ -32,7 +45,7 @@ class AuditLedgerController {
             @RequestHeader(value = "Idempotency-Key", required = false) String key,
             Authentication auth) {
         try {
-            return response(HttpStatus.CREATED, service.append(request, key, rid(), auth));
+            return response(HttpStatus.CREATED, service.append(request.toCommand(), key, rid(), auth));
         } catch (Exception e) {
             return error(e);
         }
@@ -42,11 +55,11 @@ class AuditLedgerController {
     @RawResponse
     ResponseEntity<ApiResponse<McpInvocationView>> complete(
             @PathVariable String invocationId,
-            @RequestBody CompletionRequest request,
+            @RequestBody McpInvocationCompleteRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key,
             Authentication auth) {
         try {
-            return response(HttpStatus.OK, service.complete(invocationId, request, key, rid(), auth));
+            return response(HttpStatus.OK, service.complete(invocationId,request.toCommand(), key, rid(), auth));
         } catch (Exception e) {
             return error(e);
         }
@@ -56,11 +69,11 @@ class AuditLedgerController {
     @RawResponse
     ResponseEntity<ApiResponse<McpInvocationView>> reconcile(
             @PathVariable String invocationId,
-            @RequestBody ReconciliationRequest request,
+            @RequestBody McpInvocationReconcileRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key,
             Authentication auth) {
         try {
-            return response(HttpStatus.OK, service.reconcile(invocationId, request, key, rid(), auth));
+            return response(HttpStatus.OK, service.reconcile(invocationId,request.toCommand(), key, rid(), auth));
         } catch (Exception e) {
             return error(e);
         }
@@ -108,7 +121,7 @@ class AuditLedgerController {
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/audit-events:query")
     @RawResponse
-    ResponseEntity<ApiResponse<AuditEventPage>> query(
+    ResponseEntity<ApiResponse<AuditEventPageView>> query(
             @PathVariable String enterpriseId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

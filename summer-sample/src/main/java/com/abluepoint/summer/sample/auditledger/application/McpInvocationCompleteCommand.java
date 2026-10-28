@@ -1,0 +1,18 @@
+package com.abluepoint.summer.sample.auditledger.application;
+
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+public record McpInvocationCompleteCommand(
+        String permitId,
+        String permitJti,
+        String executionAttemptId,
+        String resultStatus,
+        String resultDigest,
+        String remoteRequestId,
+        Long latencyMs,
+        String connectionSessionRef,
+        String detail) {}
+

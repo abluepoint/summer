@@ -1,4 +1,6 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.infrastructure;
+import com.abluepoint.summer.sample.auditledger.domain.AuditEventImmutableException;
+import com.abluepoint.summer.sample.auditledger.application.AuditEventView;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -84,7 +86,7 @@ public class AuditEventEntity {
         this.eventDigest = eventDigest;
     }
 
-    static AuditEventEntity fromView(AuditEventView view, ObjectMapper mapper) {
+    public static AuditEventEntity fromView(AuditEventView view, ObjectMapper mapper) {
         AuditEventEntity entity = new AuditEventEntity(view.eventId(), view.eventType(), view.enterpriseId(),
                 view.invocationId(), view.occurredAt(), writeDetail(view.detail(), mapper), view.previousDigest(), view.eventDigest());
         entity.requestId = view.requestId();
@@ -115,7 +117,7 @@ public class AuditEventEntity {
     }
 
     @PreUpdate
-    void preventUpdate() {
+    public void preventUpdate() {
         throw new AuditEventImmutableException("Audit events are append-only");
     }
 

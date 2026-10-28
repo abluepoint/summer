@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.application;
+
 
 /**
  * Durable write seam for audit evidence. Implementations must atomically append

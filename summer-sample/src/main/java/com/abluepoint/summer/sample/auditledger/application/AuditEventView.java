@@ -1,7 +1,16 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.application;
 
-public record ExecutionEvidence(
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+public record AuditEventView(
+        String eventId,
+        String eventType,
         String enterpriseId,
+        String requestId,
+        String traceId,
         String invocationId,
         String attemptId,
         String initiator,
@@ -17,8 +26,8 @@ public record ExecutionEvidence(
         String action,
         String decision,
         String reasonCode,
-        String resultStatus,
-        String resultDigest,
-        String remoteRequestId,
-        Long latencyMs,
-        String connectionSessionRef) {}
+        Map<String, Object> detail,
+        Instant occurredAt,
+        String previousDigest,
+        String eventDigest) {}
+

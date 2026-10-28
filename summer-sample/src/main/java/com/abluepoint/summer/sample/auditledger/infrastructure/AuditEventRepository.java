@@ -1,4 +1,5 @@
-package com.abluepoint.summer.sample.auditledger;
+package com.abluepoint.summer.sample.auditledger.infrastructure;
+
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -6,7 +7,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-interface AuditEventRepository extends JpaRepository<AuditEventEntity, String> {
+public interface AuditEventRepository extends JpaRepository<AuditEventEntity, String> {
     Optional<AuditEventEntity> findByEventId(String eventId);
     Optional<AuditEventEntity> findTopByEnterpriseIdAndInvocationIdAndAttemptIdOrderByOccurredAtDesc(
             String enterpriseId, String invocationId, String attemptId);
