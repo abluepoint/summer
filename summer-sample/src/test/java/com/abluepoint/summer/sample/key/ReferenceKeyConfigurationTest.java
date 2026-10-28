@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
-import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
+import com.abluepoint.summer.security.key.spi.SummerKeyStore;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

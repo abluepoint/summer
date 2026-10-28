@@ -10,7 +10,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
+import com.abluepoint.summer.security.key.spi.SummerKeyStore;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 

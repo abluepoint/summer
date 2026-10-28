@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
-import com.abluepoint.summer.security.audit.SecurityAuditLogger;
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;

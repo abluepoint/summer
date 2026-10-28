@@ -1,22 +1,28 @@
 package com.abluepoint.summer.security.autoconfigure;
 
-import com.abluepoint.summer.security.audit.SecurityAuditLogger;
-import com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository;
-import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
-import com.abluepoint.summer.security.web.JsonAccessDeniedHandler;
-import com.abluepoint.summer.security.web.JsonAuthenticationEntryPoint;
-import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerAuthorizationStore;
-import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerConsentStore;
-import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerIdentityStore;
-import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerKeyStore;
-import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerOAuthClientStore;
-import com.abluepoint.summer.security.autoconfigure.storage.DefaultSummerSessionStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerAuthorizationStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerIdentityStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerOAuthClientStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerSessionStore;
+import com.abluepoint.summer.security.access.internal.SummerCsrfEndpoint;
+
+import com.abluepoint.summer.security.access.internal.MethodSecurityExceptionHandler;
+
+import com.abluepoint.summer.security.audit.internal.SecurityAuthenticationAuditListener;
+
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
+import com.abluepoint.summer.security.session.internal.BearerOrSessionSecurityContextRepository;
+import com.abluepoint.summer.security.audit.internal.Slf4jSecurityAuditLogger;
+import com.abluepoint.summer.security.access.internal.JsonAccessDeniedHandler;
+import com.abluepoint.summer.security.access.internal.JsonAuthenticationEntryPoint;
+import com.abluepoint.summer.security.oauth2.internal.DefaultSummerAuthorizationStore;
+import com.abluepoint.summer.security.oauth2.internal.DefaultSummerConsentStore;
+import com.abluepoint.summer.security.identity.internal.DefaultSummerIdentityStore;
+import com.abluepoint.summer.security.key.internal.DefaultSummerKeyStore;
+import com.abluepoint.summer.security.oauth2.internal.DefaultSummerOAuthClientStore;
+import com.abluepoint.summer.security.session.internal.DefaultSummerSessionStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerAuthorizationStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerConsentStore;
+import com.abluepoint.summer.security.identity.spi.SummerIdentityStore;
+import com.abluepoint.summer.security.key.spi.SummerKeyStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerOAuthClientStore;
+import com.abluepoint.summer.security.session.spi.SummerSessionStore;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -94,6 +100,13 @@ public class SummerSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     SecurityAuditLogger summerSecurityAuditLogger() {
+        return new Slf4jSecurityAuditLogger();
+    }
+
+    /** Named fallback stays outside unqualified application audit-logger selection. */
+    @Bean(defaultCandidate = false)
+    @ConditionalOnMissingBean(name = "summerSecurityFallbackAuditLogger")
+    SecurityAuditLogger summerSecurityFallbackAuditLogger() {
         return new Slf4jSecurityAuditLogger();
     }
 
@@ -314,7 +327,7 @@ public class SummerSecurityAutoConfiguration {
             bearerConverter.setAuthenticationDetailsSource(request ->
                     new org.springframework.security.web.authentication.WebAuthenticationDetails(request.getRemoteAddr(), null));
             try {
-                http.addFilterBefore(new com.abluepoint.summer.security.autoconfigure.storage.BearerSessionIsolationFilter(),
+                http.addFilterBefore(new com.abluepoint.summer.security.session.internal.BearerSessionIsolationFilter(),
                                 org.springframework.security.web.context.SecurityContextHolderFilter.class)
                         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                         .securityContext(context -> context.securityContextRepository(
@@ -358,7 +371,7 @@ public class SummerSecurityAutoConfiguration {
                 .csrf(csrf -> csrf.requireCsrfProtectionMatcher(request ->
                         org.springframework.security.web.csrf.CsrfFilter.DEFAULT_CSRF_MATCHER.matches(request)
                                 && request.getRequestedSessionId() != null
-                                && !com.abluepoint.summer.security.context.SummerSecurityContext.hasBearerCredentials(request)));
+                                && !com.abluepoint.summer.security.identity.api.SummerSecurityContext.hasBearerCredentials(request)));
         return http.build();
     }
 

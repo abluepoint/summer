@@ -5,7 +5,7 @@ import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.response.api.RawResponse;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import jakarta.servlet.http.HttpServletRequest;
-import com.abluepoint.summer.security.context.SummerSecurityContext;
+import com.abluepoint.summer.security.identity.api.SummerSecurityContext;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

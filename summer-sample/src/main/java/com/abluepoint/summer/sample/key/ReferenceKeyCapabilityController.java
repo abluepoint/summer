@@ -3,7 +3,7 @@ package com.abluepoint.summer.sample.key;
 import com.abluepoint.summer.common.response.api.ApiResponse;
 import com.abluepoint.summer.mvc.response.api.RawResponse;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
-import com.abluepoint.summer.security.audit.SecurityAuditLogger;
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

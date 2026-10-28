@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
-import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
+import com.abluepoint.summer.security.key.spi.SummerKeyStore;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;

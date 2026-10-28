@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.security.autoconfigure.storage.SummerSessionStore;
+import com.abluepoint.summer.security.session.spi.SummerSessionStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

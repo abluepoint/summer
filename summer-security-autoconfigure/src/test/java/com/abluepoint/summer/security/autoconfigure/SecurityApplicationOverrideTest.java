@@ -61,6 +61,45 @@ class SecurityApplicationOverrideTest {
     }
 
     @Test
+    void fallbackAuditLoggerDoesNotCompeteWithTheDefaultApplicationLogger() {
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBean(com.abluepoint.summer.security.audit.spi.SecurityAuditLogger.class))
+                    .isSameAs(context.getBean("summerSecurityAuditLogger"));
+            assertThat(context.getBean("summerSecurityFallbackAuditLogger"))
+                    .isInstanceOf(com.abluepoint.summer.security.audit.spi.SecurityAuditLogger.class);
+        });
+    }
+
+    @Test
+    void applicationCanReplacePrimaryAndNamedFallbackAuditSinks() {
+        contextRunner.withUserConfiguration(ApplicationAuditConfiguration.class)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).doesNotHaveBean("summerSecurityAuditLogger");
+                    assertThat(context.getBean(com.abluepoint.summer.security.audit.spi.SecurityAuditLogger.class))
+                            .isSameAs(context.getBean("applicationAuditLogger"));
+                    assertThat(context.getBean("summerSecurityFallbackAuditLogger"))
+                            .isSameAs(context.getBean(ApplicationAuditConfiguration.class).fallback);
+                });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class ApplicationAuditConfiguration {
+        final com.abluepoint.summer.security.audit.spi.SecurityAuditLogger fallback = (event, principal, attributes) -> {};
+
+        @Bean
+        com.abluepoint.summer.security.audit.spi.SecurityAuditLogger applicationAuditLogger() {
+            return (event, principal, attributes) -> {};
+        }
+
+        @Bean(defaultCandidate = false)
+        com.abluepoint.summer.security.audit.spi.SecurityAuditLogger summerSecurityFallbackAuditLogger() {
+            return fallback;
+        }
+    }
+
+    @Test
     void applicationResourceChainSharesAuthenticationWithoutCouplingBearerToCookies() {
         contextRunner.withUserConfiguration(ApplicationResourceSecurityConfiguration.class)
                 .withPropertyValues("summer.security.authorization-server.enabled=false",

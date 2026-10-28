@@ -22,8 +22,8 @@ import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import tools.jackson.databind.ObjectMapper;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerSessionStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerConsentStore;
+import com.abluepoint.summer.security.session.spi.SummerSessionStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -1,19 +1,19 @@
 package com.abluepoint.summer.sample.key;
 
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
-import com.abluepoint.summer.security.audit.SecurityAuditLogger;
-import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
 
 import java.util.Map;
 
 /** Failure-only metadata; never accepts exceptions, credentials or key material. */
 final class KeyFailureAudit {
     private final SecurityAuditLogger audit;
-    private final SecurityAuditLogger fallback = new Slf4jSecurityAuditLogger();
+    private final SecurityAuditLogger fallback;
     private final RequestIdAccessor requestId;
 
-    KeyFailureAudit(SecurityAuditLogger audit, RequestIdAccessor requestId) {
+    KeyFailureAudit(SecurityAuditLogger audit, RequestIdAccessor requestId, SecurityAuditLogger fallback) {
         this.audit = audit;
+        this.fallback = fallback;
         this.requestId = requestId;
     }
 

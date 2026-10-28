@@ -1,6 +1,6 @@
 package com.abluepoint.summer.security.autoconfigure;
 
-import com.abluepoint.summer.security.audit.SecurityAuditLogger;
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;

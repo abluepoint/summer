@@ -1,13 +1,13 @@
 package com.abluepoint.summer.sample.key;
 
-import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
+import com.abluepoint.summer.security.key.spi.SummerKeyStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
-import com.abluepoint.summer.security.audit.SecurityAuditLogger;
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -16,8 +16,10 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 class KeyCapabilityConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "summer.security.storage", name = "keys", havingValue = "mysql")
-    KeyFailureAudit keyFailureAudit(SecurityAuditLogger audit, RequestIdAccessor requestId) {
-        return new KeyFailureAudit(audit, requestId);
+    KeyFailureAudit keyFailureAudit(SecurityAuditLogger audit, RequestIdAccessor requestId,
+            @org.springframework.beans.factory.annotation.Qualifier("summerSecurityFallbackAuditLogger")
+            SecurityAuditLogger fallback) {
+        return new KeyFailureAudit(audit, requestId, fallback);
     }
 
     @Bean

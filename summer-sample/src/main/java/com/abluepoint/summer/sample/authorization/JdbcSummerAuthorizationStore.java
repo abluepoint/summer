@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.Map;
 
 class JdbcSummerAuthorizationStore extends JdbcOAuth2AuthorizationService
-        implements com.abluepoint.summer.security.autoconfigure.storage.SummerAuthorizationStore {
+        implements com.abluepoint.summer.security.oauth2.spi.SummerAuthorizationStore {
     JdbcSummerAuthorizationStore(JdbcOperations jdbc, RegisteredClientRepository clients) {
         super(jdbc, clients);
         // The Sample form-login bridge carries claims in these two concrete types.

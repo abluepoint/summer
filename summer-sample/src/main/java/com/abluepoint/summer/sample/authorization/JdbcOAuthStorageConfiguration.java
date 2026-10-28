@@ -1,8 +1,8 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.security.autoconfigure.storage.SummerAuthorizationStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore;
-import com.abluepoint.summer.security.autoconfigure.storage.SummerOAuthClientStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerAuthorizationStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerConsentStore;
+import com.abluepoint.summer.security.oauth2.spi.SummerOAuthClientStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

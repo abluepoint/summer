@@ -5,7 +5,7 @@ import org.springframework.security.oauth2.server.authorization.JdbcOAuth2Author
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 
 class JdbcSummerConsentStore extends JdbcOAuth2AuthorizationConsentService
-        implements com.abluepoint.summer.security.autoconfigure.storage.SummerConsentStore {
+        implements com.abluepoint.summer.security.oauth2.spi.SummerConsentStore {
     JdbcSummerConsentStore(JdbcOperations jdbc, RegisteredClientRepository clients) {
         super(jdbc, clients);
     }

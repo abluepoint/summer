@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.security.context.SummerSecurityContext;
+import com.abluepoint.summer.security.identity.api.SummerSecurityContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;

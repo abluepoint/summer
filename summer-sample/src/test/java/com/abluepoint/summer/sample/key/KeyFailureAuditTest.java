@@ -16,13 +16,17 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.boot.test.context.SpringBootTest
 class KeyFailureAuditTest {
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("summerSecurityFallbackAuditLogger")
+    com.abluepoint.summer.security.audit.spi.SecurityAuditLogger fallback;
     @Test
     void auditSinkFailureDoesNotReplaceTheOriginalSigningFailure() {
         var original = new JwtEncodingException(UUID.randomUUID().toString());
         KeyFailureAudit audit = new KeyFailureAudit((event, principal, attributes) -> {
             throw new IllegalStateException(UUID.randomUUID().toString());
-        }, () -> "request-sign-failure");
+        }, () -> "request-sign-failure", fallback);
         var encoder = new AuditedKeyJwtEncoder(parameters -> { throw original; }, audit);
         boolean originalPreserved = false;
         try {
@@ -41,7 +45,7 @@ class KeyFailureAuditTest {
             assertThat(event).isEqualTo("key_read_failure");
             assertThat(principal).isEqualTo("system");
             events.add(attributes);
-        }, () -> "request-key-1");
+        }, () -> "request-key-1", fallback);
 
         audit.readFailed(kid);
 
@@ -56,7 +60,7 @@ class KeyFailureAuditTest {
         List<Map<String, ?>> events = new ArrayList<>();
         String sensitive = "private-material-" + UUID.randomUUID();
         KeyFailureAudit audit = new KeyFailureAudit((event, principal, attributes) -> events.add(attributes),
-                () -> sensitive + "\r\n");
+                () -> sensitive + "\r\n", fallback);
 
         audit.readFailed(sensitive);
 
@@ -76,7 +80,7 @@ class KeyFailureAuditTest {
         try {
             KeyFailureAudit audit = new KeyFailureAudit((event, principal, attributes) -> {
                 throw new IllegalStateException(sensitive);
-            }, () -> "request-fallback");
+            }, () -> "request-fallback", fallback);
 
             audit.signFailed();
 
@@ -95,7 +99,7 @@ class KeyFailureAuditTest {
     void keepsAuditingWhenRequestCorrelationIsUnavailable() {
         List<Map<String, ?>> events = new ArrayList<>();
         KeyFailureAudit audit = new KeyFailureAudit((event, principal, attributes) -> events.add(attributes),
-                () -> { throw new IllegalStateException(); });
+                () -> { throw new IllegalStateException(); }, fallback);
 
         audit.signFailed();
 

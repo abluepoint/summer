@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.security.autoconfigure.storage.SummerIdentityStore;
+import com.abluepoint.summer.security.identity.spi.SummerIdentityStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;

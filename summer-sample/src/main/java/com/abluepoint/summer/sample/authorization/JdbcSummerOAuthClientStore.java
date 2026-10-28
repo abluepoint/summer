@@ -10,7 +10,7 @@ import java.util.Map;
 
 /** JDBC registered-client store with a narrow, redacted management projection. */
 class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
-        implements com.abluepoint.summer.security.autoconfigure.storage.SummerOAuthClientStore {
+        implements com.abluepoint.summer.security.oauth2.spi.SummerOAuthClientStore {
     private final JdbcOperations jdbc;
 
     JdbcSummerOAuthClientStore(JdbcOperations jdbc) {
