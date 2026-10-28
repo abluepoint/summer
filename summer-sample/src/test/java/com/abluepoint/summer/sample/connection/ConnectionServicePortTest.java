@@ -1,4 +1,12 @@
 package com.abluepoint.summer.sample.connection;
+import com.abluepoint.summer.sample.connection.domain.McpProviderResult;
+import com.abluepoint.summer.sample.connection.domain.ResourceToken;
+import com.abluepoint.summer.sample.connection.infrastructure.InMemoryConnectionServicePort;
+import com.abluepoint.summer.sample.connection.domain.ExecutionStatusReceipt;
+import com.abluepoint.summer.sample.connection.domain.ConnectionSession;
+import com.abluepoint.summer.sample.connection.domain.ConnectionSessionRequest;
+import com.abluepoint.summer.sample.connection.domain.McpProviderRequest;
+import com.abluepoint.summer.sample.connection.domain.ResourceTokenRequest;
 
 import org.junit.jupiter.api.Test;
 

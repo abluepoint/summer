@@ -53,4 +53,22 @@ class ModulithArchitectureTest {
         }
     }
 
+    @Test
+    void connectionLifecycleDomainsRemainIndependentOfFrameworkAndAdapters() {
+        var modules = Set.of("connection", "delegation", "mcpauthorization", "physicalconnection");
+        var dependencies = new ClassFileImporter().importPackages("com.abluepoint.summer.sample").stream()
+                .filter(type -> modules.stream().anyMatch(module -> type.getPackageName()
+                        .startsWith("com.abluepoint.summer.sample." + module + ".domain")))
+                .flatMap(type -> type.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> {
+                    String target = dependency.getTargetClass().getPackageName();
+                    return target.startsWith("jakarta.persistence") || target.startsWith("jakarta.servlet")
+                            || target.startsWith("org.springframework.data") || target.startsWith("org.springframework.web")
+                            || target.startsWith("org.springframework.security")
+                            || target.contains(".application") || target.contains(".infrastructure") || target.contains(".api");
+                })
+                .map(Object::toString).sorted().toList();
+        assertThat(dependencies).isEmpty();
+    }
+
 }

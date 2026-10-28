@@ -1,4 +1,5 @@
 package com.abluepoint.summer.sample.physicalconnection;
+
 import com.jayway.jsonpath.JsonPath;import org.junit.jupiter.api.Test;import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.http.MediaType;import org.springframework.security.core.authority.SimpleGrantedAuthority;import org.springframework.test.annotation.DirtiesContext;import org.springframework.test.web.servlet.MockMvc;import org.springframework.test.web.servlet.MvcResult;import java.util.List;import java.util.Map;import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 @SpringBootTest @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class PhysicalConnectionControllerTest{@Autowired MockMvc mockMvc;
