@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

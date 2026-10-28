@@ -1,4 +1,6 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.infrastructure.discovery;
+
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
 
 import jakarta.servlet.Filter;
 import org.springframework.web.servlet.HandlerMapping;

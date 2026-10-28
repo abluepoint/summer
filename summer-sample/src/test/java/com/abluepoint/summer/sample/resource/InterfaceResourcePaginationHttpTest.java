@@ -1,12 +1,19 @@
 package com.abluepoint.summer.sample.resource;
 
+import com.abluepoint.summer.sample.resource.api.InterfaceResourceCatalogController;
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceCatalogService;
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceHistory;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceCatalog;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceCatalogView;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
+import com.abluepoint.summer.sample.resource.domain.ResourceType;
+import com.abluepoint.summer.sample.resource.domain.SensitiveLevel;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
@@ -31,11 +38,12 @@ class InterfaceResourcePaginationHttpTest {
                 "GET", "/api/resource-" + i, "Fixture#read" + i, "fixture",
                 ResourceType.BUSINESS, SensitiveLevel.NORMAL, null, true)).toList();
         var view = new InterfaceResourceCatalogView(items, 7);
-        var service = new InterfaceResourceCatalogService(new StaticApplicationContext(), history);
-        ReflectionTestUtils.setField(service, "current", view);
+        var service = new InterfaceResourceCatalogService(() -> new InterfaceResourceCatalog(items), history);
         when(history.protect(any())).thenAnswer(call -> call.getArgument(0));
         when(history.record(any())).thenReturn(view);
         when(history.read(6)).thenReturn(new InterfaceResourceCatalogView(items, 6));
+        service.refresh();
+        org.mockito.Mockito.clearInvocations(history);
         var requestId = mock(RequestIdAccessor.class);
         when(requestId.currentRequestId()).thenReturn("pagination-check");
         mvc = MockMvcBuilders.standaloneSetup(new InterfaceResourceCatalogController(service, requestId, history)).build();

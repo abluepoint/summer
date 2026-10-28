@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.domain;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,7 +13,7 @@ public final class InterfaceResourceCatalog {
 
     public InterfaceResourceCatalog(List<InterfaceResourceDescriptor> descriptors) { this(descriptors, List.of()); }
 
-    InterfaceResourceCatalog(List<InterfaceResourceDescriptor> descriptors, List<InterfaceResourceDiscoveryIssue> issues) {
+    public InterfaceResourceCatalog(List<InterfaceResourceDescriptor> descriptors, List<InterfaceResourceDiscoveryIssue> issues) {
         this.issues = issues.stream().distinct().sorted(Comparator.comparing(InterfaceResourceDiscoveryIssue::contextId)
                 .thenComparing(InterfaceResourceDiscoveryIssue::source).thenComparing(InterfaceResourceDiscoveryIssue::code)).toList();
         Map<String, InterfaceResourceDescriptor> byKey = new LinkedHashMap<>();
@@ -84,7 +84,7 @@ public final class InterfaceResourceCatalog {
         return items;
     }
 
-    List<InterfaceResourceDiscoveryIssue> issues() { return issues; }
+    public List<InterfaceResourceDiscoveryIssue> issues() { return issues; }
 
     public long revision() {
         return Integer.toUnsignedLong(items.hashCode());

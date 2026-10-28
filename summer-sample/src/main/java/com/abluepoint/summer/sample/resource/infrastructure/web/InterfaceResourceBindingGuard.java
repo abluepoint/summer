@@ -1,4 +1,8 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.infrastructure.web;
+
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceHistory;
+import com.abluepoint.summer.sample.resource.infrastructure.discovery.SpringInterfaceResourceDiscovery;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,7 +19,7 @@ import org.springframework.web.util.pattern.PathPattern;
 
 /** Narrow anti-rebinding check; existing role, tenant, scope and protocol checks still run afterwards. */
 @Component
-final class InterfaceResourceBindingGuard implements HandlerInterceptor {
+public final class InterfaceResourceBindingGuard implements HandlerInterceptor {
     private final InterfaceResourceHistory history;
     InterfaceResourceBindingGuard(InterfaceResourceHistory history) { this.history = history; }
 
@@ -39,7 +43,7 @@ final class InterfaceResourceBindingGuard implements HandlerInterceptor {
         String automatic = request.getMethod().toUpperCase(java.util.Locale.ROOT) + ":" + path;
         String permission = explicit != null && !explicit.value().isBlank() ? explicit.value().trim() : automatic;
         if (history.isReplaced(permission,
-                InterfaceResourceCatalogService.handlerIdentity(method)))
+                SpringInterfaceResourceDiscovery.handlerIdentity(method)))
             throw new AccessDeniedException("SUMMER_RESOURCE_PERMISSION_REUSE: replacement requires an explicit new permission");
         return true;
     }

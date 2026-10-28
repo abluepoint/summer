@@ -1,5 +1,10 @@
 package com.abluepoint.summer.sample.resource;
 
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceCatalog;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
+import com.abluepoint.summer.sample.resource.domain.ResourceType;
+import com.abluepoint.summer.sample.resource.domain.SensitiveLevel;
+
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;

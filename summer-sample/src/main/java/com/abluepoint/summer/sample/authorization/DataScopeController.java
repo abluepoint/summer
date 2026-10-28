@@ -25,21 +25,21 @@ class DataScopeController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/data-scopes")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.read")
     @RawResponse
     ResponseEntity<ApiResponse<List<DataScopePolicyView>>> list(@PathVariable String enterpriseId, Authentication auth) {
         try { return ok(service.list(enterpriseId, auth)); } catch (Exception e) { return error(e); }
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.read")
     @RawResponse
     ResponseEntity<ApiResponse<DataScopePolicyView>> get(@PathVariable String enterpriseId, @PathVariable String resource, Authentication auth) {
         try { return ok(service.get(enterpriseId, resource, auth)); } catch (Exception e) { return error(e); }
     }
 
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.write")
     @RawResponse
     ResponseEntity<ApiResponse<DataScopePolicyView>> put(@PathVariable String enterpriseId, @PathVariable String resource,
                                                           @RequestBody DataScopePolicyRequest body, Authentication auth) {
@@ -47,14 +47,14 @@ class DataScopeController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}/audit")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.read")
     @RawResponse
     ResponseEntity<ApiResponse<List<DataScopeAuditView>>> audit(@PathVariable String enterpriseId, @PathVariable String resource, Authentication auth) {
         try { return ok(service.audit(enterpriseId, resource, auth)); } catch (Exception e) { return error(e); }
     }
 
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}:preview", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.read")
     @RawResponse
     ResponseEntity<ApiResponse<DataScopePreviewView>> preview(@PathVariable String enterpriseId, @PathVariable String resource,
                                                                @RequestBody(required = false) DataScopePreviewRequest request, Authentication auth) {
@@ -62,7 +62,7 @@ class DataScopeController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}/preview")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.read")
     @RawResponse
     ResponseEntity<ApiResponse<DataScopePreviewView>> previewGet(@PathVariable String enterpriseId, @PathVariable String resource,
                                                                    @RequestParam(required = false) String subject,
@@ -73,14 +73,14 @@ class DataScopeController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}/bindings")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.read")
     @RawResponse
     ResponseEntity<ApiResponse<List<DataScopeBindingView>>> bindings(@PathVariable String enterpriseId, @PathVariable String resource, Authentication auth) {
         try { return ok(service.bindings(enterpriseId, resource, auth)); } catch (Exception e) { return error(e); }
     }
 
     @PutMapping("/api/v1/enterprises/{enterpriseId}/data-scopes/{resource}/bindings/{kind}/{subject}")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.data-scope.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.data-scope.write")
     @RawResponse
     ResponseEntity<ApiResponse<DataScopeBindingView>> bind(@PathVariable String enterpriseId, @PathVariable String resource,
             @PathVariable String kind, @PathVariable String subject, @RequestBody DataScopePolicyRequest body, Authentication auth) {

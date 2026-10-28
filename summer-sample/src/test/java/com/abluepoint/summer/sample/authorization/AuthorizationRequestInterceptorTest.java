@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.util.pattern.PathPatternParser;
-import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
 
 import java.util.List;
 import java.util.Map;

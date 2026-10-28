@@ -1,8 +1,14 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.infrastructure.discovery;
+
+import com.abluepoint.summer.sample.resource.domain.ResourceType;
+import com.abluepoint.summer.sample.resource.domain.SensitiveLevel;
+import org.springframework.web.util.pattern.PathPattern;
+
+
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.web.servlet.function.*;
-import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 import java.util.*;
 
@@ -98,8 +104,8 @@ final class FunctionalResourceDiscovery implements RouterFunctions.Visitor {
         }
         @Override public void path(String pattern) { leaf(METHODS, pattern, Map.of()); }
         @Override public void pathExtension(String extension) { condition("extension", extension); }
-        @Override public void header(String name, String value) { condition("headers", InterfaceResourceCatalogService.safeExpression(name + "=" + value)); }
-        @Override public void param(String name, String value) { condition("params", InterfaceResourceCatalogService.safeExpression(name + "=" + value)); }
+        @Override public void header(String name, String value) { condition("headers", SpringInterfaceResourceDiscovery.safeExpression(name + "=" + value)); }
+        @Override public void param(String name, String value) { condition("params", SpringInterfaceResourceDiscovery.safeExpression(name + "=" + value)); }
         @Override public void version(String version) { condition("version", version); }
         @Override public void startAnd() {}
         @Override public void and() {}

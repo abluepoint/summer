@@ -31,7 +31,7 @@ class DictionaryNotificationController {
     @GetMapping(value = "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RawResponse
-    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("platform.dictionary.read")
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
     ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String code,
                                 @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,

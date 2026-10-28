@@ -1,76 +1,60 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.infrastructure.discovery;
 
-import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.security.web.SecurityFilterChain;
+
+
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceCatalog;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDiscovery;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDiscoveryIssue;
+import com.abluepoint.summer.sample.resource.domain.ResourceType;
+import com.abluepoint.summer.sample.resource.domain.SensitiveLevel;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.handler.AbstractHandlerMethodMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-@Service
-final class InterfaceResourceCatalogService implements SmartInitializingSingleton, org.springframework.context.ApplicationListener<org.springframework.context.event.ContextRefreshedEvent> {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(InterfaceResourceCatalogService.class);
+@org.springframework.stereotype.Component
+public final class SpringInterfaceResourceDiscovery implements InterfaceResourceDiscovery {
     private final ApplicationContext context;
-    private final InterfaceResourceHistory history;
     private final Map<String, ApplicationContext> contexts = new java.util.LinkedHashMap<>();
-    private volatile InterfaceResourceCatalogView current = new InterfaceResourceCatalogView(List.of(), 0);
-    private volatile InterfaceResourceCatalog catalog = new InterfaceResourceCatalog(List.of());
 
-    InterfaceResourceCatalogService(ApplicationContext context, InterfaceResourceHistory history) {
+    SpringInterfaceResourceDiscovery(ApplicationContext context) {
         this.context = context;
-        this.history = history;
-        this.contexts.put("application", context);
+        contexts.put("application", context);
     }
 
-    @Override
-    public void afterSingletonsInstantiated() { refresh(); }
-
-    @Override
-    public synchronized void onApplicationEvent(org.springframework.context.event.ContextRefreshedEvent event) {
-        ApplicationContext candidate = event.getApplicationContext();
+    synchronized boolean registerContext(ApplicationContext candidate) {
         for (ApplicationContext ancestor = candidate; ancestor != null; ancestor = ancestor.getParent()) {
             if (ancestor == context) {
                 contexts.put(candidate == context ? "application" : "management", candidate);
-                refresh();
-                return;
+                return true;
             }
         }
+        return false;
     }
 
-    private synchronized void refresh() {
+    @Override
+    public synchronized InterfaceResourceCatalog discover() {
         List<InterfaceResourceDescriptor> descriptors = new ArrayList<>();
         List<InterfaceResourceDiscoveryIssue> issues = new ArrayList<>();
         contexts.forEach((id, active) -> {
             if (!(active instanceof org.springframework.context.ConfigurableApplicationContext configurable) || configurable.isActive())
                 descriptors.addAll(discover(active, id, issues));
         });
-        long previous = current.revision() == 0 ? history.latestRevision() : current.revision();
-        catalog = history.protect(new InterfaceResourceCatalog(descriptors, issues));
-        current = history.record(catalog);
-        if (previous != current.revision()) {
-            var difference = previous == 0 ? null : history.diff(previous, current.revision());
-            log.info("Interface resource revision={} added={} removed={} changed={} complete={}", current.revision(),
-                    difference == null ? current.items().size() : difference.added().size(),
-                    difference == null ? 0 : difference.removed().size(), difference == null ? 0 : difference.changed().size(), current.complete());
-        }
+        return new InterfaceResourceCatalog(descriptors, issues);
     }
 
     private List<InterfaceResourceDescriptor> discover(ApplicationContext context, String contextId, List<InterfaceResourceDiscoveryIssue> issues) {
@@ -156,28 +140,6 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         }
     }
 
-    InterfaceResourceCatalogView read(Authentication authentication) {
-        requirePlatformRead(authentication);
-        refresh();
-        return current;
-    }
-
-    InterfaceResourceCatalogPage readPage(Authentication authentication, int page, int size, Long revision, boolean rescan) {
-        requirePlatformRead(authentication);
-        InterfaceResourceCatalogPage.validate(page, size);
-        if (revision != null && revision < 1) throw new IllegalArgumentException("revision must be positive");
-        if (rescan && revision != null) throw new IllegalArgumentException("a fresh scan cannot select a historical revision");
-        // Lifecycle events keep this immutable snapshot current. Paging must not
-        // rediscover mappings or deserialize every stored revision on each click.
-        InterfaceResourceCatalogView view = rescan ? read(authentication) : current;
-        if (revision != null && revision != view.revision()) view = history.read(revision);
-        return InterfaceResourceCatalogPage.of(view, page, size);
-    }
-
-    InterfaceResourceCatalog snapshot() {
-        return catalog;
-    }
-
     private static InterfaceResourceDescriptor descriptor(String path, RequestMethod method, HandlerMethod handler, RequestMappingInfo mapping) {
         String httpMethod = method == null ? "ANY" : method.name();
         Method methodRef = handler.getMethod();
@@ -191,8 +153,8 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         String module = module(handler.getBeanType());
         Map<String, List<String>> conditions = new java.util.TreeMap<>();
         conditions.put("declaredMethods", mapping.getMethodsCondition().getMethods().stream().map(Enum::name).toList());
-        conditions.put("params", mapping.getParamsCondition().getExpressions().stream().map(Object::toString).map(InterfaceResourceCatalogService::safeExpression).toList());
-        conditions.put("headers", mapping.getHeadersCondition().getExpressions().stream().map(Object::toString).map(InterfaceResourceCatalogService::safeExpression).toList());
+        conditions.put("params", mapping.getParamsCondition().getExpressions().stream().map(Object::toString).map(SpringInterfaceResourceDiscovery::safeExpression).toList());
+        conditions.put("headers", mapping.getHeadersCondition().getExpressions().stream().map(Object::toString).map(SpringInterfaceResourceDiscovery::safeExpression).toList());
         conditions.put("consumes", mapping.getConsumesCondition().getExpressions().stream().map(Object::toString).toList());
         conditions.put("produces", mapping.getProducesCondition().getExpressions().stream().map(Object::toString).toList());
         if (!mapping.getVersionCondition().isEmpty()) conditions.put("version", List.of(mapping.getVersionCondition().toString()));
@@ -236,12 +198,12 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         return null;
     }
 
-    static String handlerIdentity(HandlerMethod handler) {
+    public static String handlerIdentity(HandlerMethod handler) {
         return handler.getBeanType().getName() + "#" + handler.getMethod().getName()
                 + java.util.Arrays.toString(handler.getMethod().getParameterTypes());
     }
 
-    static String safeExpression(String expression) {
+    public static String safeExpression(String expression) {
         int equals = expression.indexOf('=');
         String name = equals < 0 ? expression : expression.substring(0, equals);
         if (name.toLowerCase(java.util.Locale.ROOT).matches(".*(authorization|cookie|token|secret|password|api.?key).*"))
@@ -324,19 +286,4 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         return parts.length == 0 ? "application" : parts[parts.length - 1];
     }
 
-    static void requirePlatformRead(Authentication authentication) {
-        if (!(authentication instanceof JwtAuthenticationToken jwt)
-                || !hasClaim(jwt, "platform.interface-resources.read")
-                || jwt.getAuthorities().stream().noneMatch(
-                authority -> "SCOPE_platform.interface-resources.read".equals(authority.getAuthority()))) {
-            throw new AccessDeniedException("Interface resource catalog denied");
-        }
-    }
-
-    private static boolean hasClaim(JwtAuthenticationToken jwt, String capability) {
-        Object claims = jwt.getToken().getClaims().get("platform_capabilities");
-        return claims instanceof Collection<?> values && values.stream()
-                .map(String::valueOf)
-                .anyMatch(capability::equals);
-    }
 }

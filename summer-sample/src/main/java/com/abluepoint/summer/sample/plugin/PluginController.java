@@ -7,7 +7,7 @@ import com.abluepoint.summer.common.error.api.ErrorCode;
 import com.abluepoint.summer.mvc.response.api.RawResponse;
 import com.abluepoint.summer.mvc.error.spi.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
-import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;

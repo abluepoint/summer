@@ -1,4 +1,6 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.infrastructure.persistence;
+
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceRevisionSummaryView;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -7,7 +9,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "summer_interface_resource_revision", uniqueConstraints =
         @UniqueConstraint(name = "uk_interface_resource_revision_fingerprint", columnNames = "fingerprint"))
-class InterfaceResourceRevisionEntity {
+public class InterfaceResourceRevisionEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "revision") private Long revision;
     @Column(nullable = false, length = 64) private String fingerprint;
@@ -18,7 +20,7 @@ class InterfaceResourceRevisionEntity {
 
     protected InterfaceResourceRevisionEntity() {}
 
-    InterfaceResourceRevisionEntity(String fingerprint, String snapshotJson, int resourceCount) {
+    public InterfaceResourceRevisionEntity(String fingerprint, String snapshotJson, int resourceCount) {
         this.fingerprint = fingerprint;
         this.snapshotJson = snapshotJson;
         this.resourceCount = resourceCount;
@@ -27,7 +29,7 @@ class InterfaceResourceRevisionEntity {
 
     Long getRevision() { return revision; }
     String getSnapshotJson() { return snapshotJson; }
-    InterfaceResourceRevisionSummary summary() {
-        return new InterfaceResourceRevisionSummary(revision, fingerprint, resourceCount, createdAt.toString());
+    InterfaceResourceRevisionSummaryView summary() {
+        return new InterfaceResourceRevisionSummaryView(revision, fingerprint, resourceCount, createdAt.toString());
     }
 }

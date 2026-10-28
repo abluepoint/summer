@@ -155,7 +155,7 @@ class AuthorizationEventTenantAuthorizationHttpTest {
         } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
     }
     static class OtherGlobalController {
-        @com.abluepoint.summer.sample.resource.ResourcePermission(READ) public void read() {}
+        @com.abluepoint.summer.sample.resource.api.ResourcePermission(READ) public void read() {}
     }
 
     private RequestPostProcessor token(List<String> bCapabilities, List<String> scopes) {

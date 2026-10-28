@@ -1,4 +1,4 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.domain;
 
 public enum SensitiveLevel {
     NORMAL,

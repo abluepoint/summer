@@ -1,4 +1,7 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.infrastructure.discovery;
+
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
+import com.abluepoint.summer.sample.resource.infrastructure.discovery.FunctionalResourceDiscovery;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.function.*;

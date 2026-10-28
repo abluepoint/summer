@@ -1,5 +1,11 @@
 package com.abluepoint.summer.sample.resource;
 
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceHistory;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceBindingPolicy;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceCatalog;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceRevisions;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class InterfaceResourceHistoryHttpTest {
     @Autowired MockMvc mvc;
-    @Autowired InterfaceResourceRevisionRepository revisions;
+    @Autowired InterfaceResourceRevisions revisions;
     @Autowired tools.jackson.databind.ObjectMapper mapper;
     @Autowired @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mappings;
     private static final String ROOT = "/api/v1/platform/interface-resources";
@@ -79,7 +85,7 @@ class InterfaceResourceHistoryHttpTest {
         mappings.registerMapping(info, new ExplicitOldHandler(), ExplicitOldHandler.class.getMethod("read"));
         try {
             mvc.perform(get("/api/catalog-explicit-reused").with(jwt())).andExpect(status().isForbidden());
-            var restored = new InterfaceResourceHistory(revisions, mapper);
+            var restored = new InterfaceResourceHistory(revisions, new InterfaceResourceBindingPolicy(Map.of()));
             restored.protect(new InterfaceResourceCatalog(List.of()));
             assertThat(restored.isReplaced("GET:/api/catalog-explicit-reused", ExplicitOldHandler.class.getName() + "#read[]")).isTrue();
         } finally { mappings.unregisterMapping(info); }

@@ -43,7 +43,7 @@ class OrganizationController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-tree")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationTree>> tree(@PathVariable String enterpriseId, Authentication authentication, HttpServletRequest request) {
@@ -51,7 +51,7 @@ class OrganizationController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationTree>> list(@PathVariable String enterpriseId, @RequestParam(required = false) String parentId,
@@ -60,7 +60,7 @@ class OrganizationController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationUnit>> detail(@PathVariable String enterpriseId, @PathVariable String unitId,
@@ -74,7 +74,7 @@ class OrganizationController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationMemberList>> members(@PathVariable String enterpriseId, @PathVariable String unitId,
@@ -87,7 +87,7 @@ class OrganizationController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/audit")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<List<OrganizationDirectoryService.OrganizationAuditEvent>>> audit(@PathVariable String enterpriseId,
@@ -97,7 +97,7 @@ class OrganizationController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/context")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationDirectoryService.CurrentOrganizationContext>> currentContext(
@@ -107,7 +107,7 @@ class OrganizationController {
     }
 
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/context", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationDirectoryService.CurrentOrganizationContext>> context(
@@ -121,7 +121,7 @@ class OrganizationController {
     }
 
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/org-units", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.write")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationUnit>> create(@PathVariable String enterpriseId, @RequestBody OrganizationUnitRequest body,
@@ -136,7 +136,7 @@ class OrganizationController {
     }
 
     @PatchMapping(value = "/api/v1/enterprises/{enterpriseId}/org-units/{unitId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.write")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationUnit>> update(@PathVariable String enterpriseId, @PathVariable String unitId, @RequestBody OrganizationUnitRequest body,
@@ -153,7 +153,7 @@ class OrganizationController {
     }
 
     @DeleteMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.write")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")
     @RawResponse
     ResponseEntity<ApiResponse<Void>> delete(@PathVariable String enterpriseId, @PathVariable String unitId,
@@ -169,7 +169,7 @@ class OrganizationController {
     }
 
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/org-assignments:batch", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.write")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationAssignmentBatchResult>> assignBatch(@PathVariable String enterpriseId, @RequestBody OrganizationAssignmentsRequest body,
@@ -186,7 +186,7 @@ class OrganizationController {
     }
 
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/members/{memberId}/org-assignments", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.organization.write")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("enterprise.organization.write")
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")
     @RawResponse
     ResponseEntity<ApiResponse<OrganizationAssignmentBatchResult>> assignMember(@PathVariable String enterpriseId, @PathVariable String memberId,

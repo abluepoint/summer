@@ -1,5 +1,10 @@
 package com.abluepoint.summer.sample.resource;
 
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceCatalog;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceDescriptor;
+import com.abluepoint.summer.sample.resource.domain.ResourceType;
+import com.abluepoint.summer.sample.resource.domain.SensitiveLevel;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,9 @@
-package com.abluepoint.summer.sample.resource;
+package com.abluepoint.summer.sample.resource.api;
+
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceCatalogPageView;
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceCatalogService;
+import com.abluepoint.summer.sample.resource.application.InterfaceResourceHistory;
+import com.abluepoint.summer.sample.resource.domain.InterfaceResourceRevisionNotFoundException;
 
 import com.abluepoint.summer.common.response.api.ApiError;
 import com.abluepoint.summer.common.response.api.ApiResponse;
@@ -18,13 +23,13 @@ import java.util.List;
 
 @RestController
 @ResourcePermission("platform.interface-resources.read")
-final class InterfaceResourceCatalogController {
+public final class InterfaceResourceCatalogController {
 
     private final InterfaceResourceCatalogService service;
     private final RequestIdAccessor requestIdAccessor;
     private final InterfaceResourceHistory history;
 
-    InterfaceResourceCatalogController(
+    public InterfaceResourceCatalogController(
             InterfaceResourceCatalogService service,
             RequestIdAccessor requestIdAccessor, InterfaceResourceHistory history
     ) {
@@ -74,7 +79,7 @@ final class InterfaceResourceCatalogController {
         } catch (IllegalArgumentException invalid) {
             return ResponseEntity.badRequest().header("X-Request-Id", requestId).body(ApiResponse.failure(
                     new ApiError("SUMMER_RESOURCE_PAGE_INVALID", invalid.getMessage(), List.of()), requestId));
-        } catch (InterfaceResourceHistory.RevisionNotFoundException missing) {
+        } catch (InterfaceResourceRevisionNotFoundException missing) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).header("X-Request-Id", requestId).body(ApiResponse.failure(
                     new ApiError("SUMMER_RESOURCE_REVISION_NOT_FOUND", "Interface resource revision was not found", List.of()), requestId));
         }
@@ -91,7 +96,7 @@ final class InterfaceResourceCatalogController {
     ResponseEntity<?> revision(Authentication authentication, @PathVariable long revision,
                                @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
         return historyResponse(authentication, () -> page == null && size == null ? history.read(revision)
-                : InterfaceResourceCatalogPage.of(history.read(revision), page == null ? 0 : page, size == null ? 10 : size));
+                : InterfaceResourceCatalogPageView.of(history.read(revision), page == null ? 0 : page, size == null ? 10 : size));
     }
 
     @GetMapping("/api/v1/platform/interface-resources/diff")
@@ -108,7 +113,7 @@ final class InterfaceResourceCatalogController {
             return ResponseEntity.ok().header("X-Request-Id", requestId).body(ApiResponse.success(value.get(), requestId));
         } catch (AccessDeniedException denied) {
             status = HttpStatus.FORBIDDEN; code = "SUMMER_FORBIDDEN"; message = "Interface resource catalog denied";
-        } catch (InterfaceResourceHistory.RevisionNotFoundException missing) {
+        } catch (InterfaceResourceRevisionNotFoundException missing) {
             status = HttpStatus.NOT_FOUND; code = "SUMMER_RESOURCE_REVISION_NOT_FOUND"; message = "Interface resource revision was not found";
         } catch (IllegalArgumentException invalid) {
             status = HttpStatus.BAD_REQUEST; code = "SUMMER_RESOURCE_HISTORY_INVALID"; message = invalid.getMessage();

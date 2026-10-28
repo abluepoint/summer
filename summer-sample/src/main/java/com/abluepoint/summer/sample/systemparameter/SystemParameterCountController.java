@@ -28,7 +28,7 @@ class SystemParameterCountController {
 
     @GetMapping
     @RawResponse
-    @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
+    @com.abluepoint.summer.sample.resource.api.ResourcePermission("system.parameter.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
     @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "page", required = false, style = "systemParameterPageStyle")

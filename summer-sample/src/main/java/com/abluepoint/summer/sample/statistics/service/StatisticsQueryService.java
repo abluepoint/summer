@@ -6,7 +6,7 @@ import com.abluepoint.summer.sample.statistics.model.view.StatisticsWindowView;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
-import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
