@@ -1,19 +1,11 @@
+import type { ApiFailure } from '@/api/types';
+import { businessData as request } from '@/api/client';
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type OrganizationUnit = { id: string; enterpriseId: string; parentId: string | null; unitType: 'COMPANY' | 'DEPARTMENT' | 'TEAM'; name: string; code: string; leaderMemberId?: string; description?: string; sortOrder: number; status: 'ACTIVE' | 'DISABLED'; memberCount: number; children: OrganizationUnit[] };
 export type OrganizationTree = { enterpriseId: string; revision: string; items: OrganizationUnit[] };
 export type OrganizationMember = { memberId: string; displayName: string; email: string; status: string; primary: boolean };
-export type OrganizationApiError = { status: number; code: string; message: string; requestId: string };
-
-async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { const response = await call(); return response.status === 204 ? undefined as T : readEnvelope(response.data, response.status) as T; }
-  catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const failure = readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || ''));
-    throw failure as OrganizationApiError;
-  }
-}
+export type OrganizationApiError = Pick<ApiFailure, 'status' | 'code' | 'message' | 'requestId'>;
 
 export const getOrganizationTree = (enterpriseId: string) => request<OrganizationTree>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/org-tree`));
 export const getOrganizationContext = (enterpriseId: string) => request<{ enterpriseId: string; organizationId: string | null }>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/context`));
@@ -28,10 +20,15 @@ export type AssignmentDraft = { memberIds: string[]; organizationIds: string[]; 
 const root = (enterprise: string) => `/api/v1/enterprises/${encodeURIComponent(enterprise)}`;
 const units = (enterprise: string) => `${root(enterprise)}/org-units`;
 const headers = (key: string, etag?: string) => ({ 'Idempotency-Key': key, ...(etag ? { 'If-Match': etag } : {}) });
-export const getOrganizationDetail = (enterprise: string, id: string) => request<{ unit: OrganizationUnit; etag: string }>(async () => {
-  const response = await axios.get(`${units(enterprise)}/${encodeURIComponent(id)}`);
-  return { ...response, data: { success: true, data: { unit: readEnvelope(response.data, response.status), etag: String(response.headers.etag || '') } } };
-});
+export const getOrganizationDetail = async (enterprise: string, id: string) => {
+  let etag = '';
+  const unit = await request<OrganizationUnit>(async () => {
+    const response = await axios.get(`${units(enterprise)}/${encodeURIComponent(id)}`);
+    etag = String(response.headers.etag || '');
+    return response;
+  });
+  return { unit, etag };
+};
 export const createOrganization = (enterprise: string, body: UnitDraft, key: string) => request<OrganizationUnit>(() => axios.post(units(enterprise), body, { headers: headers(key) }));
 export const updateOrganization = (enterprise: string, id: string, body: UnitDraft, etag: string, key: string) => request<OrganizationUnit>(() => axios.patch(`${units(enterprise)}/${encodeURIComponent(id)}`, body, { headers: headers(key, etag) }));
 export const deleteOrganization = (enterprise: string, id: string, etag: string, key: string) => request<void>(() => axios.delete(`${units(enterprise)}/${encodeURIComponent(id)}`, { headers: headers(key, etag) }));

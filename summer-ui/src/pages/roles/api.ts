@@ -1,5 +1,6 @@
+import type { ApiFailure } from '@/api/types';
+import { businessData as request } from '@/api/client';
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type AuthorizationRole = {
   roleId: string;
@@ -24,15 +25,7 @@ export type UserRoleAssignment = {
   deniedCapabilityCodes: string[];
   version: number;
 };
-export type AuthorizationApiError = { status: number; code: string; message: string; requestId: string };
-
-async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { return readEnvelope((await call()).data, 200) as T; }
-  catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    throw readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || '')) as AuthorizationApiError;
-  }
-}
+export type AuthorizationApiError = Pick<ApiFailure, 'status' | 'code' | 'message' | 'requestId'>;
 
 export const listRoles = (enterpriseId: string) => request<AuthorizationRole[]>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/roles`));
 export const listAuthorizationResources = () => request<{ items: AuthorizationResource[] }>(() => axios.get('/api/v1/platform/interface-resources'));

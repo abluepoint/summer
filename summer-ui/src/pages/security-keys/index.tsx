@@ -13,7 +13,7 @@ import {
 } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { listSecurityKeyState, rotateSecurityKey, SecurityKey, SecurityKeyRotationSchedule } from './api';
-import { SummerApiError } from '../customer/api';
+import { SummerApiError } from '@/api/errors';
 
 export default function SecurityKeysPage() {
   const t = useLocale();

@@ -12,7 +12,7 @@ const [api, page, routes, vite] = await Promise.all([
 ]);
 
 assert.match(api, /\/public\/dictionaries/);
-assert.match(api, /readEnvelope/);
+assert.match(api, /businessData/);
 assert.match(api, /version\?: number/);
 assert.match(page, /getPublicDictionary/);
 assert.match(page, /Select/);

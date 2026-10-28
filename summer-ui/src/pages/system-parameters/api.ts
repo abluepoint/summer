@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type Parameter = {
   id: string; key: string; type: 'STRING' | 'INTEGER' | 'DECIMAL' | 'BOOLEAN'; value: unknown;
@@ -38,11 +39,10 @@ export class ParameterApiError extends Error {
 }
 
 async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { const response = await call(); return readEnvelope(response.data, response.status) as T; }
+  try { return await businessData<T>(call); }
   catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
-    const failure = readFailure(error.response?.data, status, String(error.response?.headers?.['x-request-id'] || ''));
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new ParameterApiError(failure.status, failure.code, failure.message, failure.requestId, failure.violations);
   }
 }

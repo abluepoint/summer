@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type RuntimeDiagnostics = {
   requestId: string;
@@ -51,23 +52,25 @@ export class RuntimeDiagnosticsError extends Error {
 }
 
 export async function getRuntimeDiagnostics(): Promise<RuntimeDiagnostics> {
+  let traceId = '';
   try {
-    const response = await axios.get('/internal/v1/diagnostics/runtime');
-    return readEnvelope(response.data, response.status) as RuntimeDiagnostics;
+    return await businessData<RuntimeDiagnostics>(async () => {
+      try {
+        return await axios.get('/internal/v1/diagnostics/runtime');
+      } catch (error) {
+        if (axios.isAxiosError(error)) traceId = String(error.response?.headers?.['x-trace-id'] || '');
+        throw error;
+      }
+    });
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
-    const failure = readFailure(
-      error.response?.data,
-      status,
-      String(error.response?.headers?.['x-request-id'] || '')
-    );
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new RuntimeDiagnosticsError(
       failure.status,
       failure.code,
       failure.message,
       failure.requestId,
-      String(error.response?.headers?.['x-trace-id'] || '')
+      traceId
     );
   }
 }

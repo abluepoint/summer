@@ -72,21 +72,3 @@ export function canConfirmDeletion(typed, username) {
 export function pageAfterDeletion(page, size, totalElements) {
   return Math.max(0, Math.min(page, Math.ceil(totalElements / size) - 1));
 }
-
-export function readFailure(body, status, headerRequestId = '') {
-  const error = body?.error && typeof body.error === 'object' ? body.error : {};
-  return {
-    status,
-    code: typeof error.code === 'string' ? error.code : '',
-    message: typeof error.message === 'string' ? error.message : '',
-    violations: Array.isArray(error.violations) ? error.violations : [],
-    requestId:
-      typeof body?.requestId === 'string' ? body.requestId : headerRequestId,
-    timestamp: typeof body?.timestamp === 'string' ? body.timestamp : '',
-  };
-}
-
-export function readEnvelope(body, status) {
-  if (body?.success === true) return body.data;
-  throw readFailure(body, status);
-}

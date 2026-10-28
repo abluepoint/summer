@@ -1,5 +1,6 @@
+import type { ApiFailure } from '@/api/types';
+import { businessData as request } from '@/api/client';
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type Task = {
   taskId: string; enterpriseId: string; name: string; taskType: string;
@@ -16,19 +17,12 @@ export type TaskExecution = {
   attempts: { attempt: number; status: string; startedAt: string; finishedAt?: string; failureCode?: string; nodeId?: string }[];
 };
 export type TrustedTaskType = { taskType: string; description: string };
-export type TaskApiError = { status: number; code: string; message: string; requestId: string };
+export type TaskApiError = Pick<ApiFailure, 'status' | 'code' | 'message' | 'requestId'>;
 export type TaskProgressEvent = {
   id: number; type: string; taskId?: string; executionId?: string; status?: string;
   progress?: number; attempt?: number; failureCode?: string; reason?: string; message?: string;
 };
 
-async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { return readEnvelope((await call()).data, 200) as T; }
-  catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    throw readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || '')) as TaskApiError;
-  }
-}
 const base = (enterpriseId: string) => `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/tasks`;
 export const listTasks = (enterpriseId: string) => request<{ items: Task[] }>(() => axios.get(base(enterpriseId)));
 export const listTrustedTaskTypes = (enterpriseId: string) => request<TrustedTaskType[]>(() => axios.get(`${base(enterpriseId)}/types`));

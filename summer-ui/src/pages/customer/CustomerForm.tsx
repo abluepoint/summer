@@ -1,3 +1,4 @@
+import { SummerApiError } from '@/api/errors';
 import React, { useRef, useState } from 'react';
 import {
   Alert,
@@ -13,7 +14,6 @@ import useLocale from '@/utils/useLocale';
 import {
   createCustomer,
   Customer,
-  SummerApiError,
   updateCustomer,
 } from './api';
 import {

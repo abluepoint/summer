@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from './contract.mjs';
+import { businessData } from '@/api/client';
 
 export type Customer = {
   username: string;
@@ -16,49 +16,6 @@ export type CustomerPage = {
   totalPages: number;
   projection: string;
 };
-
-export type CustomerApiFailure = {
-  status: number;
-  code: string;
-  message: string;
-  violations: unknown[];
-  requestId: string;
-  timestamp: string;
-};
-
-export class SummerApiError extends Error implements CustomerApiFailure {
-  status: number;
-  code: string;
-  violations: unknown[];
-  requestId: string;
-  timestamp: string;
-
-  constructor(failure: CustomerApiFailure) {
-    super(failure.message || `HTTP ${failure.status || 'network'}`);
-    this.name = 'SummerApiError';
-    Object.assign(this, failure);
-  }
-}
-
-async function businessData<T>(
-  request: () => Promise<{ data: unknown; status: number }>
-): Promise<T> {
-  try {
-    const response = await request();
-    return readEnvelope(response.data, response.status) as T;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status || 0;
-      const requestId = String(error.response?.headers?.['x-request-id'] || '');
-      throw new SummerApiError(
-        readFailure(error.response?.data, status, requestId)
-      );
-    }
-    if (error && typeof error === 'object' && 'status' in error)
-      throw new SummerApiError(error as CustomerApiFailure);
-    throw error;
-  }
-}
 
 function getBusinessData<T>(url: string, params?: Record<string, unknown>) {
   return businessData<T>(() => axios.get(url, { params }));
@@ -88,24 +45,14 @@ export function getCustomer(username: string) {
 }
 
 export async function deleteCustomer(username: string): Promise<void> {
-  try {
+  await businessData<void>(async () => {
     // DELETE is a raw 204 response, outside the business success envelope.
     const response = await axios.delete(
       `/api/customers/${encodeURIComponent(username)}`
     );
     if (response.status !== 204) throw new Error('Unexpected delete response');
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new SummerApiError(
-        readFailure(
-          error.response?.data,
-          error.response?.status || 0,
-          String(error.response?.headers?.['x-request-id'] || '')
-        )
-      );
-    }
-    throw error;
-  }
+    return response;
+  });
 }
 
 export function createCustomer(payload: {

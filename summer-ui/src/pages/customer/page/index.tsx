@@ -1,3 +1,4 @@
+import { SummerApiError } from '@/api/errors';
 import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -20,7 +21,7 @@ import {
   registerCustomerDraftProvider,
 } from '@/auth/oidc';
 import CustomerForm, { CustomerDraft } from '../CustomerForm';
-import { Customer, SummerApiError, getCustomer } from '../api';
+import { Customer, getCustomer } from '../api';
 import {
   customerDraft,
   editRecovery,

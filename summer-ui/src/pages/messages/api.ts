@@ -1,22 +1,14 @@
+import { businessData as request } from '@/api/client';
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import type { ApiFailure } from '@/api/types';
 
 export type RealtimeMessage = {
   messageId: string; enterpriseId: string; clientMessageId: string; sender: string;
   recipient?: string; payload: Record<string, unknown>; sequence: number; status: string;
   createdAt: string; acknowledgedAt?: string; duplicate: boolean;
 };
-export type RealtimeError = { status: number; code: string; message: string; requestId: string };
+export type RealtimeError = Pick<ApiFailure, 'status' | 'code' | 'message' | 'requestId'>;
 const base = (enterpriseId: string) => `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/messages`;
-
-async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { return readEnvelope((await call()).data, 200) as T; }
-  catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    throw readFailure(error.response?.data, error.response?.status || 0,
-      String(error.response?.headers?.['x-request-id'] || '')) as RealtimeError;
-  }
-}
 
 export const listMessages = (enterpriseId: string, after?: number) =>
   request<{ items: RealtimeMessage[]; latestSequence: number; hasMore: boolean }>(() =>

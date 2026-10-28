@@ -1,13 +1,12 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { businessData } from '@/api/client';
 export type AuthUser = { username: string; role: 'ADMIN' | 'USER'; active: boolean };
 export type UserFailure = { status: number; requestId: string };
 export type CreateUser = { username: string; password: string; role: AuthUser['role'] };
 async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { const response = await call(); return readEnvelope(response.data, response.status) as T; }
+  try { return await businessData<T>(call); }
   catch (error) {
-    const response = axios.isAxiosError(error) ? error.response : undefined;
-    const failure = response ? readFailure(response.data, response.status, String(response.headers?.['x-request-id'] || '')) : error as UserFailure;
+    const failure = error as UserFailure;
     // Validation errors can include rejected passwords. Retain metadata only.
     throw { status: failure?.status || 0, requestId: failure?.requestId || '' } as UserFailure;
   }

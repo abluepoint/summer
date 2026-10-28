@@ -33,7 +33,7 @@ function transport() {
     opened() { this.readyState = Socket.OPEN; this.onopen?.({}); }
     ended(code = 1006) { this.readyState = 3; this.onclose?.({ code }); }
   }
-  const api = load('../src/pages/messages/api.ts', { axios: {}, '../customer/contract.mjs': {} }, {
+  const api = load('../src/pages/messages/api.ts', { axios: {}, '@/api/client': {} }, {
     WebSocket: Socket,
     window: { location: { protocol: 'http:', host: 'localhost' },
       setInterval(fn) { intervals.set(++timerId, fn); return timerId; },

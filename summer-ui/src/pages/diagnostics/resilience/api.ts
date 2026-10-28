@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type ResilienceOperation = {
   name: string;
@@ -29,12 +30,10 @@ export class ResilienceDiagnosticsError extends Error {
 
 export async function getResilienceDiagnostics(): Promise<ResilienceDiagnostics> {
   try {
-    const response = await axios.get('/internal/v1/diagnostics/resilience');
-    return readEnvelope(response.data, response.status) as ResilienceDiagnostics;
+    return await businessData<ResilienceDiagnostics>(() => axios.get('/internal/v1/diagnostics/resilience'));
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const failure = readFailure(error.response?.data, error.response?.status || 0,
-      String(error.response?.headers?.['x-request-id'] || ''));
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new ResilienceDiagnosticsError(failure.status, failure.code, failure.message, failure.requestId);
   }
 }

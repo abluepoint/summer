@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getAccessTokenFromMemory } from '@/auth/oidc';
-import { readEnvelope, readFailure } from '../../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type RedisDiagnostics = {
   component: 'REDIS';
@@ -35,18 +36,12 @@ export class RedisDiagnosticsError extends Error {
 export async function getRedisDiagnostics(): Promise<RedisDiagnostics> {
   try {
     const token = await getAccessTokenFromMemory();
-    const response = await axios.get('/internal/v1/diagnostics/redis', {
+    return await businessData<RedisDiagnostics>(() => axios.get('/internal/v1/diagnostics/redis', {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    return readEnvelope(response.data, response.status) as RedisDiagnostics;
+    }));
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
-    const failure = readFailure(
-      error.response?.data,
-      status,
-      String(error.response?.headers?.['x-request-id'] || '')
-    );
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new RedisDiagnosticsError(
       failure.status,
       failure.code,

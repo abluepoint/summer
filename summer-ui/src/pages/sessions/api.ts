@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { SummerApiError } from '../customer/api';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { SummerApiError } from '@/api/errors';
+import { businessData } from '@/api/client';
+import type { ApiFailure } from '@/api/types';
 
 export type SessionItem = {
   sessionRef: string;
@@ -16,7 +17,7 @@ export type SessionItem = {
 export type SessionPage = { availability: 'AVAILABLE' | 'UNAVAILABLE'; items: SessionItem[] };
 
 export class SessionApiError extends SummerApiError {
-  constructor(failure: { status: number; code: string; message: string; violations: unknown[]; requestId: string; timestamp: string }) {
+  constructor(failure: ApiFailure) {
     super(failure);
     this.name = 'SessionApiError';
   }
@@ -24,12 +25,10 @@ export class SessionApiError extends SummerApiError {
 
 async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
   try {
-    return readEnvelope((await call()).data, 200) as T;
+    return await businessData<T>(call);
   } catch (error) {
-    if (error instanceof SummerApiError) throw error;
-    if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
-    const failure = readFailure(error.response?.data, status, String(error.response?.headers?.['x-request-id'] || ''));
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new SessionApiError(failure);
   }
 }

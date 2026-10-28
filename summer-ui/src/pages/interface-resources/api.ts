@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type InterfaceResource = {
   httpMethod: string;
@@ -72,15 +73,10 @@ async function request<T>(
   params?: Record<string, number | boolean>
 ): Promise<T> {
   try {
-    const response = await axios.get(root + path, { params });
-    return readEnvelope(response.data, response.status) as T;
+    return await businessData<T>(() => axios.get(root + path, { params }));
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const failure = readFailure(
-      error.response?.data,
-      error.response?.status || 0,
-      String(error.response?.headers?.['x-request-id'] || '')
-    );
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new InterfaceResourceApiError(
       failure.status,
       failure.code,

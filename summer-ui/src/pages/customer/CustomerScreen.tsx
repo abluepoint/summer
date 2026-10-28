@@ -1,3 +1,4 @@
+import { SummerApiError } from '@/api/errors';
 import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -30,7 +31,6 @@ import {
 import {
   Customer,
   CustomerPage,
-  SummerApiError,
   deleteCustomer,
   getCustomer,
   listCustomers,

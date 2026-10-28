@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type Statistics = {
   window: { from: string; to: string };
@@ -37,11 +38,10 @@ export async function getStatistics(
   params: { from?: string; to?: string; organizationId?: string } = {}
 ): Promise<Statistics> {
   try {
-    const response = await axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/statistics`, { params });
-    return readEnvelope(response.data, response.status) as Statistics;
+    return await businessData<Statistics>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/statistics`, { params }));
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const failure = readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || ''));
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new StatisticsError(failure.status, failure.code, failure.message, failure.requestId);
   }
 }

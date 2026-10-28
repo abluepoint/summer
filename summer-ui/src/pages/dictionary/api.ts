@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getAccessTokenFromMemory } from '@/auth/oidc';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { SummerApiError } from '@/api/errors';
 
 export type DictionaryOption = {
   value: string;
@@ -30,17 +31,11 @@ const publicDictionaryPath = (code: string, enterpriseId?: string) => enterprise
 async function readPublicDictionary<T>(path: string): Promise<T> {
   try {
     const token = await getAccessTokenFromMemory();
-    const response = await axios.get(path, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-    return readEnvelope(response.data, response.status) as T;
+    return await businessData<T>(() => axios.get(path, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined));
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
-    const failure = readFailure(
-      error.response?.data,
-      status,
-      String(error.response?.headers?.['x-request-id'] || '')
-    );
-    throw Object.assign(new Error(failure.message || `HTTP ${status || 'network'}`), { status, code: failure.code, requestId: failure.requestId });
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
+    throw Object.assign(new Error(failure.message || `HTTP ${failure.status || 'network'}`), { status: failure.status, code: failure.code, requestId: failure.requestId });
   }
 }
 
@@ -95,11 +90,10 @@ export function subscribeDictionaryNotifications(
 
 export async function saveDictionaryOverride(code: string, organization: string, options: DictionaryOption[], expectedVersion?: number, enterpriseId?: string): Promise<{ version: number }> {
   try {
-    const response = await axios.put(enterpriseId ? `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}` : `/api/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}`, { value: options, publicReadable: true, expectedVersion });
-    return readEnvelope(response.data, response.status) as { version: number };
+    return await businessData<{ version: number }>(() => axios.put(enterpriseId ? `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}` : `/api/dictionaries/${encodeURIComponent(code)}/overrides/${encodeURIComponent(organization)}`, { value: options, publicReadable: true, expectedVersion }));
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const failure = readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || ''));
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw Object.assign(new Error(failure.message), failure);
   }
 }

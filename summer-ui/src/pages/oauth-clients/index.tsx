@@ -24,7 +24,7 @@ import {
   setOAuthClientStatus,
   updateOAuthClient,
 } from './api';
-import { SummerApiError } from '../customer/api';
+import { SummerApiError } from '@/api/errors';
 import locale from './locale';
 
 export default function OAuthClientsPage() {

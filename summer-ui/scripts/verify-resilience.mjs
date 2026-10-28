@@ -6,7 +6,7 @@ const page = await readFile(new URL('../src/pages/diagnostics/resilience/index.t
 const routes = await readFile(new URL('../src/routes.ts', import.meta.url), 'utf8');
 const locale = await readFile(new URL('../src/locale/index.ts', import.meta.url), 'utf8');
 assert.match(api, /internal\/v1\/diagnostics\/resilience/);
-assert.match(api, /readEnvelope/);
+assert.match(api, /businessData/);
 assert.match(page, /fallbacks/);
 assert.match(page, /timedOut/);
 assert.match(routes, /diagnostics\/resilience/);

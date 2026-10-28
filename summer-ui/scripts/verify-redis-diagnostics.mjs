@@ -13,7 +13,7 @@ const [api, page, routes, vite, caddy] = await Promise.all([
 ]);
 
 assert.match(api, /\/internal\/v1\/diagnostics\/redis/);
-assert.match(api, /readEnvelope/);
+assert.match(api, /businessData/);
 assert.match(page, /diagnostics\.redis\.status/);
 assert.match(page, /diagnostics\.redis\.metrics/);
 assert.match(page, /diagnostics\.redis\.forbidden/);

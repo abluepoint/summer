@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { businessData } from '@/api/client';
+import { readFailure, SummerApiError } from '@/api/errors';
 
 export type AuditEvent = {
   eventId: string;
@@ -38,16 +39,10 @@ export class AuditApiError extends Error {
 
 async function request<T>(call: () => Promise<{ data: unknown; status: number }>) {
   try {
-    const response = await call();
-    return readEnvelope(response.data, response.status) as T;
+    return await businessData<T>(call);
   } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const status = error.response?.status || 0;
-    const failure = readFailure(
-      error.response?.data,
-      status,
-      String(error.response?.headers?.['x-request-id'] || '')
-    );
+    if (!(error instanceof SummerApiError)) throw error;
+    const failure = error;
     throw new AuditApiError(
       failure.status,
       failure.code,

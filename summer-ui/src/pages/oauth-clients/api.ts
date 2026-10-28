@@ -1,6 +1,5 @@
+import { businessData as request } from '@/api/client';
 import axios from 'axios';
-import { SummerApiError } from '../customer/api';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type OAuthClient = {
   clientId: string;
@@ -19,40 +18,6 @@ export type OAuthConsent = {
   principalName: string;
   authorities: string[];
 };
-
-function requestId(headers: unknown): string {
-  if (!headers || typeof headers !== 'object') return '';
-  const value = headers as {
-    [key: string]: unknown;
-    get?: (name: string) => unknown;
-  };
-  return String(value['x-request-id'] || value.get?.('x-request-id') || '');
-}
-
-async function request<T>(
-  call: () => Promise<{ data: unknown; status: number; headers: unknown }>
-): Promise<T> {
-  try {
-    const response = await call();
-    const value = readEnvelope(response.data, response.status);
-    return value as T;
-  } catch (error) {
-    if (error instanceof SummerApiError) throw error;
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status || 0;
-      const failure = readFailure(
-        error.response?.data,
-        status,
-        requestId(error.response?.headers)
-      );
-      throw new SummerApiError({
-        ...failure,
-        message: failure.message || `HTTP ${status || 'network'}`,
-      });
-    }
-    throw error;
-  }
-}
 
 export async function listOAuthClients(): Promise<OAuthClient[]> {
   const data = await request<{ items: OAuthClient[] }>(() =>
