@@ -19,7 +19,7 @@ class AuthUserServiceTest {
         var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
         AuthUserService service = new AuthUserService(new com.abluepoint.summer.sample.identity.infrastructure.persistence.JpaAuthAccountStore(repository), encoder, "", "");
 
-        AuthUserView created = service.create(new com.abluepoint.summer.sample.identity.application.command.AuthUserCreateCommand("alice", "a-strong-password", "USER"));
+        AuthUserView created = service.create(new com.abluepoint.summer.sample.identity.api.AuthUserCreateRequest("alice", "a-strong-password", "USER"));
         verify(repository).save(argThat(user -> !user.passwordHash().equals("a-strong-password")
                 && encoder.matches("a-strong-password", user.passwordHash())));
         assertThat(created.active()).isTrue();

@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.abluepoint.summer.sample.identity.application.command.AuthUserCreateCommand;
 import com.abluepoint.summer.sample.identity.application.command.AuthUserActivationCommand;
 import java.util.List;
 
@@ -40,7 +39,7 @@ public class AuthUserController {
     @PostMapping
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     AuthUserView create(@Valid @RequestBody AuthUserCreateRequest request) {
-        return service.create(new AuthUserCreateCommand(request.username(), request.password(), request.role()));
+        return service.create(request);
     }
 
     @PatchMapping("/{username}")

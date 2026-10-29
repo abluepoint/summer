@@ -25,7 +25,7 @@ class LocalConsoleIdentityClaimsTest {
 
     @BeforeEach void seed() {
         username="claims-"+UUID.randomUUID();role="role-"+UUID.randomUUID();capability="cap-"+UUID.randomUUID();
-        users.create(new com.abluepoint.summer.sample.identity.application.command.AuthUserCreateCommand(username,UUID.randomUUID().toString(),"USER"));
+        users.create(new com.abluepoint.summer.sample.identity.api.AuthUserCreateRequest(username,UUID.randomUUID().toString(),"USER"));
         members.provision("ent-acme", "member-" + username, username, username, "claims@example.test");
         jdbc.update("insert into summer_organization_membership (enterprise_id,member_id,organization_id,primary_organization,created_at,updated_at) values ('ent-acme',?,'org-engineering',true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", "member-" + username);
         jdbc.update("insert into summer_authorization_capability (capability_id,enterprise_id,scope,code,resource,action,risk_level,status,version,created_at,updated_at) values (?, 'ent-acme','ENTERPRISE',?,'data-scopes','read','LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",capability,CODE);
