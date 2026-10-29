@@ -12,5 +12,5 @@ public final class ApplicationOAuth {
     public static void validateUris(List<String> uris){ if(uris==null)return; for(String u:uris){ if(u==null||u.contains("*")||!(u.startsWith("https://")||u.startsWith("http://localhost")))throw new ApplicationValidationException("Redirect URI must be exact and use https"); } }
     public static String secret(){byte[] b=new byte[24];new SecureRandom().nextBytes(b);return Base64.getUrlEncoder().withoutPadding().encodeToString(b);}
     public static String hash(String s){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
-    public static String fingerprint(Object... o){return hash(Arrays.deepToString(o).replace("Command[", "Request["));} public static String op(String e,String k){return e+":"+k;}
+    public static String fingerprint(Object... o){return hash(Arrays.deepToString(o));} public static String op(String e,String k){return e+":"+k;}
 }

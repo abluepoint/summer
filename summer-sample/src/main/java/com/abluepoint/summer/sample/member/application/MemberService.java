@@ -33,7 +33,7 @@ public class MemberService {
         com.abluepoint.summer.sample.member.infrastructure.MemberAccess.requireMembership(enterpriseId, auth);
         if (key == null || key.isBlank() || key.length() > 120) throw new IdempotencyConflictException("Idempotency-Key is required");
         enterprises.lock(enterpriseId);
-        String fingerprint = request.toString().replace("MemberCreateCommand[", "MemberCreateRequest[");
+        String fingerprint = request.toString();
         var prior = journal.find(enterpriseId, "member.create", key).orElse(null);
         if (prior != null) {
             if (!fingerprint.equals(prior.fingerprint())) throw new IdempotencyConflictException("Idempotency-Key was already used for another mutation");

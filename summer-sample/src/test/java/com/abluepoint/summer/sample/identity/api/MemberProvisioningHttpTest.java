@@ -26,7 +26,7 @@ class MemberProvisioningHttpTest extends IdentityHttpSupport {
         mvc.perform(post("/api/users").header("Authorization", "Bearer " + admin).contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(Map.of("username", user, "password", UUID.randomUUID().toString(), "role", "USER"))))
                 .andExpect(status().isOk());
-        String body = mapper.writeValueAsString(Map.of("subject", user, "displayName", "New member", "email", "new@example.test"));
+        String body = mapper.writeValueAsString(Map.of("subject", user, "displayName", "prefix MemberCreateCommand[ suffix", "email", "new@example.test"));
         String key = UUID.randomUUID().toString();
         var created = mvc.perform(post("/api/v1/enterprises/ent-acme/members").header("Authorization", "Bearer " + admin)
                 .header("Idempotency-Key", key).header("X-Request-Id", "create-member")
@@ -35,6 +35,11 @@ class MemberProvisioningHttpTest extends IdentityHttpSupport {
         mvc.perform(post("/api/v1/enterprises/ent-acme/members").header("Authorization", "Bearer " + admin)
                 .header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.data.memberId").value(member));
+        mvc.perform(post("/api/v1/enterprises/ent-acme/members").header("Authorization", "Bearer " + admin)
+                .header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("MemberCreateCommand[", "MemberCreateRequest[")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
         mvc.perform(get("/api/v1/enterprises/ent-acme/members/{member}/audit", member).header("Authorization", "Bearer " + admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].action").value("MEMBER_CREATED"))

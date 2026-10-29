@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(print = org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint.NONE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AgentControllerTest {
     @Autowired MockMvc mockMvc;
@@ -127,6 +127,44 @@ class AgentControllerTest {
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/agents/" + agentId + "/instances")
                         .with(admin("enterprise.agents.read")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test void distinguishesTypeLikeTextInAgentCreateFields() throws Exception {
+        for (String field : List.of("name", "description", "ownerMemberId", "runtimeType")) {
+            var payload = new java.util.HashMap<String, String>(Map.of("name", "Marker agent", "code", "marker-" + field));
+            payload.put(field, "prefix AgentCreateCommand[ Command[ suffix");
+            String body = new tools.jackson.databind.ObjectMapper().writeValueAsString(payload);
+            String key = "create-marker-" + field;
+            var first = mockMvc.perform(post("/api/v1/enterprises/ent-acme/agents").contentType(MediaType.APPLICATION_JSON)
+                    .content(body).header("Idempotency-Key", key).with(admin("enterprise.agents.write")))
+                    .andExpect(status().isCreated()).andReturn();
+            String id = JsonPath.read(first.getResponse().getContentAsString(), "$.data.agentId");
+            mockMvc.perform(post("/api/v1/enterprises/ent-acme/agents").contentType(MediaType.APPLICATION_JSON)
+                    .content(body).header("Idempotency-Key", key).with(admin("enterprise.agents.write")))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.data.agentId").value(id));
+            mockMvc.perform(post("/api/v1/enterprises/ent-acme/agents").contentType(MediaType.APPLICATION_JSON)
+                    .content(body.replace("Command[", "Request[")).header("Idempotency-Key", key).with(admin("enterprise.agents.write")))
+                    .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
+        }
+    }
+
+    @Test void distinguishesTypeLikeTextInAgentUpdateFields() throws Exception {
+        var created = mockMvc.perform(post("/api/v1/enterprises/ent-acme/agents").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Marker agent\",\"code\":\"marker-update\"}").header("Idempotency-Key", "update-setup")
+                .with(admin("enterprise.agents.write"))).andExpect(status().isCreated()).andReturn();
+        String id = JsonPath.read(created.getResponse().getContentAsString(), "$.data.agentId");
+        String etag = created.getResponse().getHeader("ETag");
+        String body = "{\"name\":\"AgentUpdateCommand[\",\"description\":\"nested Command[ text\"}";
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/agents/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(body).header("If-Match", etag).header("Idempotency-Key", "update-marker").with(admin("enterprise.agents.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.description").value("nested Command[ text"));
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/agents/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(body).header("If-Match", etag).header("Idempotency-Key", "update-marker").with(admin("enterprise.agents.write")))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/agents/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("Command[", "Request[")).header("If-Match", etag).header("Idempotency-Key", "update-marker")
+                .with(admin("enterprise.agents.write")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
     }
 
     private String createAgent(String key) throws Exception {

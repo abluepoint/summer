@@ -18,7 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(print = org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint.NONE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ApplicationControllerTest {
     @Autowired MockMvc mockMvc;
@@ -76,6 +76,65 @@ class ApplicationControllerTest {
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.application.read"))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test void distinguishesTypeLikeTextInApplicationCreateFields() throws Exception {
+        for (String field : List.of("name", "description", "redirectUris")) {
+            String text = "prefix ApplicationCreateCommand[ Command[ suffix";
+            Map<String, Object> payload = new java.util.HashMap<>(Map.of("name", "Marker app"));
+            payload.put(field, field.equals("redirectUris") ? List.of("https://example.test/" + text) : text);
+            var mapper = new tools.jackson.databind.ObjectMapper();
+            String body = mapper.writeValueAsString(payload);
+            String key = "create-marker-" + field;
+            var first = mockMvc.perform(post("/api/v1/enterprises/ent-acme/applications").contentType(MediaType.APPLICATION_JSON)
+                    .content(body).header("Idempotency-Key", key).with(admin("ent-acme", "enterprise.application.write")))
+                    .andExpect(status().isCreated()).andReturn();
+            String id = JsonPath.read(first.getResponse().getContentAsString(), "$.data.applicationId");
+            mockMvc.perform(post("/api/v1/enterprises/ent-acme/applications").contentType(MediaType.APPLICATION_JSON)
+                    .content(body).header("Idempotency-Key", key).with(admin("ent-acme", "enterprise.application.write")))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.data.applicationId").value(id));
+            mockMvc.perform(post("/api/v1/enterprises/ent-acme/applications").contentType(MediaType.APPLICATION_JSON)
+                    .content(body.replace("Command[", "Request[")).header("Idempotency-Key", key)
+                    .with(admin("ent-acme", "enterprise.application.write")))
+                    .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
+        }
+    }
+
+    @Test void distinguishesTypeLikeTextInApplicationUpdateFields() throws Exception {
+        var created = create("update-markers");
+        String id = JsonPath.read(created.getResponse().getContentAsString(), "$.data.applicationId");
+        String etag = created.getResponse().getHeader("ETag");
+        String body = "{\"name\":\"ApplicationUpdateCommand[\",\"description\":\"nested Command[ text\"}";
+        var updated = mockMvc.perform(patch("/api/v1/enterprises/ent-acme/applications/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(body).header("If-Match", etag).header("Idempotency-Key", "update-marker")
+                .with(admin("ent-acme", "enterprise.application.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.description").value("nested Command[ text")).andReturn();
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/applications/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(body).header("If-Match", etag).header("Idempotency-Key", "update-marker")
+                .with(admin("ent-acme", "enterprise.application.write")))
+                .andExpect(status().isOk()).andExpect(header().string("ETag", updated.getResponse().getHeader("ETag")));
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/applications/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("Command[", "Request[")).header("If-Match", etag).header("Idempotency-Key", "update-marker")
+                .with(admin("ent-acme", "enterprise.application.write")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
+    }
+
+    @Test void distinguishesTypeLikeTextInOauthConfigurationLists() throws Exception {
+        var created = create("oauth-markers");
+        String id = JsonPath.read(created.getResponse().getContentAsString(), "$.data.applicationId");
+        String etag = created.getResponse().getHeader("ETag");
+        String body = "{\"scopes\":[\"openid\",\"OAuthConfigCommand[\"],\"redirectUris\":[\"https://example.test/Command[\"]}";
+        String url = "/api/v1/enterprises/ent-acme/applications/" + id + "/oauth-config";
+        mockMvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content(body).header("If-Match", etag)
+                .header("Idempotency-Key", "oauth-marker").with(admin("ent-acme", "enterprise.application.write")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.scopes[1]").value("OAuthConfigCommand["));
+        mockMvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content(body).header("If-Match", etag)
+                .header("Idempotency-Key", "oauth-marker").with(admin("ent-acme", "enterprise.application.write")))
+                .andExpect(status().isOk());
+        mockMvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content(body.replace("Command[", "Request["))
+                .header("If-Match", etag).header("Idempotency-Key", "oauth-marker")
+                .with(admin("ent-acme", "enterprise.application.write")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"));
     }
 
     private MvcResult create(String key) throws Exception {

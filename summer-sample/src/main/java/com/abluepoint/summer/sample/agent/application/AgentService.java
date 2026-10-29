@@ -190,7 +190,7 @@ public final class AgentService {
     private void requireKey(String key) { if (blank(key)) throw new AgentValidationException("Idempotency-Key is required"); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
     private static String claim(JwtAuthenticationToken jwt, String name) { return jwt.getToken().getClaimAsString(name); }
-    private static String fingerprint(Object... values) { return Integer.toHexString(Arrays.deepToString(values).replace("Command[", "Request[").hashCode()); }
+    private static String fingerprint(Object... values) { return Integer.toHexString(Arrays.deepToString(values).hashCode()); }
     private static String op(String enterpriseId, String key) { return enterpriseId + ":" + key; }
 
     @SuppressWarnings("unchecked") private <T> T replay(AgentReceipt receipt, String fingerprint) {
