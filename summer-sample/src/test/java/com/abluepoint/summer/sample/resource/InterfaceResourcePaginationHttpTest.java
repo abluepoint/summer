@@ -75,7 +75,10 @@ class InterfaceResourcePaginationHttpTest {
     @Test
     void rejectsUnboundedPagesAndRetainsAuthorizationChecks() throws Exception {
         for (String query : List.of("?page=-1&size=10", "?page=0&size=0", "?page=0&size=101"))
-            mvc.perform(get(ROOT + query).principal(reader)).andExpect(status().isBadRequest());
+            mvc.perform(get(ROOT + query).principal(reader)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("RESOURCE_PAGE_INVALID"))
+                    .andExpect(jsonPath("$.requestId").value("pagination-check"))
+                    .andExpect(header().string("X-Request-Id", "pagination-check"));
         var denied = new JwtAuthenticationToken(Jwt.withTokenValue("fixture").header("alg", "none").subject("reader").build());
         mvc.perform(get(ROOT).principal(denied).param("page", "0").param("size", "10"))
                 .andExpect(status().isForbidden());

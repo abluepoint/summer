@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.systemparameter.domain;
 
-import static com.abluepoint.summer.sample.configuration.infrastructure.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.api.SummerException;
 import java.util.List;
 

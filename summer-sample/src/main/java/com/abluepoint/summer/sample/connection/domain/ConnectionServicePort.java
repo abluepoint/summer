@@ -1,5 +1,4 @@
 package com.abluepoint.summer.sample.connection.domain;
-import com.abluepoint.summer.sample.connection.application.ConnectionService;
 
 /** Narrow seam owned by the independent ConnectionService data plane. */
 @org.springframework.modulith.NamedInterface("execution")

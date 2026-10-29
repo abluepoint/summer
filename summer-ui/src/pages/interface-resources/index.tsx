@@ -94,6 +94,7 @@ export default function InterfaceResourcesPage() {
         if (initialize) {
           compareGeneration.current++;
           snapshotGeneration.current++;
+          setViewing(null);
           setSnapshot(null);
           setDifference(null);
           setTo(next.revision);

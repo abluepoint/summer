@@ -78,7 +78,7 @@ public final class InterfaceResourceCatalogController {
                             new ApiError("SUMMER_FORBIDDEN", exception.getMessage(), List.of()), requestId));
         } catch (IllegalArgumentException invalid) {
             return ResponseEntity.badRequest().header("X-Request-Id", requestId).body(ApiResponse.failure(
-                    new ApiError("SUMMER_RESOURCE_PAGE_INVALID", invalid.getMessage(), List.of()), requestId));
+                    new ApiError("RESOURCE_PAGE_INVALID", invalid.getMessage(), List.of()), requestId));
         } catch (InterfaceResourceRevisionNotFoundException missing) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).header("X-Request-Id", requestId).body(ApiResponse.failure(
                     new ApiError("SUMMER_RESOURCE_REVISION_NOT_FOUND", "Interface resource revision was not found", List.of()), requestId));

@@ -115,3 +115,41 @@ test('snapshot details request pages and a late page cannot reopen a closed dial
     assert.equal(f.findAll('modal')[0].props.visible, false);
   } finally { f.close(); }
 });
+
+for (const outcome of ['resolve', 'reject']) {
+  test(`refresh clears an invalidated snapshot load and ignores its late ${outcome}`, async () => {
+    const f = fixture();
+    try {
+      await f.flush();
+      f.pending.find(p => p.name === 'listInterfaceResources').resolve(page());
+      f.pending.find(p => p.name === 'listInterfaceResourceHistory').resolve({ items: [{ revision: 6 }], total: 1, page: 0, size: 20 });
+      await f.flush();
+      const view = () => f.findAll('table').find(t => t.props.rowKey === 'revision')
+        .props.columns.at(-1).render(null, { revision: 6 });
+      view().props.onClick(); await f.flush();
+      const stale = f.pending.find(p => p.name === 'getInterfaceResourceRevision');
+      assert.equal(view().props.loading, true);
+
+      f.findAll('card')[0].props.extra.props.onClick(); await f.flush();
+      f.pending.filter(p => p.name === 'listInterfaceResources').at(-1).resolve(page(0, 8));
+      f.pending.filter(p => p.name === 'listInterfaceResourceHistory').at(-1).resolve({ items: [{ revision: 6 }], total: 1, page: 0, size: 20 });
+      await f.flush();
+      assert.equal(view().props.loading, false);
+      assert.equal(f.findAll('modal')[0].props.visible, false);
+
+      view().props.onClick(); await f.flush();
+      const retry = f.pending.filter(p => p.name === 'getInterfaceResourceRevision').at(-1);
+      assert.notEqual(retry, stale);
+      if (outcome === 'resolve') stale.resolve(page(0, 6));
+      else stale.reject(new f.ApiError(403));
+      await f.flush();
+      assert.equal(view().props.loading, true);
+      assert.ok(f.currentTable());
+      assert.equal(f.findAll('modal')[0].props.visible, false);
+
+      retry.resolve(page(0, 6)); await f.flush();
+      assert.equal(view().props.loading, false);
+      assert.equal(f.findAll('modal')[0].props.visible, true);
+    } finally { f.close(); }
+  });
+}
