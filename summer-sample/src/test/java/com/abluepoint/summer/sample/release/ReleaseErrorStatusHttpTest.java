@@ -2,7 +2,6 @@ package com.abluepoint.summer.sample.release;
 
 
 import com.abluepoint.summer.common.error.api.ErrorCategory;
-import com.abluepoint.summer.mvc.error.internal.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.spi.ErrorStatusResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
