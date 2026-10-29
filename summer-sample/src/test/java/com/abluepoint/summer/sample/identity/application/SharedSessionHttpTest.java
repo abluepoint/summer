@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.data.redis.port=${SUMMER_REDIS_PORT:6379}",
         "spring.data.redis.username=${SUMMER_REDIS_USERNAME:default}",
         "spring.data.redis.password=${SUMMER_REDIS_PASSWORD:}",
-        "spring.data.redis.database=15",
+        "spring.data.redis.database=${SUMMER_TEST_REDIS_DATABASE:15}",
         "summer.sample.session-index.timeout-ms=2000",
         "summer.sample.session-index.retries=1",
         "summer.sample.session-index.failure-threshold=3",

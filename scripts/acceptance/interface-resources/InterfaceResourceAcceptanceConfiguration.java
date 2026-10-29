@@ -1,6 +1,6 @@
 package acceptance;
 
-import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.sample.resource.api.ResourcePermission;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

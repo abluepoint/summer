@@ -8,7 +8,7 @@ with zipfile.ZipFile(candidate) as jar:
     for name in jar.namelist():
         if name.startswith('BOOT-INF/lib/') and name.endswith('.jar'):
             target=libs/Path(name).name;target.write_bytes(jar.read(name));paths.append(target)
-    name='com/abluepoint/summer/sample/task/RegisteredTaskHandler.class'
+    name='com/abluepoint/summer/sample/task/domain/RegisteredTaskHandler.class'
     target=classes/name;target.parent.mkdir(parents=True);target.write_bytes(jar.read('BOOT-INF/classes/'+name))
 subprocess.run([str(JAVA.with_name('javac')),'-proc:none','-cp',os.pathsep.join(map(str,[classes,*paths])),'-d',str(classes),str(SCRIPT/'SseTaskConfiguration.java')],check=True,capture_output=True)
 # Keep only our fixture classes in the external artifact; the interface comes from production.

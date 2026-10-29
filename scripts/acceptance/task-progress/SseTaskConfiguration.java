@@ -1,6 +1,6 @@
 package acceptance;
 
-import com.abluepoint.summer.sample.task.RegisteredTaskHandler;
+import com.abluepoint.summer.sample.task.domain.RegisteredTaskHandler;
 import java.util.Map;
 import java.util.function.IntConsumer;
 import org.springframework.context.annotation.Bean;

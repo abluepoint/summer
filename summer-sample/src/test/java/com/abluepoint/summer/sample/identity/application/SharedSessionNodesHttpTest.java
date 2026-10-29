@@ -34,7 +34,9 @@ class SharedSessionNodesHttpTest {
         b = start();
     }
 
-    private ConfigurableApplicationContext start() { return start(6379); }
+    private ConfigurableApplicationContext start() {
+        return start(Integer.parseInt(System.getenv().getOrDefault("SUMMER_REDIS_PORT", "6379")));
+    }
 
     private ConfigurableApplicationContext start(int redisPort) { return start(redisPort, false); }
 
@@ -44,11 +46,11 @@ class SharedSessionNodesHttpTest {
         properties.put("server.port", "0");
         properties.put("server.servlet.session.cookie.name", "JSESSIONID");
         properties.put("server.servlet.session.cookie.same-site", "lax");
-        properties.put("spring.data.redis.host", "127.0.0.1");
+        properties.put("spring.data.redis.host", System.getenv().getOrDefault("SUMMER_REDIS_HOST", "127.0.0.1"));
         properties.put("spring.data.redis.port", Integer.toString(redisPort));
         properties.put("spring.data.redis.connect-timeout", "250ms");
         properties.put("spring.data.redis.timeout", "250ms");
-        properties.put("spring.data.redis.database", "15");
+        properties.put("spring.data.redis.database", System.getenv().getOrDefault("SUMMER_TEST_REDIS_DATABASE", "15"));
         properties.put("spring.data.redis.username", System.getenv().getOrDefault("SUMMER_REDIS_USERNAME", "default"));
         properties.put("spring.data.redis.password", System.getenv().getOrDefault("SUMMER_REDIS_PASSWORD", ""));
         properties.put("spring.session.data.redis.namespace", namespace + ":servlet");
