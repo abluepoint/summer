@@ -34,7 +34,8 @@ class TaskTriggerDispatchRecoveryTest {
         doThrow(new SchedulerException("test scheduler outage")).doReturn(new java.util.Date())
                 .when(scheduler).scheduleJob(any(Trigger.class));
         var service = new TaskSchedulerService(definitions, executions, mock(TaskAttemptRepository.class), receipts,
-                new TrustedTaskRegistry(), new QuartzTaskSchedulingAdapter(scheduler), new ObjectMapper(), mock(CustomerAuditService.class));
+                new TrustedTaskRegistry(), new QuartzTaskSchedulingAdapter(scheduler, new org.springframework.jdbc.core.JdbcTemplate(),
+                        new org.springframework.boot.quartz.autoconfigure.QuartzProperties()), new ObjectMapper(), mock(CustomerAuditService.class));
         assertThatThrownBy(() -> service.trigger("ent-acme", "task", "retry-key", "request", null))
                 .isInstanceOf(TaskConflictException.class);
         service.trigger("ent-acme", "task", "retry-key", "request", null);
