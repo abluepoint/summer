@@ -37,7 +37,7 @@
 
 阶段 Standards/Spec 审查使用相同固定 HEAD `2ca6616`，发现并正在修复三项问题：外层 record 名称兼容处理误改字段内容、OAuth 管理业务仍滞留 HTTP 层、持久 Quartz 任务旧类名升级。最终审查必须覆盖这些修复及后续字典/参数集成增量。
 
-完整后端检查、UI 测试/类型检查/lint/build、真实 MySQL/Redis、源码启动和 Chrome 验收尚待最终批次，不能用上述结构门禁替代。原生验收需使用自有临时 schema 和独立 Redis，不清理共享数据。
+完整后端检查、UI 门禁及真实 MySQL/Redis 的已执行结果见下；最后 Spec 修复与源码 Chrome 验收仍在进行，不能用上述结构门禁替代运行验收。原生验收需使用自有临时 schema 和独立 Redis，不清理共享数据。
 
 逐批门禁日志、实际 JUnit 计数、任务缓存状态及交接保存在本机 Git 元数据目录 `implement-20261028`；最终批次完成后在本页补齐可复核结果和清理回执。
 
@@ -72,3 +72,31 @@
 `final-backend-check` 保持源码固定并实际执行 47 个 Gradle task，但 Sample 测试 JVM 使用默认 `-Xmx512m` 时发生 `OutOfMemoryError: Java heap space`，随后 Spring 关闭钩子等待上下文退出。只终止确认属于本批的失效测试执行器后，Gradle `--continue` 完成其它模块并以 1 退出；该批不能算完整通过，退出 137 及不完整 Sample 结果保留。
 
 仅将 Sample 测试 task 的堆上限调整为 2g，再次执行相同完整命令；没有修改生产 JVM、测试断言、跳过条件或 Spring 上下文缓存大小。
+
+## 完整后端通过批次
+
+`final-backend-check-green2` 在固定输入 `57fcd2a1e37561f73992e5c6de53acc211ae2090` 上执行 `./gradlew check --continue --rerun-tasks --console=plain --max-workers=1`，退出码 0；耗时 1053.47 秒。源码输入前后 SHA 清单相同，47 个 actionable task 全部实际执行，没有 FROM-CACHE。
+
+192 份本批 JUnit suite 共 **828 / 0 / 0 / 0**（tests / failures / errors / skipped）。按模块计数如下；生命周期任务的 UP-TO-DATE / NO-SOURCE 不当作测试或新增执行数。
+
+| 模块 | 实际测试 |
+| --- | ---: |
+| summer-common | 1 |
+| summer-common-autoconfigure | 3 |
+| summer-mvc | 82 |
+| summer-mvc-autoconfigure | 18 |
+| summer-data-jpa | 7 |
+| summer-data-jpa-autoconfigure | 2 |
+| summer-security | 10 |
+| summer-security-autoconfigure | 18 |
+| summer-sample | 687 |
+
+包含当前完整架构检查、能力/自动配置、HTTP/事务及原生依赖用例；`verifyModuleBoundaries` 实际通过。原生首批 53 项属于其中的阶段证据，不能与 828 相加冒充不同测试。此完整批次尚未包含之后识别的三种嵌套 HTTP 参数映射与身份输入去重修正，后者须补受影响回归并分别记录。
+
+## 最后 Spec 修复
+
+复审发现的 P1/P2 已落实：真实旧嵌套 HTTP 参数的三个 binary name 精确映射补齐（706→709），创建用户 Request 直接实现 Application 输入访问契约，不再复制同构状态。原绑定保护、权限与创建服务业务逻辑保持。
+
+独立修复批 `review-identity-upgrade-red` 为 10/6/0/0：三个真实升级 HTTP 端点分别 403，三个真实生产配置加载/绑定断言失败，属于有效红灯。修复扩大批 43/0/0/0，排序后实际配置加载再验 3/0/0/0。原 706 条映射未改，真正的方法替换仍拒绝；密钥材料在 H2 测试内临时生成。
+
+集成后复用这组受影响 HTTP、服务、生产迁移表与架构检查作组合回归；完整 828 项批次与这组修复回归分别记录，不跨批相加。浏览器执行前再固定集成 HEAD 和源码清单。
