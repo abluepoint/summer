@@ -3,7 +3,8 @@ import { Alert, Button, Card, Drawer, Form, Input, InputNumber, Modal, Select, S
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
 import useLocale from '@/utils/useLocale';
-import { Parameter, ParameterApiError, ParameterEvent, ParameterListQuery, ParameterPage, ParameterVersion, ParameterVersionPage, parameterApiForEnterprise } from './api';
+import { ParameterApiError, parameterApiForEnterprise } from './api';
+import type { Parameter, ParameterEvent, ParameterListQuery, ParameterPage, ParameterVersion, ParameterVersionPage } from './types';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 
 const Item = Form.Item;

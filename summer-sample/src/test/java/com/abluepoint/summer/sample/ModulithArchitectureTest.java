@@ -133,4 +133,19 @@ class ModulithArchitectureTest {
         assertThat(forbidden).isEmpty();
     }
 
+    @Test
+    void systemparameterDomainIsIndependentOfFrameworksAndOuterLayers() {
+        var classes = new ClassFileImporter().importPackages("com.abluepoint.summer.sample.systemparameter.domain");
+        assertThat(classes).isNotEmpty();
+        var forbidden = classes.stream().flatMap(type -> type.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> {
+                    String target = dependency.getTargetClass().getPackageName();
+                    return target.startsWith("org.springframework") || target.startsWith("jakarta.persistence")
+                            || target.startsWith("com.abluepoint.summer.sample.systemparameter.api")
+                            || target.startsWith("com.abluepoint.summer.sample.systemparameter.application")
+                            || target.startsWith("com.abluepoint.summer.sample.systemparameter.infrastructure");
+                }).map(Object::toString).toList();
+        assertThat(forbidden).isEmpty();
+    }
+
 }

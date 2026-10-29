@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.infrastructure;
 
+import com.abluepoint.summer.sample.systemparameter.api.SystemParameterController;
+
 import com.abluepoint.summer.sample.authorization.application.AuthorizationService;
 import com.abluepoint.summer.sample.authorization.infrastructure.AuthorizationRequestInterceptor;
 
@@ -43,7 +45,7 @@ class AuthorizationRequestInterceptorTest {
         var request = new MockHttpServletRequest("GET", "/api/system-parameters");
         org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
                 new org.springframework.web.context.request.ServletRequestAttributes(request));
-        Class<?> controller = Class.forName("com.abluepoint.summer.sample.systemparameter.SystemParameterController");
+        Class<?> controller = Class.forName("com.abluepoint.summer.sample.systemparameter.api.SystemParameterController");
         var list = java.util.Arrays.stream(controller.getDeclaredMethods()).filter(method -> method.getName().equals("list")).findFirst().orElseThrow();
         when(service.decision(authentication, "ent-north", "system.parameter.read", null))
                 .thenReturn(new AuthorizationService.Decision(true, "ROLE_ALLOW"));
