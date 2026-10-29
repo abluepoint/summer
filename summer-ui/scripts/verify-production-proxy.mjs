@@ -62,7 +62,9 @@ try {
   ]) {
     const response = await fetch(`${origin}${path}`);
     assert.equal(response.status, 200, path);
-    assert.match(await response.text(), /<div id="root"><\/div>/, path);
+    const html = await response.text();
+    assert.match(html, /<div id="root">/, path);
+    assert.match(html, /<script\b[^>]*src="\/assets\/[^"]+\.js"/, path);
   }
   assert.deepEqual(backendRequests, []);
   for (const [method, path] of [

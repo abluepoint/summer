@@ -74,7 +74,8 @@ try {
   ]) {
     const { response, body } = await request(path);
     assert.equal(response.status, 200, path);
-    assert.match(body, /<div id="root"><\/div>/, path);
+    assert.match(body, /<div id="root">/, path);
+    assert.match(body, /src="\/src\/main\.tsx"/, path);
   }
   assert.deepEqual(backendRequests, [], 'SPA GET requests must stay in Vite');
 
