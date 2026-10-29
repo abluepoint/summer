@@ -37,15 +37,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.security.storage.consent=jdbc"
 })
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(OAuthPersistenceHttpTest.AuditConfiguration.class)
 class OAuthPersistenceHttpTest {
     @Autowired MockMvc mockMvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired SummerOAuthClientStore clients;
     @Autowired SummerAuthorizationStore authorizations;
     @Autowired SummerConsentStore consents;
+    @Autowired OAuthAuditCapture auditCapture;
 
     @BeforeEach
     void createJdbcSchema() {
+        auditCapture.events.clear();
         jdbc.execute("create table if not exists oauth2_registered_client (id varchar(100) primary key, client_id varchar(100) unique not null, client_id_issued_at timestamp(6) not null, client_secret varchar(200), client_secret_expires_at timestamp(6), client_name varchar(200) not null, client_authentication_methods varchar(1000) not null, authorization_grant_types varchar(1000) not null, redirect_uris varchar(2000), post_logout_redirect_uris varchar(2000), scopes varchar(1000) not null, client_settings varchar(2000) not null, token_settings varchar(2000) not null)");
         jdbc.execute("create table if not exists oauth2_authorization_consent (registered_client_id varchar(100) not null, principal_name varchar(200) not null, authorities varchar(1000) not null, primary key (registered_client_id, principal_name))");
         jdbc.execute("create table if not exists summer_oauth_client_status (client_id varchar(100) primary key, status varchar(20) not null, version integer not null, updated_at timestamp(6) not null)");
@@ -254,6 +257,89 @@ class OAuthPersistenceHttpTest {
                 .andExpect(jsonPath("$.data.items[0].clientName").value("Before"))
                 .andExpect(jsonPath("$.data.items[0].version").value(1));
     }
+
+    @Test
+    void preservesFailurePriorityBeforeAndAfterTheVersionFence() throws Exception {
+        createEditableClient();
+        mockMvc.perform(post("/api/security/oauth-clients").with(manager()).contentType("application/json")
+                        .content("{\"clientId\":\"invalid-public\",\"clientName\":\"Invalid\",\"publicClient\":false,\"redirectUris\":[\"http://example.test/callback\"],\"scopes\":[\"openid\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("only public PKCE clients are supported by this endpoint"));
+        mockMvc.perform(patch("/api/security/oauth-clients/missing").with(manager()).contentType("application/json")
+                        .content("{\"version\":1,\"status\":\"UNKNOWN\",\"clientName\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("clientName must contain 1 to 200 characters without control characters"));
+        mockMvc.perform(patch("/api/security/oauth-clients/missing").with(manager()).contentType("application/json")
+                        .content("{\"version\":1,\"status\":\"UNKNOWN\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_OAUTH_CLIENT_NOT_FOUND"));
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                        .content("{\"version\":2,\"status\":\"UNKNOWN\"}"))
+                .andExpect(status().isPreconditionFailed())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_OAUTH_CLIENT_VERSION_CONFLICT"));
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                        .content("{\"version\":1,\"status\":\"UNKNOWN\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("status must be ACTIVE or DISABLED"));
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].version").value(1));
+    }
+
+    @Test
+    void managementAuditRetainsActorRequestIdAndOutcome() throws Exception {
+        var auditor = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("oauth-auditor"))
+                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.write"));
+        String body = "{\"clientId\":\"audit-client\",\"clientName\":\"Audit client\",\"publicClient\":true,\"redirectUris\":[\"https://example.test/callback\"],\"scopes\":[\"openid\"]}";
+        mockMvc.perform(post("/api/security/oauth-clients").with(auditor).header("X-Request-Id", "oauth-audit-create")
+                        .contentType("application/json").content(body)).andExpect(status().isCreated());
+        mockMvc.perform(post("/api/security/oauth-clients").with(auditor).header("X-Request-Id", "oauth-audit-duplicate")
+                        .contentType("application/json").content(body)).andExpect(status().isConflict());
+        assertThat(auditCapture.events.stream().filter(event -> event.event().equals("oauth_client_created")).toList())
+                .singleElement().satisfies(event -> {
+                    assertThat(event.principal()).isEqualTo("oauth-auditor");
+                    assertThat(event.attributes()).isEqualTo(java.util.Map.of("clientId", "audit-client", "requestId", "oauth-audit-create", "publicClient", true));
+                });
+        assertThat(auditCapture.events.stream().filter(event -> event.event().equals("oauth_management_failed")).toList())
+                .singleElement().satisfies(event -> {
+                    assertThat(event.principal()).isEqualTo("oauth-auditor");
+                    assertThat(event.attributes()).isEqualTo(java.util.Map.of("code", "SUMMER_OAUTH_CLIENT_EXISTS", "requestId", "oauth-audit-duplicate"));
+                });
+    }
+
+    @Test
+    void consentListAndRevocationRetainRegisteredClientIdentityAndMissingResult() throws Exception {
+        createEditableClient();
+        String registeredId = clients.findByClientId("editable-client").getId();
+        consents.save(OAuth2AuthorizationConsent.withId(registeredId, "consent-principal")
+                .authority(new org.springframework.security.core.authority.SimpleGrantedAuthority("openid")).build());
+        mockMvc.perform(get("/api/security/oauth-consents").with(manager()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].clientId").value(registeredId))
+                .andExpect(jsonPath("$.data.items[0].principalName").value("consent-principal"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/security/oauth-consents/{clientId}/{principalName}", registeredId, "consent-principal").with(manager()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REVOKED"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/security/oauth-consents/{clientId}/{principalName}", registeredId, "consent-principal").with(manager()))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.error.code").value("SUMMER_OAUTH_CONSENT_NOT_FOUND"));
+        mockMvc.perform(get("/api/security/oauth-consents").with(manager()))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
+    static class AuditConfiguration {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        OAuthAuditCapture oauthAuditCapture() { return new OAuthAuditCapture(); }
+    }
+
+    static class OAuthAuditCapture implements com.abluepoint.summer.security.audit.spi.SecurityAuditLogger {
+        private final java.util.List<AuditEntry> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+        @Override public void record(String event, String principal, java.util.Map<String, ?> attributes) {
+            events.add(new AuditEntry(event, principal, java.util.Map.copyOf(attributes)));
+        }
+    }
+    private record AuditEntry(String event, String principal, java.util.Map<String, ?> attributes) {}
 
     private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor manager() {
         return SecurityMockMvcRequestPostProcessors.jwt().authorities(

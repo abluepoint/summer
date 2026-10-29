@@ -1,5 +1,12 @@
 package com.abluepoint.summer.sample.authorization.infrastructure;
 
+import com.abluepoint.summer.sample.authorization.domain.OAuthClientManagementStore;
+import com.abluepoint.summer.sample.authorization.domain.OAuthClientRules;
+import com.abluepoint.summer.sample.authorization.domain.OAuthClientAlreadyExistsException;
+import com.abluepoint.summer.sample.authorization.domain.OAuthClientNotFoundException;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
@@ -9,7 +16,7 @@ import java.util.Map;
 
 /** JDBC registered-client store with a narrow, redacted management projection. */
 public class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
-        implements com.abluepoint.summer.security.oauth2.spi.SummerOAuthClientStore {
+        implements com.abluepoint.summer.security.oauth2.spi.SummerOAuthClientStore, OAuthClientManagementStore {
     private final JdbcOperations jdbc;
 
     JdbcSummerOAuthClientStore(JdbcOperations jdbc) {
@@ -34,12 +41,24 @@ public class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
         return super.findByClientId(clientId) != null;
     }
 
-    public void register(RegisteredClient client) {
-        if (isRegistered(client.getClientId())) throw new DuplicateClientException();
+    @Override
+    public void registerPublicClient(String clientId, String clientName, List<String> redirectUris, List<String> scopes) {
+        RegisteredClient client = RegisteredClient.withId(java.util.UUID.randomUUID().toString())
+                .clientId(clientId).clientName(clientName)
+                .clientAuthenticationMethod(new ClientAuthenticationMethod(OAuthClientRules.PUBLIC_AUTHENTICATION_METHOD))
+                .authorizationGrantType(new AuthorizationGrantType(OAuthClientRules.PUBLIC_GRANT_TYPE))
+                .clientSettings(ClientSettings.builder().requireProofKey(OAuthClientRules.REQUIRE_PROOF_KEY)
+                        .requireAuthorizationConsent(OAuthClientRules.REQUIRE_AUTHORIZATION_CONSENT).build())
+                .redirectUris(set -> set.addAll(redirectUris)).scopes(set -> set.addAll(scopes)).build();
+        register(client);
+    }
+
+    private void register(RegisteredClient client) {
+        if (isRegistered(client.getClientId())) throw new OAuthClientAlreadyExistsException();
         try {
             super.save(client);
         } catch (IllegalArgumentException | org.springframework.dao.DataIntegrityViolationException failure) {
-            if (isRegistered(client.getClientId())) throw new DuplicateClientException();
+            if (isRegistered(client.getClientId())) throw new OAuthClientAlreadyExistsException();
             throw failure;
         }
     }
@@ -77,13 +96,13 @@ public class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
                                                  List<String> redirectUris, List<String> scopes,
                                                  int expectedVersion) {
         if (jdbc.queryForList("select id from oauth2_registered_client where client_id=? for update", String.class, clientId).isEmpty())
-            throw new ClientNotFoundException();
+            throw new OAuthClientNotFoundException();
         RegisteredClient existing = super.findByClientId(clientId);
         List<Map<String, Object>> states = jdbc.queryForList("select status, version from summer_oauth_client_status where client_id=?", clientId);
         int version = states.isEmpty() ? 1 : ((Number) states.getFirst().get("version")).intValue();
-        if (version != expectedVersion) throw new ClientVersionException();
+        OAuthClientRules.requireVersion(version, expectedVersion);
         String nextStatus = status == null ? (states.isEmpty() ? "ACTIVE" : (String) states.getFirst().get("status")) : status;
-        if (!SetOfStatuses.VALUES.contains(nextStatus)) throw new IllegalArgumentException("status must be ACTIVE or DISABLED");
+        OAuthClientRules.requireStatus(nextStatus);
         RegisteredClient.Builder builder = RegisteredClient.from(existing);
         if (clientName != null) builder.clientName(clientName);
         if (redirectUris != null) builder.redirectUris(set -> { set.clear(); set.addAll(redirectUris); });
@@ -97,10 +116,6 @@ public class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
         return Map.of("clientId", clientId, "status", nextStatus, "version", version + 1);
     }
 
-    public static class DuplicateClientException extends RuntimeException {}
-    public static class ClientVersionException extends RuntimeException {}
-    public static class ClientNotFoundException extends RuntimeException {}
-
     private boolean isEnabled(String clientId) {
         Integer count = jdbc.queryForObject("select count(*) from summer_oauth_client_status where client_id=? and status='ACTIVE'", Integer.class, clientId);
         Integer rows = jdbc.queryForObject("select count(*) from summer_oauth_client_status where client_id=?", Integer.class, clientId);
@@ -112,7 +127,4 @@ public class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
         return java.util.Arrays.stream(value.split(",")).map(String::trim).filter(v -> !v.isBlank()).toList();
     }
 
-    private static final class SetOfStatuses {
-        private static final java.util.Set<String> VALUES = java.util.Set.of("ACTIVE", "DISABLED");
-    }
 }

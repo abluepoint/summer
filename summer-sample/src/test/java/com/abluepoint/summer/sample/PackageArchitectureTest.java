@@ -73,6 +73,25 @@ class PackageArchitectureTest {
         assertThat(violations).isEmpty();
     }
 
+    @Test void oauthManagementApiDelegatesUseCasesWithoutStorageOrProtocolAssembly() {
+        var api = CLASSES.get(SAMPLE + "authorization.api.OAuthClientManagementController");
+        assertThat(api.getDirectDependenciesFromSelf().stream().filter(dependency -> {
+            String target = dependency.getTargetClass().getName();
+            return target.startsWith(SAMPLE + "authorization.infrastructure.")
+                    || target.startsWith("org.springframework.security.oauth2.server.authorization.")
+                    || target.startsWith("com.abluepoint.summer.security.oauth2.spi.")
+                    || target.equals("com.abluepoint.summer.security.audit.spi.SecurityAuditLogger");
+        }).map(Object::toString).sorted().toList()).isEmpty();
+        var useCases = CLASSES.stream().filter(type -> type.getName().equals(SAMPLE
+                + "authorization.application.OAuthClientManagementService")).toList();
+        assertThat(useCases).hasSize(1);
+        assertThat(useCases.stream().flatMap(type -> type.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> dependency.getTargetClass().getPackageName().startsWith(SAMPLE + "authorization.infrastructure")
+                        || dependency.getTargetClass().getPackageName().startsWith("org.springframework.web")
+                        || dependency.getTargetClass().getPackageName().startsWith("org.springframework.http"))
+                .map(Object::toString).sorted().toList()).isEmpty();
+    }
+
     @Test void sampleDoesNotConsumeFrameworkInternalImplementations() {
         var violations = CLASSES.stream().filter(type -> type.getPackageName().startsWith(SAMPLE))
                 .flatMap(type -> type.getDirectDependenciesFromSelf().stream())

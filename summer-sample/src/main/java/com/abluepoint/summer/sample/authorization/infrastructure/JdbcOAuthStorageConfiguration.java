@@ -1,6 +1,12 @@
 package com.abluepoint.summer.sample.authorization.infrastructure;
 
 import com.abluepoint.summer.sample.authorization.api.OAuthClientManagementController;
+import com.abluepoint.summer.sample.authorization.application.OAuthClientManagementService;
+import com.abluepoint.summer.sample.authorization.domain.OAuthClientManagementStore;
+import com.abluepoint.summer.mvc.request.api.RequestIdAccessor;
+import com.abluepoint.summer.security.audit.spi.SecurityAuditLogger;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 
 import com.abluepoint.summer.security.oauth2.spi.SummerAuthorizationStore;
 import com.abluepoint.summer.security.oauth2.spi.SummerConsentStore;
@@ -67,17 +73,23 @@ public class JdbcOAuthStorageConfiguration {
         });
     }
 
-    // Component scan may encounter the API before these store definitions after package moves.
-    // Register the same controller conditionally after storage, without a second instance.
     @Bean
-    @org.springframework.boot.autoconfigure.condition.ConditionalOnBean({JdbcSummerOAuthClientStore.class, SummerConsentStore.class})
-    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(com.abluepoint.summer.sample.authorization.api.OAuthClientManagementController.class)
+    @ConditionalOnBean({JdbcSummerOAuthClientStore.class, SummerConsentStore.class})
+    @ConditionalOnMissingBean(OAuthClientManagementService.class)
     @ConditionalOnProperty(prefix = "summer.security.storage", name = "consent", havingValue = "jdbc")
-    com.abluepoint.summer.sample.authorization.api.OAuthClientManagementController oauthClientManagementController(
-            JdbcSummerOAuthClientStore clients, SummerConsentStore consents,
-            com.abluepoint.summer.mvc.request.api.RequestIdAccessor requestId,
-            com.abluepoint.summer.security.audit.spi.SecurityAuditLogger audit) {
-        return new com.abluepoint.summer.sample.authorization.api.OAuthClientManagementController(clients, consents, requestId, audit);
+    OAuthClientManagementService oauthClientManagementService(OAuthClientManagementStore clients,
+                                                              SummerConsentStore consents, SecurityAuditLogger audit) {
+        return new OAuthClientManagementService(clients, consents, audit);
     }
 
+    // Component scan can encounter the API before storage/service definitions after package moves.
+    // Register the controller after its use case without introducing a second instance.
+    @Bean
+    @ConditionalOnBean(OAuthClientManagementService.class)
+    @ConditionalOnMissingBean(OAuthClientManagementController.class)
+    @ConditionalOnProperty(prefix = "summer.security.storage", name = "consent", havingValue = "jdbc")
+    OAuthClientManagementController oauthClientManagementController(OAuthClientManagementService management,
+                                                                   RequestIdAccessor requestId) {
+        return new OAuthClientManagementController(management, requestId);
+    }
 }
