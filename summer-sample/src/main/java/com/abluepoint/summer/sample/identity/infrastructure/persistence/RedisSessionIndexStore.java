@@ -149,4 +149,3 @@ public final class RedisSessionIndexStore implements SessionIndexStore {
         writeRevokedOnce(record);
     }
 }
-

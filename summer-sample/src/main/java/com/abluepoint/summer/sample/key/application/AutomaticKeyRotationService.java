@@ -110,4 +110,3 @@ public class AutomaticKeyRotationService {
                 state.failureCount(), state.lastError());
     }
 }
-

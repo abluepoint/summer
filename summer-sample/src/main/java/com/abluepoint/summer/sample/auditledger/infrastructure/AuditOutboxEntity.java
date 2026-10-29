@@ -62,4 +62,3 @@ public class AuditOutboxEntity {
     void reschedule(Instant next) { this.nextAttemptAt = next; this.attempts++; }
     void deadLetter() { this.status = AuditOutboxStatus.DEAD_LETTER; this.attempts++; }
 }
-

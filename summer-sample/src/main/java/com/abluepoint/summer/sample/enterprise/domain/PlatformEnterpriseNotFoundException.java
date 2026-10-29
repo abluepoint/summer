@@ -5,4 +5,3 @@ public class PlatformEnterpriseNotFoundException extends RuntimeException {
         super("Enterprise not found: " + id);
     }
 }
-

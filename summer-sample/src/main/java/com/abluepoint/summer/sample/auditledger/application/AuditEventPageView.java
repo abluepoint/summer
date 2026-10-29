@@ -11,4 +11,3 @@ public record AuditEventPageView(
         int size,
         long totalElements,
         int totalPages) {}
-

@@ -15,4 +15,3 @@ public record McpInvocationCompleteCommand(
         Long latencyMs,
         String connectionSessionRef,
         String detail) {}
-

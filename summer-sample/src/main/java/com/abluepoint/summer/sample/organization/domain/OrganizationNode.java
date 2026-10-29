@@ -8,4 +8,3 @@ public record OrganizationNode(String enterpriseId, String id, String parentId, 
 
     @Override public String toString() { return "UnitRecord[" + "enterpriseId=" + enterpriseId + ", " + "id=" + id + ", " + "parentId=" + parentId + ", " + "unitType=" + unitType + ", " + "name=" + name + ", " + "code=" + code + ", " + "leaderMemberId=" + leaderMemberId + ", " + "description=" + description + ", " + "sortOrder=" + sortOrder + ", " + "status=" + status + ", " + "version=" + version + "]"; }
 }
-

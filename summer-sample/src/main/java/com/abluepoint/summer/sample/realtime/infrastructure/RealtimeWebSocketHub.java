@@ -209,4 +209,3 @@ public class RealtimeWebSocketHub implements com.abluepoint.summer.sample.realti
         sessions.values().stream().flatMap(Collection::stream).forEach(s -> { try { s.close(CloseStatus.GOING_AWAY); } catch (IOException ignored) {} });
     }
 }
-

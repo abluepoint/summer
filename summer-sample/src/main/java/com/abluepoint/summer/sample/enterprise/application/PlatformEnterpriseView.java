@@ -12,4 +12,3 @@ public record PlatformEnterpriseView(
         String resources,
         String activity,
         String revision) {}
-

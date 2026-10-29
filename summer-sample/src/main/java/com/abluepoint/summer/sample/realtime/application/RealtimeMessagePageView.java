@@ -8,4 +8,3 @@ public record RealtimeMessagePageView(List<RealtimeMessageView> items, long late
         items = List.copyOf(items);
     }
 }
-

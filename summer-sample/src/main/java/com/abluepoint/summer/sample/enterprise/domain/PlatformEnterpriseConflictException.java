@@ -5,4 +5,3 @@ public class PlatformEnterpriseConflictException extends RuntimeException {
         super(message);
     }
 }
-

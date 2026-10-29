@@ -7,4 +7,3 @@ import java.util.Map;
 
 public record RealtimeMessageCreateCommand(String clientMessageId, String recipient, Map<String, Object> payload,
                                     Integer ttlSeconds) {}
-

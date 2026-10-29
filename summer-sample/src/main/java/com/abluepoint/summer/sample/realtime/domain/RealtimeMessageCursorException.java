@@ -6,4 +6,3 @@ import java.util.Map;
 public final class RealtimeMessageCursorException extends RuntimeException {
     public RealtimeMessageCursorException() { super("Message cursor must be a non-negative integer"); }
 }
-

@@ -11,4 +11,3 @@ public record McpInvocationReconcileCommand(
         String resultDigest,
         String remoteRequestId,
         Long latencyMs) {}
-

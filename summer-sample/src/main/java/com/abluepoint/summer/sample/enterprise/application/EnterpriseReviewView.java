@@ -8,4 +8,3 @@ public record EnterpriseReviewView(String applicationId, String enterpriseId, St
     // Existing revision hashes use the historical record rendering.
     @Override public String toString() { return "EnterpriseReview[" + "applicationId=" + applicationId + ", " + "enterpriseId=" + enterpriseId + ", " + "legalName=" + legalName + ", " + "status=" + status + ", " + "materials=" + materials + ", " + "revision=" + revision + "]"; }
 }
-

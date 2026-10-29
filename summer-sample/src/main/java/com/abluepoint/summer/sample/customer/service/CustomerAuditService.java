@@ -170,4 +170,3 @@ public class CustomerAuditService {
         return '"' + String.valueOf(value).replace("\"", "\"\"").replace("\r", " ").replace("\n", " ") + '"';
     }
 }
-

@@ -1,0 +1,379 @@
+{
+  "schema": "summer4-package-refactor-acceptance-v1",
+  "date": "2026-10-29",
+  "parent_spec": 146,
+  "implementation_tickets": [
+    147,
+    148,
+    149,
+    150,
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    157,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172
+  ],
+  "baseline": "62c6182e7052f3e5497b2c8f88227a4089f3638b",
+  "runtime_source_head": "8be4c82cc48315056839d7b7c4d86afe6271f171",
+  "structure": {
+    "gradle_modules": 15,
+    "sample_responsibility_modules": 30,
+    "technical_modules": 6,
+    "domain_modules": 24,
+    "framework_types": 81,
+    "exact_resource_type_moves": 709
+  },
+  "backend_full": {
+    "label": "final-backend-check-green2",
+    "source_head": "57fcd2a1e37561f73992e5c6de53acc211ae2090",
+    "source_stable": true,
+    "counts": {
+      "tests": 828,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suite_count": 192,
+    "exit_code": 0,
+    "gate_receipt_sha256": "cb15e99ce3825db9fe44f02a7b8edae1137d53c3686eb114dbbe71643f34241f"
+  },
+  "final_affected_regression": {
+    "label": "final-review-delta",
+    "source_head": "8be4c82cc48315056839d7b7c4d86afe6271f171",
+    "source_stable": true,
+    "counts": {
+      "tests": 47,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suite_count": 10,
+    "exit_code": 0,
+    "gate_receipt_sha256": "054178ad2af92cae800abb00924cc747b9ac079966c51e504f07eecb99d15744"
+  },
+  "native_stage": {
+    "label": "native-dependencies-first",
+    "source_head": "982333a8b0e90c71fa4f0eb233eb466a970e60ae",
+    "source_stable": true,
+    "counts": {
+      "tests": 53,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suite_count": 14,
+    "exit_code": 0,
+    "gate_receipt_sha256": "46ed9b6c9746b8f1b31afed4da7f5c0464aa05a22f3807ea9c1eaf7c46c84f31"
+  },
+  "ui": {
+    "label": "final-ui-green3",
+    "exit_code": 0,
+    "node_tests": 82,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "commands": [
+      "test",
+      "typecheck",
+      "lint",
+      "lint:style",
+      "test:proxy",
+      "build",
+      "test:proxy:production",
+      "test:mock-boundary"
+    ],
+    "proxy_backend": "controlled echo backend; distinct from business Chrome regression"
+  },
+  "chrome": {
+    "schema": "summer-172-browser-run-v1",
+    "sourceHead": "8be4c82cc48315056839d7b7c4d86afe6271f171",
+    "scripts": {
+      "auth": "233eaedcad135843cc99cc5bcb650c20a4870cb3dd4bc27b0f46240ef75efefa",
+      "customer-create": "b8159a0ab660d6e9841a3fa1b76c9b290ad345ea3b0a4d1ef17cce985612a347",
+      "customer-edit": "2dae5d895e8a5d8377949eafee13a280d0711a9727b03e45aa027ec3039806b7",
+      "customer-modal": "a2d93c13a7b401d4e50aff16ac0020561b2cf9aea126460aa45937f3ad8e78b7",
+      "customer-page": "d806dbcd937d51fadc00381943487ad9525e304dfeaa420515da903abd713392"
+    },
+    "cases": [
+      {
+        "case": "auth",
+        "exitCode": 0,
+        "timedOut": false,
+        "ownedChromeProcessesForceClosed": 0,
+        "elapsedSeconds": 48.0,
+        "receipt": {
+          "schema": "summer-172-browser-case-v1",
+          "case": "auth",
+          "passed": true,
+          "originalScriptCompleted": true,
+          "controlledSubstitutions": {},
+          "ownedCustomerDeleteStatuses": {},
+          "ownedCustomersCreated": 0,
+          "ownedCustomersRemoved": 0,
+          "cleanupFailures": 0,
+          "browsersOpened": 1,
+          "browsersClosed": 1,
+          "freshContexts": 8,
+          "assertionsPassed": 13,
+          "originalBodyCompleted": true,
+          "controlledClientLogoutFailure": true,
+          "ownedCustomersRemaining": 0
+        }
+      },
+      {
+        "case": "customer-create",
+        "exitCode": 0,
+        "timedOut": false,
+        "ownedChromeProcessesForceClosed": 0,
+        "elapsedSeconds": 12.3,
+        "receipt": {
+          "schema": "summer-172-browser-case-v1",
+          "case": "customer-create",
+          "passed": true,
+          "originalScriptCompleted": true,
+          "controlledSubstitutions": {
+            "http-400": 1,
+            "http-409": 1,
+            "network-abort": 1,
+            "http-401": 1
+          },
+          "ownedCustomerDeleteStatuses": {
+            "204": 1
+          },
+          "ownedCustomersCreated": 1,
+          "ownedCustomersRemoved": 1,
+          "cleanupFailures": 0,
+          "browsersOpened": 1,
+          "browsersClosed": 1,
+          "freshContexts": 1,
+          "assertionsPassed": 11,
+          "ownedCustomersRemaining": 0
+        }
+      },
+      {
+        "case": "customer-edit",
+        "exitCode": 0,
+        "timedOut": false,
+        "ownedChromeProcessesForceClosed": 0,
+        "elapsedSeconds": 17.8,
+        "receipt": {
+          "schema": "summer-172-browser-case-v1",
+          "case": "customer-edit",
+          "passed": true,
+          "originalScriptCompleted": true,
+          "controlledSubstitutions": {
+            "http-404": 1,
+            "http-401": 1
+          },
+          "ownedCustomerDeleteStatuses": {
+            "204": 1
+          },
+          "ownedCustomersCreated": 1,
+          "ownedCustomersRemoved": 1,
+          "cleanupFailures": 0,
+          "browsersOpened": 1,
+          "browsersClosed": 1,
+          "freshContexts": 1,
+          "assertionsPassed": 33,
+          "ownedCustomersRemaining": 0
+        }
+      },
+      {
+        "case": "customer-modal",
+        "exitCode": 0,
+        "timedOut": false,
+        "ownedChromeProcessesForceClosed": 0,
+        "elapsedSeconds": 16.7,
+        "receipt": {
+          "schema": "summer-172-browser-case-v1",
+          "case": "customer-modal",
+          "passed": true,
+          "originalScriptCompleted": true,
+          "controlledSubstitutions": {
+            "http-400": 1,
+            "http-409": 1,
+            "http-401": 2
+          },
+          "ownedCustomerDeleteStatuses": {
+            "204": 1
+          },
+          "ownedCustomersCreated": 1,
+          "ownedCustomersRemoved": 1,
+          "cleanupFailures": 0,
+          "browsersOpened": 1,
+          "browsersClosed": 1,
+          "freshContexts": 1,
+          "assertionsPassed": 33,
+          "ownedCustomersRemaining": 0
+        }
+      },
+      {
+        "case": "customer-page",
+        "exitCode": 0,
+        "timedOut": false,
+        "ownedChromeProcessesForceClosed": 0,
+        "elapsedSeconds": 46.9,
+        "receipt": {
+          "schema": "summer-172-browser-case-v1",
+          "case": "customer-page",
+          "passed": true,
+          "originalScriptCompleted": true,
+          "controlledSubstitutions": {
+            "http-400": 1,
+            "http-409": 1,
+            "network-abort": 1,
+            "http-401": 2,
+            "http-404": 1
+          },
+          "ownedCustomerDeleteStatuses": {
+            "204": 1
+          },
+          "ownedCustomersCreated": 1,
+          "ownedCustomersRemoved": 1,
+          "cleanupFailures": 0,
+          "browsersOpened": 1,
+          "browsersClosed": 1,
+          "freshContexts": 1,
+          "assertionsPassed": 28,
+          "ownedCustomersRemaining": 0
+        }
+      },
+      {
+        "case": "protocol",
+        "exitCode": 0,
+        "timedOut": false,
+        "ownedChromeProcessesForceClosed": 0,
+        "elapsedSeconds": 4.2,
+        "receipt": {
+          "schema": "summer-172-browser-case-v1",
+          "case": "protocol",
+          "passed": true,
+          "originalScriptCompleted": true,
+          "controlledSubstitutions": {},
+          "ownedCustomerDeleteStatuses": {},
+          "ownedCustomersCreated": 0,
+          "ownedCustomersRemoved": 0,
+          "cleanupFailures": 0,
+          "browsersOpened": 1,
+          "browsersClosed": 1,
+          "freshContexts": 1,
+          "assertionsPassed": 55,
+          "protocol": {
+            "discoveryNative": true,
+            "jwksNative": true,
+            "csrfNative": true,
+            "pkceSuccessNative": true,
+            "replayCodeNativeError": true,
+            "wrongVerifierNativeError": true,
+            "nativeRedirects": {
+              "authorize": 3,
+              "login": 1,
+              "logout": 1
+            },
+            "callbackHeldByHarness": true,
+            "transport": "real-Chrome-page-fetch-and-navigation"
+          },
+          "ownedCustomersRemaining": 0
+        }
+      }
+    ],
+    "passed": true
+  },
+  "reviews": {
+    "standards": {
+      "base": "62c6182e7052f3e5497b2c8f88227a4089f3638b",
+      "reviewed_through": "8be4c82cc48315056839d7b7c4d86afe6271f171",
+      "actionable_findings": 0
+    },
+    "spec": {
+      "base": "62c6182e7052f3e5497b2c8f88227a4089f3638b",
+      "full_review_through": "57fcd2a1e37561f73992e5c6de53acc211ae2090",
+      "independent_repair_review_through": "8be4c82cc48315056839d7b7c4d86afe6271f171",
+      "unresolved_findings": 0
+    }
+  },
+  "cleanup": {
+    "backend_listener_stop_requested": true,
+    "ui_listener_stop_requested": true,
+    "backend_group_stopped": true,
+    "ui_group_stopped": true,
+    "backend_port_released": true,
+    "ui_port_released": true,
+    "redis_removed": true,
+    "schema_removed": true,
+    "db_user_removed": true,
+    "private_files_removed": true
+  },
+  "environment_after_cleanup": {
+    "shared_pods": [
+      {
+        "name": "mysql-0",
+        "uid_unchanged": true,
+        "ready": true
+      },
+      {
+        "name": "redis-0",
+        "uid_unchanged": true,
+        "ready": true
+      }
+    ],
+    "temporary_schema_prefix_matches": 0,
+    "shared_services_preserved": true,
+    "passed": true
+  },
+  "credential_audit": {
+    "audited_generated_files": 161,
+    "files_containing_credential_values": 0,
+    "redacted_text_files": 0,
+    "removed_generated_binary_files": 0,
+    "remaining_matches": 0,
+    "scope": "current in-process dependency/runtime credentials; private input files excluded"
+  },
+  "browser_postrun": {
+    "owned_customer_candidate_rows": 0,
+    "browser_private_password_removed": true,
+    "runtime_source_input_head": "8be4c82cc48315056839d7b7c4d86afe6271f171"
+  },
+  "primary_preservation": {
+    "baseline": "62c6182e7052f3e5497b2c8f88227a4089f3638b",
+    "files_checked": 1451,
+    "different_or_missing_files": 1,
+    "paths": [
+      "gradlew.bat"
+    ],
+    "index_sha256": "4c9f4a28064ffb216ae36219e3c4da1c5eb95a2de100a209981d7394f7db83ad",
+    "git_normalized_equivalent_paths": [
+      "gradlew.bat"
+    ],
+    "substantive_differences": 0
+  },
+  "final_hygiene": {
+    "only_eof_line_breaks_removed": true,
+    "files": 45,
+    "behavior_change": false
+  },
+  "notes": [
+    "Counts are per independent batch and must not be added as unique tests.",
+    "Full backend run precedes final nested HTTP history mapping and identity input repair; final affected regression covers those repairs.",
+    "Chrome customer fixture created through real capability/role/binding APIs in the owned temporary schema.",
+    "Protocol callback HTML alone held by harness; discovery/JWKS/CSRF/authorize/login/token/logout use real server responses.",
+    "Final commit adds evidence/documentation and removes extra EOF blank lines; runtime tests pin the preceding behavioral source head."
+  ]
+}

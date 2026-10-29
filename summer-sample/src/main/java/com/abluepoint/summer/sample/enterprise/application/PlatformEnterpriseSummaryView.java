@@ -10,4 +10,3 @@ public record PlatformEnterpriseSummaryView(
     // Existing revision hashes use the historical record rendering.
     @Override public String toString() { return "PlatformEnterpriseSummary[" + "total=" + total + ", " + "authenticated=" + authenticated + ", " + "pending=" + pending + ", " + "abnormal=" + abnormal + "]"; }
 }
-

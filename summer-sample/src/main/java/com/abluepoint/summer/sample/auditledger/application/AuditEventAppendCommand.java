@@ -27,4 +27,3 @@ public record AuditEventAppendCommand(
         String decision,
         String reasonCode,
         Map<String, Object> detail) {}
-

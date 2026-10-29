@@ -20,4 +20,3 @@ export type DictionaryNotification = {
 };
 
 export type DictionaryStreamState = 'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CLOSED';
-

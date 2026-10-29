@@ -159,4 +159,3 @@ public class TaskExecutionService {
 
     private record ExecutionRun(TaskDefinitionEntity task, String executionId, String owner, int firstAttempt, int maxAttempts) {}
 }
-

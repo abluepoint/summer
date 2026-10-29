@@ -6,4 +6,3 @@ import java.util.Map;
 public final class RealtimeMessageValidationException extends RuntimeException {
     public RealtimeMessageValidationException(String message) { super(message); }
 }
-

@@ -5,4 +5,3 @@ import java.util.Map;
 public record PluginInsightsView(String pluginId, String version, String requestId, long activeCustomerCount,
                           List<Map<String, Object>> configuration, PluginDictionaryView dictionary,
                           long auditRevision) {}
-

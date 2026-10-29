@@ -30,4 +30,3 @@ public record AuditEventView(
         Instant occurredAt,
         String previousDigest,
         String eventDigest) {}
-
