@@ -43,3 +43,8 @@ dependencies {
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("summer-sample.jar")
 }
+
+// The full Sample suite retains architecture graphs and many Spring/JPA contexts.
+tasks.named<org.gradle.api.tasks.testing.Test>("test") {
+    maxHeapSize = "2g"
+}

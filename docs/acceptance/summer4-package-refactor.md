@@ -66,3 +66,9 @@
 - Quartz：两种旧持久化作业类在读取/启动前精确迁移，保留 JobData 和触发器；H2 JDBC 升级 4 项及现有任务 28 项通过。迁移/调度失败保留原因并向上暴露。
 
 这些修复均已集成；各聊天扩大批中的 release/plugin Modulith 失败已由集成树既有命名接口修正处理，最终完整检查需再次验证该组合。
+
+## 完整后端首批资源失败
+
+`final-backend-check` 保持源码固定并实际执行 47 个 Gradle task，但 Sample 测试 JVM 使用默认 `-Xmx512m` 时发生 `OutOfMemoryError: Java heap space`，随后 Spring 关闭钩子等待上下文退出。只终止确认属于本批的失效测试执行器后，Gradle `--continue` 完成其它模块并以 1 退出；该批不能算完整通过，退出 137 及不完整 Sample 结果保留。
+
+仅将 Sample 测试 task 的堆上限调整为 2g，再次执行相同完整命令；没有修改生产 JVM、测试断言、跳过条件或 Spring 上下文缓存大小。
