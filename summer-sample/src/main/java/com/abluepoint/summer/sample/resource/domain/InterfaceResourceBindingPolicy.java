@@ -4,14 +4,20 @@ package com.abluepoint.summer.sample.resource.domain;
 import java.util.*;
 import java.util.regex.Pattern;
 
-/** Preserves observed ownership; only explicitly catalogued type moves are equivalent. */
+/** Preserves observed ownership; only explicitly catalogued type and handler moves are equivalent. */
 public final class InterfaceResourceBindingPolicy {
     private final Map<String, String> typeMoves;
+    private final Map<String, String> handlerMoves;
     private final Pattern movedType;
     private volatile Map<String, Set<String>> originalHandlers = Map.of();
 
     public InterfaceResourceBindingPolicy(Map<String, String> typeMoves) {
+        this(typeMoves, Map.of());
+    }
+
+    public InterfaceResourceBindingPolicy(Map<String, String> typeMoves, Map<String, String> handlerMoves) {
         this.typeMoves = Map.copyOf(typeMoves);
+        this.handlerMoves = Map.copyOf(handlerMoves);
         String alternatives = typeMoves.keySet().stream().sorted(Comparator.comparingInt(String::length).reversed())
                 .map(Pattern::quote).collect(java.util.stream.Collectors.joining("|"));
         this.movedType = alternatives.isEmpty() ? Pattern.compile("(?!)")
@@ -19,7 +25,8 @@ public final class InterfaceResourceBindingPolicy {
     }
 
     private String canonical(String handler) {
-        return movedType.matcher(handler).replaceAll(match -> java.util.regex.Matcher.quoteReplacement(typeMoves.get(match.group(1))));
+        String observed = handlerMoves.getOrDefault(handler, handler);
+        return movedType.matcher(observed).replaceAll(match -> java.util.regex.Matcher.quoteReplacement(typeMoves.get(match.group(1))));
     }
 
     public InterfaceResourceCatalog protect(InterfaceResourceCatalog catalog, List<InterfaceResourceCatalogView> revisions) {

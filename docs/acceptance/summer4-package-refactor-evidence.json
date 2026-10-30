@@ -375,5 +375,29 @@
     "Chrome customer fixture created through real capability/role/binding APIs in the owned temporary schema.",
     "Protocol callback HTML alone held by harness; discovery/JWKS/CSRF/authorize/login/token/logout use real server responses.",
     "Final commit adds evidence/documentation and removes extra EOF blank lines; runtime tests pin the preceding behavioral source head."
-  ]
+  ],
+  "closing_verification": {
+    "date": "2026-10-30",
+    "base_commit": "858f2335aeb40abe7be2f2b001b5384fbdf46120",
+    "counts": {
+      "tests": 66,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suite_count": 12,
+    "exit_code": 0,
+    "module_boundaries": "passed",
+    "resource_type_moves": 712,
+    "exact_handler_moves": 1,
+    "live_http_date": "2026-10-29",
+    "live_http": {
+      "cookie_sessions": 200,
+      "bearer_sessions": 200,
+      "anonymous": 401,
+      "other_principal": 403,
+      "remaining_replaced_resources": 0
+    },
+    "scope": "Targeted regression plus architecture checks; previous full/backend/native/UI/Chrome batches retain their original source heads."
+  }
 }
