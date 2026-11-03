@@ -1,6 +1,8 @@
 package com.abluepoint.summer.sample.identity;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -36,25 +38,19 @@ final class SessionController {
     @GetMapping("/api/v1/session")
     @RawResponse
     ResponseEntity<ApiResponse<SessionSnapshot>> session(Authentication authentication, HttpServletRequest request) {
-        try {
-            if (sessionIndex != null && !com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository.hasBearerCredentials(request))
-                sessionIndex.assertActive(request, authentication);
-            SessionSnapshot snapshot = snapshotService.snapshot(authentication);
-            String etag = quote(snapshot.revision());
-            if (etag.equals(request.getHeader(HttpHeaders.IF_NONE_MATCH))) {
-                return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
-                        .eTag(etag)
-                        .header("X-Request-Id", requestIdAccessor.currentRequestId())
-                        .build();
-            }
-            return ResponseEntity.ok()
+        if (sessionIndex != null && !com.abluepoint.summer.security.autoconfigure.storage.BearerOrSessionSecurityContextRepository.hasBearerCredentials(request))
+            sessionIndex.assertActive(request, authentication);
+        SessionSnapshot snapshot = snapshotService.snapshot(authentication);
+        String etag = quote(snapshot.revision());
+        if (etag.equals(request.getHeader(HttpHeaders.IF_NONE_MATCH))) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                     .eTag(etag)
-                    .body(ApiResponse.success(snapshot, requestIdAccessor.currentRequestId()));
-        } catch (SessionRevokedException exception) {
-            return failure(HttpStatus.UNAUTHORIZED, "SUMMER_SESSION_REVOKED", exception.getMessage());
-        } catch (SessionIndexUnavailableException exception) {
-            return failure(HttpStatus.SERVICE_UNAVAILABLE, "SUMMER_SESSION_STORE_UNAVAILABLE", exception.getMessage());
+                    .header("X-Request-Id", requestIdAccessor.currentRequestId())
+                    .build();
         }
+        return ResponseEntity.ok()
+                .eTag(etag)
+                .body(ApiResponse.success(snapshot, requestIdAccessor.currentRequestId()));
     }
 
     @GetMapping("/api/v1/sessions")
@@ -67,9 +63,7 @@ final class SessionController {
             if (sessionIndex == null) return ok(new SessionIndexPage("UNAVAILABLE", List.of()));
             return ok(sessionIndex.list(principal, authentication, request));
         } catch (AccessDeniedException exception) {
-            return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", exception.getMessage());
-        } catch (SessionIndexUnavailableException exception) {
-            return failure(HttpStatus.SERVICE_UNAVAILABLE, "SUMMER_SESSION_STORE_UNAVAILABLE", exception.getMessage());
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, exception.getMessage(), exception);
         }
     }
 
@@ -79,17 +73,11 @@ final class SessionController {
             @PathVariable String reference, Authentication authentication, HttpServletRequest request) {
         try {
             if (sessionIndex == null) {
-                return failure(HttpStatus.SERVICE_UNAVAILABLE, "SUMMER_SESSION_STORE_UNAVAILABLE", "Shared session storage is unavailable");
+                throw SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable");
             }
             return ok(sessionIndex.revoke(reference, authentication, request));
-        } catch (SessionReferenceInvalidException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_SESSION_REFERENCE_INVALID", exception.getMessage());
-        } catch (SessionNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_SESSION_NOT_FOUND", exception.getMessage());
         } catch (AccessDeniedException exception) {
-            return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", exception.getMessage());
-        } catch (SessionIndexUnavailableException exception) {
-            return failure(HttpStatus.SERVICE_UNAVAILABLE, "SUMMER_SESSION_STORE_UNAVAILABLE", exception.getMessage());
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, exception.getMessage(), exception);
         }
     }
 
@@ -102,7 +90,8 @@ final class SessionController {
             if (sessionIndex != null) sessionIndex.revokeCurrent(request, authentication);
             if (request.getSession(false) != null) request.getSession(false).invalidate();
             return ResponseEntity.noContent().build();
-        } catch (SessionIndexUnavailableException exception) {
+        } catch (SummerException exception) {
+            if (exception.errorCode() != SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE) throw exception;
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .header("X-Request-Id", requestIdAccessor.currentRequestId()).build();
         }
@@ -111,11 +100,6 @@ final class SessionController {
     private <T> ResponseEntity<ApiResponse<T>> ok(T value) {
         return ResponseEntity.ok().header("X-Request-Id", requestIdAccessor.currentRequestId())
                 .body(ApiResponse.success(value, requestIdAccessor.currentRequestId()));
-    }
-
-    private <T> ResponseEntity<ApiResponse<T>> failure(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).header("X-Request-Id", requestIdAccessor.currentRequestId())
-                .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestIdAccessor.currentRequestId()));
     }
 
     private static String quote(String value) { return "\"" + value + "\""; }

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.resilience;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -111,7 +113,7 @@ public class ResilientReadService {
                 } catch (RuntimeException verificationFailure) {
                     fallbackValues.remove(operation + ":" + cacheKey);
                     if (isBusinessFailure(verificationFailure)) throw verificationFailure;
-                    throw new DependencyDegradedException("Fallback cannot be verified", verificationFailure);
+                    throw new SummerException(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE, verificationFailure);
                 }
                 if (fallback == null) fallbackValues.remove(operation + ":" + cacheKey);
             }
@@ -119,7 +121,7 @@ public class ResilientReadService {
                 stats.fallbacks.incrementAndGet();
                 return (T) fallback.value();
             }
-            throw new DependencyDegradedException("Dependency read is unavailable", failure);
+            throw new SummerException(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE, failure);
         }
     }
 

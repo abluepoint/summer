@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.realtime;
 
+import com.abluepoint.summer.common.error.SummerException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
@@ -38,7 +40,10 @@ class RealtimeHandshakeInterceptor implements HandshakeInterceptor {
         catch (RuntimeException denied) { response.setStatusCode(HttpStatus.FORBIDDEN); return false; }
         long after;
         try { after = RealtimeMessageService.cursor(UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams().getFirst("after")); }
-        catch (RealtimeMessageCursorException invalid) { response.setStatusCode(HttpStatus.BAD_REQUEST); return false; }
+        catch (SummerException invalid) {
+            if (invalid.errorCode() != RealtimeErrorCode.CURSOR_INVALID) throw invalid;
+            response.setStatusCode(HttpStatus.BAD_REQUEST); return false;
+        }
         attributes.put("enterpriseId", enterpriseId);
         attributes.put("after", after);
         attributes.put("authentication", authentication);

@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerIdentityStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -54,14 +55,15 @@ class AuthUserService implements SummerIdentityStore {
 
     @Transactional
     AuthUserView create(String username, String password, String role) {
-        if (repository.existsByUsername(username)) throw new AuthUserConflictException();
+        if (repository.existsByUsername(username))
+            throw SummerException.withMessage(IdentityErrorCode.USER_CONFLICT, "Username already exists");
         try {
             AuthUser user = repository.save(new AuthUser(username, passwordEncoder.encode(password), role));
             // Surface a concurrent unique-key conflict inside this operation, before transaction commit.
             repository.flush();
             return AuthUserView.from(user);
         } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
-            throw new AuthUserConflictException();
+            throw SummerException.withMessage(IdentityErrorCode.USER_CONFLICT, "Username already exists", conflict);
         }
     }
 
@@ -77,6 +79,3 @@ class AuthUserService implements SummerIdentityStore {
     }
 }
 
-class AuthUserConflictException extends RuntimeException {
-    AuthUserConflictException() { super("Username already exists"); }
-}

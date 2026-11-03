@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.agent;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -29,12 +31,12 @@ final class AgentService {
         String fingerprint = fingerprint(request);
         Receipt previous = receipts.get(op(enterpriseId, idempotencyKey));
         if (previous != null) return replay(previous, fingerprint);
-        if (!ENTERPRISE.equals(enterpriseId)) throw new AgentConflictException("Enterprise does not exist");
+        if (!ENTERPRISE.equals(enterpriseId)) throw SummerException.withMessage(AgentErrorCode.CONFLICT, "Enterprise does not exist");
         if (request == null || blank(request.name()) || blank(request.code())) {
-            throw new AgentValidationException("name and code are required");
+            throw SummerException.withMessage(AgentErrorCode.INVALID, "name and code are required");
         }
         if (agents.values().stream().anyMatch(a -> a.enterpriseId.equals(enterpriseId) && a.agentCode.equals(request.code().trim()))) {
-            throw new AgentConflictException("Agent code already exists");
+            throw SummerException.withMessage(AgentErrorCode.CONFLICT, "Agent code already exists");
         }
         String id = "agent-" + UUID.randomUUID().toString().substring(0, 8);
         AgentRecord agent = new AgentRecord(enterpriseId, id, "principal-" + UUID.randomUUID().toString().substring(0, 8),
@@ -61,7 +63,7 @@ final class AgentService {
         if (previous != null) return replay(previous, fingerprint);
         AgentRecord agent = agent(enterpriseId, agentId);
         etag(agent.version, ifMatch);
-        if (request == null || blank(request.name())) throw new AgentValidationException("name is required");
+        if (request == null || blank(request.name())) throw SummerException.withMessage(AgentErrorCode.INVALID, "name is required");
         agent.name = request.name().trim();
         agent.description = request.description();
         agent.ownerMemberId = request.ownerMemberId();
@@ -106,7 +108,7 @@ final class AgentService {
                 || !runtime.getToken().getClaimAsBoolean("attestation_verified")) {
             throw new AccessDeniedException("Verified workload identity is required");
         }
-        if (request == null || blank(request.runtimeId())) throw new AgentValidationException("runtimeId is required");
+        if (request == null || blank(request.runtimeId())) throw SummerException.withMessage(AgentErrorCode.INVALID, "runtimeId is required");
         if (!trustedRuntimeId.equals(request.runtimeId())) throw new AccessDeniedException("Runtime assertion mismatch");
         if (!blank(request.agentId()) && !trustedAgentId.equals(request.agentId())) {
             throw new AccessDeniedException("Self-reported agent identity is not trusted");
@@ -114,7 +116,7 @@ final class AgentService {
         AgentRecord agent = agentById(trustedAgentId);
         if (!"ACTIVE".equals(agent.status)) throw new AccessDeniedException("Agent is not active");
         if (agent.instances.values().stream().anyMatch(i -> i.runtimeId.equals(trustedRuntimeId) && "ACTIVE".equals(i.status))) {
-            throw new AgentConflictException("Runtime instance already registered");
+            throw SummerException.withMessage(AgentErrorCode.CONFLICT, "Runtime instance already registered");
         }
         Instant now = Instant.now();
         long ttl = request.expiresInSeconds() == null ? 900 : Math.max(60, Math.min(3600, request.expiresInSeconds()));
@@ -209,33 +211,33 @@ final class AgentService {
     private AgentRecord agent(String enterpriseId, String agentId) {
         if (!ENTERPRISE.equals(enterpriseId)) throw new AccessDeniedException("Enterprise context denied");
         AgentRecord agent = agents.get(agentId);
-        if (agent == null || !enterpriseId.equals(agent.enterpriseId)) throw new AgentConflictException("Agent not found");
+        if (agent == null || !enterpriseId.equals(agent.enterpriseId)) throw SummerException.withMessage(AgentErrorCode.CONFLICT, "Agent not found");
         return agent;
     }
 
     private AgentRecord agentById(String agentId) {
         AgentRecord agent = agents.get(agentId);
-        if (agent == null) throw new AgentConflictException("Agent not found");
+        if (agent == null) throw SummerException.withMessage(AgentErrorCode.CONFLICT, "Agent not found");
         return agent;
     }
 
     private AgentInstanceRecord findInstance(String instanceId) {
         return agents.values().stream().map(a -> a.instances.get(instanceId)).filter(Objects::nonNull).findFirst()
-                .orElseThrow(() -> new AgentConflictException("Agent instance not found"));
+                .orElseThrow(() -> SummerException.withMessage(AgentErrorCode.CONFLICT, "Agent instance not found"));
     }
 
     private void etag(long version, String ifMatch) {
-        if (ifMatch == null || !ifMatch.equals("\"" + version + "\"")) throw new AgentPreconditionException("The resource has changed");
+        if (ifMatch == null || !ifMatch.equals("\"" + version + "\"")) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
     }
 
-    private void requireKey(String key) { if (blank(key)) throw new AgentValidationException("Idempotency-Key is required"); }
+    private void requireKey(String key) { if (blank(key)) throw SummerException.withMessage(AgentErrorCode.INVALID, "Idempotency-Key is required"); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
     private static String claim(JwtAuthenticationToken jwt, String name) { return jwt.getToken().getClaimAsString(name); }
     private static String fingerprint(Object... values) { return Integer.toHexString(Arrays.deepToString(values).hashCode()); }
     private static String op(String enterpriseId, String key) { return enterpriseId + ":" + key; }
 
     @SuppressWarnings("unchecked") private <T> T replay(Receipt receipt, String fingerprint) {
-        if (!receipt.fingerprint.equals(fingerprint)) throw new AgentIdempotencyConflictException("Idempotency key reused");
+        if (!receipt.fingerprint.equals(fingerprint)) throw SummerException.withMessage(AgentErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency key reused");
         return (T) receipt.result;
     }
     private void remember(String enterpriseId, String key, String fingerprint, Object result) { receipts.put(op(enterpriseId, key), new Receipt(fingerprint, result)); }

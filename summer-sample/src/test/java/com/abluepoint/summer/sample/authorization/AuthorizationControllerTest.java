@@ -29,6 +29,28 @@ class AuthorizationControllerTest {
     MockMvc mockMvc;
 
     @Test
+    void invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures() throws Exception {
+        String uri = "/api/v1/enterprises/ent-acme/roles";
+        mockMvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content("{}")
+                        .header("Idempotency-Key", "role-invalid").with(admin("enterprise.roles.write")))
+                .andExpect(status().isBadRequest())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_AUTHORIZATION_INVALID", "name and code are required"));
+        String body = "{\"name\":\"Reader\",\"code\":\"unified-reader\",\"capabilityIds\":[\"custom.resource.invoke\"]}";
+        mockMvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "role-unified").with(admin("enterprise.roles.write")))
+                .andExpect(status().isCreated()).andExpect(header().string("ETag", "\"1\""))
+                .andExpect(jsonPath("$.data.capabilityIds.length()").value(1));
+        mockMvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(body.replace("Reader", "Changed"))
+                        .header("Idempotency-Key", "role-unified").with(admin("enterprise.roles.write")))
+                .andExpect(status().isConflict())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_IDEMPOTENCY_CONFLICT", "Idempotency key reused"));
+        mockMvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Idempotency-Key", "role-duplicate-code").with(admin("enterprise.roles.write")))
+                .andExpect(status().isConflict())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_AUTHORIZATION_CONFLICT", "Role code already exists"));
+    }
+
+    @Test
     void listsOnlyEnterpriseCapabilitiesAndDoesNotTreatOAuthScopeAsCapability() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/capabilities/catalog")
                         .with(admin("enterprise.capabilities.read")))
@@ -117,7 +139,8 @@ class AuthorizationControllerTest {
                         .header("If-Match", "\"999\"").header("Idempotency-Key", "role-stale-1")
                         .with(admin("enterprise.roles.write")))
                 .andExpect(status().isPreconditionFailed())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"))
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
     }
 
     @Test

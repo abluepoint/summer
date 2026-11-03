@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.menu;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
 import com.abluepoint.summer.sample.authorization.AuthorizationAuditStore;
@@ -48,21 +51,21 @@ class MenuManifestService {
     @Transactional
     synchronized MenuManifestView sync(MenuManifestSyncRequest request, String key, Authentication authentication) {
         authorizationService.requirePlatformMenu(authentication);
-        if (key == null || key.isBlank()) throw new MenuManifestValidationException("Idempotency-Key is required");
+        if (key == null || key.isBlank()) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Idempotency-Key is required");
         validate(request);
         String fingerprint = manifestFingerprint(request);
         Receipt previous = receipts.get(key);
         if (previous != null) {
-            if (!previous.fingerprint.equals(fingerprint)) throw new MenuManifestConflictException("Idempotency key reused");
+            if (!previous.fingerprint.equals(fingerprint)) throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Idempotency key reused");
             return (MenuManifestView) previous.result;
         }
         long current = manifestRepository.findAll().stream().mapToLong(MenuManifestEntity::manifestVersion).max().orElse(0);
-        if (request.manifestVersion() < current) throw new MenuManifestConflictException("Manifest version must increase");
+        if (request.manifestVersion() < current) throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Manifest version must increase");
         if (request.manifestVersion() == current) {
             List<MenuManifestEntity> existing = manifestRepository.findAllByOrderBySortOrderAscMenuIdAsc();
             MenuManifestView replay = view(current, existing, Map.of(), null);
             if (manifestFingerprint(request).equals(manifestFingerprint(toRequest(replay)))) return replay;
-            throw new MenuManifestConflictException("Manifest version already contains different metadata");
+            throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Manifest version already contains different metadata");
         }
         manifestRepository.deleteAll();
         List<MenuManifestEntity> entities = request.items().stream().map(item -> new MenuManifestEntity(item, request.manifestVersion())).toList();
@@ -121,32 +124,32 @@ class MenuManifestService {
     synchronized MenuManifestItemView override(String enterpriseId, String menuId, MenuManifestOverrideRequest request,
                                                 String ifMatch, String key, Authentication authentication) {
         authorizationService.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.menu.write");
-        if (key == null || key.isBlank()) throw new MenuManifestValidationException("Idempotency-Key is required");
-        if (request == null) throw new MenuManifestValidationException("Menu override is required");
-        MenuManifestEntity item = manifestRepository.lockMenu(menuId).orElseThrow(() -> new MenuManifestConflictException("Menu item not found"));
+        if (key == null || key.isBlank()) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Idempotency-Key is required");
+        if (request == null) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Menu override is required");
+        MenuManifestEntity item = manifestRepository.lockMenu(menuId).orElseThrow(() -> SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Menu item not found"));
         // A locking/current read avoids an older MySQL repeatable-read snapshot after waiting.
         MenuManifestOverrideEntity current = overrideRepository.findByEnterpriseIdAndMenuId(enterpriseId, menuId).orElse(null);
         validateOverride(request, menuId);
         if (request.parentMenuId() != null && !request.parentMenuId().isBlank()
                 && !manifestRepository.existsById(request.parentMenuId())) {
-            throw new MenuManifestValidationException("Unknown parent menu");
+            throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Unknown parent menu");
         }
         validateOverrideParent(enterpriseId, menuId, request.parentMenuId());
         String fingerprint = fingerprint(enterpriseId, menuId, request, ifMatch);
         Receipt previous = receipts.get("override:" + enterpriseId + ":" + menuId + ":" + key);
         if (previous != null) {
-            if (!previous.fingerprint.equals(fingerprint)) throw new MenuManifestConflictException("Idempotency key reused");
+            if (!previous.fingerprint.equals(fingerprint)) throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Idempotency key reused");
             return (MenuManifestItemView) previous.result;
         }
         long currentVersion = current == null ? 1 : current.version();
-        if (ifMatch == null || !ifMatch.equals("\"" + currentVersion + "\"")) throw new MenuManifestPreconditionException("The resource has changed");
+        if (ifMatch == null || !ifMatch.equals("\"" + currentVersion + "\"")) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
         if (current == null) {
             current = new MenuManifestOverrideEntity(enterpriseId, menuId, request);
             overrideRepository.saveAndFlush(current);
         } else {
             int changed = overrideRepository.compareAndSet(current.overrideId(), currentVersion, request.enabled(),
                     request.parentMenuId(), request.sortOrder(), request.capabilityCode(), Instant.now());
-            if (changed != 1) throw new MenuManifestPreconditionException("The resource has changed");
+            if (changed != 1) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
             // compareAndSet clears the persistence context; this is only the response snapshot.
             current.update(request, currentVersion + 1);
         }
@@ -223,21 +226,21 @@ class MenuManifestService {
     private static String blankToNull(String value) { return value == null || value.isBlank() ? null : value; }
 
     private static void validate(MenuManifestSyncRequest request) {
-        if (request == null || request.manifestVersion() < 1 || request.items() == null) throw new MenuManifestValidationException("manifestVersion and items are required");
+        if (request == null || request.manifestVersion() < 1 || request.items() == null) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "manifestVersion and items are required");
         Set<String> ids = new HashSet<>();
         for (MenuManifestItemRequest item : request.items()) {
-            if (item == null || blank(item.menuId()) || !item.menuId().matches("[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)*") || item.menuId().length() > 160) throw new MenuManifestValidationException("Invalid menuId");
-            if (!ids.add(item.menuId())) throw new MenuManifestValidationException("Duplicate menuId");
-            if (blank(item.path()) || !item.path().startsWith("/") || item.path().contains("://") || item.path().contains("${") || item.path().contains("?")) throw new MenuManifestValidationException("Invalid menu path");
-            if (blank(item.titleKey()) || blank(item.iconKey()) || item.sortOrder() == null || item.sortOrder() < 0) throw new MenuManifestValidationException("Invalid menu metadata");
-            if (item.capabilityCode() != null && (item.capabilityCode().isBlank() || item.capabilityCode().length() > 200)) throw new MenuManifestValidationException("Invalid capability code");
-            if (item.parentMenuId() != null && item.parentMenuId().equals(item.menuId())) throw new MenuManifestValidationException("Menu cannot parent itself");
+            if (item == null || blank(item.menuId()) || !item.menuId().matches("[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)*") || item.menuId().length() > 160) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Invalid menuId");
+            if (!ids.add(item.menuId())) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Duplicate menuId");
+            if (blank(item.path()) || !item.path().startsWith("/") || item.path().contains("://") || item.path().contains("${") || item.path().contains("?")) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Invalid menu path");
+            if (blank(item.titleKey()) || blank(item.iconKey()) || item.sortOrder() == null || item.sortOrder() < 0) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Invalid menu metadata");
+            if (item.capabilityCode() != null && (item.capabilityCode().isBlank() || item.capabilityCode().length() > 200)) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Invalid capability code");
+            if (item.parentMenuId() != null && item.parentMenuId().equals(item.menuId())) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Menu cannot parent itself");
         }
         for (MenuManifestItemRequest item : request.items()) {
-            if (item.parentMenuId() != null && !ids.contains(item.parentMenuId())) throw new MenuManifestValidationException("Unknown parent menu");
+            if (item.parentMenuId() != null && !ids.contains(item.parentMenuId())) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Unknown parent menu");
             String parent = item.parentMenuId(); Set<String> visited = new HashSet<>();
             while (parent != null) {
-                if (!visited.add(parent)) throw new MenuManifestValidationException("Menu parent cycle");
+                if (!visited.add(parent)) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Menu parent cycle");
                 String currentParent = parent;
                 MenuManifestItemRequest parentItem = request.items().stream().filter(x -> currentParent.equals(x.menuId())).findFirst().orElse(null);
                 parent = parentItem == null ? null : parentItem.parentMenuId();
@@ -245,9 +248,9 @@ class MenuManifestService {
         }
     }
     private static void validateOverride(MenuManifestOverrideRequest request, String menuId) {
-        if (request.sortOrder() != null && request.sortOrder() < 0) throw new MenuManifestValidationException("Invalid sortOrder");
-        if (request.parentMenuId() != null && request.parentMenuId().equals(menuId)) throw new MenuManifestValidationException("Menu cannot parent itself");
-        if (request.capabilityCode() != null && (request.capabilityCode().length() > 200 || request.capabilityCode().contains("${"))) throw new MenuManifestValidationException("Invalid capability code");
+        if (request.sortOrder() != null && request.sortOrder() < 0) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Invalid sortOrder");
+        if (request.parentMenuId() != null && request.parentMenuId().equals(menuId)) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Menu cannot parent itself");
+        if (request.capabilityCode() != null && (request.capabilityCode().length() > 200 || request.capabilityCode().contains("${"))) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Invalid capability code");
     }
     private void validateOverrideParent(String enterpriseId, String menuId, String requestedParent) {
         String parent = blankToNull(requestedParent);
@@ -255,7 +258,7 @@ class MenuManifestService {
         overrideRepository.findAllByEnterpriseId(enterpriseId).forEach(value -> overrides.put(value.menuId(), value));
         Set<String> visited = new HashSet<>();
         while (parent != null) {
-            if (!visited.add(parent) || menuId.equals(parent)) throw new MenuManifestValidationException("Menu parent cycle");
+            if (!visited.add(parent) || menuId.equals(parent)) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Menu parent cycle");
             MenuManifestOverrideEntity override = overrides.get(parent);
             if (override != null && override.parentMenuId() != null) parent = blankToNull(override.parentMenuId());
             else parent = manifestRepository.findById(parent).map(MenuManifestEntity::parentMenuId).orElse(null);

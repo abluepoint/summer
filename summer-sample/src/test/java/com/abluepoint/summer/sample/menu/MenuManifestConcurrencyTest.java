@@ -58,7 +58,8 @@ class MenuManifestConcurrencyTest {
     private int write(MenuManifestService service, TransactionTemplate tx, String id, long version, int order, CyclicBarrier barrier) throws Exception {
         barrier.await(10, TimeUnit.SECONDS);
         try { tx.execute(s -> service.override("ent-acme", id, new MenuManifestOverrideRequest(null, null, order, null), "\"" + version + "\"", "writer-" + order, admin())); return 200; }
-        catch (MenuManifestPreconditionException expected) { return 412; }
+        catch (com.abluepoint.summer.common.error.SummerException expected) {
+            if (expected.errorCode() != com.abluepoint.summer.sample.error.SampleTransportErrorCode.PRECONDITION_FAILED) throw expected; return 412; }
     }
     @Test void rollbackDoesNotPublishIdempotencyReceiptAndSameKeyRetryPersists() {
         String id = menu(); var tx = new TransactionTemplate(transactions); var service = node("retry");

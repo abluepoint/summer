@@ -34,7 +34,9 @@ class ReleaseErrorStatusHttpTest {
                         .header("Idempotency-Key", "typed-validation").header("X-Request-Id", "typed-release-error")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"releaseVersion\":\"candidate\",\"dryRun\":false}"))
                 .andExpect(status().is(422))
+                .andExpect(header().string("X-Request-Id", "typed-release-error"))
                 .andExpect(jsonPath("$.error.code").value("IAM_RELEASE_INVALID"))
+                .andExpect(jsonPath("$.error.message").value("dryRun is required"))
                 .andExpect(jsonPath("$.requestId").value("typed-release-error"));
     }
 

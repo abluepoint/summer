@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 @SpringBootTest(properties = "summer.security.storage.keys=mysql")
-@DirtiesContext
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AutomaticKeyRotationTransactionTest {
     private static final String MASTER = UUID.randomUUID().toString();
 
@@ -32,6 +32,33 @@ class AutomaticKeyRotationTransactionTest {
     @Autowired KeyRotationStateRepository states;
     @Autowired PlatformTransactionManager transactions;
     @Autowired JdbcTemplate jdbc;
+
+    @Test
+    void invalidPersistedRetentionKeepsItsDiagnosticAndCanBeRetriedAfterRepair() {
+        int version = store.currentVersion();
+        var transaction = new TransactionTemplate(transactions);
+        transaction.executeWithoutResult(ignored -> {
+            var state = states.findById(1).orElseThrow();
+            state.schedule(90, 0, Instant.now().minusSeconds(1));
+            states.saveAndFlush(state);
+        });
+
+        var failed = automatic.rotateIfDue();
+        assertThat(failed.status()).isEqualTo("FAILED");
+        assertThat(failed.lastError()).isEqualTo("KeyRotationValidationException");
+        assertThat(failed.failureCount()).isEqualTo(1);
+        assertThat(failed.nextRotationAt()).isAfter(failed.lastAttemptAt().plusSeconds(3500));
+        assertThat(store.currentVersion()).isEqualTo(version);
+
+        transaction.executeWithoutResult(ignored -> {
+            var state = states.findById(1).orElseThrow();
+            state.schedule(90, 30, Instant.now().minusSeconds(1));
+            states.saveAndFlush(state);
+        });
+        assertThat(automatic.rotateIfDue().status()).isEqualTo("SUCCEEDED");
+        assertThat(automatic.status().lastError()).isNull();
+        assertThat(store.currentVersion()).isEqualTo(version + 1);
+    }
 
     @Test
     void databaseRotationFailureCommitsRetryStateAndLaterRetrySucceedsOnce() {

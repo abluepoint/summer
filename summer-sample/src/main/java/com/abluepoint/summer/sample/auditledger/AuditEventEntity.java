@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.auditledger;
 
+import com.abluepoint.summer.common.error.SummerException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -116,7 +117,7 @@ public class AuditEventEntity {
 
     @PreUpdate
     void preventUpdate() {
-        throw new AuditEventImmutableException("Audit events are append-only");
+        throw SummerException.withMessage(AuditLedgerErrorCode.EVENT_IMMUTABLE, "Audit events are append-only");
     }
 
     public String getEventId() { return eventId; }

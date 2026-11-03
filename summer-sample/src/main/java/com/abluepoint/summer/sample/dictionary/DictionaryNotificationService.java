@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.dictionary;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
@@ -69,7 +73,7 @@ class DictionaryNotificationService {
         Connection connection = new Connection(enterpriseId, dictionaryCode, emitter, authentication, lastEventId);
         synchronized (subscriptionLock) {
             Set<Connection> active = connections.computeIfAbsent(enterpriseId, ignored -> ConcurrentHashMap.newKeySet());
-            if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE) throw new DictionaryNotificationConnectionLimitException();
+            if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE) throw SummerException.withMessage(SampleTransportErrorCode.DICTIONARY_SSE_LIMIT, "Too many dictionary notification connections");
             active.add(connection);
             emitter.onCompletion(() -> remove(connection));
             emitter.onTimeout(() -> remove(connection));
@@ -106,7 +110,7 @@ class DictionaryNotificationService {
         actions.requirePublic(enterpriseId, "dictionaries", authentication);
         DataScopeService.ScopeFilter scope = dataScopes.filter(enterpriseId, "dictionaries", authentication);
         boolean visible = types.findScoped(dictionaryCode, scope).isPresent();
-        if (!visible) throw new DictionaryNotificationNotFoundException();
+        if (!visible) throw SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Dictionary was not found");
     }
 
     private void sendConnected(Connection connection, long lastEventId) throws IOException {
@@ -204,5 +208,3 @@ class DictionaryNotificationService {
                                          String eventType, long version, String payloadJson) {}
 }
 
-final class DictionaryNotificationConnectionLimitException extends RuntimeException {}
-final class DictionaryNotificationNotFoundException extends RuntimeException {}

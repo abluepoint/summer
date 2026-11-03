@@ -1,5 +1,9 @@
 package com.abluepoint.summer.mvc.filter;
 
+import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
+import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
+import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import com.abluepoint.summer.mvc.logging.RequestLogRecord;
 import com.abluepoint.summer.mvc.logging.RequestLogSink;
 import com.abluepoint.summer.mvc.logging.RequestBodySnapshotter;
@@ -22,6 +26,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 class RequestLoggingFilterTest {
+
+    private static HandlerExceptionResolver mvcResolver() {
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new Object())
+                .setControllerAdvice(new ApiExceptionHandler(
+                        (code, arguments, locale) -> code.defaultMessage(),
+                        new DefaultErrorStatusResolver(), new ServletRequestIdAccessor()))
+                .build();
+        return mvc.getDispatcherServlet().getWebApplicationContext()
+                .getBean("handlerExceptionResolver", HandlerExceptionResolver.class);
+    }
 
     @Test
     void recordsRequestMetadataAfterTheHttpChainCompletes() throws Exception {
@@ -128,7 +142,7 @@ class RequestLoggingFilterTest {
 
         new RequestCorrelationFilter().doFilter(request, response, (correlated, correlatedResponse) ->
                 logging.doFilter(correlated, correlatedResponse, (logged, loggedResponse) ->
-                        new CachedBodyFilter(8).doFilter(logged, loggedResponse, (body, bodyResponse) -> {
+                        CachedBodyFilter.withExceptionResolver(8, mvcResolver()).doFilter(logged, loggedResponse, (body, bodyResponse) -> {
                             throw new AssertionError("oversized request reached downstream chain");
                         })));
 

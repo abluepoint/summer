@@ -40,6 +40,8 @@ class OAuthPersistenceHttpTest {
     @Autowired SummerOAuthClientStore clients;
     @Autowired SummerAuthorizationStore authorizations;
     @Autowired SummerConsentStore consents;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+    com.abluepoint.summer.security.audit.SecurityAuditLogger audit;
 
     @BeforeEach
     void createJdbcSchema() {
@@ -49,6 +51,46 @@ class OAuthPersistenceHttpTest {
         jdbc.update("delete from oauth2_authorization_consent");
         jdbc.update("delete from oauth2_registered_client");
         jdbc.update("delete from summer_oauth_client_status");
+    }
+
+    @Test
+    void businessFailuresKeepTheirAuditWhileUsingTheUnifiedBoundary() throws Exception {
+        createEditableClient();
+        mockMvc.perform(post("/api/security/oauth-clients").with(manager()).contentType("application/json")
+                        .header("X-Request-Id", "oauth-duplicate")
+                        .content("{\"clientId\":\"editable-client\",\"clientName\":\"Duplicate\",\"publicClient\":true,\"redirectUris\":[\"https://example.test/other\"],\"scopes\":[\"openid\"]}"))
+                .andExpect(status().isConflict())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_OAUTH_CLIENT_EXISTS", "Client ID already exists"));
+        mockMvc.perform(patch("/api/security/oauth-clients/missing").with(manager()).contentType("application/json")
+                        .header("X-Request-Id", "oauth-missing").content("{\"version\":1,\"status\":\"DISABLED\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_OAUTH_CLIENT_NOT_FOUND", "Client was not found"));
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                        .header("X-Request-Id", "oauth-stale").content("{\"version\":2,\"status\":\"DISABLED\"}"))
+                .andExpect(status().isPreconditionFailed())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_OAUTH_CLIENT_VERSION_CONFLICT", "Client version has changed; reload before retrying"));
+        mockMvc.perform(patch("/api/security/oauth-clients/editable-client").with(manager()).contentType("application/json")
+                        .header("X-Request-Id", "oauth-invalid").content("{\"version\":0,\"status\":\"DISABLED\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_OAUTH_CLIENT_INVALID", "version is required"))
+                .andExpect(result -> assertThat(result.getResolvedException().getCause()).isInstanceOf(IllegalArgumentException.class));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(
+                        "/api/security/oauth-consents/missing/alice").with(manager()).header("X-Request-Id", "consent-missing"))
+                .andExpect(status().isNotFound())
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_OAUTH_CONSENT_NOT_FOUND", "Authorization consent was not found"));
+        org.mockito.Mockito.verify(audit).record(org.mockito.ArgumentMatchers.eq("oauth_management_failed"),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(java.util.Map.of("code", "SUMMER_OAUTH_CLIENT_EXISTS", "requestId", "oauth-duplicate")));
+        org.mockito.Mockito.verify(audit).record(org.mockito.ArgumentMatchers.eq("oauth_management_failed"),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(java.util.Map.of("code", "SUMMER_OAUTH_CLIENT_NOT_FOUND", "requestId", "oauth-missing")));
+        org.mockito.Mockito.verify(audit).record(org.mockito.ArgumentMatchers.eq("oauth_management_failed"),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(java.util.Map.of("code", "SUMMER_OAUTH_CLIENT_VERSION_CONFLICT", "requestId", "oauth-stale")));
+        org.mockito.Mockito.verify(audit).record(org.mockito.ArgumentMatchers.eq("oauth_management_failed"),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(java.util.Map.of("code", "SUMMER_OAUTH_CLIENT_INVALID", "requestId", "oauth-invalid")));
+        org.mockito.Mockito.verify(audit).record(org.mockito.ArgumentMatchers.eq("oauth_management_failed"),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(java.util.Map.of("code", "SUMMER_OAUTH_CONSENT_NOT_FOUND", "requestId", "consent-missing")));
+        mockMvc.perform(get("/api/security/oauth-clients").with(manager()))
+                .andExpect(jsonPath("$.data.items[0].clientName").value("Before"))
+                .andExpect(jsonPath("$.data.items[0].version").value(1));
     }
 
     @Test

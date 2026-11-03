@@ -25,6 +25,7 @@ class BffMcpControllerTest {
                     new BffSessionService(stateStore, sessions, (code, verifier) ->
                             new OidcIdentity("unused", "Unused", Instant.now()), new BffTokenGenerator()),
                     new BffCookiePolicy("https://console.example.test/", "/"), summer))
+            .setControllerAdvice(businessErrors())
             .addFilters(new BffCsrfFilter(List.of(ORIGIN)))
             .build();
 
@@ -113,6 +114,7 @@ class BffMcpControllerTest {
                         new BffSessionService(stateStore, localSessions, (code, verifier) ->
                                 new OidcIdentity("unused", "Unused", Instant.now()), new BffTokenGenerator()),
                         new BffCookiePolicy("https://console.example.test/", "/"), new UnavailableSummerMcpClient()))
+                .setControllerAdvice(businessErrors())
                 .addFilters(new BffCsrfFilter(List.of(ORIGIN)))
                 .build();
 
@@ -132,26 +134,45 @@ class BffMcpControllerTest {
         InMemoryProductSessionStore localSessions = new InMemoryProductSessionStore();
         localSessions.put("session-human", new OidcIdentity("human-1", "Alice",
                 Instant.parse("2030-01-01T00:00:00Z"), java.util.Set.of("ent-acme")));
-        MockMvc failingMvc = MockMvcBuilders.standaloneSetup(new BffSessionController(
-                        new BffSessionService(stateStore, localSessions, (code, verifier) ->
-                                new OidcIdentity("unused", "Unused", Instant.now()), new BffTokenGenerator()),
-                        new BffCookiePolicy("https://console.example.test/", "/"),
-                        (enterpriseId, identity, request) -> {
-                            throw new IllegalStateException("provider credentials must not be exposed");
-                        }))
-                .addFilters(new BffCsrfFilter(List.of(ORIGIN)))
-                .build();
+        for (RuntimeException upstream : List.of(new IllegalStateException("provider diagnostic"),
+                new org.springframework.security.access.AccessDeniedException("provider diagnostic"),
+                com.abluepoint.summer.common.error.SummerException.withMessage(
+                        com.abluepoint.summer.common.error.CommonErrorCode.CONFLICT, "provider diagnostic"))) {
+            MockMvc failingMvc = MockMvcBuilders.standaloneSetup(new BffSessionController(
+                            new BffSessionService(stateStore, localSessions, (code, verifier) ->
+                                    new OidcIdentity("unused", "Unused", Instant.now()), new BffTokenGenerator()),
+                            new BffCookiePolicy("https://console.example.test/", "/"),
+                            (enterpriseId, identity, request) -> { throw upstream; }))
+                    .setControllerAdvice(businessErrors())
+                    .addFilters(new BffCsrfFilter(List.of(ORIGIN)))
+                    .build();
+            var result = failingMvc.perform(post("/bff/api/v1/enterprises/ent-acme/mcp/invoke")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"connectionId\":\"ext-1\",\"tool\":\"search\",\"arguments\":{}}")
+                            .header("Origin", ORIGIN)
+                            .header(BffCsrfFilter.CSRF_HEADER, "csrf-1")
+                            .cookie(new jakarta.servlet.http.Cookie(BffCookiePolicy.PRODUCT_SESSION_COOKIE, "session-human"),
+                                    new jakarta.servlet.http.Cookie(BffCookiePolicy.CSRF_COOKIE, "csrf-1")))
+                    .andExpect(status().isBadGateway())
+                    .andExpect(jsonPath("$.error.code").value("BFF_MCP_UPSTREAM_ERROR"))
+                    .andExpect(jsonPath("$.error.message").value("MCP execution is temporarily unavailable"))
+                    .andExpect(jsonPath("$.error.cause").doesNotExist()).andReturn();
+            assertThat(result.getResolvedException()).isInstanceOfSatisfying(
+                    com.abluepoint.summer.common.error.SummerException.class,
+                    error -> assertThat(error.getCause()).isSameAs(upstream));
+            assertThat(result.getResponse().getContentAsString()).doesNotContain("provider diagnostic");
+        }
+    }
 
-        failingMvc.perform(post("/bff/api/v1/enterprises/ent-acme/mcp/invoke")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"connectionId\":\"ext-1\",\"tool\":\"search\",\"arguments\":{}}")
-                        .header("Origin", ORIGIN)
-                        .header(BffCsrfFilter.CSRF_HEADER, "csrf-1")
-                        .cookie(new jakarta.servlet.http.Cookie(BffCookiePolicy.PRODUCT_SESSION_COOKIE, "session-human"),
-                                new jakarta.servlet.http.Cookie(BffCookiePolicy.CSRF_COOKIE, "csrf-1")))
-                .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.error.code").value("BFF_MCP_UPSTREAM_ERROR"))
-                .andExpect(jsonPath("$.error.message").value("MCP execution is temporarily unavailable"));
+    private static com.abluepoint.summer.mvc.support.ApiExceptionHandler businessErrors() {
+        return new com.abluepoint.summer.mvc.support.ApiExceptionHandler(
+                (code, arguments, locale) -> code.defaultMessage(),
+                new com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver(Map.of(
+                        com.abluepoint.summer.sample.error.SampleTransportErrorCode.BFF_UNAVAILABLE,
+                        org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                        com.abluepoint.summer.sample.error.SampleTransportErrorCode.BFF_UPSTREAM_ERROR,
+                        org.springframework.http.HttpStatus.BAD_GATEWAY)),
+                () -> "bff-standalone");
     }
 
     private static final class RecordingSummerMcpClient implements SummerMcpClient {

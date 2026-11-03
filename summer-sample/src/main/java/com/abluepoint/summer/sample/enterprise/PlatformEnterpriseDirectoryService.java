@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -39,22 +42,22 @@ class PlatformEnterpriseDirectoryService {
     @Transactional
     PlatformEnterpriseView transition(String id, String action, String ifMatch, String key, String requestId, Authentication auth) {
         require(auth, "platform.enterprise.write");
-        if (key == null || key.isBlank() || key.length() > 128) throw new PlatformEnterpriseValidationException("Idempotency-Key is required (maximum 128 characters)");
-        if (!repository.existsByEnterpriseId(id)) throw new PlatformEnterpriseNotFoundException(id);
+        if (key == null || key.isBlank() || key.length() > 128) throw SummerException.withMessage(DirectoryErrorCode.INVALID_ENTERPRISE_ACTION, "Idempotency-Key is required (maximum 128 characters)");
+        if (!repository.existsByEnterpriseId(id)) throw SummerException.withMessage(DirectoryErrorCode.ENTERPRISE_NOT_FOUND, "Enterprise not found: " + id);
         registry.lock(id);
         String fingerprint = action + "|" + ifMatch;
         var previous = journal.find(id, "platform.enterprise.mutation", key).orElse(null);
         if (previous != null) {
-            if (!previous.fingerprint().equals(fingerprint)) throw new PlatformEnterpriseConflictException("Idempotency-Key was already used for another enterprise action");
+            if (!previous.fingerprint().equals(fingerprint)) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key was already used for another enterprise action");
             return journal.decode(previous, PlatformEnterpriseView.class);
         }
-        var current = repository.findByEnterpriseId(id).orElseThrow(() -> new PlatformEnterpriseNotFoundException(id));
-        if (!("\"" + revision(current) + "\"").equals(ifMatch)) throw new PlatformEnterprisePreconditionException();
+        var current = repository.findByEnterpriseId(id).orElseThrow(() -> SummerException.withMessage(DirectoryErrorCode.ENTERPRISE_NOT_FOUND, "Enterprise not found: " + id));
+        if (!("\"" + revision(current) + "\"").equals(ifMatch)) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The enterprise has changed");
         String next = switch (action) {
             case "freeze" -> "FROZEN";
             case "disable" -> "DISABLED";
             case "reject" -> "REJECTED";
-            default -> throw new PlatformEnterpriseValidationException("unsupported enterprise action");
+            default -> throw SummerException.withMessage(DirectoryErrorCode.INVALID_ENTERPRISE_ACTION, "unsupported enterprise action");
         };
         String before = current.status();
         current.status(next);

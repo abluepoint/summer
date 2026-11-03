@@ -1,11 +1,9 @@
 package com.abluepoint.summer.sample.plugin;
 
-import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.mvc.api.RawResponse;
-import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.sample.resource.ResourcePermission;
 import org.springframework.http.HttpStatus;
@@ -15,19 +13,17 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.function.Supplier;
 
 @RestController
 @RequestMapping("/api")
 class PluginController {
     private final PluginService service;
     private final RequestIdAccessor requestId;
-    private final ErrorStatusResolver errorStatus;
 
-    PluginController(PluginService service, RequestIdAccessor requestId, ErrorStatusResolver errorStatus) {
+    PluginController(PluginService service, RequestIdAccessor requestId) {
         this.service = service;
         this.requestId = requestId;
-        this.errorStatus = errorStatus;
     }
 
     @GetMapping("/v1/platform/plugins")
@@ -39,7 +35,7 @@ class PluginController {
     @RawResponse
     @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
     ResponseEntity<ApiResponse<PluginView>> register(@RequestBody PluginRegisterRequest body, Authentication authentication) {
-        try { return body(HttpStatus.CREATED, service.register(body, authentication)); } catch (Exception e) { return error(e); }
+        return body(HttpStatus.CREATED, nativeBoundary(() -> service.register(body, authentication)));
     }
 
     @PostMapping("/v1/platform/plugins/{pluginId}:enable")
@@ -72,20 +68,14 @@ class PluginController {
     @ResourcePermission("enterprise.plugins.customer-insights.read")
     ResponseEntity<ApiResponse<PluginInsightsView>> customerInsights(@PathVariable String enterpriseId, Authentication authentication) { return lifecycle(() -> service.customerInsights(enterpriseId, authentication)); }
 
-    private <T> ResponseEntity<ApiResponse<T>> lifecycle(ThrowingSupplier<T> call) { try { return ok(call.get()); } catch (Exception e) { return error(e); } }
+    private <T> ResponseEntity<ApiResponse<T>> lifecycle(Supplier<T> call) { return ok(nativeBoundary(call)); }
     private <T> ResponseEntity<ApiResponse<T>> ok(T value) { return body(HttpStatus.OK, value); }
     private <T> ResponseEntity<ApiResponse<T>> body(HttpStatus status, T value) { String rid = requestId.currentRequestId(); return ResponseEntity.status(status).header("X-Request-Id", rid).body(ApiResponse.success(value, rid)); }
-    private <T> ResponseEntity<ApiResponse<T>> error(Exception exception) {
-        ErrorCode code = CommonErrorCode.INTERNAL_ERROR;
-        if (exception instanceof AccessDeniedException) code = CommonErrorCode.FORBIDDEN;
-        else if (exception instanceof PluginValidationException) code = PluginErrorCode.INVALID;
-        else if (exception instanceof PluginTrustException) code = PluginErrorCode.UNTRUSTED;
-        else if (exception instanceof PluginCompatibilityException) code = PluginErrorCode.INCOMPATIBLE;
-        else if (exception instanceof PluginNotFoundException) code = CommonErrorCode.NOT_FOUND;
-        else if (exception instanceof RuntimeException failure) throw failure;
-        String rid = requestId.currentRequestId();
-        return ResponseEntity.status(errorStatus.resolve(code)).header("X-Request-Id", rid)
-                .body(ApiResponse.failure(new ApiError(code.code(), exception.getMessage(), List.of()), rid));
+    // Preserve the message contract of this existing native permission boundary.
+    private <T> T nativeBoundary(Supplier<T> call) {
+        try { return call.get(); }
+        catch (AccessDeniedException denied) {
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, denied.getMessage(), denied);
+        }
     }
-    @FunctionalInterface private interface ThrowingSupplier<T> { T get() throws Exception; }
 }

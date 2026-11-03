@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.enterprise;
 
-import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -34,7 +33,10 @@ class EnterpriseReviewController {
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise-review.write")
     @PostMapping("/api/v1/platform/enterprise-reviews/{id}:request-info") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.write')") @RawResponse
     ResponseEntity<ApiResponse<EnterpriseReview>> requestInfo(@PathVariable String id, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String key, @RequestBody ReviewRequest body, Authentication auth) { return decide(id, "REQUEST_INFO", body.reason(), ifMatch, key, auth); }
-    private ResponseEntity<ApiResponse<EnterpriseReview>> decide(String id, String decision, String reason, String ifMatch, String key, Authentication auth) { try { EnterpriseReview body = service.decide(id, decision, reason, ifMatch, key, requestId.currentRequestId(), auth); return ResponseEntity.ok().eTag(quote(body.revision())).body(ApiResponse.success(body, requestId.currentRequestId())); } catch (ReviewPreconditionException e) { return ResponseEntity.status(412).body(ApiResponse.failure(new ApiError("SUMMER_PRECONDITION_FAILED", "The resource has changed", List.of()), requestId.currentRequestId())); } catch (ReviewConflictException e) { return ResponseEntity.status(409).body(ApiResponse.failure(new ApiError("SUMMER_IDEMPOTENCY_CONFLICT", e.getMessage(), List.of()), requestId.currentRequestId())); } catch (ReviewValidationException e) { return ResponseEntity.badRequest().body(ApiResponse.failure(new ApiError("SUMMER_INVALID_REVIEW", e.getMessage(), List.of()), requestId.currentRequestId())); } }
+    private ResponseEntity<ApiResponse<EnterpriseReview>> decide(String id, String decision, String reason, String ifMatch, String key, Authentication auth) {
+        EnterpriseReview body = service.decide(id, decision, reason, ifMatch, key, requestId.currentRequestId(), auth);
+        return ResponseEntity.ok().eTag(quote(body.revision())).body(ApiResponse.success(body, requestId.currentRequestId()));
+    }
     record ListResponse(List<EnterpriseReview> items) { ListResponse { items = List.copyOf(items); } }
     private static String quote(String v) { return "\"" + v + "\""; }
 }

@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.task;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.ObjectMapper;
@@ -77,7 +80,7 @@ class TaskProgressEventService {
             if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE
                     || connections.values().stream().mapToInt(Set::size).sum() >= MAX_CONNECTIONS) {
                 if (active.isEmpty()) connections.remove(enterpriseId, active);
-                throw new TaskProgressConnectionLimitException();
+                throw new SummerException(SampleTransportErrorCode.TASK_SSE_LIMIT);
             }
             active.add(connection);
             emitter.onCompletion(() -> remove(connection));
@@ -214,7 +217,7 @@ class TaskProgressEventService {
 
     private void requireTask(String enterpriseId, String taskId) {
         if (definitions.findById(taskId).filter(task -> enterpriseId.equals(task.enterpriseId())).isEmpty()) {
-            throw new TaskNotFoundException();
+            throw SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Task was not found");
         }
     }
 
@@ -251,4 +254,3 @@ class TaskProgressEventService {
     }
 }
 
-final class TaskProgressConnectionLimitException extends RuntimeException {}

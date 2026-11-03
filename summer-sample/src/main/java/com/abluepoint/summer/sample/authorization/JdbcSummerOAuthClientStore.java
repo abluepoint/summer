@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
@@ -36,11 +39,11 @@ class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
     }
 
     void register(RegisteredClient client) {
-        if (isRegistered(client.getClientId())) throw new DuplicateClientException();
+        if (isRegistered(client.getClientId())) throw SummerException.withMessage(OAuthManagementErrorCode.CLIENT_EXISTS, "Client ID already exists");
         try {
             super.save(client);
         } catch (IllegalArgumentException | org.springframework.dao.DataIntegrityViolationException failure) {
-            if (isRegistered(client.getClientId())) throw new DuplicateClientException();
+            if (isRegistered(client.getClientId())) throw SummerException.withMessage(OAuthManagementErrorCode.CLIENT_EXISTS, "Client ID already exists", failure);
             throw failure;
         }
     }
@@ -78,11 +81,11 @@ class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
                                                  List<String> redirectUris, List<String> scopes,
                                                  int expectedVersion) {
         if (jdbc.queryForList("select id from oauth2_registered_client where client_id=? for update", String.class, clientId).isEmpty())
-            throw new ClientNotFoundException();
+            throw SummerException.withMessage(OAuthManagementErrorCode.CLIENT_NOT_FOUND, "Client was not found");
         RegisteredClient existing = super.findByClientId(clientId);
         List<Map<String, Object>> states = jdbc.queryForList("select status, version from summer_oauth_client_status where client_id=?", clientId);
         int version = states.isEmpty() ? 1 : ((Number) states.getFirst().get("version")).intValue();
-        if (version != expectedVersion) throw new ClientVersionException();
+        if (version != expectedVersion) throw SummerException.withMessage(SampleTransportErrorCode.OAUTH_CLIENT_VERSION_CONFLICT, "Client version has changed; reload before retrying");
         String nextStatus = status == null ? (states.isEmpty() ? "ACTIVE" : (String) states.getFirst().get("status")) : status;
         if (!SetOfStatuses.VALUES.contains(nextStatus)) throw new IllegalArgumentException("status must be ACTIVE or DISABLED");
         RegisteredClient.Builder builder = RegisteredClient.from(existing);
@@ -98,9 +101,6 @@ class JdbcSummerOAuthClientStore extends JdbcRegisteredClientRepository
         return Map.of("clientId", clientId, "status", nextStatus, "version", version + 1);
     }
 
-    static class DuplicateClientException extends RuntimeException {}
-    static class ClientVersionException extends RuntimeException {}
-    static class ClientNotFoundException extends RuntimeException {}
 
     private boolean isEnabled(String clientId) {
         Integer count = jdbc.queryForObject("select count(*) from summer_oauth_client_status where client_id=? and status='ACTIVE'", Integer.class, clientId);

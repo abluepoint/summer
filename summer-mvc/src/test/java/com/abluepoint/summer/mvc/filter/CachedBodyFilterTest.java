@@ -1,5 +1,9 @@
 package com.abluepoint.summer.mvc.filter;
 
+import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
+import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
+import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletRequest;
@@ -74,7 +78,7 @@ class CachedBodyFilterTest {
     @Test
     void rejectsOversizedBodyWithStableHttpResponseBeforeController() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldlessBodyController())
-                .addFilters(new RequestCorrelationFilter(), new CachedBodyFilter(8))
+                .addFilters(new RequestCorrelationFilter(), CachedBodyFilter.withExceptionResolver(8, mvcResolver()))
                 .build();
 
         var response = mockMvc.perform(post("/fieldless-body")
@@ -89,7 +93,7 @@ class CachedBodyFilterTest {
     @Test
     void rejectsUnknownLengthAtHttpSeamWithoutDispatchingPartialBody() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new FieldlessBodyController())
-                .addFilters(new RequestCorrelationFilter(), new CachedBodyFilter(8))
+                .addFilters(new RequestCorrelationFilter(), CachedBodyFilter.withExceptionResolver(8, mvcResolver()))
                 .build();
         RequestBuilder unknownLength = context -> {
             MockHttpServletRequest request = new MockHttpServletRequest(context) {
@@ -114,6 +118,7 @@ class CachedBodyFilterTest {
     @Test
     void interruptedHttpStreamNeverDispatchesPartialBody() {
         AtomicBoolean dispatched = new AtomicBoolean();
+        IOException interrupted = new IOException("interrupted request stream");
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/fieldless-body") {
             @Override
             public long getContentLengthLong() {
@@ -125,7 +130,7 @@ class CachedBodyFilterTest {
                 return new ServletInputStream() {
                     @Override
                     public int read() throws IOException {
-                        throw new IOException("interrupted request stream");
+                        throw interrupted;
                     }
 
                     @Override
@@ -149,8 +154,83 @@ class CachedBodyFilterTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
                 () -> new CachedBodyFilter(8).doFilter(request, new MockHttpServletResponse(), chain)
-        ).isInstanceOf(IOException.class).hasMessage("interrupted request stream");
+        ).isSameAs(interrupted);
         assertThat(dispatched).isFalse();
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void unresolvedBodyLimitFailsClosedWithoutContinuingTheChain() throws Exception {
+        for (CachedBodyFilter limited : new CachedBodyFilter[]{new CachedBodyFilter(8),
+                new CachedBodyFilter(8, new tools.jackson.databind.ObjectMapper()),
+                CachedBodyFilter.withExceptionResolver(8, (request, response, handler, exception) -> null)}) {
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            AtomicBoolean dispatched = new AtomicBoolean();
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> limited.doFilter(
+                            request("application/json", "123456789"), response,
+                            (request, result) -> dispatched.set(true)))
+                    .isInstanceOf(jakarta.servlet.ServletException.class)
+                    .hasCauseInstanceOf(com.abluepoint.summer.common.error.SummerException.class);
+            assertThat(dispatched).isFalse();
+            assertThat(response.getContentAsString()).isEmpty();
+        }
+    }
+
+    @Test
+    void resolverFailurePropagatesWithoutContinuingTheChain() {
+        IllegalStateException unavailable = new IllegalStateException("MVC unavailable");
+        CachedBodyFilter limited = CachedBodyFilter.withExceptionResolver(8, (request, response, handler, exception) -> {
+            throw unavailable;
+        });
+        AtomicBoolean dispatched = new AtomicBoolean();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> limited.doFilter(
+                        request("application/json", "123456789"), new MockHttpServletResponse(),
+                        (request, response) -> dispatched.set(true)))
+                .isSameAs(unavailable);
+        assertThat(dispatched).isFalse();
+    }
+
+    @Test
+    void committedResponseIsNotWrittenAgainAfterBodyLimitFailure() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(202);
+        response.getWriter().write("already committed");
+        response.flushBuffer();
+        AtomicBoolean dispatched = new AtomicBoolean();
+        CachedBodyFilter.withExceptionResolver(8, (request, result, handler, exception) -> {
+            throw new AssertionError("committed response reached MVC resolution");
+        }).doFilter(request("application/json", "123456789"), response,
+                (request, result) -> dispatched.set(true));
+        assertThat(response.getStatus()).isEqualTo(202);
+        assertThat(response.getContentAsString()).isEqualTo("already committed");
+        assertThat(dispatched).isFalse();
+    }
+
+    @Test
+    void downstreamExceptionsAreNotMistakenForCacheFailures() {
+        var downstream = new com.abluepoint.summer.common.error.SummerException(
+                com.abluepoint.summer.mvc.error.MvcErrorCode.REQUEST_BODY_TOO_LARGE);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new CachedBodyFilter(8).doFilter(
+                        request("application/json", "{}"), new MockHttpServletResponse(),
+                        (request, response) -> { throw downstream; }))
+                .isSameAs(downstream);
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void legacyNullMapperCallRemainsUnambiguousAndRejectsNull() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new CachedBodyFilter(8, null))
+                .isInstanceOf(NullPointerException.class).hasMessage("objectMapper");
+    }
+
+    private static HandlerExceptionResolver mvcResolver() {
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new FieldlessBodyController())
+                .setControllerAdvice(new ApiExceptionHandler(
+                        (code, arguments, locale) -> code.defaultMessage(),
+                        new DefaultErrorStatusResolver(), new ServletRequestIdAccessor()))
+                .build();
+        return mvc.getDispatcherServlet().getWebApplicationContext()
+                .getBean("handlerExceptionResolver", HandlerExceptionResolver.class);
     }
 
     private ServletRequest filteredRequest(MockHttpServletRequest request) throws Exception {

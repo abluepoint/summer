@@ -1,7 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.api.RawResponse;
@@ -14,7 +13,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -54,7 +52,7 @@ class SystemParameterController {
             SystemParameterListQuery query = SystemParameterQueryParser.parse(values, authentication);
             return body(HttpStatus.OK, page(queryService.list(query, authentication)));
         } catch (IllegalArgumentException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", "Invalid system parameter query", List.of());
+            throw SummerException.withMessage(SystemParameterErrorCode.INVALID, "Invalid system parameter query", exception);
         }
     }
 
@@ -66,11 +64,7 @@ class SystemParameterController {
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> find(
             @PathVariable String key, Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, parameter(service.find(key, authentication)));
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, parameter(service.find(key, authentication)));
     }
 
     @PostMapping
@@ -80,15 +74,7 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<Map<String, Object>>> create(
             @RequestBody CreateSystemParameterRequest request,
             Authentication authentication) {
-        try {
-            return body(HttpStatus.CREATED, parameter(service.create(request, rid(), authentication)));
-        } catch (SystemParameterValidationException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID",
-                    exception.getMessage(), violations(exception.violations()));
-        } catch (SystemParameterConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_CONFLICT",
-                    exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.CREATED, parameter(service.create(request, rid(), authentication)));
     }
 
     @PatchMapping("/{key}")
@@ -99,17 +85,7 @@ class SystemParameterController {
             @PathVariable String key,
             @RequestBody UpdateSystemParameterRequest request,
             Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, parameter(service.update(key, request, rid(), authentication)));
-        } catch (SystemParameterValidationException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID",
-                    exception.getMessage(), violations(exception.violations()));
-        } catch (SystemParameterVersionConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT",
-                    exception.getMessage(), List.of());
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, parameter(service.update(key, request, rid(), authentication)));
     }
 
     @PostMapping("/{key}/enable")
@@ -143,17 +119,7 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<Map<String, Object>>> draft(@PathVariable String key,
                                                             @RequestBody SystemParameterDraftRequest request,
                                                             Authentication authentication) {
-        try {
-            return body(HttpStatus.CREATED, release(releases.draft(key, request, rid(), authentication)));
-        } catch (SystemParameterReleaseValidationException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
-        } catch (SystemParameterVersionConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        } catch (SystemParameterReleaseConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_RELEASE_CONFLICT", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.CREATED, release(releases.draft(key, request, rid(), authentication)));
     }
 
     @GetMapping("/{key}/versions")
@@ -161,11 +127,7 @@ class SystemParameterController {
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
     ResponseEntity<ApiResponse<Map<String, Object>>> versions(@PathVariable String key, Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, versionPage(releases.versions(key, authentication)));
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, versionPage(releases.versions(key, authentication)));
     }
 
     @PostMapping("/{key}/publish")
@@ -175,17 +137,7 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<Map<String, Object>>> publish(@PathVariable String key,
                                                                @RequestBody SystemParameterReleaseCommand command,
                                                                Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, release(releases.publish(key, command, rid(), authentication)));
-        } catch (SystemParameterReleaseValidationException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
-        } catch (SystemParameterVersionConflictException | SystemParameterReleaseConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
-        } catch (SystemParameterReleaseNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, release(releases.publish(key, command, rid(), authentication)));
     }
 
     @PostMapping("/{key}/rollback")
@@ -195,15 +147,7 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<Map<String, Object>>> rollback(@PathVariable String key,
                                                                 @RequestBody SystemParameterReleaseCommand command,
                                                                 Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, release(releases.rollback(key, command, rid(), authentication)));
-        } catch (SystemParameterReleaseValidationException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
-        } catch (SystemParameterVersionConflictException | SystemParameterReleaseConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
-        } catch (SystemParameterReleaseNotFoundException | SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, release(releases.rollback(key, command, rid(), authentication)));
     }
 
     @PostMapping("/{key}/deactivate")
@@ -213,27 +157,12 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<Map<String, Object>>> deactivate(@PathVariable String key,
                                                                   @RequestBody SystemParameterReleaseCommand command,
                                                                   Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, release(releases.deactivate(key, command, rid(), authentication)));
-        } catch (SystemParameterReleaseValidationException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", exception.getMessage(), violations(exception.violations()));
-        } catch (SystemParameterVersionConflictException | SystemParameterReleaseConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT", exception.getMessage(), List.of());
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, release(releases.deactivate(key, command, rid(), authentication)));
     }
 
     private ResponseEntity<ApiResponse<Map<String, Object>>> status(
             String key, SystemParameterStatus status, Authentication authentication) {
-        try {
-            return body(HttpStatus.OK, parameter(service.setStatus(key, status, rid(), authentication)));
-        } catch (SystemParameterNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage(), List.of());
-        } catch (SystemParameterVersionConflictException exception) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_PARAMETER_VERSION_CONFLICT",
-                    exception.getMessage(), List.of());
-        }
+        return body(HttpStatus.OK, parameter(service.setStatus(key, status, rid(), authentication)));
     }
 
     @PutMapping("/{key}/overrides/{organization}")
@@ -243,9 +172,7 @@ class SystemParameterController {
     ResponseEntity<ApiResponse<com.abluepoint.summer.sample.configuration.ConfigurationOverrideView>> override(
             @PathVariable String key, @PathVariable String organization,
             @RequestBody com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth) {
-        try { return body(HttpStatus.OK, service.override(key, organization, request, auth, rid())); }
-        catch (SystemParameterValidationException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_PARAMETER_INVALID", e.getMessage(), violations(e.violations())); }
-        catch (SystemParameterNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", "The requested resource was not found", List.of()); }
+        return body(HttpStatus.OK, service.override(key, organization, request, auth, rid()));
     }
 
     private String rid() {
@@ -255,16 +182,6 @@ class SystemParameterController {
     private <T> ResponseEntity<ApiResponse<T>> body(HttpStatus status, T value) {
         return ResponseEntity.status(status).header("X-Request-Id", rid())
                 .body(ApiResponse.success(value, rid()));
-    }
-
-    private <T> ResponseEntity<ApiResponse<T>> failure(
-            HttpStatus status, String code, String message, List<ApiError.FieldViolation> violations) {
-        return ResponseEntity.status(status).header("X-Request-Id", rid())
-                .body(ApiResponse.failure(new ApiError(code, message, violations), rid()));
-    }
-
-    private static List<ApiError.FieldViolation> violations(List<SummerException.Violation> violations) {
-        return violations.stream().map(value -> new ApiError.FieldViolation(value.field(), value.message())).toList();
     }
 
     private static Map<String, Object> page(SystemParameterQueryPage page) {

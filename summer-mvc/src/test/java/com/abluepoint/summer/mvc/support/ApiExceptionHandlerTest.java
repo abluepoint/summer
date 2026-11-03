@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.support;
 
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
@@ -53,7 +54,7 @@ class ApiExceptionHandlerTest {
                 () -> "request-123"
         );
         FieldValidationException exception = new FieldValidationException(List.of(
-                new FieldValidationException.Violation("items[0].quantity", "must be an integer")
+                new SummerException.Violation("items[0].quantity", "must be an integer")
         ));
 
         ResponseEntity<ApiResponse<Void>> response = handler.handleFieldValidation(exception);

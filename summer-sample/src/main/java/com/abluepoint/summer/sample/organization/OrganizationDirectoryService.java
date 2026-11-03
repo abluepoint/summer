@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.enterprise.DirectoryErrorCode;
+import static com.abluepoint.summer.sample.error.SampleTransportErrorCode.PRECONDITION_FAILED;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -110,14 +114,14 @@ class OrganizationDirectoryService {
         var previous = journal.find(enterpriseId, "organization.mutation", key).orElse(null);
         if (previous != null) return replay(previous, fingerprint, OrganizationUnit.class);
         validateRequest(request, true);
-        if (!enterprises.exists(enterpriseId)) throw new OrganizationConflictException("Enterprise does not exist");
+        if (!enterprises.exists(enterpriseId)) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Enterprise does not exist");
         UnitRecord parent = request.parentId() == null ? null : units.get(request.parentId());
-        if (request.parentId() != null && (parent == null || !enterpriseId.equals(parent.enterpriseId()))) throw new OrganizationConflictException("Parent organization must belong to the enterprise");
-        if (parent != null && "DISABLED".equals(parent.status())) throw new OrganizationConflictException("Parent organization is disabled");
+        if (request.parentId() != null && (parent == null || !enterpriseId.equals(parent.enterpriseId()))) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Parent organization must belong to the enterprise");
+        if (parent != null && "DISABLED".equals(parent.status())) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Parent organization is disabled");
         ensureSiblingCodeAvailable(enterpriseId, request.parentId(), request.code(), null);
-        if (parent != null && depth(parent.id()) >= MAX_DEPTH) throw new OrganizationConflictException("Organization tree depth exceeded");
+        if (parent != null && depth(parent.id()) >= MAX_DEPTH) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Organization tree depth exceeded");
         String id = "org-" + java.util.UUID.randomUUID();
-        if (units.containsKey(id)) throw new OrganizationConflictException("Organization code already exists");
+        if (units.containsKey(id)) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Organization code already exists");
         UnitRecord created = new UnitRecord(enterpriseId, id, request.parentId(), normalizeType(request.unitType()), request.name().trim(), request.code().trim(),
                 request.leaderMemberId(), request.description(), request.sortOrder() == null ? 0 : request.sortOrder(), normalizeStatus(request.status()), 0);
         units.put(id, created);
@@ -144,10 +148,10 @@ class OrganizationDirectoryService {
         String name = request.name() == null ? current.name() : request.name().trim();
         String type = request.unitType() == null ? current.unitType() : normalizeType(request.unitType());
         String status = request.status() == null ? current.status() : normalizeStatus(request.status());
-        if (unitId.equals(parentId) || (parentId != null && isDescendant(unitId, parentId))) throw new OrganizationConflictException("Organization parent would create a cycle");
-        if (parentId != null && (units.get(parentId) == null || !enterpriseId.equals(units.get(parentId).enterpriseId()))) throw new OrganizationConflictException("Parent organization must belong to the enterprise");
-        if (parentId != null && "DISABLED".equals(units.get(parentId).status())) throw new OrganizationConflictException("Parent organization is disabled");
-        if ((parentId == null ? 0 : depth(parentId)) + subtreeHeight(unitId) > MAX_DEPTH) throw new OrganizationConflictException("Organization tree depth exceeded");
+        if (unitId.equals(parentId) || (parentId != null && isDescendant(unitId, parentId))) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Organization parent would create a cycle");
+        if (parentId != null && (units.get(parentId) == null || !enterpriseId.equals(units.get(parentId).enterpriseId()))) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Parent organization must belong to the enterprise");
+        if (parentId != null && "DISABLED".equals(units.get(parentId).status())) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Parent organization is disabled");
+        if ((parentId == null ? 0 : depth(parentId)) + subtreeHeight(unitId) > MAX_DEPTH) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Organization tree depth exceeded");
         ensureSiblingCodeAvailable(enterpriseId, parentId, code, unitId);
         UnitRecord updated = new UnitRecord(enterpriseId, unitId, parentId, type, name, code,
                 request.leaderMemberId() == null ? current.leaderMemberId() : request.leaderMemberId(),
@@ -176,8 +180,8 @@ class OrganizationDirectoryService {
         }
         UnitRecord current = unitFor(enterpriseId, unitId);
         requireEtag(current, ifMatch);
-        if (units.values().stream().anyMatch(unit -> unitId.equals(unit.parentId()))) throw new OrganizationConflictException("Organization has child units");
-        if (memberCount(enterpriseId, unitId) > 0) throw new OrganizationConflictException("Organization has active members");
+        if (units.values().stream().anyMatch(unit -> unitId.equals(unit.parentId()))) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Organization has child units");
+        if (memberCount(enterpriseId, unitId) > 0) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Organization has active members");
         units.remove(unitId);
         unitRepository.findByUnitId(unitId).ifPresent(unitRepository::delete);
         remember(enterpriseId, key, fingerprint, Boolean.TRUE);
@@ -194,19 +198,19 @@ class OrganizationDirectoryService {
         if (previous != null) return replay(previous, fingerprint, OrganizationAssignmentBatchResult.class);
         requireEtagForEnterprise(enterpriseId, ifMatch);
         if (request == null || request.memberIds() == null || request.organizationIds() == null || request.memberIds().isEmpty() || request.memberIds().stream().anyMatch(java.util.Objects::isNull) || request.organizationIds().stream().anyMatch(java.util.Objects::isNull)) {
-            throw new OrganizationValidationException("memberIds are required");
+            throw SummerException.withMessage(OrganizationErrorCode.INVALID, "memberIds are required");
         }
         if ((!request.organizationIds().isEmpty() && request.primaryOrganizationId() == null)
                 || (request.primaryOrganizationId() != null && !request.organizationIds().contains(request.primaryOrganizationId()))) {
-            throw new OrganizationValidationException("primaryOrganizationId must be one of organizationIds");
+            throw SummerException.withMessage(OrganizationErrorCode.INVALID, "primaryOrganizationId must be one of organizationIds");
         }
         for (String memberId : request.memberIds().stream().distinct().toList()) {
             var member = memberDirectory.find(enterpriseId, memberId).orElse(null);
-            if (member == null || !"ACTIVE".equals(member.status())) throw new OrganizationConflictException("Member is not active in the enterprise");
+            if (member == null || !"ACTIVE".equals(member.status())) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Member is not active in the enterprise");
         }
         for (String organizationId : request.organizationIds().stream().distinct().toList()) {
             UnitRecord organization = unitFor(enterpriseId, organizationId);
-            if ("DISABLED".equals(organization.status())) throw new OrganizationConflictException("Cannot assign a member to a disabled organization");
+            if ("DISABLED".equals(organization.status())) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Cannot assign a member to a disabled organization");
         }
         for (String memberId : request.memberIds().stream().distinct().toList()) {
             assignments.entrySet().removeIf(entry -> memberId.equals(entry.getValue().memberId()) && enterpriseId.equals(entry.getValue().enterpriseId()));
@@ -351,28 +355,28 @@ class OrganizationDirectoryService {
     }
 
     private static void validateRequest(OrganizationUnitRequest request, boolean create) {
-        if (request == null) throw new OrganizationValidationException("Request body is required");
-        if (create && (request.name() == null || request.name().isBlank() || request.code() == null || request.code().isBlank())) throw new OrganizationValidationException("name and code are required");
-        if (request.name() != null && request.name().isBlank()) throw new OrganizationValidationException("name must not be blank");
-        if (request.code() != null && request.code().isBlank()) throw new OrganizationValidationException("code must not be blank");
+        if (request == null) throw SummerException.withMessage(OrganizationErrorCode.INVALID, "Request body is required");
+        if (create && (request.name() == null || request.name().isBlank() || request.code() == null || request.code().isBlank())) throw SummerException.withMessage(OrganizationErrorCode.INVALID, "name and code are required");
+        if (request.name() != null && request.name().isBlank()) throw SummerException.withMessage(OrganizationErrorCode.INVALID, "name must not be blank");
+        if (request.code() != null && request.code().isBlank()) throw SummerException.withMessage(OrganizationErrorCode.INVALID, "code must not be blank");
     }
 
     private static String normalizeType(String value) {
         String normalized = value == null || value.isBlank() ? "DEPARTMENT" : value.toUpperCase();
-        if (!List.of("COMPANY", "DEPARTMENT", "TEAM").contains(normalized)) throw new OrganizationValidationException("unitType is invalid");
+        if (!List.of("COMPANY", "DEPARTMENT", "TEAM").contains(normalized)) throw SummerException.withMessage(OrganizationErrorCode.INVALID, "unitType is invalid");
         return normalized;
     }
 
     private static String normalizeStatus(String value) {
         String normalized = value == null || value.isBlank() ? "ACTIVE" : value.toUpperCase();
-        if (!List.of("ACTIVE", "DISABLED").contains(normalized)) throw new OrganizationValidationException("status is invalid");
+        if (!List.of("ACTIVE", "DISABLED").contains(normalized)) throw SummerException.withMessage(OrganizationErrorCode.INVALID, "status is invalid");
         return normalized;
     }
 
     private void ensureSiblingCodeAvailable(String enterpriseId, String parentId, String code, String exceptId) {
         if (code == null) return;
         if (units.values().stream().anyMatch(unit -> enterpriseId.equals(unit.enterpriseId()) && (parentId == null ? unit.parentId() == null : parentId.equals(unit.parentId()))
-                && !unit.id().equals(exceptId) && code.equalsIgnoreCase(unit.code()))) throw new OrganizationConflictException("Sibling organization code already exists");
+                && !unit.id().equals(exceptId) && code.equalsIgnoreCase(unit.code()))) throw SummerException.withMessage(OrganizationErrorCode.CONFLICT, "Sibling organization code already exists");
     }
 
     private int subtreeHeight(String unitId) {
@@ -392,13 +396,13 @@ class OrganizationDirectoryService {
         return false;
     }
 
-    private void requireEtag(UnitRecord unit, String ifMatch) { if (ifMatch == null || !ifMatch.equals(quote(unitRevision(unit)))) throw new OrganizationPreconditionException(); }
-    private void requireEtagForEnterprise(String enterpriseId, String ifMatch) { if (ifMatch == null || !ifMatch.equals(quote(enterpriseRevision(enterpriseId)))) throw new OrganizationPreconditionException(); }
-    private static void requireKey(String key) { if (key == null || key.isBlank() || key.length() > 128) throw new OrganizationIdempotencyConflictException("Idempotency-Key is required"); }
+    private void requireEtag(UnitRecord unit, String ifMatch) { if (ifMatch == null || !ifMatch.equals(quote(unitRevision(unit)))) throw SummerException.withMessage(PRECONDITION_FAILED, "The resource has changed"); }
+    private void requireEtagForEnterprise(String enterpriseId, String ifMatch) { if (ifMatch == null || !ifMatch.equals(quote(enterpriseRevision(enterpriseId)))) throw SummerException.withMessage(PRECONDITION_FAILED, "The organization revision has changed"); }
+    private static void requireKey(String key) { if (key == null || key.isBlank() || key.length() > 128) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required"); }
     private void remember(String enterpriseId, String key, String fingerprint, Object result) { journal.remember(enterpriseId, "organization.mutation", key, fingerprint, result); }
 
     private <T> T replay(com.abluepoint.summer.sample.enterprise.DirectoryJournal.Receipt receipt, String fingerprint, Class<T> type) {
-        if (!receipt.fingerprint().equals(fingerprint)) throw new OrganizationIdempotencyConflictException("Idempotency-Key was already used for another mutation");
+        if (!receipt.fingerprint().equals(fingerprint)) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key was already used for another mutation");
         return journal.decode(receipt, type);
     }
 

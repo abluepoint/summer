@@ -61,14 +61,32 @@ class ReferenceKeyConfigurationTest {
     void invalidReferencesFailClosedWithStableDiagnostics() {
         var environment = new MockEnvironment().withProperty("summer.bad", "value");
         assertThatThrownBy(() -> ReferenceKeyMaterialResolver.resolve(environment, "environment", "summer.bad", "", "kid"))
-                .isInstanceOf(ReferenceKeyMaterialResolver.ReferenceKeyResolutionException.class)
-                .hasMessageStartingWith("SUMMER_KEY_REFERENCE_INVALID:");
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class)
+                .hasMessageStartingWith("SUMMER_KEY_REFERENCE_INVALID:")
+                .extracting(error -> ((com.abluepoint.summer.common.error.SummerException) error).errorCode())
+                .isEqualTo(KeyErrorCode.REFERENCE_INVALID);
         assertThatThrownBy(() -> ReferenceKeyMaterialResolver.resolve(environment, "file", "../outside", directory.toString(), "kid"))
-                .isInstanceOf(ReferenceKeyMaterialResolver.ReferenceKeyResolutionException.class)
-                .hasMessageStartingWith("SUMMER_KEY_REFERENCE_INVALID:");
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class)
+                .hasMessageStartingWith("SUMMER_KEY_REFERENCE_INVALID:")
+                .extracting(error -> ((com.abluepoint.summer.common.error.SummerException) error).errorCode())
+                .isEqualTo(KeyErrorCode.REFERENCE_INVALID);
         assertThatThrownBy(() -> ReferenceKeyMaterialResolver.resolve(environment, "file", "missing", directory.toString(), "kid"))
-                .isInstanceOf(ReferenceKeyMaterialResolver.ReferenceKeyResolutionException.class)
-                .hasMessageStartingWith("SUMMER_KEY_REFERENCE_UNAVAILABLE:");
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class)
+                .hasMessageStartingWith("SUMMER_KEY_REFERENCE_UNAVAILABLE:")
+                .extracting(error -> ((com.abluepoint.summer.common.error.SummerException) error).errorCode())
+                .isEqualTo(KeyErrorCode.REFERENCE_UNAVAILABLE);
+    }
+
+    @Test
+    void nestedReferenceGuardsKeepTheirOriginalClassificationAndLiteralDiagnostic() {
+        assertThatThrownBy(() -> ReferenceKeyMaterialResolver.resolve(new MockEnvironment(), "file", ".",
+                directory.toString(), "kid"))
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class)
+                .hasMessage("SUMMER_KEY_REFERENCE_INVALID: file reference is not an allowed regular file");
+        var environment = new MockEnvironment().withProperty("SUMMER_TEST_BAD_KEY", "-----BEGIN RSA PRIVATE KEY-----");
+        assertThatThrownBy(() -> ReferenceKeyMaterialResolver.resolve(environment, "environment", "SUMMER_TEST_BAD_KEY", "", "kid"))
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class)
+                .hasMessage("SUMMER_KEY_REFERENCE_INVALID: PKCS#1 private keys are not supported");
     }
 
     private static String pem(byte[] encoded) {

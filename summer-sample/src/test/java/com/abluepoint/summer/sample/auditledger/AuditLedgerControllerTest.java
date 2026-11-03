@@ -31,6 +31,112 @@ class AuditLedgerControllerTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Test void auditAdminDenialsKeepTheirOriginalMessageCauseAndEnvelope() throws Exception {
+        for (String suffix : List.of("audit-events", "audit-events:query", "audit-events:export", "audit-events/missing",
+                "mcp-invocations", "mcp-invocations/missing", "audit-anomalies", "mcp-invocations/missing:mark-unknown")) {
+            String path = "/api/v1/enterprises/ent-acme/" + suffix;
+            var request = suffix.endsWith(":mark-unknown") ? post(path) : get(path);
+            mockMvc.perform(request.with(jwt().jwt(t -> t.subject("audit-native-no-cap").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))).header("X-Request-Id", "audit-admin-denied"))
+                    .andExpect(result -> deniedOrigin(result, "Audit capability denied"))
+                    .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                    .andExpect(jsonPath("$.error.message").value("Audit capability denied"))
+                    .andExpect(jsonPath("$.requestId").value("audit-admin-denied"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Request-Id", "audit-admin-denied"))
+                    .andExpect(jsonPath("$.error.cause").doesNotExist()).andExpect(AuditLedgerControllerTest::nativeDeniedCause);
+        }
+    }
+
+    @Test void auditServiceDenialsKeepTheirOriginalMessageCauseAndEnvelope() throws Exception {
+        for (String path : List.of("/internal/v1/audit-events", "/internal/v1/mcp/invocations/missing:complete",
+                "/internal/v1/mcp/invocations/missing:reconcile")) {
+            mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{}")
+                            .header("Idempotency-Key", "audit-denied").header("X-Request-Id", "audit-service-denied").with(jwt()))
+                    .andExpect(result -> deniedOrigin(result, "Audit service trust denied"))
+                    .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                    .andExpect(jsonPath("$.error.message").value("Audit service trust denied"))
+                    .andExpect(jsonPath("$.requestId").value("audit-service-denied"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Request-Id", "audit-service-denied"))
+                    .andExpect(jsonPath("$.error.cause").doesNotExist()).andExpect(AuditLedgerControllerTest::nativeDeniedCause);
+        }
+    }
+
+    private static void deniedOrigin(MvcResult result, String expected) {
+        Throwable failure = result.getResolvedException();
+        if (failure instanceof com.abluepoint.summer.common.error.SummerException summer) failure = summer.getCause();
+        var nativeFailure = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                org.springframework.security.access.AccessDeniedException.class, failure);
+        org.junit.jupiter.api.Assertions.assertEquals(expected, nativeFailure.getMessage());
+    }
+
+    private static void nativeDeniedCause(MvcResult result) {
+        var error = org.junit.jupiter.api.Assertions.assertInstanceOf(com.abluepoint.summer.common.error.SummerException.class,
+                result.getResolvedException());
+        org.junit.jupiter.api.Assertions.assertSame(com.abluepoint.summer.common.error.CommonErrorCode.FORBIDDEN, error.errorCode());
+        var cause = org.junit.jupiter.api.Assertions.assertInstanceOf(org.springframework.security.access.AccessDeniedException.class,
+                error.getCause());
+        org.junit.jupiter.api.Assertions.assertEquals(cause.getMessage(), error.explicitMessage());
+    }
+
+    @Test
+    void invalidAuditRequestsKeepTheirOriginalMessagesAndCorrelation() throws Exception {
+        for (String[] example : new String[][]{
+                {"/internal/v1/audit-events", "missing", "Idempotency-Key is required"},
+                {"/internal/v1/audit-events", "present", "eventId, eventType, enterpriseId and invocationId are required"},
+                {"/internal/v1/mcp/invocations/absent:complete", "present", "resultStatus and resultDigest are required"}}) {
+            var request = post(example[0]).contentType(MediaType.APPLICATION_JSON).content("{}")
+                    .header("X-Request-Id", "audit-validation").with(connectionService());
+            if ("present".equals(example[1])) request.header("Idempotency-Key", "invalid-audit");
+            mockMvc.perform(request).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_INVALID"))
+                    .andExpect(jsonPath("$.error.message").value(example[2]))
+                    .andExpect(jsonPath("$.requestId").value("audit-validation"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                            .string("X-Request-Id", "audit-validation"))
+                    .andExpect(jsonPath("$.error.cause").doesNotExist());
+        }
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events:query")
+                        .queryParam("from", "invalid-time").with(admin()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_INVALID"))
+                .andExpect(jsonPath("$.error.message").value("Invalid audit time range"));
+    }
+
+    @Test
+    void missingAuditResourcesKeepConflictStatusAndTheirOriginalMessages() throws Exception {
+        for (String[] example : new String[][]{
+                {"audit-events/absent", "Event not found"},
+                {"mcp-invocations/absent", "Invocation not found"}}) {
+            mockMvc.perform(get("/api/v1/enterprises/ent-acme/" + example[0]).with(admin()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_CONFLICT"))
+                    .andExpect(jsonPath("$.error.message").value(example[1]));
+        }
+        mockMvc.perform(post("/internal/v1/mcp/invocations/absent:reconcile")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}")
+                        .header("Idempotency-Key", "missing-reconcile").with(connectionService()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.message").value("Invocation not found"));
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/mcp-invocations/absent:mark-unknown")
+                        .header("Idempotency-Key", "missing-unknown").with(admin()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.message").value("Invocation not found"));
+    }
+
+    @Test
+    void conflictingIdempotencyKeyPreservesTheOriginalAuditEvidence() throws Exception {
+        append("event-original", "MCP_AUTHORIZATION_DECISION", "inv-idempotent", "attempt", "{\"decision\":\"ALLOW\"}");
+        mockMvc.perform(post("/internal/v1/audit-events").with(connectionService())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "event-original")
+                        .content("{\"eventId\":\"event-second\",\"eventType\":\"MCP_PERMIT_CLAIMED\",\"enterpriseId\":\"ent-acme\",\"invocationId\":\"inv-idempotent\",\"detail\":{}}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_IDEMPOTENCY_CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("Idempotency key reused"));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events").queryParam("invocationId", "inv-idempotent").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].eventId").value("event-original"));
+    }
+
     @Test
     void appendsAnIdentityDecisionPermitAndResultChainAsAppendOnlyEvents() throws Exception {
         append("evt-decision", "MCP_AUTHORIZATION_DECISION", "inv-1", "attempt-1", "{\"decision\":\"ALLOW\",\"reasonCode\":\"AUTHORIZED\",\"policyVersion\":3,\"initiator\":\"alice\",\"actor\":\"agent-1\",\"effectiveSubject\":\"alice\",\"agentInstanceId\":\"instance-1\",\"toolId\":\"tool-search\",\"resource\":\"customers/42\",\"action\":\"read\"}");
@@ -105,7 +211,8 @@ class AuditLedgerControllerTest {
                         .header("Idempotency-Key", "complete-inv-receipt-conflict")
                         .with(connectionService()))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_CONTRADICTORY_RECEIPT"));
+                .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_CONTRADICTORY_RECEIPT"))
+                .andExpect(jsonPath("$.error.message").value("Conflicting result digest"));
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events")
                         .queryParam("invocationId", "inv-receipt")
                         .queryParam("eventType", "AUDIT_ANOMALY")
@@ -160,7 +267,8 @@ class AuditLedgerControllerTest {
                         .header("Idempotency-Key", "event-immutable-conflict")
                         .with(connectionService()))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_EVENT_IMMUTABLE"));
+                .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_EVENT_IMMUTABLE"))
+                .andExpect(jsonPath("$.error.message").value("Event is immutable"));
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/audit-events")
                         .queryParam("invocationId", "inv-immutable")
                         .with(admin()))

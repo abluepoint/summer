@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named="T19_MYSQL_PASSWORD",matches=".+")
 class ConfigurationProjectionMySqlHttpTest {
-    private static final String SCHEMA="summer_t36_"+UUID.randomUUID().toString().replace("-","");
+    private static final String SCHEMA=com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.claim(ConfigurationProjectionMySqlHttpTest.class, "summer_t36_"+UUID.randomUUID().toString().replace("-",""));
     private static final String URL="jdbc:mysql://127.0.0.1:3306/";
     private static Connection connection() throws SQLException { return DriverManager.getConnection(URL,"root",System.getenv("T19_MYSQL_PASSWORD")); }
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) throws SQLException {
@@ -37,6 +37,7 @@ class ConfigurationProjectionMySqlHttpTest {
                 rows.next(); assertThat(rows.getInt(1)).isZero();
             }
         }
+        com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.removed(SCHEMA);
     }
     @Autowired MockMvc mvc;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;

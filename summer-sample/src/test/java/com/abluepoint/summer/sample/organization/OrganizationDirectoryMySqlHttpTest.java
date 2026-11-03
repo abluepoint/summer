@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"spring.flyway.enabled=true","spring.jpa.hibernate.ddl-auto=none","summer.security.storage.keys=memory","summer.sample.cache.enabled=false","summer.sample.resilience.enabled=false"})
 @EnabledIfEnvironmentVariable(named="T19_MYSQL_PASSWORD",matches=".+")
 class OrganizationDirectoryMySqlHttpTest extends OrganizationContextHttpTest {
-    private static final String SCHEMA="summer_org_"+UUID.randomUUID().toString().replace("-","");
+    private static final String SCHEMA=com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.claim(OrganizationDirectoryMySqlHttpTest.class, "summer_org_"+UUID.randomUUID().toString().replace("-",""));
     private static final String URL="jdbc:mysql://127.0.0.1:3306/";
     private static Connection connect(String schema) throws SQLException { return DriverManager.getConnection(URL+schema,"root",System.getenv("T19_MYSQL_PASSWORD")); }
     private static boolean initialized;
@@ -43,5 +43,6 @@ class OrganizationDirectoryMySqlHttpTest extends OrganizationContextHttpTest {
             st.executeUpdate("DROP DATABASE IF EXISTS "+SCHEMA);
             try(var rs=st.executeQuery("select count(*) from information_schema.schemata where schema_name='"+SCHEMA+"'")) {rs.next();assertThat(rs.getInt(1)).isZero();}
         }
+        com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.removed(SCHEMA);
     }
 }

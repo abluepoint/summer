@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerSessionStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -82,8 +84,9 @@ final class RedisSummerSessionStore extends org.springframework.security.web.con
         if (session == null) return false;
         try {
             return active(index.load(session.getId()));
-        } catch (SessionIndexUnavailableException ignored) {
-            return false;
+        } catch (SummerException failure) {
+            if (failure.errorCode() == SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE) return false;
+            throw failure;
         }
     }
 

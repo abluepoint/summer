@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import io.lettuce.core.RedisCommandTimeoutException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -60,6 +62,31 @@ class SessionFailureConfigurationTest {
         assertThat(body.path("error").path("code").asText()).isEqualTo("SUMMER_SESSION_STORE_UNAVAILABLE");
         assertThat(body.path("requestId").asText()).isNotBlank().isEqualTo(response.getHeader("X-Request-Id"));
         assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
+    }
+
+    @Test
+    void typedSessionOutageInsideAServletWrapperUsesTheNative503Boundary() throws Exception {
+        var failure = SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE,
+                "Shared session storage is unavailable");
+        var response = new MockHttpServletResponse();
+        var filter = new SessionFailureConfiguration().sharedSessionFailureFilter(mapper).getFilter();
+        filter.doFilter(new MockHttpServletRequest(), response, (req, res) -> { throw new ServletException(failure); });
+        assertThat(response.getStatus()).isEqualTo(503);
+        var body = mapper.readTree(response.getContentAsString());
+        assertThat(body.path("error").path("code").asText()).isEqualTo("SUMMER_SESSION_STORE_UNAVAILABLE");
+        assertThat(body.path("error").path("message").asText()).isEqualTo("Shared session storage is unavailable");
+        assertThat(body.path("requestId").asText()).isNotBlank().isEqualTo(response.getHeader("X-Request-Id"));
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
+    }
+
+    @Test
+    void unrelatedTypedFailureIsRethrownWithoutAStorageResponse() {
+        var failure = SummerException.withMessage(IdentityErrorCode.USER_CONFLICT, "Username already exists");
+        var response = new MockHttpServletResponse();
+        var filter = new SessionFailureConfiguration().sharedSessionFailureFilter(mapper).getFilter();
+        assertThatThrownBy(() -> filter.doFilter(new MockHttpServletRequest(), response,
+                (req, res) -> { throw failure; })).isSameAs(failure);
+        assertThat(response.getContentAsByteArray()).isEmpty();
     }
 
     @Test

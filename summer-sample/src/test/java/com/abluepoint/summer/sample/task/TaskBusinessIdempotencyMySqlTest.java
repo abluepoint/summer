@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         classes={com.abluepoint.summer.sample.SummerSampleApplication.class,TaskBusinessIdempotencyTest.Business.class})
 @EnabledIfEnvironmentVariable(named="SUMMER_TASK_MYSQL_PASSWORD",matches=".+")
 class TaskBusinessIdempotencyMySqlTest extends TaskBusinessIdempotencyTest {
-    private static final String SCHEMA="summer_task_business_"+UUID.randomUUID().toString().replace("-","");
+    private static final String SCHEMA=com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.claim(TaskBusinessIdempotencyMySqlTest.class, "summer_task_business_"+UUID.randomUUID().toString().replace("-",""));
     private static final String URL="jdbc:mysql://127.0.0.1:3306/";
     private static Connection connect() throws SQLException {
         return DriverManager.getConnection(URL,"root",System.getenv("SUMMER_TASK_MYSQL_PASSWORD"));
@@ -38,5 +38,6 @@ class TaskBusinessIdempotencyMySqlTest extends TaskBusinessIdempotencyTest {
                 assertThat(result.next()).isTrue();assertThat(result.getInt(1)).isZero();
             }
         }
+        com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.removed(SCHEMA);
     }
 }

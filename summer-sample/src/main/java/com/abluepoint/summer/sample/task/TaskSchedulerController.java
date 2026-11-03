@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.task;
 
-import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -36,10 +35,7 @@ class TaskSchedulerController {
     @RawResponse
     @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
     ResponseEntity<ApiResponse<TaskView>> create(@PathVariable String enterpriseId, @RequestBody TaskCreateRequest request, Authentication authentication) {
-        try { TaskView result = service.create(enterpriseId, request, rid(), authentication); return body(HttpStatus.CREATED, result, result.version()); }
-        catch (TaskUntrustedTypeException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_TASK_TYPE_UNTRUSTED", e.getMessage()); }
-        catch (TaskValidationException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_TASK_INVALID", e.getMessage()); }
-        catch (TaskConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_TASK_CONFLICT", e.getMessage()); }
+        TaskView result = service.create(enterpriseId, request, rid(), authentication); return body(HttpStatus.CREATED, result, result.version());
     }
 
     @PatchMapping("/{taskId}")
@@ -48,11 +44,7 @@ class TaskSchedulerController {
     ResponseEntity<ApiResponse<TaskView>> update(@PathVariable String enterpriseId, @PathVariable String taskId,
                                                    @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                                    @RequestBody TaskUpdateRequest request, Authentication authentication) {
-        try { TaskView result = service.update(enterpriseId, taskId, request, ifMatch, rid(), authentication); return body(HttpStatus.OK, result, result.version()); }
-        catch (TaskNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", e.getMessage()); }
-        catch (TaskPreconditionException e) { return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", e.getMessage()); }
-        catch (TaskValidationException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_TASK_INVALID", e.getMessage()); }
-        catch (TaskConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_TASK_CONFLICT", e.getMessage()); }
+        TaskView result = service.update(enterpriseId, taskId, request, ifMatch, rid(), authentication); return body(HttpStatus.OK, result, result.version());
     }
 
     @PostMapping("/{taskId}:pause")
@@ -74,25 +66,17 @@ class TaskSchedulerController {
     ResponseEntity<ApiResponse<Map<String, String>>> trigger(@PathVariable String enterpriseId, @PathVariable String taskId,
                                                                @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                                                Authentication authentication) {
-        try { service.trigger(enterpriseId, taskId, idempotencyKey, rid(), authentication); return body(HttpStatus.ACCEPTED, Map.of("taskId", taskId, "status", "TRIGGERED")); }
-        catch (TaskNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", e.getMessage()); }
-        catch (TaskIdempotencyRequiredException e) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_IDEMPOTENCY_REQUIRED", e.getMessage()); }
-        catch (TaskIdempotencyConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", e.getMessage()); }
-        catch (TaskConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_TASK_CONFLICT", e.getMessage()); }
+        service.trigger(enterpriseId, taskId, idempotencyKey, rid(), authentication); return body(HttpStatus.ACCEPTED, Map.of("taskId", taskId, "status", "TRIGGERED"));
     }
 
     @GetMapping("/{taskId}/executions")
     @RawResponse @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
     ResponseEntity<ApiResponse<TaskExecutionPage>> executions(@PathVariable String enterpriseId, @PathVariable String taskId) {
-        try { return body(HttpStatus.OK, service.executions(enterpriseId, taskId)); }
-        catch (TaskNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", e.getMessage()); }
+        return body(HttpStatus.OK, service.executions(enterpriseId, taskId));
     }
 
     private ResponseEntity<ApiResponse<TaskView>> status(String enterpriseId, String taskId, TaskStatus status, String ifMatch, Authentication auth) {
-        try { TaskView result = service.setStatus(enterpriseId, taskId, status, ifMatch, rid(), auth); return body(HttpStatus.OK, result, result.version()); }
-        catch (TaskNotFoundException e) { return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", e.getMessage()); }
-        catch (TaskPreconditionException e) { return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", e.getMessage()); }
-        catch (TaskConflictException e) { return failure(HttpStatus.CONFLICT, "SUMMER_TASK_CONFLICT", e.getMessage()); }
+        TaskView result = service.setStatus(enterpriseId, taskId, status, ifMatch, rid(), auth); return body(HttpStatus.OK, result, result.version());
     }
 
     private String rid() { return requestId.currentRequestId(); }
@@ -101,8 +85,5 @@ class TaskSchedulerController {
         ResponseEntity.BodyBuilder builder = ResponseEntity.status(status).header("X-Request-Id", rid());
         if (version != null) builder.header("ETag", "\"" + version + "\"");
         return builder.body(ApiResponse.success(data, rid()));
-    }
-    private <T> ResponseEntity<ApiResponse<T>> failure(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).header("X-Request-Id", rid()).body(ApiResponse.failure(new ApiError(code, message, List.of()), rid()));
     }
 }

@@ -127,12 +127,8 @@ class OrganizationController {
     ResponseEntity<ApiResponse<OrganizationUnit>> create(@PathVariable String enterpriseId, @RequestBody OrganizationUnitRequest body,
                                                           @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                           Authentication authentication, HttpServletRequest request) {
-        try {
-            OrganizationUnit result = service.create(enterpriseId, body, key, requestId.currentRequestId(), authentication);
-            return responseEntity(HttpStatus.CREATED, result, service.unitRevisionValue(enterpriseId, result.id()), request);
-        } catch (OrganizationConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_ORGANIZATION_CONFLICT", exception.getMessage());
-        } catch (OrganizationValidationException exception) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_ORGANIZATION_INVALID", exception.getMessage());
-        } catch (OrganizationIdempotencyConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", exception.getMessage()); }
+        OrganizationUnit result = service.create(enterpriseId, body, key, requestId.currentRequestId(), authentication);
+        return responseEntity(HttpStatus.CREATED, result, service.unitRevisionValue(enterpriseId, result.id()), request);
     }
 
     @PatchMapping(value = "/api/v1/enterprises/{enterpriseId}/org-units/{unitId}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -143,13 +139,8 @@ class OrganizationController {
                                                           @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                           @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                           Authentication authentication, HttpServletRequest request) {
-        try {
-            OrganizationUnit result = service.update(enterpriseId, unitId, body, ifMatch, key, requestId.currentRequestId(), authentication);
-            return responseEntity(HttpStatus.OK, result, service.unitRevisionValue(enterpriseId, result.id()), request);
-        } catch (OrganizationPreconditionException exception) { return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", "The resource has changed");
-        } catch (OrganizationConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_ORGANIZATION_CONFLICT", exception.getMessage());
-        } catch (OrganizationValidationException exception) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_ORGANIZATION_INVALID", exception.getMessage());
-        } catch (OrganizationIdempotencyConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", exception.getMessage()); }
+        OrganizationUnit result = service.update(enterpriseId, unitId, body, ifMatch, key, requestId.currentRequestId(), authentication);
+        return responseEntity(HttpStatus.OK, result, service.unitRevisionValue(enterpriseId, result.id()), request);
     }
 
     @DeleteMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}")
@@ -160,12 +151,8 @@ class OrganizationController {
                                              @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                              @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                              Authentication authentication, HttpServletRequest request) {
-        try {
-            service.delete(enterpriseId, unitId, ifMatch, key, requestId.currentRequestId(), authentication);
-            return ResponseEntity.noContent().header("X-Request-Id", requestId.currentRequestId()).build();
-        } catch (OrganizationPreconditionException exception) { return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", "The resource has changed");
-        } catch (OrganizationConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_ORGANIZATION_CONFLICT", exception.getMessage());
-        } catch (OrganizationIdempotencyConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", exception.getMessage()); }
+        service.delete(enterpriseId, unitId, ifMatch, key, requestId.currentRequestId(), authentication);
+        return ResponseEntity.noContent().header("X-Request-Id", requestId.currentRequestId()).build();
     }
 
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/org-assignments:batch", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -176,13 +163,8 @@ class OrganizationController {
                                                                                 @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                                                 @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                                                 Authentication authentication, HttpServletRequest request) {
-        try {
-            OrganizationAssignmentBatchResult result = service.assign(enterpriseId, body, ifMatch, key, requestId.currentRequestId(), authentication);
-            return responseEntity(HttpStatus.OK, result, result.revision(), request);
-        } catch (OrganizationPreconditionException exception) { return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", "The organization revision has changed");
-        } catch (OrganizationConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_ORGANIZATION_CONFLICT", exception.getMessage());
-        } catch (OrganizationValidationException exception) { return failure(HttpStatus.BAD_REQUEST, "SUMMER_ORGANIZATION_INVALID", exception.getMessage());
-        } catch (OrganizationIdempotencyConflictException exception) { return failure(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", exception.getMessage()); }
+        OrganizationAssignmentBatchResult result = service.assign(enterpriseId, body, ifMatch, key, requestId.currentRequestId(), authentication);
+        return responseEntity(HttpStatus.OK, result, result.revision(), request);
     }
 
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/members/{memberId}/org-assignments", consumes = MediaType.APPLICATION_JSON_VALUE)

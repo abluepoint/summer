@@ -130,7 +130,7 @@ class SameOriginBffSummerContractTest {
                                              BffMcpInvokeRequest request) {
             try {
                 if ("explode".equals(request.tool())) {
-                    throw new IllegalStateException("provider credentials must not be exposed");
+                    throw new org.springframework.security.access.AccessDeniedException("provider diagnostic");
                 }
                 String context = "ctx-bff-" + identity.subject();
                 String attempt = "attempt-bff-" + identity.subject();

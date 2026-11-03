@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -55,7 +58,7 @@ public class AuthorizationChangeEventService {
     public AuthorizationChangeEventView retry(String enterpriseId, String eventId) {
         AuthorizationChangeEventOutboxEntity entity = repository.findById(eventId)
                 .filter(row -> enterpriseId.equals(row.enterpriseId()))
-                .orElseThrow(() -> new AuthorizationChangeEventNotFoundException(eventId));
+                .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Authorization change event not found: " + eventId));
         receipts.findById(eventId).filter(receipt -> receipt.status() == AuthorizationChangeReceiptStatus.DEAD_LETTER)
                 .ifPresent(receipts::delete);
         entity.resetForRetry(Instant.now());
@@ -72,6 +75,3 @@ public class AuthorizationChangeEventService {
     }
 }
 
-class AuthorizationChangeEventNotFoundException extends RuntimeException {
-    AuthorizationChangeEventNotFoundException(String eventId) { super("Authorization change event not found: " + eventId); }
-}

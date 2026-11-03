@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.resource;
 
+import com.abluepoint.summer.common.error.SummerException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -90,7 +91,7 @@ final class InterfaceResourceHistory {
 
     InterfaceResourceCatalogView read(long revision) {
         if (revision < 1) throw new IllegalArgumentException("revision must be positive");
-        return repository.findById(revision).map(this::view).orElseThrow(RevisionNotFoundException::new);
+        return repository.findById(revision).map(this::view).orElseThrow(() -> SummerException.withMessage(InterfaceResourceErrorCode.REVISION_NOT_FOUND, "Interface resource revision was not found"));
     }
 
     InterfaceResourceDifference diff(long from, long to) {
@@ -128,5 +129,4 @@ final class InterfaceResourceHistory {
         catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
-    static final class RevisionNotFoundException extends RuntimeException {}
 }

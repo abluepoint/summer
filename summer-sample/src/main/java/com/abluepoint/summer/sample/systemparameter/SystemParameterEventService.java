@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -48,9 +50,9 @@ class SystemParameterEventService {
     @Transactional
     SystemParameterEventView retry(String tenant, String eventId) {
         SystemParameterEventOutboxEntity entity = repository.findById(eventId)
-                .orElseThrow(() -> new SystemParameterEventNotFoundException(eventId));
+                .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter event not found: " + eventId));
         if (!tenant.equals(entity.tenantId())) {
-            throw new SystemParameterEventNotFoundException(eventId);
+            throw SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter event not found: " + eventId);
         }
         entity.resetForRetry(Instant.now());
         return view(repository.saveAndFlush(entity));
@@ -65,6 +67,3 @@ class SystemParameterEventService {
     }
 }
 
-final class SystemParameterEventNotFoundException extends RuntimeException {
-    SystemParameterEventNotFoundException(String eventId) { super("System parameter event not found: " + eventId); }
-}

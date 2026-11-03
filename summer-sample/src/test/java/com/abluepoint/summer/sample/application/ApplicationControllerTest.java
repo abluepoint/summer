@@ -23,6 +23,76 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApplicationControllerTest {
     @Autowired MockMvc mockMvc;
 
+    @Test void nativeAccessDenialsKeepTheirOriginalMessageAndCause() throws Exception {
+        String path = "/api/v1/enterprises/ent-acme/applications/missing";
+        MvcResult result = mockMvc.perform(get(path).with(jwt().jwt(t -> t.subject("application-native-no-cap").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))).header("X-Request-Id", "native-denied"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                .andExpect(jsonPath("$.error.message").value("Application capability denied"))
+                .andExpect(jsonPath("$.requestId").value("native-denied"))
+                .andExpect(header().string("X-Request-Id", "native-denied"))
+                .andExpect(jsonPath("$.error.cause").doesNotExist()).andReturn();
+        var error = org.junit.jupiter.api.Assertions.assertInstanceOf(com.abluepoint.summer.common.error.SummerException.class,
+                result.getResolvedException());
+        var cause = org.junit.jupiter.api.Assertions.assertInstanceOf(org.springframework.security.access.AccessDeniedException.class,
+                error.getCause());
+        org.junit.jupiter.api.Assertions.assertEquals(cause.getMessage(), error.explicitMessage());
+    }
+
+    @Test void rejectedApplicationMutationsKeepTheirMessagesAndDoNotChangeCredentialsOrVersion() throws Exception {
+        String base = "/api/v1/enterprises/ent-acme/applications";
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{}"), 400,
+                "SUMMER_APPLICATION_INVALID", "Idempotency-Key is required");
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{}").header("Idempotency-Key", "empty"), 400,
+                "SUMMER_APPLICATION_INVALID", "name is required");
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"CRM\",\"redirectUris\":[\"https://example.test/*\"]}")
+                .header("Idempotency-Key", "redirect"), 400, "SUMMER_APPLICATION_INVALID", "Redirect URI must be exact and use https");
+        MvcResult created = create("app-stable");
+        String id = JsonPath.read(created.getResponse().getContentAsString(), "$.data.applicationId");
+        String path = base + "/" + id;
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Changed\"}")
+                .header("Idempotency-Key", "app-stable"), 409, "SUMMER_IDEMPOTENCY_CONFLICT", "Idempotency key reused");
+        failure(get(base + "/missing"), 409, "SUMMER_APPLICATION_CONFLICT", "Application not found");
+        failure(patch(path).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Changed\"}")
+                .header("If-Match", "\"999\"").header("Idempotency-Key", "stale"), 412,
+                "SUMMER_PRECONDITION_FAILED", "The resource has changed");
+        failure(patch(path).contentType(MediaType.APPLICATION_JSON).content("{}")
+                .header("If-Match", "\"1\"").header("Idempotency-Key", "empty-update"), 400,
+                "SUMMER_APPLICATION_INVALID", "name is required");
+        failure(put(path + "/oauth-config").contentType(MediaType.APPLICATION_JSON).content("{\"grantTypes\":[\"implicit\"]}")
+                .header("If-Match", "\"1\"").header("Idempotency-Key", "unsafe"), 400,
+                "SUMMER_APPLICATION_INVALID", "Unsafe grant type");
+        failure(put(path + "/oauth-config").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"grantTypes\":[\"authorization_code\"],\"clientAuthMethod\":\"none\",\"pkceRequired\":false}")
+                .header("If-Match", "\"1\"").header("Idempotency-Key", "pkce"), 400,
+                "SUMMER_APPLICATION_INVALID", "PKCE is required");
+        failure(post(path + "/credentials/missing:revoke").header("If-Match", "\"1\"").header("Idempotency-Key", "missing-credential"),
+                409, "SUMMER_APPLICATION_CONFLICT", "Credential not found");
+        mockMvc.perform(get(path).with(admin("ent-acme", "enterprise.application.read")))
+                .andExpect(status().isOk()).andExpect(header().string("ETag", "\"1\""))
+                .andExpect(jsonPath("$.data.name").value("CRM"))
+                .andExpect(jsonPath("$.data.credentials.length()").value(1))
+                .andExpect(jsonPath("$.data.credentials[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.clientSecret").doesNotExist());
+        mockMvc.perform(get(path + "/audit").with(admin("ent-acme", "enterprise.application.read")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].action").value("APPLICATION_CREATED"));
+    }
+
+    private void failure(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request,
+                         int status, String code, String message) throws Exception {
+        mockMvc.perform(request.with(jwt().jwt(token -> token.subject("admin")
+                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.application.read", "enterprise.application.write"))))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.application.read"),
+                                new SimpleGrantedAuthority("SCOPE_enterprise.application.write")))
+                        .header("X-Request-Id", "app-rejected"))
+                .andExpect(status().is(status)).andExpect(jsonPath("$.error.code").value(code))
+                .andExpect(jsonPath("$.error.message").value(message))
+                .andExpect(jsonPath("$.requestId").value("app-rejected"))
+                .andExpect(header().string("X-Request-Id", "app-rejected"))
+                .andExpect(jsonPath("$.error.cause").doesNotExist());
+    }
+
     @Test void createsListsAndReturnsSecretOnlyOnce() throws Exception {
         MvcResult created = mockMvc.perform(post("/api/v1/enterprises/ent-acme/applications")
                 .contentType(MediaType.APPLICATION_JSON)

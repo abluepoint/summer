@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.key;
 
+import com.abluepoint.summer.common.error.SummerException;
 import org.springframework.core.env.Environment;
 
 import java.nio.charset.StandardCharsets;
@@ -72,10 +73,11 @@ final class ReferenceKeyMaterialResolver {
             if (!realFile.startsWith(realRoot) || !Files.isRegularFile(realFile, LinkOption.NOFOLLOW_LINKS)
                     || !Files.isReadable(realFile)) throw invalid("file reference is not an allowed regular file");
             return Files.readString(realFile, StandardCharsets.UTF_8);
-        } catch (ReferenceKeyResolutionException exception) {
-            throw exception;
+        } catch (SummerException exception) {
+            if (isReferenceFailure(exception)) throw exception;
+            throw unavailable("file reference is unavailable", exception);
         } catch (Exception exception) {
-            throw unavailable("file reference is unavailable");
+            throw unavailable("file reference is unavailable", exception);
         }
     }
 
@@ -91,10 +93,11 @@ final class ReferenceKeyMaterialResolver {
             }
             byte[] encoded = Base64.getMimeDecoder().decode(pem);
             return (RSAPrivateCrtKey) KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(encoded));
-        } catch (ReferenceKeyResolutionException exception) {
-            throw exception;
+        } catch (SummerException exception) {
+            if (isReferenceFailure(exception)) throw exception;
+            throw invalid("private key format is invalid", exception);
         } catch (Exception exception) {
-            throw invalid("private key format is invalid");
+            throw invalid("private key format is invalid", exception);
         }
     }
 
@@ -114,12 +117,27 @@ final class ReferenceKeyMaterialResolver {
         return value.trim();
     }
 
-    private static ReferenceKeyResolutionException invalid(String detail) {
-        return new ReferenceKeyResolutionException("SUMMER_KEY_REFERENCE_INVALID", detail);
+    private static boolean isReferenceFailure(SummerException exception) {
+        return exception.errorCode() == KeyErrorCode.REFERENCE_INVALID
+                || exception.errorCode() == KeyErrorCode.REFERENCE_UNAVAILABLE;
     }
 
-    private static ReferenceKeyResolutionException unavailable(String detail) {
-        return new ReferenceKeyResolutionException("SUMMER_KEY_REFERENCE_UNAVAILABLE", detail);
+    private static SummerException invalid(String detail) {
+        return invalid(detail, null);
+    }
+
+    private static SummerException invalid(String detail, Throwable cause) {
+        return SummerException.withMessage(KeyErrorCode.REFERENCE_INVALID,
+                "SUMMER_KEY_REFERENCE_INVALID: " + detail, cause);
+    }
+
+    private static SummerException unavailable(String detail) {
+        return unavailable(detail, null);
+    }
+
+    private static SummerException unavailable(String detail, Throwable cause) {
+        return SummerException.withMessage(KeyErrorCode.REFERENCE_UNAVAILABLE,
+                "SUMMER_KEY_REFERENCE_UNAVAILABLE: " + detail, cause);
     }
 
     record ResolvedKey(String source, String kid, RSAPrivateCrtKey privateKey) {}
@@ -141,14 +159,4 @@ final class ReferenceKeyMaterialResolver {
         }
     }
 
-    static final class ReferenceKeyResolutionException extends IllegalStateException {
-        private final String code;
-
-        ReferenceKeyResolutionException(String code, String detail) {
-            super(code + ": " + detail);
-            this.code = code;
-        }
-
-        String code() { return code; }
-    }
 }

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.key;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -98,6 +100,10 @@ class AutomaticKeyRotationService {
     }
 
     private static String failureCode(RuntimeException failure) {
+        if (failure instanceof SummerException business) {
+            if (business.errorCode() == KeyErrorCode.ROTATION_INVALID) return "KeyRotationValidationException";
+            if (business.errorCode() == SampleTransportErrorCode.PRECONDITION_FAILED) return "KeyRotationPreconditionException";
+        }
         String name = failure.getClass().getSimpleName();
         if (name == null || name.isBlank()) return "SUMMER_KEY_ROTATION_FAILED";
         return name.length() > 120 ? name.substring(0, 120) : name;

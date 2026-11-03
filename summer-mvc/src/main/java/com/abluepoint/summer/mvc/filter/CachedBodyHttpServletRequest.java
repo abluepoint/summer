@@ -1,5 +1,7 @@
 package com.abluepoint.summer.mvc.filter;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.mvc.error.MvcErrorCode;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +31,7 @@ public final class CachedBodyHttpServletRequest extends HttpServletRequestWrappe
             throw new IllegalArgumentException("maxBodyBytes must be positive");
         }
         if (request.getContentLengthLong() > maxBodyBytes) {
-            throw new RequestBodyTooLargeException();
+            throw new SummerException(MvcErrorCode.REQUEST_BODY_TOO_LARGE);
         }
         ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(maxBodyBytes, 8192));
         byte[] buffer = new byte[8192];
@@ -50,7 +52,7 @@ public final class CachedBodyHttpServletRequest extends HttpServletRequestWrappe
                     output.write(buffer, 0, count);
                 }
                 if (output.size() > maxBodyBytes) {
-                    throw new RequestBodyTooLargeException();
+                    throw new SummerException(MvcErrorCode.REQUEST_BODY_TOO_LARGE);
                 }
             }
         }

@@ -24,6 +24,75 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AgentControllerTest {
     @Autowired MockMvc mockMvc;
 
+    @Test void nativeAccessDenialsKeepTheirOriginalMessageAndCause() throws Exception {
+        String path = "/api/v1/enterprises/ent-acme/agents";
+        MvcResult result = mockMvc.perform(get(path).with(jwt().jwt(t -> t.subject("agent-native-no-cap").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))).header("X-Request-Id", "native-denied"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                .andExpect(jsonPath("$.error.message").value("Agent capability denied"))
+                .andExpect(jsonPath("$.requestId").value("native-denied"))
+                .andExpect(header().string("X-Request-Id", "native-denied"))
+                .andExpect(jsonPath("$.error.cause").doesNotExist()).andReturn();
+        var error = org.junit.jupiter.api.Assertions.assertInstanceOf(com.abluepoint.summer.common.error.SummerException.class,
+                result.getResolvedException());
+        var cause = org.junit.jupiter.api.Assertions.assertInstanceOf(org.springframework.security.access.AccessDeniedException.class,
+                error.getCause());
+        org.junit.jupiter.api.Assertions.assertEquals(cause.getMessage(), error.explicitMessage());
+    }
+
+    @Test void rejectedAgentMutationsKeepTheirMessagesAndDoNotChangeInstanceState() throws Exception {
+        String base = "/api/v1/enterprises/ent-acme/agents";
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{}"), 400,
+                "SUMMER_AGENT_INVALID", "Idempotency-Key is required");
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{}").header("Idempotency-Key", "empty"), 400,
+                "SUMMER_AGENT_INVALID", "name and code are required");
+        String id = createAgent("agent-stable");
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Duplicate\",\"code\":\"agent-stable\"}")
+                .header("Idempotency-Key", "duplicate"), 409, "SUMMER_AGENT_CONFLICT", "Agent code already exists");
+        failure(post(base).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Changed\",\"code\":\"other\"}")
+                .header("Idempotency-Key", "agent-stable"), 409, "SUMMER_IDEMPOTENCY_CONFLICT", "Idempotency key reused");
+        failure(get(base + "/missing"), 409, "SUMMER_AGENT_CONFLICT", "Agent not found");
+        failure(patch(base + "/" + id).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Changed\"}")
+                .header("If-Match", "\"999\"").header("Idempotency-Key", "stale"), 412,
+                "SUMMER_PRECONDITION_FAILED", "The resource has changed");
+        failure(patch(base + "/" + id).contentType(MediaType.APPLICATION_JSON).content("{}")
+                .header("If-Match", "\"1\"").header("Idempotency-Key", "empty-update"), 400,
+                "SUMMER_AGENT_INVALID", "name is required");
+        mockMvc.perform(post("/internal/v1/agent-instances").contentType(MediaType.APPLICATION_JSON).content("{}")
+                        .with(runtime(id, "runtime-stable", true)).header("X-Request-Id", "agent-runtime-invalid"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SUMMER_AGENT_INVALID"))
+                .andExpect(jsonPath("$.error.message").value("runtimeId is required"))
+                .andExpect(jsonPath("$.requestId").value("agent-runtime-invalid"));
+        String registration = "{\"runtimeId\":\"runtime-stable\"}";
+        mockMvc.perform(post("/internal/v1/agent-instances").contentType(MediaType.APPLICATION_JSON).content(registration)
+                        .with(runtime(id, "runtime-stable", true))).andExpect(status().isCreated());
+        mockMvc.perform(post("/internal/v1/agent-instances").contentType(MediaType.APPLICATION_JSON).content(registration)
+                        .with(runtime(id, "runtime-stable", true)).header("X-Request-Id", "agent-duplicate-runtime"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_AGENT_CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("Runtime instance already registered"))
+                .andExpect(jsonPath("$.requestId").value("agent-duplicate-runtime"));
+        failure(post("/api/v1/enterprises/ent-acme/agent-instances/missing:revoke")
+                .header("If-Match", "\"1\"").header("Idempotency-Key", "missing-instance"), 409,
+                "SUMMER_AGENT_CONFLICT", "Agent instance not found");
+        mockMvc.perform(get(base + "/" + id).with(admin("enterprise.agents.read")))
+                .andExpect(status().isOk()).andExpect(header().string("ETag", "\"1\""))
+                .andExpect(jsonPath("$.data.name").value("Runtime Agent"));
+        mockMvc.perform(get(base + "/" + id + "/instances").with(admin("enterprise.agents.read")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
+        mockMvc.perform(get(base + "/" + id + "/audit").with(admin("enterprise.agents.read")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    private void failure(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request,
+                         int status, String code, String message) throws Exception {
+        mockMvc.perform(request.with(admin("enterprise.agents.write")).header("X-Request-Id", "agent-rejected"))
+                .andExpect(status().is(status)).andExpect(jsonPath("$.error.code").value(code))
+                .andExpect(jsonPath("$.error.message").value(message))
+                .andExpect(jsonPath("$.requestId").value("agent-rejected"))
+                .andExpect(header().string("X-Request-Id", "agent-rejected"))
+                .andExpect(jsonPath("$.error.cause").doesNotExist());
+    }
+
     @Test
     void createsAndListsAgentsWithinEnterpriseBoundary() throws Exception {
         MvcResult created = mockMvc.perform(post("/api/v1/enterprises/ent-acme/agents")

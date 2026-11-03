@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.systemparameter;
 
-import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -9,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -37,11 +35,7 @@ class SystemParameterEventController {
     @RawResponse
     @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write')")
     ResponseEntity<ApiResponse<SystemParameterEventView>> retry(@PathVariable String eventId, org.springframework.security.core.Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.retry(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), eventId));
-        } catch (SystemParameterEventNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage());
-        }
+        return body(HttpStatus.OK, service.retry(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), eventId));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> body(HttpStatus status, T value) {
@@ -49,8 +43,4 @@ class SystemParameterEventController {
                 .body(ApiResponse.success(value, requestId.currentRequestId()));
     }
 
-    private <T> ResponseEntity<ApiResponse<T>> failure(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
-    }
 }

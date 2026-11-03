@@ -97,7 +97,8 @@ class AuthorizationEventTenantAuthorizationHttpTest {
         Map<String, Object> before = outbox(eventA);
         mvc.perform(retry(b, eventA).with(oldJwt).header("X-Request-Id", "foreign-event"))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.data").doesNotExist())
-                .andExpect(jsonPath("$.requestId").value("foreign-event"));
+                .andExpect(jsonPath("$.requestId").value("foreign-event"))
+                .andExpect(UnifiedBusinessFailure.unified("SUMMER_NOT_FOUND", "Authorization change event not found: " + eventA));
         assertThat(outbox(eventA)).isEqualTo(before);
         mvc.perform(list(b).with(oldJwt)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(1))

@@ -4,11 +4,11 @@ import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import jakarta.servlet.DispatcherType;
-import jakarta.servlet.RequestDispatcher;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.ResourceHttpMessageConverter;
@@ -17,6 +17,7 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
@@ -46,7 +47,12 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             ServerHttpRequest request,
             ServerHttpResponse response
     ) {
+        if (response instanceof ServletServerHttpResponse servletResponse
+                && servletResponse.getServletResponse().isCommitted()) {
+            return null;
+        }
         if (body instanceof ApiResponse<?>
+                || body instanceof ProblemDetail
                 || ByteArrayHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
                 || ResourceHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
                 || ResourceRegionHttpMessageConverter.class.isAssignableFrom(selectedConverterType)
@@ -70,9 +76,8 @@ public class SummerResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         String path = request.getURI().getPath();
         if (request instanceof ServletServerHttpRequest servletRequest) {
             var originalRequest = servletRequest.getServletRequest();
-            if (originalRequest.getDispatcherType() == DispatcherType.ERROR
-                    && originalRequest.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) instanceof String originalPath) {
-                path = originalPath;
+            if (originalRequest.getDispatcherType() == DispatcherType.ERROR) {
+                return true;
             }
             String contextPath = originalRequest.getContextPath();
             if (!contextPath.isEmpty() && path.startsWith(contextPath + "/")) {

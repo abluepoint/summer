@@ -1,12 +1,11 @@
 package com.abluepoint.summer.sample.enterprise;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
-import java.util.List;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -61,22 +60,10 @@ class PlatformEnterpriseDirectoryController {
         try {
             PlatformEnterpriseView body = service.transition(id, action, ifMatch, key, requestId.currentRequestId(), auth);
             return ResponseEntity.ok().eTag(quote(body.revision())).header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.success(body, requestId.currentRequestId()));
-        } catch (PlatformEnterprisePreconditionException e) {
-            return error(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", "The enterprise has changed");
-        } catch (PlatformEnterpriseConflictException e) {
-            return error(HttpStatus.CONFLICT, "SUMMER_IDEMPOTENCY_CONFLICT", e.getMessage());
-        } catch (PlatformEnterpriseValidationException e) {
-            return error(HttpStatus.BAD_REQUEST, "SUMMER_INVALID_ENTERPRISE_ACTION", e.getMessage());
-        } catch (PlatformEnterpriseNotFoundException e) {
-            return error(HttpStatus.NOT_FOUND, "SUMMER_ENTERPRISE_NOT_FOUND", e.getMessage());
         } catch (AccessDeniedException e) {
-            return error(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", e.getMessage());
+            throw SummerException.withMessage(
+                    CommonErrorCode.FORBIDDEN, e.getMessage(), e);
         }
-    }
-
-    private ResponseEntity<ApiResponse<PlatformEnterpriseView>> error(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
     }
 
     private static String quote(String value) {

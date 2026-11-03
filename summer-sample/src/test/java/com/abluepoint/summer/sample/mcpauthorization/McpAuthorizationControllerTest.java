@@ -23,6 +23,35 @@ class McpAuthorizationControllerTest {
     @Autowired MockMvc mockMvc;
 
     @Test
+    void missingDecisionFieldsUseTheUnifiedInvalidCode() throws Exception {
+        mockMvc.perform(post("/internal/v1/mcp/execution-decisions").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enterpriseId\":\"ent-acme\",\"executionContextId\":\"ctx\",\"actorPrincipalId\":\"agent\",\"effectiveSubjectPrincipalId\":\"user\"}")
+                        .with(service("cs-1", "ctx", "agent", null, "user")))
+                .andExpect(status().isBadRequest())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_MCP_AUTH_INVALID", "Execution decision fields are required"))
+                .andExpect(result -> org.junit.jupiter.api.Assertions.assertSame(McpAuthorizationErrorCode.INVALID,
+                        ((com.abluepoint.summer.common.error.SummerException) result.getResolvedException()).errorCode()));
+    }
+
+    @Test
+    void missingPermitUsesTheUnifiedExceptionBoundary() throws Exception {
+        MvcResult result = mockMvc.perform(post("/internal/v1/mcp/execution-permits/missing:claim")
+                        .header("X-Request-Id", "mcp-missing-permit")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"attempt\"}")
+                        .with(service("cs-1", "ctx-1", "agent", null, "user")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_MCP_AUTH_CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("Permit not found"))
+                .andExpect(header().string("X-Request-Id", "mcp-missing-permit"))
+                .andExpect(jsonPath("$.requestId").value("mcp-missing-permit")).andReturn();
+        org.assertj.core.api.Assertions.assertThat(result.getResolvedException())
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class);
+        org.junit.jupiter.api.Assertions.assertSame(McpAuthorizationErrorCode.CONFLICT,
+                ((com.abluepoint.summer.common.error.SummerException) result.getResolvedException()).errorCode());
+    }
+
+    @Test
     void evaluatesIdentityAndIssuesAudienceBoundSingleUsePermit() throws Exception {
         MvcResult result = mockMvc.perform(post("/internal/v1/mcp/execution-decisions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -34,6 +63,12 @@ class McpAuthorizationControllerTest {
                 .andExpect(jsonPath("$.data.permit.argumentsDigest").value("sha256:args")).andReturn();
         String permitId = JsonPath.read(result.getResponse().getContentAsString(), "$.data.permit.permitId");
         String invocationId = JsonPath.read(result.getResponse().getContentAsString(), "$.data.invocationId");
+        mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}")
+                        .with(service("cs-1", "ctx-1", "agent-principal", "ainst-1", "user-1")))
+                .andExpect(status().isBadRequest())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_MCP_AUTH_INVALID", "executionAttemptId is required"));
         mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"attempt-1\"}")
                         .with(service("cs-1", "ctx-1", "agent-principal", "ainst-1", "user-1")))
@@ -84,7 +119,9 @@ class McpAuthorizationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(withApproval(request.replace("args-original", "args-changed"), approvalId))
                         .with(service("cs-1", "ctx-approval", "agent", "ainst-1", "user")))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_MCP_AUTH_CONFLICT", "Human approval is missing, expired, consumed, or not bound to this invocation"));
     }
 
     @Test
@@ -95,7 +132,9 @@ class McpAuthorizationControllerTest {
         String permitId = JsonPath.read(result.getResponse().getContentAsString(), "$.data.permit.permitId");
         mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim").contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"a-1\"}").with(service("cs-2", "ctx-3", "agent", null, "user"))).andExpect(status().isForbidden());
         mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim").contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"a-1\"}").with(service("cs-1", "ctx-3", "agent", null, "user"))).andExpect(status().isOk());
-        mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim").contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"a-2\"}").with(service("cs-1", "ctx-3", "agent", null, "user"))).andExpect(status().isConflict());
+        mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim").contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"a-2\"}").with(service("cs-1", "ctx-3", "agent", null, "user"))).andExpect(status().isConflict())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_MCP_AUTH_CONFLICT", "Permit already claimed by another attempt"));
     }
 
     @Test
@@ -105,7 +144,9 @@ class McpAuthorizationControllerTest {
                         .with(service("cs-1", "ctx-4", "agent", null, "user"))).andExpect(status().isOk()).andReturn();
         String permitId = JsonPath.read(result.getResponse().getContentAsString(), "$.data.permit.permitId");
         mockMvc.perform(post("/api/v1/enterprises/ent-acme/mcp-execution-permits/" + permitId + ":revoke").header("Idempotency-Key", "permit-revoke-1").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REVOKED"));
-        mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim").contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"attempt\"}").with(service("cs-1", "ctx-4", "agent", null, "user"))).andExpect(status().isConflict());
+        mockMvc.perform(post("/internal/v1/mcp/execution-permits/" + permitId + ":claim").contentType(MediaType.APPLICATION_JSON).content("{\"executionAttemptId\":\"attempt\"}").with(service("cs-1", "ctx-4", "agent", null, "user"))).andExpect(status().isConflict())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_MCP_AUTH_CONFLICT", "Permit is not claimable"));
     }
 
     @Test

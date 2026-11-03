@@ -15,7 +15,7 @@ import org.springframework.test.context.DynamicPropertySource;
         "summer.security.storage.keys=memory", "summer.sample.cache.enabled=false", "summer.sample.resilience.enabled=false"})
 @EnabledIfEnvironmentVariable(named = "T19_MYSQL_PASSWORD", matches = ".+")
 class EnterpriseOnboardingMySqlHttpTest extends EnterpriseOnboardingHttpTest {
-    private static final String SCHEMA = "summer_identity_upgrade_" + UUID.randomUUID().toString().replace("-", "");
+    private static final String SCHEMA =com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.claim(EnterpriseOnboardingMySqlHttpTest.class,  "summer_identity_upgrade_" + UUID.randomUUID().toString().replace("-", ""));
     private static final String URL = "jdbc:mysql://127.0.0.1:3306/";
     private static Connection connect(String schema) throws SQLException {
         return DriverManager.getConnection(URL + schema, "root", System.getenv("T19_MYSQL_PASSWORD"));
@@ -36,5 +36,6 @@ class EnterpriseOnboardingMySqlHttpTest extends EnterpriseOnboardingHttpTest {
                 result.next(); org.assertj.core.api.Assertions.assertThat(result.getInt(1)).isZero();
             }
         }
+        com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.removed(SCHEMA);
     }
 }

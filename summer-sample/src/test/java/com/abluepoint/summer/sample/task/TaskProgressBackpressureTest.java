@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.task;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.ObjectMapper;
@@ -52,7 +54,8 @@ class TaskProgressBackpressureTest {
             try {
                 for (int i = 0; i < 32; i++) service.subscribe("ent-acme", "task", 0, null);
                 org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.subscribe("ent-acme", "task", 0, null))
-                        .isInstanceOf(TaskProgressConnectionLimitException.class);
+                        .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.TASK_SSE_LIMIT));
                 completionCallbacks.get(0).run();
                 service.subscribe("ent-acme", "task", 0, null);
                 assertThat(completionCallbacks).hasSize(33);

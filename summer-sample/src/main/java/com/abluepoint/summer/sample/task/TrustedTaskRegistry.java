@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.task;
 
+import com.abluepoint.summer.common.error.SummerException;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -49,7 +50,7 @@ final class TrustedTaskRegistry {
     }
     void execute(String taskType, Map<String, Object> parameters, java.util.function.IntConsumer progress) {
         TrustedTaskHandler handler = handlers.get(taskType);
-        if (handler == null) throw new TaskUntrustedTypeException(taskType);
+        if (handler == null) throw SummerException.withMessage(TaskErrorCode.TYPE_UNTRUSTED, "Task type is not trusted: " + taskType);
         handler.execute(parameters == null ? Map.of() : Map.copyOf(parameters), progress);
     }
     List<TrustedTaskTypeView> types() {

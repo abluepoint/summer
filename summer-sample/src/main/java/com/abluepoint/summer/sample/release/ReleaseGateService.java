@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.release;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,16 +39,16 @@ final class ReleaseGateService {
         Object prior = receipts.get("benchmark:" + key);
         if (prior != null) {
             Receipt receipt = (Receipt) prior;
-            if (!receipt.fingerprint.equals(fingerprint)) throw new ReleaseIdempotencyConflictException("Idempotency key reused");
+            if (!receipt.fingerprint.equals(fingerprint)) throw SummerException.withMessage(CommonErrorCode.CONFLICT, "Idempotency key reused");
             return (PerformanceBenchmarkView) receipt.value;
         }
         if (request == null || blank(request.operation()) || request.latenciesMs() == null || request.latenciesMs().isEmpty()
                 || request.elapsedMs() <= 0 || request.successful() < 0 || request.failed() < 0) {
-            throw new ReleaseValidationException("operation, samples, elapsedMs and counts are required");
+            throw SummerException.withMessage(ReleaseErrorCode.INVALID, "operation, samples, elapsedMs and counts are required");
         }
         long budget = budgetFor(request.operation());
         List<Long> sorted = request.latenciesMs().stream().filter(Objects::nonNull).filter(v -> v >= 0).sorted().toList();
-        if (sorted.isEmpty()) throw new ReleaseValidationException("latenciesMs must contain non-negative values");
+        if (sorted.isEmpty()) throw SummerException.withMessage(ReleaseErrorCode.INVALID, "latenciesMs must contain non-negative values");
         int rank = (int) Math.ceil(sorted.size() * 0.95d) - 1;
         long p95 = sorted.get(Math.max(0, Math.min(rank, sorted.size() - 1)));
         double throughput = request.successful() * 1000d / request.elapsedMs();
@@ -69,28 +71,28 @@ final class ReleaseGateService {
         Object prior = receipts.get(key);
         if (prior != null) {
             Receipt receipt = (Receipt) prior;
-            if (!receipt.fingerprint.equals(fp)) throw new ReleaseIdempotencyConflictException("Idempotency key reused");
+            if (!receipt.fingerprint.equals(fp)) throw SummerException.withMessage(CommonErrorCode.CONFLICT, "Idempotency key reused");
             return (ReleaseGateView) receipt.value;
         }
-        if (request == null || request.releaseVersion() == null || !Boolean.TRUE.equals(request.dryRun())) throw new ReleaseValidationException("dryRun is required");
+        if (request == null || request.releaseVersion() == null || !Boolean.TRUE.equals(request.dryRun())) throw SummerException.withMessage(ReleaseErrorCode.INVALID, "dryRun is required");
         List<String> checks = request.requiredChecks() == null || request.requiredChecks().isEmpty() ? DEFAULT_CHECKS : request.requiredChecks();
         List<ReleaseGate> gates = checks.stream().distinct().map(c -> new ReleaseGate(c, false, false, "External execution evidence required")).toList();
         ReleaseGateView out = new ReleaseGateView("NOT_VERIFIED", request.releaseVersion(), true, gates); receipts.put(key, new Receipt(fp, out)); return out;
     }
 
     synchronized RollbackDryRunView rollback(RollbackDryRunRequest request, String key, Authentication auth) {
-        require(auth, "internal.release.write"); requireKey(key); String fingerprint = String.valueOf(request); Object prior = receipts.get(key); if (prior != null) { Receipt receipt = (Receipt) prior; if (!receipt.fingerprint.equals(fingerprint)) throw new ReleaseIdempotencyConflictException("Idempotency key reused"); return (RollbackDryRunView) receipt.value; }
-        if (request == null || blank(request.releaseVersion()) || blank(request.targetVersion())) throw new ReleaseValidationException("releaseVersion and targetVersion are required");
+        require(auth, "internal.release.write"); requireKey(key); String fingerprint = String.valueOf(request); Object prior = receipts.get(key); if (prior != null) { Receipt receipt = (Receipt) prior; if (!receipt.fingerprint.equals(fingerprint)) throw SummerException.withMessage(CommonErrorCode.CONFLICT, "Idempotency key reused"); return (RollbackDryRunView) receipt.value; }
+        if (request == null || blank(request.releaseVersion()) || blank(request.targetVersion())) throw SummerException.withMessage(ReleaseErrorCode.INVALID, "releaseVersion and targetVersion are required");
         RollbackDryRunView out = new RollbackDryRunView(true, request.releaseVersion(), request.targetVersion(), CURRENT); receipts.put(key, new Receipt(fingerprint, out)); return out;
     }
 
     synchronized FailureDrillView drill(FailureDrillRequest request, String key, Authentication auth) {
-        require(auth, "internal.release.write"); requireKey(key); String fingerprint = String.valueOf(request); Object prior = receipts.get(key); if (prior != null) { Receipt receipt = (Receipt) prior; if (!receipt.fingerprint.equals(fingerprint)) throw new ReleaseIdempotencyConflictException("Idempotency key reused"); return (FailureDrillView) receipt.value; }
-        if (request == null || blank(request.component()) || !"UNAVAILABLE".equalsIgnoreCase(request.scenario())) throw new ReleaseValidationException("Only UNAVAILABLE failure scenario is supported");
+        require(auth, "internal.release.write"); requireKey(key); String fingerprint = String.valueOf(request); Object prior = receipts.get(key); if (prior != null) { Receipt receipt = (Receipt) prior; if (!receipt.fingerprint.equals(fingerprint)) throw SummerException.withMessage(CommonErrorCode.CONFLICT, "Idempotency key reused"); return (FailureDrillView) receipt.value; }
+        if (request == null || blank(request.component()) || !"UNAVAILABLE".equalsIgnoreCase(request.scenario())) throw SummerException.withMessage(ReleaseErrorCode.INVALID, "Only UNAVAILABLE failure scenario is supported");
         String component = request.component().toUpperCase(Locale.ROOT); FailureDrillView out;
         if ("IAM".equals(component)) out = new FailureDrillView(component, "UNAVAILABLE", "DENY", null, false, false, "REQUIRED");
         else if ("CONNECTION_SERVICE".equals(component)) out = new FailureDrillView(component, "UNAVAILABLE", null, "EXECUTION_UNKNOWN", false, false, "REQUIRED");
-        else throw new ReleaseValidationException("Unsupported component");
+        else throw SummerException.withMessage(ReleaseErrorCode.INVALID, "Unsupported component");
         receipts.put(key, new Receipt(fingerprint, out)); return out;
     }
 
@@ -115,7 +117,7 @@ final class ReleaseGateService {
         return authorization.platformDecision(jwt, permission, requestId.currentRequestId()).allowed();
     }
 
-    private static void requireKey(String key) { if (key == null || key.isBlank()) throw new ReleaseValidationException("Idempotency-Key is required"); }
+    private static void requireKey(String key) { if (key == null || key.isBlank()) throw SummerException.withMessage(ReleaseErrorCode.INVALID, "Idempotency-Key is required"); }
     private static boolean blank(String s) { return s == null || s.isBlank(); }
     private static long budgetFor(String operation) {
         return switch (operation) {
@@ -125,7 +127,7 @@ final class ReleaseGateService {
             case "authorizationDecision" -> 50;
             case "permitClaim" -> 20;
             case "auditWrite" -> 100;
-            default -> throw new ReleaseValidationException("Unsupported benchmark operation");
+            default -> throw SummerException.withMessage(ReleaseErrorCode.INVALID, "Unsupported benchmark operation");
         };
     }
     private record Receipt(String fingerprint, Object value) {}

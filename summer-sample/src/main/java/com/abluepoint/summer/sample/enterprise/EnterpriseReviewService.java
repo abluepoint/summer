@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -26,21 +29,21 @@ class EnterpriseReviewService {
     @Transactional
     EnterpriseReview decide(String id, String decision, String reason, String ifMatch, String key, String requestId, Authentication auth) {
         PlatformEnterpriseDirectoryService.require(auth, "platform.enterprise-review.write");
-        if (key == null || key.isBlank() || key.length() > 128) throw new ReviewConflictException("Idempotency-Key is required (maximum 128 characters)");
+        if (key == null || key.isBlank() || key.length() > 128) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required (maximum 128 characters)");
         String tenant = find(id).enterpriseId();
         registry.lock(tenant);
         String fingerprint = decision + "|" + reason + "|" + ifMatch;
         var previous = journal.find(tenant, "enterprise.review.mutation", key).orElse(null);
         if (previous != null) {
-            if (!previous.fingerprint().equals(fingerprint)) throw new ReviewConflictException("Idempotency-Key was already used for another decision");
+            if (!previous.fingerprint().equals(fingerprint)) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key was already used for another decision");
             return journal.decode(previous, EnterpriseReview.class);
         }
         var current = find(id);
-        if (!("\"" + PlatformEnterpriseDirectoryService.revision(current) + "\"").equals(ifMatch)) throw new ReviewPreconditionException();
-        if (("REJECT".equals(decision) || "REQUEST_INFO".equals(decision)) && (reason == null || reason.isBlank())) throw new ReviewValidationException("reason is required");
-        String after = switch (decision) { case "APPROVE" -> "APPROVED"; case "REJECT" -> "REJECTED"; case "REQUEST_INFO" -> "NEEDS_INFO"; default -> throw new ReviewValidationException("unsupported decision"); };
+        if (!("\"" + PlatformEnterpriseDirectoryService.revision(current) + "\"").equals(ifMatch)) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
+        if (("REJECT".equals(decision) || "REQUEST_INFO".equals(decision)) && (reason == null || reason.isBlank())) throw SummerException.withMessage(DirectoryErrorCode.INVALID_REVIEW, "reason is required");
+        String after = switch (decision) { case "APPROVE" -> "APPROVED"; case "REJECT" -> "REJECTED"; case "REQUEST_INFO" -> "NEEDS_INFO"; default -> throw SummerException.withMessage(DirectoryErrorCode.INVALID_REVIEW, "unsupported decision"); };
         String before = current.reviewStatus();
-        if (!"PENDING".equals(before) && !"NEEDS_INFO".equals(before)) throw new ReviewValidationException("illegal status transition");
+        if (!"PENDING".equals(before) && !"NEEDS_INFO".equals(before)) throw SummerException.withMessage(DirectoryErrorCode.INVALID_REVIEW, "illegal status transition");
         current.reviewStatus(after);
         repository.saveAndFlush(current);
         var result = view(current);

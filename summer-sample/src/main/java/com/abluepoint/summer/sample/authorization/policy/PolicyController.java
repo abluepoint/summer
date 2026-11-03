@@ -1,6 +1,11 @@
 package com.abluepoint.summer.sample.authorization.policy;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import org.springframework.security.access.AccessDeniedException;
+import java.util.function.Supplier;
+
+import com.abluepoint.summer.common.error.SummerException;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -28,11 +33,8 @@ class PolicyController {
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyView>>> list(@PathVariable String enterpriseId, Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.list(enterpriseId, auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.list(enterpriseId, auth)), null);
+
     }
 
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/policies", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -42,35 +44,26 @@ class PolicyController {
             @RequestBody PolicyCreateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            PolicyView view = service.create(enterpriseId, request, idempotencyKey, rid(), auth);
-            return body(HttpStatus.CREATED, view, view.version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyView view = preserveAccessDenied(() -> service.create(enterpriseId, request, idempotencyKey, rid(), auth));
+        return body(HttpStatus.CREATED, view, view.version());
+
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}")
     @RawResponse
     ResponseEntity<ApiResponse<PolicyDetailView>> detail(
             @PathVariable String enterpriseId, @PathVariable String policyId, Authentication auth) {
-        try {
-            PolicyDetailView view = service.detailBundle(enterpriseId, policyId, auth);
-            return body(HttpStatus.OK, view, view.policy().version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyDetailView view = preserveAccessDenied(() -> service.detailBundle(enterpriseId, policyId, auth));
+        return body(HttpStatus.OK, view, view.policy().version());
+
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}/versions")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyVersionView>>> versions(
             @PathVariable String enterpriseId, @PathVariable String policyId, Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.versions(enterpriseId, policyId, auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.versions(enterpriseId, policyId, auth)), null);
+
     }
 
     @PatchMapping(value = "/api/v1/enterprises/{enterpriseId}/policies/{policyId}/draft", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -82,12 +75,9 @@ class PolicyController {
             @RequestHeader("If-Match") String ifMatch,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            PolicyView view = service.updateDraft(enterpriseId, policyId, request, ifMatch, idempotencyKey, rid(), auth);
-            return body(HttpStatus.OK, view, view.version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyView view = preserveAccessDenied(() -> service.updateDraft(enterpriseId, policyId, request, ifMatch, idempotencyKey, rid(), auth));
+        return body(HttpStatus.OK, view, view.version());
+
     }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:validate")
@@ -97,11 +87,8 @@ class PolicyController {
             @PathVariable String policyId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.validate(enterpriseId, policyId, idempotencyKey, rid(), auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.validate(enterpriseId, policyId, idempotencyKey, rid(), auth)), null);
+
     }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:publish")
@@ -112,12 +99,9 @@ class PolicyController {
             @RequestHeader("If-Match") String ifMatch,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            PolicyView view = service.publish(enterpriseId, policyId, ifMatch, idempotencyKey, rid(), auth);
-            return body(HttpStatus.OK, view, view.version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyView view = preserveAccessDenied(() -> service.publish(enterpriseId, policyId, ifMatch, idempotencyKey, rid(), auth));
+        return body(HttpStatus.OK, view, view.version());
+
     }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:pause")
@@ -151,12 +135,9 @@ class PolicyController {
             @RequestHeader("If-Match") String ifMatch,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            PolicyView view = service.rollback(enterpriseId, policyId, request, ifMatch, idempotencyKey, rid(), auth);
-            return body(HttpStatus.OK, view, view.version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyView view = preserveAccessDenied(() -> service.rollback(enterpriseId, policyId, request, ifMatch, idempotencyKey, rid(), auth));
+        return body(HttpStatus.OK, view, view.version());
+
     }
 
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/policies/{policyId}:copy", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -167,23 +148,17 @@ class PolicyController {
             @RequestBody(required = false) PolicyCreateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            PolicyView view = service.copy(enterpriseId, policyId, request, idempotencyKey, rid(), auth);
-            return body(HttpStatus.CREATED, view, view.version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyView view = preserveAccessDenied(() -> service.copy(enterpriseId, policyId, request, idempotencyKey, rid(), auth));
+        return body(HttpStatus.CREATED, view, view.version());
+
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}/test-cases")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyTestCaseView>>> testCases(
             @PathVariable String enterpriseId, @PathVariable String policyId, Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.testCases(enterpriseId, policyId, auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.testCases(enterpriseId, policyId, auth)), null);
+
     }
 
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/policies/{policyId}/test-cases", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -194,11 +169,8 @@ class PolicyController {
             @RequestBody PolicyTestCaseCreateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            return body(HttpStatus.CREATED, service.createTestCase(enterpriseId, policyId, request, idempotencyKey, rid(), auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.CREATED, preserveAccessDenied(() -> service.createTestCase(enterpriseId, policyId, request, idempotencyKey, rid(), auth)), null);
+
     }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:test")
@@ -208,22 +180,16 @@ class PolicyController {
             @PathVariable String policyId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.runTests(enterpriseId, policyId, idempotencyKey, rid(), auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.runTests(enterpriseId, policyId, idempotencyKey, rid(), auth)), null);
+
     }
 
     @PostMapping(value = "/internal/v1/authorization/evaluate", consumes = MediaType.APPLICATION_JSON_VALUE)
     @RawResponse
     ResponseEntity<ApiResponse<PolicyEvaluationView>> evaluate(
             @RequestBody PolicyEvaluationRequest request, Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.evaluate(trustedIdentity(request, auth), auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.evaluate(trustedIdentity(request, auth), auth)), null);
+
     }
 
     private PolicyEvaluationRequest trustedIdentity(PolicyEvaluationRequest request, Authentication auth) {
@@ -240,7 +206,7 @@ class PolicyController {
             throw new org.springframework.security.access.AccessDeniedException("Evaluation identity does not match trusted caller");
         }
         if (request == null) {
-            throw new PolicyValidationException("Evaluation request is required");
+            throw SummerException.withMessage(PolicyErrorCode.INVALID, "Evaluation request is required");
         }
         return new PolicyEvaluationRequest(initiator, actor, effectiveSubject, request.enterpriseId(),
                 request.resource(), request.action(), request.risk(), request.organizationId(), request.requestId());
@@ -260,21 +226,15 @@ class PolicyController {
     @RawResponse
     ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> audit(
             @PathVariable String enterpriseId, @PathVariable String policyId, Authentication auth) {
-        try {
-            return body(HttpStatus.OK, service.audit(enterpriseId, policyId, auth), null);
-        } catch (Exception e) {
-            return error(e);
-        }
+        return body(HttpStatus.OK, preserveAccessDenied(() -> service.audit(enterpriseId, policyId, auth)), null);
+
     }
 
     private ResponseEntity<ApiResponse<PolicyView>> lifecycle(
             String enterpriseId, String policyId, String state, String ifMatch, String idempotencyKey, Authentication auth) {
-        try {
-            PolicyView view = service.lifecycle(enterpriseId, policyId, state, ifMatch, idempotencyKey, rid(), auth);
-            return body(HttpStatus.OK, view, view.version());
-        } catch (Exception e) {
-            return error(e);
-        }
+        PolicyView view = preserveAccessDenied(() -> service.lifecycle(enterpriseId, policyId, state, ifMatch, idempotencyKey, rid(), auth));
+        return body(HttpStatus.OK, view, view.version());
+
     }
 
     private String rid() {
@@ -289,26 +249,12 @@ class PolicyController {
         return builder.body(ApiResponse.success(value, rid()));
     }
 
-    private <T> ResponseEntity<ApiResponse<T>> error(Exception exception) {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        String code = "SUMMER_INTERNAL_ERROR";
-        if (exception instanceof org.springframework.security.access.AccessDeniedException) {
-            status = HttpStatus.FORBIDDEN;
-            code = "SUMMER_FORBIDDEN";
-        } else if (exception instanceof PolicyValidationException) {
-            status = HttpStatus.BAD_REQUEST;
-            code = "SUMMER_POLICY_INVALID";
-        } else if (exception instanceof PolicyPreconditionException) {
-            status = HttpStatus.PRECONDITION_FAILED;
-            code = "SUMMER_PRECONDITION_FAILED";
-        } else if (exception instanceof PolicyIdempotencyConflictException) {
-            status = HttpStatus.CONFLICT;
-            code = "SUMMER_IDEMPOTENCY_CONFLICT";
-        } else if (exception instanceof PolicyConflictException) {
-            status = HttpStatus.CONFLICT;
-            code = "SUMMER_POLICY_CONFLICT";
+    /** Preserve this application's original security message without changing the native service contract. */
+    private <T> T preserveAccessDenied(Supplier<T> action) {
+        try {
+            return action.get();
+        } catch (AccessDeniedException denied) {
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, denied.getMessage(), denied);
         }
-        return ResponseEntity.status(status).header("X-Request-Id", rid())
-                .body(ApiResponse.failure(new ApiError(code, exception.getMessage(), List.of()), rid()));
     }
 }

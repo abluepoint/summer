@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.realtime;
 
+import com.abluepoint.summer.common.error.SummerException;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -54,7 +56,7 @@ public class RealtimeWebSocketHub {
         }
         sessions.compute(enterpriseId, (key, existing) -> {
             Set<WebSocketSession> active = existing == null ? ConcurrentHashMap.newKeySet() : existing;
-            if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE) throw new RealtimeConnectionLimitException();
+            if (active.size() >= MAX_CONNECTIONS_PER_ENTERPRISE) throw SummerException.withMessage(RealtimeErrorCode.CONNECTION_LIMIT, "connection limit");
             active.add(session);
             return active;
         });
@@ -204,4 +206,3 @@ public class RealtimeWebSocketHub {
     }
 }
 
-final class RealtimeConnectionLimitException extends RuntimeException {}

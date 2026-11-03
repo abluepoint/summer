@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.member;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.enterprise.DirectoryErrorCode;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -26,17 +29,17 @@ class MemberService {
     @org.springframework.transaction.annotation.Transactional
     MemberDetail create(String enterpriseId, MemberCreateRequest request, String key, String requestId, Authentication auth) {
         requireMembership(enterpriseId, auth);
-        if (key == null || key.isBlank() || key.length() > 120) throw new IdempotencyConflictException("Idempotency-Key is required");
+        if (key == null || key.isBlank() || key.length() > 120) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required");
         enterprises.lock(enterpriseId);
         String fingerprint = request.toString();
         var prior = journal.find(enterpriseId, "member.create", key).orElse(null);
         if (prior != null) {
-            if (!fingerprint.equals(prior.fingerprint())) throw new IdempotencyConflictException("Idempotency-Key was already used for another mutation");
+            if (!fingerprint.equals(prior.fingerprint())) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key was already used for another mutation");
             return journal.decode(prior, MemberDetail.class);
         }
         if (!identities.isActive(request.subject())) throw new org.springframework.web.server.ResponseStatusException(
                 org.springframework.http.HttpStatus.BAD_REQUEST, "An existing active login identity is required");
-        if (directory.forSubject(enterpriseId, request.subject()).isPresent()) throw new MemberConflictException();
+        if (directory.forSubject(enterpriseId, request.subject()).isPresent()) throw SummerException.withMessage(MemberErrorCode.CONFLICT, "Subject already has a membership in this enterprise");
         String id = "member-" + java.util.UUID.randomUUID();
         var member = directory.provision(enterpriseId, id, request.subject(), request.displayName(), request.email());
         MemberDetail detail = detailOf(enterpriseId, id, member);
@@ -69,18 +72,18 @@ class MemberService {
     @org.springframework.transaction.annotation.Transactional
     synchronized MemberDetail changeStatus(String enterpriseId, String memberId, String status, String ifMatch, String idempotencyKey, String requestId, Authentication auth) {
         requireMembership(enterpriseId, auth);
-        if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 120) throw new IdempotencyConflictException("Idempotency-Key is required");
+        if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 120) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required");
         String operationKey = enterpriseId + ":" + memberId + ":" + idempotencyKey;
         String fingerprint = status + "|" + ifMatch;
         enterprises.lock(enterpriseId);
         var previous = journal.find(enterpriseId, "member.mutation", operationKey).orElse(null);
         if (previous != null) {
-            if (!previous.fingerprint().equals(fingerprint)) throw new IdempotencyConflictException("Idempotency-Key was already used for another mutation");
+            if (!previous.fingerprint().equals(fingerprint)) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key was already used for another mutation");
             return journal.decode(previous, MemberDetail.class);
         }
         String currentRevision = quote(revision(enterpriseId));
         if (ifMatch == null || !ifMatch.equals(currentRevision)) {
-            throw new PreconditionFailedException();
+            throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
         }
         MemberDirectory.Member record = directory.find(enterpriseId, memberId).orElse(null);
         if (record == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
@@ -122,6 +125,3 @@ class MemberService {
     record AuditEvent(String actorSubject, String enterpriseId, String memberId, String action, String beforeStatus, String afterStatus, String requestId) {}
 }
 
-class MemberConflictException extends RuntimeException {
-    MemberConflictException() { super("Subject already has a membership in this enterprise"); }
-}

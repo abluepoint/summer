@@ -21,14 +21,5 @@ record RealtimeConnectionView(String enterpriseId, int connections, int maxConne
 
 record RealtimeMessagePublishedEvent(RealtimeMessageView message) {}
 
-final class RealtimeMessageValidationException extends RuntimeException {
-    RealtimeMessageValidationException(String message) { super(message); }
-}
 
-final class RealtimeMessageCursorException extends RuntimeException {
-    RealtimeMessageCursorException() { super("Message cursor must be a non-negative integer"); }
-}
 
-final class RealtimeMessageNotFoundException extends RuntimeException {
-    RealtimeMessageNotFoundException() { super("Message was not found"); }
-}

@@ -13,12 +13,20 @@ import com.abluepoint.summer.mvc.logging.Slf4jRequestLogSink;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
 import com.abluepoint.summer.mvc.support.ApiExceptionHandler;
+import com.abluepoint.summer.mvc.support.SummerExceptionAdvice;
 import com.abluepoint.summer.mvc.support.SummerResponseBodyAdvice;
 import com.abluepoint.summer.mvc.validate.FieldValuesArgumentResolver;
 import com.abluepoint.summer.mvc.validate.Style;
 import com.abluepoint.summer.mvc.validate.StyleReferenceValidator;
 import com.abluepoint.summer.mvc.validate.StyleRegistry;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.LocaleContextResolver;
+import org.springframework.context.i18n.LocaleContext;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.i18n.SimpleLocaleContext;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingFilterBean;
@@ -104,10 +112,28 @@ public class SummerMvcAutoConfiguration {
     @ConditionalOnMissingFilterBean(CachedBodyFilter.class)
     FilterRegistrationBean<CachedBodyFilter> summerCachedBodyFilter(
             SummerMvcProperties properties,
-            ObjectMapper objectMapper
+            @Qualifier("handlerExceptionResolver") ObjectProvider<HandlerExceptionResolver> exceptionResolvers,
+            @Qualifier("localeResolver") ObjectProvider<LocaleResolver> localeResolvers
     ) {
         FilterRegistrationBean<CachedBodyFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new CachedBodyFilter(properties.getRequestBody().getMaxBytes(), objectMapper));
+        registration.setFilter(CachedBodyFilter.withExceptionResolver(properties.getRequestBody().getMaxBytes(),
+                (request, response, handler, exception) -> {
+                    HandlerExceptionResolver resolver = exceptionResolvers.getIfAvailable();
+                    if (resolver == null) {
+                        return null;
+                    }
+                    LocaleResolver localeResolver = localeResolvers.getIfAvailable();
+                    LocaleContext locale = localeResolver instanceof LocaleContextResolver contextResolver
+                            ? contextResolver.resolveLocaleContext(request)
+                            : new SimpleLocaleContext(localeResolver == null ? request.getLocale() : localeResolver.resolveLocale(request));
+                    LocaleContext previousLocale = LocaleContextHolder.getLocaleContext();
+                    try {
+                        LocaleContextHolder.setLocaleContext(locale);
+                        return resolver.resolveException(request, response, handler, exception);
+                    } finally {
+                        LocaleContextHolder.setLocaleContext(previousLocale);
+                    }
+                }));
         registration.setName("summerCachedBodyFilter");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 22);
         return registration;
@@ -133,6 +159,12 @@ public class SummerMvcAutoConfiguration {
             RequestIdAccessor requestIdAccessor
     ) {
         return new ApiExceptionHandler(messageResolver, errorStatusResolver, requestIdAccessor);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    SummerExceptionAdvice summerExceptionAdvice(ApiExceptionHandler handler) {
+        return new SummerExceptionAdvice(handler);
     }
 
     @Bean

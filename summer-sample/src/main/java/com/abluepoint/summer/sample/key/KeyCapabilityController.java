@@ -1,12 +1,14 @@
 package com.abluepoint.summer.sample.key;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,25 +62,19 @@ class KeyCapabilityController {
                     .header("X-Request-Id", requestId.currentRequestId())
                     .body(ApiResponse.success(Map.of("activeKid", result.activeKid(), "version", result.version(),
                             "retentionDays", result.retentionDays()), requestId.currentRequestId()));
-        } catch (MysqlSummerKeyStore.KeyRotationValidationException e) {
-            auditFailure(authentication, "SUMMER_KEY_ROTATION_INVALID");
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_KEY_ROTATION_INVALID", e.getMessage());
-        } catch (MysqlSummerKeyStore.KeyRotationPreconditionException e) {
-            auditFailure(authentication, "SUMMER_PRECONDITION_FAILED");
-            return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_PRECONDITION_FAILED", e.getMessage());
         } catch (NumberFormatException e) {
             auditFailure(authentication, "SUMMER_KEY_ROTATION_INVALID");
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_KEY_ROTATION_INVALID", "If-Match must contain a key version");
+            throw SummerException.withMessage(KeyErrorCode.ROTATION_INVALID, "If-Match must contain a key version", e);
         } catch (Exception e) {
+            if (e instanceof SummerException failure && (failure.errorCode() == KeyErrorCode.ROTATION_INVALID
+                    || failure.errorCode() == SampleTransportErrorCode.PRECONDITION_FAILED)) {
+                auditFailure(authentication, failure.errorCode().code());
+                throw failure;
+            }
             auditLogger.record("security_key_rotation_failed", authentication.getName(),
                     Map.of("requestId", requestId.currentRequestId(), "result", "FAILED"));
-            return failure(HttpStatus.INTERNAL_SERVER_ERROR, "SUMMER_INTERNAL_ERROR", "Key rotation failed");
+            throw SummerException.withMessage(CommonErrorCode.INTERNAL_ERROR, "Key rotation failed", e);
         }
-    }
-
-    private ResponseEntity<ApiResponse<Map<String, Object>>> failure(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.failure(new com.abluepoint.summer.common.response.ApiError(code, message, List.of()), requestId.currentRequestId()));
     }
 
     private void auditFailure(Authentication authentication, String code) {

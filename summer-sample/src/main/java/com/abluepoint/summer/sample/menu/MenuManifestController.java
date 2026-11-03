@@ -1,18 +1,19 @@
 package com.abluepoint.summer.sample.menu;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+import org.springframework.security.access.AccessDeniedException;
+import java.util.function.Supplier;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.sample.resource.ResourcePermission;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -26,8 +27,7 @@ final class MenuManifestController {
     @RawResponse
     @ResourcePermission("platform.menu.write")
     ResponseEntity<ApiResponse<MenuManifestView>> current(Authentication authentication) {
-        try { MenuManifestView view = service.current(authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
-        catch (Exception e) { return error(e); }
+         MenuManifestView view = preserveAccessDenied(() -> service.current(authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
     }
 
     @PutMapping(value = "/v1/platform/menu-manifest", consumes = "application/json")
@@ -36,23 +36,20 @@ final class MenuManifestController {
     ResponseEntity<ApiResponse<MenuManifestView>> sync(@RequestBody MenuManifestSyncRequest body,
                                                         @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                         Authentication authentication) {
-        try { MenuManifestView view = service.sync(body, key, authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
-        catch (Exception e) { return error(e); }
+         MenuManifestView view = preserveAccessDenied(() -> service.sync(body, key, authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
     }
 
     @GetMapping("/v1/enterprises/{enterpriseId}/menu-manifest")
     @RawResponse
     ResponseEntity<ApiResponse<MenuManifestView>> visible(@PathVariable String enterpriseId, Authentication authentication) {
-        try { MenuManifestView view = service.visible(enterpriseId, authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
-        catch (Exception e) { return error(e); }
+         MenuManifestView view = preserveAccessDenied(() -> service.visible(enterpriseId, authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
     }
 
     @GetMapping("/v1/enterprises/{enterpriseId}/menu-manifest/management")
     @RawResponse
     @ResourcePermission("enterprise.menu.write")
     ResponseEntity<ApiResponse<MenuManifestView>> management(@PathVariable String enterpriseId, Authentication authentication) {
-        try { MenuManifestView view = service.management(enterpriseId, authentication); return result(HttpStatus.OK, view, view.manifestVersion()); }
-        catch (Exception e) { return error(e); }
+         MenuManifestView view = preserveAccessDenied(() -> service.management(enterpriseId, authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
     }
 
     @PatchMapping(value = "/v1/enterprises/{enterpriseId}/menu-manifest/{menuId}", consumes = "application/json")
@@ -63,8 +60,7 @@ final class MenuManifestController {
                                                                  @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                                                  @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                                  Authentication authentication) {
-        try { MenuManifestItemView view = service.override(enterpriseId, menuId, body, ifMatch, key, authentication); return result(HttpStatus.OK, view, view.version()); }
-        catch (Exception e) { return error(e); }
+         MenuManifestItemView view = preserveAccessDenied(() -> service.override(enterpriseId, menuId, body, ifMatch, key, authentication)); return result(HttpStatus.OK, view, view.version());
     }
 
     // Nested frontend route IDs contain '/', which must not be encoded into a
@@ -85,12 +81,13 @@ final class MenuManifestController {
     private <T> ResponseEntity<ApiResponse<T>> result(HttpStatus status, T value, long version) {
         return ResponseEntity.status(status).eTag("\"" + version + "\"").header("X-Request-Id", rid()).body(ApiResponse.success(value, rid()));
     }
-    private <T> ResponseEntity<ApiResponse<T>> error(Exception exception) {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR; String code = "SUMMER_INTERNAL_ERROR";
-        if (exception instanceof AccessDeniedException) { status = HttpStatus.FORBIDDEN; code = "SUMMER_FORBIDDEN"; }
-        else if (exception instanceof MenuManifestValidationException) { status = HttpStatus.BAD_REQUEST; code = "SUMMER_MENU_MANIFEST_INVALID"; }
-        else if (exception instanceof MenuManifestPreconditionException) { status = HttpStatus.PRECONDITION_FAILED; code = "SUMMER_PRECONDITION_FAILED"; }
-        else if (exception instanceof MenuManifestConflictException) { status = HttpStatus.CONFLICT; code = "SUMMER_MENU_MANIFEST_CONFLICT"; }
-        return ResponseEntity.status(status).header("X-Request-Id", rid()).body(ApiResponse.failure(new ApiError(code, exception.getMessage(), List.of()), rid()));
+
+    /** Preserve this application's original security message without changing the native service contract. */
+    private <T> T preserveAccessDenied(Supplier<T> action) {
+        try {
+            return action.get();
+        } catch (AccessDeniedException denied) {
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, denied.getMessage(), denied);
+        }
     }
 }

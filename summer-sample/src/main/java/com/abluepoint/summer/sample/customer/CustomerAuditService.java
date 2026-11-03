@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+
 import io.opentelemetry.api.trace.Span;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
@@ -112,7 +115,7 @@ public class CustomerAuditService {
     @Transactional(readOnly = true)
     CustomerAuditEventView find(String eventId) {
         return repository.findById(eventId).filter(event -> TENANT_ID.equals(event.tenantId()))
-                .map(this::view).orElseThrow(() -> new CustomerAuditNotFoundException("Audit event not found"));
+                .map(this::view).orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Audit event not found"));
     }
 
     private void recordResource(String resource, String action, String result, String requestId,
@@ -166,6 +169,4 @@ public class CustomerAuditService {
 record CustomerAuditQuery(String principal, String resource, String action, String result,
                           String requestId, Instant from, Instant to) {}
 
-final class CustomerAuditNotFoundException extends RuntimeException {
-    CustomerAuditNotFoundException(String message) { super(message); }
-}
+// Pending deletion in exception-unification task 15; no production consumers.

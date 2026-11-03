@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.authorization.policy;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+import com.abluepoint.summer.sample.authorization.AuthorizationErrorCode;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -59,7 +63,7 @@ final class PolicyService {
         Receipt previous = receipts.get(operation(enterpriseId, key));
         if (previous != null) return replay(previous, fp);
         if (request == null || blank(request.name()) || blank(request.code())) {
-            throw new PolicyValidationException("name and code are required");
+            throw SummerException.withMessage(PolicyErrorCode.INVALID, "name and code are required");
         }
         PolicyDefinition definition = normalize(request.definition());
         validateDefinition(definition, false);
@@ -84,17 +88,17 @@ final class PolicyService {
         if (previous != null) return replay(previous, fp);
         PolicyRecord record = policy(enterpriseId, policyId);
         checkEtag(record, ifMatch);
-        if (request == null) throw new PolicyValidationException("Draft update is required");
+        if (request == null) throw SummerException.withMessage(PolicyErrorCode.INVALID, "Draft update is required");
         PolicyDefinition definition = request.definition() == null
                 ? (record.draft == null ? record.current.definition() : record.draft.definition())
                 : normalize(request.definition());
         validateDefinition(definition, false);
         if (request.name() != null) {
-            if (blank(request.name())) throw new PolicyValidationException("name is required");
+            if (blank(request.name())) throw SummerException.withMessage(PolicyErrorCode.INVALID, "name is required");
             record.name = request.name().trim();
         }
         if (request.code() != null) {
-            if (blank(request.code())) throw new PolicyValidationException("code is required");
+            if (blank(request.code())) throw SummerException.withMessage(PolicyErrorCode.INVALID, "code is required");
             record.code = request.code().trim();
         }
         if (request.description() != null) record.description = request.description();
@@ -116,13 +120,8 @@ final class PolicyService {
         Receipt previous = receipts.get(operation(enterpriseId, key));
         if (previous != null) return replay(previous, fp);
         PolicyRecord record = policy(enterpriseId, policyId);
-        try {
-            validateDefinition(record.draft == null ? (record.current == null ? null : record.current.definition())
-                    : record.draft.definition(), true);
-        } catch (PolicyValidationException ex) {
-            // Validation is an intentionally observable 400 contract at the controller seam.
-            throw ex;
-        }
+        validateDefinition(record.draft == null ? (record.current == null ? null : record.current.definition())
+                : record.draft.definition(), true);
         PolicyValidationView out = new PolicyValidationView(policyId, true, List.of(), List.of());
         remember(enterpriseId, key, fp, out);
         recordAudit(enterpriseId, policyId, "POLICY_VALIDATED", requestId, auth, null, null);
@@ -138,7 +137,7 @@ final class PolicyService {
         if (previous != null) return replay(previous, fp);
         PolicyRecord record = policy(enterpriseId, policyId);
         checkEtag(record, ifMatch);
-        if (record.draft == null) throw new PolicyConflictException("Policy has no draft");
+        if (record.draft == null) throw SummerException.withMessage(PolicyErrorCode.CONFLICT, "Policy has no draft");
         validateDefinition(record.draft.definition(), true);
         int no = record.draft.versionNo();
         if (containsVersion(record, no)) no = nextVersion(record);
@@ -163,9 +162,9 @@ final class PolicyService {
         if (previous != null) return replay(previous, fp);
         PolicyRecord record = policy(enterpriseId, policyId);
         checkEtag(record, ifMatch);
-        if (request == null || request.versionNo() == null) throw new PolicyValidationException("versionNo is required");
+        if (request == null || request.versionNo() == null) throw SummerException.withMessage(PolicyErrorCode.INVALID, "versionNo is required");
         PolicyVersionView target = record.versions.stream().filter(v -> v.versionNo() == request.versionNo()).findFirst()
-                .orElseThrow(() -> new PolicyConflictException("Policy version not found"));
+                .orElseThrow(() -> SummerException.withMessage(PolicyErrorCode.CONFLICT, "Policy version not found"));
         record.current = target;
         record.lifecycleStatus = "PUBLISHED";
         record.version++;
@@ -184,8 +183,8 @@ final class PolicyService {
         if (previous != null) return replay(previous, fp);
         PolicyRecord record = policy(enterpriseId, policyId);
         checkEtag(record, ifMatch);
-        if (!Set.of("PAUSED", "REVOKED").contains(state)) throw new PolicyValidationException("Invalid lifecycle state");
-        if (record.current == null) throw new PolicyConflictException("Policy is not published");
+        if (!Set.of("PAUSED", "REVOKED").contains(state)) throw SummerException.withMessage(PolicyErrorCode.INVALID, "Invalid lifecycle state");
+        if (record.current == null) throw SummerException.withMessage(PolicyErrorCode.CONFLICT, "Policy is not published");
         record.lifecycleStatus = state;
         record.version++;
         PolicyView out = view(record);
@@ -226,7 +225,7 @@ final class PolicyService {
         if (previous != null) return replay(previous, fp);
         policy(enterpriseId, policyId);
         if (request == null || blank(request.name()) || blank(request.expectedDecision())) {
-            throw new PolicyValidationException("name and expectedDecision are required");
+            throw SummerException.withMessage(PolicyErrorCode.INVALID, "name and expectedDecision are required");
         }
         PolicyTestCaseView out = new PolicyTestCaseView("policy-test-" + UUID.randomUUID().toString().substring(0, 8),
                 policyId, request.name().trim(), request.input() == null ? Map.of() : Map.copyOf(request.input()),
@@ -363,20 +362,20 @@ final class PolicyService {
     }
 
     private void validateDefinition(PolicyDefinition definition, boolean strictConditions) {
-        if (definition == null) throw new PolicyValidationException("definition is required");
+        if (definition == null) throw SummerException.withMessage(PolicyErrorCode.INVALID, "definition is required");
         if (definition.defaultDecision() != null && !Set.of("ALLOW", "DENY").contains(definition.defaultDecision().toUpperCase(Locale.ROOT))) {
-            throw new PolicyValidationException("defaultDecision must be ALLOW or DENY");
+            throw SummerException.withMessage(PolicyErrorCode.INVALID, "defaultDecision must be ALLOW or DENY");
         }
         if (definition.rules() == null) return;
         for (PolicyRule rule : definition.rules()) {
-            if (rule == null) throw new PolicyValidationException("rule is required");
+            if (rule == null) throw SummerException.withMessage(PolicyErrorCode.INVALID, "rule is required");
             if (strictConditions && rule.conditions() != null) {
                 for (String condition : rule.conditions().keySet()) {
-                    if (!CONDITION_WHITELIST.contains(condition)) throw new PolicyValidationException("Unsupported condition: " + condition);
+                    if (!CONDITION_WHITELIST.contains(condition)) throw SummerException.withMessage(PolicyErrorCode.INVALID, "Unsupported condition: " + condition);
                 }
             }
             if (rule.effect() != null && !Set.of("ALLOW", "DENY").contains(rule.effect().toUpperCase(Locale.ROOT))) {
-                throw new PolicyValidationException("Invalid rule effect");
+                throw SummerException.withMessage(PolicyErrorCode.INVALID, "Invalid rule effect");
             }
         }
     }
@@ -403,7 +402,7 @@ final class PolicyService {
     private PolicyRecord policy(String enterpriseId, String id) {
         if (!ENTERPRISE.equals(enterpriseId)) throw new AccessDeniedException("Enterprise context denied");
         PolicyRecord p = policies.get(id);
-        if (p == null || !enterpriseId.equals(p.enterpriseId)) throw new PolicyConflictException("Policy not found");
+        if (p == null || !enterpriseId.equals(p.enterpriseId)) throw SummerException.withMessage(PolicyErrorCode.CONFLICT, "Policy not found");
         return p;
     }
 
@@ -446,10 +445,10 @@ final class PolicyService {
     }
 
     private void checkEtag(PolicyRecord record, String ifMatch) {
-        if (ifMatch == null || !ifMatch.equals("\"" + record.version + "\"")) throw new PolicyPreconditionException("The resource has changed");
+        if (ifMatch == null || !ifMatch.equals("\"" + record.version + "\"")) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
     }
 
-    private static void requireKey(String key) { if (key == null || key.isBlank()) throw new PolicyValidationException("Idempotency-Key is required"); }
+    private static void requireKey(String key) { if (key == null || key.isBlank()) throw SummerException.withMessage(PolicyErrorCode.INVALID, "Idempotency-Key is required"); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
     private static String operation(String enterpriseId, String key) { return enterpriseId + ":" + key; }
     private static String principal(Authentication auth) { return auth == null ? null : auth.getName(); }
@@ -460,7 +459,7 @@ final class PolicyService {
     }
 
     @SuppressWarnings("unchecked") private <T> T replay(Receipt previous, String fingerprint) {
-        if (!previous.fingerprint.equals(fingerprint)) throw new PolicyIdempotencyConflictException("Idempotency key reused");
+        if (!previous.fingerprint.equals(fingerprint)) throw SummerException.withMessage(AuthorizationErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency key reused");
         return (T) previous.result;
     }
 

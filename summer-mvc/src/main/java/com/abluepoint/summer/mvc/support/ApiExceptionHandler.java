@@ -8,17 +8,20 @@ import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -43,22 +46,23 @@ public class ApiExceptionHandler {
         this.requestIdAccessor = requestIdAccessor;
     }
 
-    @ExceptionHandler(FieldValidationException.class)
+    /** Retains direct callers; HTTP dispatch uses the shared SummerException handler. */
     public ResponseEntity<ApiResponse<Void>> handleFieldValidation(FieldValidationException exception) {
-        List<ApiError.FieldViolation> violations = exception.violations().stream()
-                .map(violation -> new ApiError.FieldViolation(violation.field(), violation.message()))
-                .toList();
-        ApiError error = new ApiError(
-                CommonErrorCode.INVALID_ARGUMENT.code(),
-                CommonErrorCode.INVALID_ARGUMENT.defaultMessage(),
-                violations
-        );
-        return ResponseEntity.badRequest().body(ApiResponse.failure(error, requestId()));
+        return handleSummerException(exception);
     }
 
     @ExceptionHandler(SummerException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSummerException(
+            SummerException exception, HttpServletResponse response
+    ) {
+        if (response.isCommitted()) {
+            throw exception;
+        }
+        return handleSummerException(exception);
+    }
+
     public ResponseEntity<ApiResponse<Void>> handleSummerException(SummerException exception) {
-        String message = messageResolver.resolve(
+        String message = exception.explicitMessage() != null ? exception.explicitMessage() : messageResolver.resolve(
                 exception.errorCode(),
                 exception.messageArguments(),
                 LocaleContextHolder.getLocale()
@@ -68,6 +72,7 @@ public class ApiExceptionHandler {
                 .toList();
         ApiError error = new ApiError(exception.errorCode().code(), message, violations);
         return ResponseEntity.status(errorStatusResolver.resolve(exception.errorCode()))
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(ApiResponse.failure(error, requestId()));
     }
 
@@ -119,6 +124,15 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnexpected(
+            Exception exception, HttpServletResponse response
+    ) throws Exception {
+        if (response.isCommitted() || exception instanceof ErrorResponse) {
+            throw exception;
+        }
+        return handleUnexpected(exception);
+    }
+
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception exception) {
         log.error("Unhandled request failure", exception);
         ApiError error = new ApiError(

@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.physicalconnection;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.auditledger.AuditLedgerErrorCode;
 import com.abluepoint.summer.sample.auditledger.AuditLedgerService;
 import com.abluepoint.summer.sample.auditledger.ExecutionEvidence;
 import com.abluepoint.summer.sample.connection.ConnectionServicePort;
@@ -10,6 +13,7 @@ import com.abluepoint.summer.sample.connection.McpProviderResult;
 import com.abluepoint.summer.sample.connection.ResourceToken;
 import com.abluepoint.summer.sample.connection.ResourceTokenRequest;
 import com.abluepoint.summer.sample.mcpauthorization.McpAuthorizationService;
+import com.abluepoint.summer.sample.mcpauthorization.McpAuthorizationErrorCode;
 import com.abluepoint.summer.sample.mcpauthorization.PublicPermitSnapshot;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -42,23 +46,32 @@ final class PhysicalExecutionService {
         }
         if (request == null || blank(request.permitId()) || blank(request.executionAttemptId())
                 || blank(request.schemaDigest()) || blank(request.argumentsDigest()) || blank(request.sessionRef())) {
-            throw new PhysicalExecutionValidationException("permit, attempt, digests and session are required");
+            throw SummerException.withMessage(PhysicalExecutionErrorCode.INVALID, "permit, attempt, digests and session are required");
         }
         String attemptKey = request.permitId() + ":" + request.executionAttemptId();
         PhysicalExecutionView prior = attempts.get(attemptKey);
         if (prior != null) {
             if (!prior.sessionRef().equals(request.sessionRef())) {
-                throw new PhysicalExecutionConflictException("Execution session mismatch");
+                throw SummerException.withMessage(PhysicalExecutionErrorCode.CONFLICT, "Execution session mismatch");
             }
             return prior;
         }
-        PublicPermitSnapshot permit = auth.snapshot(request.permitId());
+        PublicPermitSnapshot permit;
+        try {
+            permit = auth.snapshot(request.permitId());
+        } catch (SummerException failure) {
+            throw permitFailure(failure);
+        }
         if (!permit.connectionServiceId().equals(serviceId) || !permit.externalConnectionId().equals(connectionId)
                 || !permit.toolName().equals(tool) || !permit.schemaDigest().equals(request.schemaDigest())
                 || !permit.argumentsDigest().equals(request.argumentsDigest())) {
-            throw new PhysicalExecutionConflictException("Permit binding mismatch");
+            throw SummerException.withMessage(PhysicalExecutionErrorCode.CONFLICT, "Permit binding mismatch");
         }
-        auth.claimForExecution(request.permitId(), request.executionAttemptId(), authentication);
+        try {
+            auth.claimForExecution(request.permitId(), request.executionAttemptId(), authentication);
+        } catch (SummerException failure) {
+            throw permitFailure(failure);
+        }
         int retries = request.maxRetries() == null ? 0 : Math.max(0, Math.min(3, request.maxRetries()));
         long timeout = request.timeoutMs() == null ? 1000 : request.timeoutMs();
         ResourceToken token = connectionPort.acquireResourceToken(new ResourceTokenRequest(
@@ -73,16 +86,33 @@ final class PhysicalExecutionService {
                 request.executionAttemptId(), tool, status, request.sessionRef(), retries + 1,
                 provider.resultDigest(), provider.remoteRequestRef());
         attempts.put(attemptKey, output);
-        audit.recordExecution(new ExecutionEvidence(permit.enterpriseId(), permit.invocationId(), request.executionAttemptId(),
-                jwt.getToken().getClaimAsString("initiator_principal_id"), permit.actorPrincipalId(),
-                permit.effectiveSubjectPrincipalId(), permit.actorInstanceId(), null, permit.connectionRevision(),
-                permit.permitId(), null, permit.toolId(), permit.externalConnectionId(), "mcp.invoke", "ALLOW", "AUTHORIZED",
-                status, output.resultDigest() == null ? "sha256:unknown" : output.resultDigest(), output.remoteRequestRef(), null,
-                output.sessionRef()), authentication);
+        try {
+            audit.recordExecution(new ExecutionEvidence(permit.enterpriseId(), permit.invocationId(), request.executionAttemptId(),
+                    jwt.getToken().getClaimAsString("initiator_principal_id"), permit.actorPrincipalId(),
+                    permit.effectiveSubjectPrincipalId(), permit.actorInstanceId(), null, permit.connectionRevision(),
+                    permit.permitId(), null, permit.toolId(), permit.externalConnectionId(), "mcp.invoke", "ALLOW", "AUTHORIZED",
+                    status, output.resultDigest() == null ? "sha256:unknown" : output.resultDigest(), output.remoteRequestRef(), null,
+                    output.sessionRef()), authentication);
+        } catch (SummerException failure) {
+            if (failure.errorCode() == AuditLedgerErrorCode.IDEMPOTENCY_CONFLICT) {
+                throw SummerException.withMessage(PhysicalExecutionErrorCode.CONFLICT, failure.explicitMessage(), failure);
+            }
+            if (failure.errorCode() == AuditLedgerErrorCode.EVENT_IMMUTABLE) {
+                throw SummerException.withMessage(CommonErrorCode.INTERNAL_ERROR, failure.explicitMessage(), failure);
+            }
+            throw new SummerException(CommonErrorCode.INTERNAL_ERROR, failure);
+        }
         connectionPort.publish(new ExecutionStatusReceipt(permit.invocationId(), request.executionAttemptId(),
                 output.sessionRef(), status, output.resultDigest(), output.remoteRequestRef(), provider.latencyMs(),
                 java.time.Instant.now()));
         return output;
+    }
+
+    private static SummerException permitFailure(SummerException failure) {
+        if (failure.errorCode() == McpAuthorizationErrorCode.CONFLICT) {
+            return SummerException.withMessage(PhysicalExecutionErrorCode.CONFLICT, failure.explicitMessage(), failure);
+        }
+        return new SummerException(CommonErrorCode.INTERNAL_ERROR, failure);
     }
 
     private static boolean blank(String value) {

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.key;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
 import com.abluepoint.summer.security.audit.Slf4jSecurityAuditLogger;
 import com.abluepoint.summer.mvc.request.ServletRequestIdAccessor;
@@ -193,7 +195,7 @@ class MysqlSummerKeyStore implements SummerKeyStore {
             Rotation completed = completedRotations.get(idempotencyKey);
             if (completed != null) return completed;
         }
-        if (retentionDays < 1 || retentionDays > 365) throw new KeyRotationValidationException("retentionDays must be between 1 and 365");
+        if (retentionDays < 1 || retentionDays > 365) throw SummerException.withMessage(KeyErrorCode.ROTATION_INVALID, "retentionDays must be between 1 and 365");
         if (rotationStates != null && TransactionSynchronizationManager.isActualTransactionActive()) {
             // Every ready instance has initialized this shared row. Serialize the
             // version check across nodes before reading or changing key material.
@@ -202,7 +204,7 @@ class MysqlSummerKeyStore implements SummerKeyStore {
         }
         List<KeyMaterialEntity> before = repository.findAll();
         int currentVersion = before.stream().mapToInt(KeyMaterialEntity::version).max().orElse(0);
-        if (currentVersion != expectedVersion) throw new KeyRotationPreconditionException("The signing key version has changed");
+        if (currentVersion != expectedVersion) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The signing key version has changed");
         KeyMaterialEntity old = before.stream().filter(value -> "ACTIVE".equals(value.status())).findFirst().orElseThrow(
                 () -> new IllegalStateException("SUMMER_KEY_READ_FAILED"));
         try {
@@ -286,12 +288,6 @@ class MysqlSummerKeyStore implements SummerKeyStore {
     }
 
     record Rotation(String activeKid, int version, int retentionDays) {}
-    static final class KeyRotationValidationException extends RuntimeException {
-        KeyRotationValidationException(String message) { super(message); }
-    }
-    static final class KeyRotationPreconditionException extends RuntimeException {
-        KeyRotationPreconditionException(String message) { super(message); }
-    }
 
     private String encrypt(byte[] plain) throws Exception {
         javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");

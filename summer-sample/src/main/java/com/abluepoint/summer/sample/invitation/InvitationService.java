@@ -1,5 +1,10 @@
 package com.abluepoint.summer.sample.invitation;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.enterprise.DirectoryErrorCode;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.CommonErrorCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -34,7 +39,7 @@ class InvitationService {
         String fingerprint = "create|" + request;
         Receipt old = idempotency.get(op("create:" + enterpriseId, key));
         if (old != null) return replay(old, fingerprint);
-        if (request == null || request.inviteeEmail() == null || request.inviteeEmail().isBlank()) throw new InvitationValidationException("inviteeEmail is required");
+        if (request == null || request.inviteeEmail() == null || request.inviteeEmail().isBlank()) throw SummerException.withMessage(InvitationErrorCode.INVALID, "inviteeEmail is required");
         long ttl = request.expiresInSeconds() == null ? 86400L : request.expiresInSeconds();
         String id = "inv-" + UUID.randomUUID();
         String token = token();
@@ -76,13 +81,13 @@ class InvitationService {
         return new Page<>(values.subList(from, to), page, pageSize, values.size());
     }
 
-    synchronized InvitationView get(String enterpriseId, String id, Authentication auth) { requireAdmin(enterpriseId, auth, "enterprise.invitation.read"); return view(find(enterpriseId, id)); }
+    synchronized InvitationView get(String enterpriseId, String id, Authentication auth) { requireAdmin(enterpriseId, auth, "enterprise.invitation.read"); return view(find(enterpriseId, id, CommonErrorCode.NOT_FOUND)); }
     synchronized List<AuditEvent> audit(String enterpriseId, String id, Authentication auth) { requireAdmin(enterpriseId, auth, "enterprise.invitation.read"); List<AuditEvent> result = new ArrayList<>(audits.getOrDefault(enterpriseId + ":" + id, List.of())); Collections.reverse(result); return List.copyOf(result); }
 
     synchronized InvitationIssue resend(String enterpriseId, String id, String ifMatch, String key, String requestId, Authentication auth) {
         requireAdmin(enterpriseId, auth, "enterprise.invitation.write"); requireKey(key);
         String fingerprint = "resend|" + id + "|" + ifMatch; Receipt old = idempotency.get(op("resend:" + enterpriseId + ":" + id, key)); if (old != null) return replay(old, fingerprint);
-        InvitationRecord r = find(enterpriseId, id); requireEtag(r, ifMatch); usable(r);
+        InvitationRecord r = find(enterpriseId, id, InvitationErrorCode.UNUSABLE); requireEtag(r, ifMatch); usable(r);
         tokenIndex.remove(r.tokenHash); String token = token(); r.tokenHash = hash(token); r.revision++;
         tokenIndex.put(r.tokenHash, r.id); InvitationIssue result = issue(r, token); idempotency.put(op("resend:" + enterpriseId + ":" + id, key), new Receipt(fingerprint, result));
         audit(enterpriseId, id, "INVITATION_RESENT", "PENDING", r.state, requestId, auth); return result;
@@ -91,7 +96,7 @@ class InvitationService {
     synchronized InvitationView revoke(String enterpriseId, String id, String ifMatch, String key, String requestId, Authentication auth) {
         requireAdmin(enterpriseId, auth, "enterprise.invitation.write"); requireKey(key);
         String fingerprint = "revoke|" + id + "|" + ifMatch; Receipt old = idempotency.get(op("revoke:" + enterpriseId + ":" + id, key)); if (old != null) return replay(old, fingerprint);
-        InvitationRecord r = find(enterpriseId, id); requireEtag(r, ifMatch); if (!"PENDING".equals(r.state)) throw new InvitationConflictException("Invitation is no longer pending");
+        InvitationRecord r = find(enterpriseId, id, InvitationErrorCode.UNUSABLE); requireEtag(r, ifMatch); if (!"PENDING".equals(r.state)) throw SummerException.withMessage(InvitationErrorCode.UNUSABLE, "Invitation is no longer pending");
         r.state = "REVOKED"; r.revision++; InvitationView result = view(r); idempotency.put(op("revoke:" + enterpriseId + ":" + id, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, "INVITATION_REVOKED", "PENDING", r.state, requestId, auth); return result;
     }
 
@@ -100,52 +105,52 @@ class InvitationService {
     synchronized InvitationView reject(String token, InvitationContextRequest context, String key, String requestId, Authentication auth) { return consume(token, context, key, requestId, auth, false); }
 
     private InvitationView consume(String token, InvitationContextRequest context, String key, String requestId, Authentication auth, boolean accept) {
-        requireKey(key); InvitationRecord r = token == null ? null : invitations.get(tokenIndex.get(hash(token))); if (r == null) throw new InvitationConflictException("Invitation token is invalid");
-        if (context != null && context.enterpriseId() != null && !r.enterpriseId.equals(context.enterpriseId())) throw new InvitationContextMismatchException("Invitation enterprise context does not match token");
+        requireKey(key); InvitationRecord r = token == null ? null : invitations.get(tokenIndex.get(hash(token))); if (r == null) throw SummerException.withMessage(InvitationErrorCode.UNUSABLE, "Invitation token is invalid");
+        if (context != null && context.enterpriseId() != null && !r.enterpriseId.equals(context.enterpriseId())) throw SummerException.withMessage(InvitationErrorCode.CONTEXT_MISMATCH, "Invitation enterprise context does not match token");
         requireSubject(r.inviteeEmail, auth); String fingerprint = (accept ? "accept|" : "reject|") + r.id + "|" + auth.getName(); String scope = (accept ? "accept:" : "reject:") + r.enterpriseId + ":" + r.id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint);
-        usable(r); if (!"PENDING".equals(r.state)) throw new InvitationConflictException("Invitation has already been consumed");
-        String before = r.state; String memberId = accept ? provisionMembership(r.enterpriseId, "member-" + shortHash(auth.getName() + r.id), auth.getName(), r.inviteeEmail, r.organizationId) : null; r.state = accept ? "ACCEPTED" : "REJECTED"; r.memberId = memberId; r.revision++;
+        usable(r); if (!"PENDING".equals(r.state)) throw SummerException.withMessage(InvitationErrorCode.UNUSABLE, "Invitation has already been consumed");
+        String before = r.state; String memberId = accept ? provisionMembership(r.enterpriseId, "member-" + shortHash(auth.getName() + r.id), auth.getName(), r.inviteeEmail, r.organizationId, InvitationErrorCode.UNUSABLE) : null; r.state = accept ? "ACCEPTED" : "REJECTED"; r.memberId = memberId; r.revision++;
         InvitationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(r.enterpriseId, r.id, accept ? "INVITATION_ACCEPTED" : "INVITATION_REJECTED", before, r.state, requestId, auth); return result;
     }
 
     synchronized JoinApplicationView submit(String enterpriseId, JoinApplicationSubmitRequest req, String key, String requestId, Authentication auth) {
         requireApplicant(req == null ? null : req.applicantEmail(), auth); requireKey(key);
         String fingerprint = "submit|" + auth.getName() + "|" + req; Receipt old = idempotency.get(op("submit:" + enterpriseId, key)); if (old != null) return replay(old, fingerprint);
-        if (!enterprises.exists(enterpriseId) || req == null || req.applicantEmail() == null || req.applicantEmail().isBlank()) throw new InvitationValidationException("Invalid join application");
+        if (!enterprises.exists(enterpriseId) || req == null || req.applicantEmail() == null || req.applicantEmail().isBlank()) throw SummerException.withMessage(InvitationErrorCode.INVALID, "Invalid join application");
         String id = "join-" + UUID.randomUUID(); JoinRecord r = new JoinRecord(id, enterpriseId, req.applicantEmail().trim(), req.applicantName(), req.organizationId(), req.capabilityCodes(), req.materials()); r.applicantSubject = auth.getName(); applications.put(id, r);
         JoinApplicationView result = view(r); idempotency.put(op("submit:" + enterpriseId, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, "JOIN_APPLICATION_SUBMITTED", null, r.state, requestId, auth); return result;
     }
 
     synchronized JoinApplicationView supplement(String enterpriseId, String id, JoinApplicationSupplementRequest req, String ifMatch, String key, String requestId, Authentication auth) {
         requireKey(key); JoinRecord r = findApp(enterpriseId, id); requireApplicantSubject(r.applicantSubject, auth); String fingerprint = "supplement|" + id + "|" + req + "|" + ifMatch; String scope = "supplement:" + enterpriseId + ":" + id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint); requireEtag(r, ifMatch);
-        if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw new JoinApplicationConflictException("Join application is no longer editable");
+        if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw SummerException.withMessage(InvitationErrorCode.JOIN_APPLICATION_CONFLICT, "Join application is no longer editable");
         r.materials = req == null ? List.of() : req.materials(); r.state = "NEEDS_INFO"; r.revision++; JoinApplicationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, "JOIN_APPLICATION_SUPPLEMENTED", "PENDING", r.state, requestId, auth); return result;
     }
 
     @org.springframework.transaction.annotation.Transactional
     synchronized JoinApplicationView approve(String enterpriseId, String id, String ifMatch, String key, String requestId, Authentication auth) {
         requireAdmin(enterpriseId, auth, "enterprise.join-application.review"); requireKey(key); String fingerprint = "approve|" + id + "|" + ifMatch; String scope = "approve:" + enterpriseId + ":" + id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint);
-        JoinRecord r = findApp(enterpriseId, id); if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw new JoinApplicationConflictException("Join application cannot be approved in current state"); requireEtag(r, ifMatch);
-        String before = r.state; String memberId = provisionMembership(r.enterpriseId, "member-" + shortHash(r.applicantSubject + r.id), r.applicantSubject, r.applicantEmail, r.organizationId); r.state = "APPROVED"; r.memberId = memberId; r.revision++; JoinApplicationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, "JOIN_APPLICATION_APPROVED", before, r.state, requestId, auth); return result;
+        JoinRecord r = findApp(enterpriseId, id); if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw SummerException.withMessage(InvitationErrorCode.JOIN_APPLICATION_CONFLICT, "Join application cannot be approved in current state"); requireEtag(r, ifMatch);
+        String before = r.state; String memberId = provisionMembership(r.enterpriseId, "member-" + shortHash(r.applicantSubject + r.id), r.applicantSubject, r.applicantEmail, r.organizationId, CommonErrorCode.INTERNAL_ERROR); r.state = "APPROVED"; r.memberId = memberId; r.revision++; JoinApplicationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, "JOIN_APPLICATION_APPROVED", before, r.state, requestId, auth); return result;
     }
 
     synchronized JoinApplicationView reject(String enterpriseId, String id, String ifMatch, String key, String requestId, Authentication auth) { return decide(enterpriseId, id, ifMatch, key, requestId, auth, "REJECTED", "JOIN_APPLICATION_REJECTED"); }
     synchronized JoinApplicationView withdraw(String enterpriseId, String id, String ifMatch, String key, String requestId, Authentication auth) {
-        requireKey(key); JoinRecord r = findApp(enterpriseId, id); requireApplicantSubject(r.applicantSubject, auth); String fingerprint = "withdraw|" + id + "|" + ifMatch; String scope = "withdraw:" + enterpriseId + ":" + id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint); requireEtag(r, ifMatch); if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw new JoinApplicationConflictException("Join application cannot be withdrawn");
+        requireKey(key); JoinRecord r = findApp(enterpriseId, id); requireApplicantSubject(r.applicantSubject, auth); String fingerprint = "withdraw|" + id + "|" + ifMatch; String scope = "withdraw:" + enterpriseId + ":" + id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint); requireEtag(r, ifMatch); if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw SummerException.withMessage(InvitationErrorCode.JOIN_APPLICATION_CONFLICT, "Join application cannot be withdrawn");
         String before = r.state; r.state = "WITHDRAWN"; r.revision++; JoinApplicationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, "JOIN_APPLICATION_WITHDRAWN", before, r.state, requestId, auth); return result;
     }
     synchronized JoinApplicationView getApplication(String enterpriseId, String id, Authentication auth) { requireAdmin(enterpriseId, auth, "enterprise.join-application.read"); return view(findApp(enterpriseId, id)); }
     synchronized List<AuditEvent> applicationAudit(String enterpriseId, String id, Authentication auth) { requireAdmin(enterpriseId, auth, "enterprise.join-application.read"); List<AuditEvent> result = new ArrayList<>(audits.getOrDefault(enterpriseId + ":" + id, List.of())); Collections.reverse(result); return List.copyOf(result); }
 
     private JoinApplicationView decide(String enterpriseId, String id, String ifMatch, String key, String requestId, Authentication auth, String state, String action) {
-        requireAdmin(enterpriseId, auth, "enterprise.join-application.review"); requireKey(key); String fingerprint = state + "|" + id + "|" + ifMatch; String scope = "decide:" + enterpriseId + ":" + id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint); JoinRecord r = findApp(enterpriseId, id); requireEtag(r, ifMatch); if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw new JoinApplicationConflictException("Join application cannot be changed in current state"); String before = r.state; r.state = state; r.revision++; JoinApplicationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, action, before, r.state, requestId, auth); return result;
+        requireAdmin(enterpriseId, auth, "enterprise.join-application.review"); requireKey(key); String fingerprint = state + "|" + id + "|" + ifMatch; String scope = "decide:" + enterpriseId + ":" + id; Receipt old = idempotency.get(op(scope, key)); if (old != null) return replay(old, fingerprint); JoinRecord r = findApp(enterpriseId, id); requireEtag(r, ifMatch); if (!("PENDING".equals(r.state) || "NEEDS_INFO".equals(r.state))) throw SummerException.withMessage(InvitationErrorCode.JOIN_APPLICATION_CONFLICT, "Join application cannot be changed in current state"); String before = r.state; r.state = state; r.revision++; JoinApplicationView result = view(r); idempotency.put(op(scope, key), new Receipt(fingerprint, result)); audit(enterpriseId, id, action, before, r.state, requestId, auth); return result;
     }
 
-    private InvitationRecord find(String enterpriseId, String id) { if (!enterprises.exists(enterpriseId)) throw new InvitationConflictException("Enterprise not found"); InvitationRecord r = invitations.get(id); if (r == null || !enterpriseId.equals(r.enterpriseId)) throw new InvitationConflictException("Invitation not found"); return r; }
-    private JoinRecord findApp(String enterpriseId, String id) { if (!enterprises.exists(enterpriseId)) throw new JoinApplicationConflictException("Join application not found"); JoinRecord r = applications.get(id); if (r == null || !enterpriseId.equals(r.enterpriseId)) throw new JoinApplicationConflictException("Join application not found"); return r; }
-    private static void requireKey(String key) { if (key == null || key.isBlank()) throw new InvitationIdempotencyConflictException("Idempotency-Key is required"); }
-    private static void requireEtag(BaseRecord r, String etag) { if (etag == null || !etag.equals(r.etag())) throw new InvitationPreconditionException(); }
-    private static void usable(InvitationRecord r) { if (r.expiresAt.isBefore(Instant.now())) { r.state = "EXPIRED"; throw new InvitationConflictException("Invitation has expired"); } if (!"PENDING".equals(r.state)) throw new InvitationConflictException("Invitation is not usable"); }
+    private InvitationRecord find(String enterpriseId, String id, ErrorCode failureCode) { if (!enterprises.exists(enterpriseId)) throw SummerException.withMessage(failureCode, "Enterprise not found"); InvitationRecord r = invitations.get(id); if (r == null || !enterpriseId.equals(r.enterpriseId)) throw SummerException.withMessage(failureCode, "Invitation not found"); return r; }
+    private JoinRecord findApp(String enterpriseId, String id) { if (!enterprises.exists(enterpriseId)) throw SummerException.withMessage(InvitationErrorCode.JOIN_APPLICATION_CONFLICT, "Join application not found"); JoinRecord r = applications.get(id); if (r == null || !enterpriseId.equals(r.enterpriseId)) throw SummerException.withMessage(InvitationErrorCode.JOIN_APPLICATION_CONFLICT, "Join application not found"); return r; }
+    private static void requireKey(String key) { if (key == null || key.isBlank()) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required"); }
+    private static void requireEtag(BaseRecord r, String etag) { if (etag == null || !etag.equals(r.etag())) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed"); }
+    private static void usable(InvitationRecord r) { if (r.expiresAt.isBefore(Instant.now())) { r.state = "EXPIRED"; throw SummerException.withMessage(InvitationErrorCode.UNUSABLE, "Invitation has expired"); } if (!"PENDING".equals(r.state)) throw SummerException.withMessage(InvitationErrorCode.UNUSABLE, "Invitation is not usable"); }
     private static void requireSubject(String email, Authentication auth) {
         if (!(auth instanceof JwtAuthenticationToken jwt) || email == null || email.isBlank()) throw new AccessDeniedException("Applicant identity does not match");
         boolean verifiedEmail = Boolean.TRUE.equals(jwt.getToken().getClaim("email_verified")) && email.equalsIgnoreCase(jwt.getToken().getClaimAsString("email"));
@@ -159,17 +164,23 @@ class InvitationService {
     private static boolean activeMember(JwtAuthenticationToken jwt, String enterpriseId) { Object c = jwt.getToken().getClaims().get("enterprise_memberships"); return c instanceof Collection<?> col && col.stream().anyMatch(v -> { if (!(v instanceof Map<?, ?> m)) return false; Object enterprise = m.get("enterpriseId"); if (enterprise == null) enterprise = m.get("enterprise_id"); Object status = m.get("status"); if (status == null) status = m.get("membership_status"); return enterpriseId.equals(String.valueOf(enterprise)) && "ACTIVE".equalsIgnoreCase(String.valueOf(status)); }); }
     private static boolean hasCapability(JwtAuthenticationToken jwt, String enterpriseId, String capability) { Object c = jwt.getToken().getClaims().get("enterprise_capabilities"); if (!(c instanceof Map<?, ?> m)) return false; Object values = m.get(enterpriseId); return values instanceof Collection<?> col && col.stream().map(String::valueOf).anyMatch(capability::equals); }
     private static String op(String enterpriseId, String key) { return enterpriseId + ":" + key; }
-    private String provisionMembership(String enterpriseId, String memberId, String subject, String email, String organizationId) {
+    private String provisionMembership(String enterpriseId, String memberId, String subject, String email, String organizationId, ErrorCode failureCode) {
         try {
             var member = memberDirectory.forSubject(enterpriseId, subject).orElseGet(() -> memberDirectory.provision(enterpriseId, memberId, subject, email, email));
-            if (!"ACTIVE".equals(member.status())) throw new InvitationConflictException("Membership is not active");
+            if (!"ACTIVE".equals(member.status())) throw provisioningFailure(failureCode, "Membership is not active", null);
             if (organizationId != null && !organizationId.isBlank()) organizationMemberships.assign(enterpriseId, member.memberId(), organizationId);
             return member.memberId();
         } catch (IllegalArgumentException | IllegalStateException failure) {
-            throw new InvitationConflictException(failure.getMessage());
+            throw provisioningFailure(failureCode, failure.getMessage(), failure);
         }
     }
-    @SuppressWarnings("unchecked") private static <T> T replay(Receipt r, String fp) { if (!r.fingerprint.equals(fp)) throw new InvitationIdempotencyConflictException("Idempotency-Key was already used for another mutation"); return (T) r.result; }
+    private static SummerException provisioningFailure(ErrorCode failureCode, String message, Throwable cause) {
+        // Legacy approval exposed the fixed internal-error response; consumption exposed the refusal message.
+        String responseMessage = failureCode == CommonErrorCode.INTERNAL_ERROR
+                ? CommonErrorCode.INTERNAL_ERROR.defaultMessage() : message;
+        return SummerException.withMessage(failureCode, responseMessage, cause);
+    }
+    @SuppressWarnings("unchecked") private static <T> T replay(Receipt r, String fp) { if (!r.fingerprint.equals(fp)) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key was already used for another mutation"); return (T) r.result; }
     private static String token() { byte[] b = new byte[32]; RANDOM.nextBytes(b); return Base64.getUrlEncoder().withoutPadding().encodeToString(b); }
     private static String hash(String value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); } catch (Exception e) { throw new IllegalStateException(e); } }
     private static String shortHash(String value) { return hash(value).substring(0, 16); }

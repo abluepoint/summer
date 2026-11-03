@@ -2,6 +2,8 @@ package com.abluepoint.summer.sample.systemparameter;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.mvc.validate.FieldValidationException;
 import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
@@ -63,7 +65,7 @@ class SystemParameterReleaseService {
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
         if (request == null || request.baseVersion() == null || request.baseVersion() != parameter.version()) {
-            throw new SystemParameterVersionConflictException();
+            throw SummerException.withMessage(SystemParameterErrorCode.VERSION_CONFLICT, "The system parameter was changed by another request");
         }
         SystemParameterSnapshot snapshot = merge(parameter, request);
         validate(snapshot);
@@ -84,7 +86,7 @@ class SystemParameterReleaseService {
         if (existing.isPresent()) return result(parameter, existing.get());
         checkExpected(parameter, command);
         SystemParameterVersionEntity draft = version(parameter.tenantId(), key, command.revision());
-        if (draft.state() != SystemParameterReleaseState.DRAFT) throw new SystemParameterReleaseConflictException("Only a draft can be published");
+        if (draft.state() != SystemParameterReleaseState.DRAFT) throw SummerException.withMessage(SystemParameterErrorCode.VERSION_CONFLICT, "Only a draft can be published");
         SystemParameterSnapshot snapshot = readSnapshot(draft.snapshotJson());
         validate(snapshot);
         return apply(parameter, snapshot, SystemParameterReleaseState.PUBLISHED, "SYSTEM_PARAMETER_PUBLISHED",
@@ -100,7 +102,7 @@ class SystemParameterReleaseService {
         if (existing.isPresent()) return result(parameter, existing.get());
         checkExpected(parameter, command);
         SystemParameterVersionEntity target = version(parameter.tenantId(), key, command.revision());
-        if (target.state() == SystemParameterReleaseState.DRAFT) throw new SystemParameterReleaseConflictException("Draft versions cannot be rolled back to");
+        if (target.state() == SystemParameterReleaseState.DRAFT) throw SummerException.withMessage(SystemParameterErrorCode.VERSION_CONFLICT, "Draft versions cannot be rolled back to");
         SystemParameterSnapshot snapshot = readSnapshot(target.snapshotJson());
         validate(snapshot);
         return apply(parameter, snapshot, SystemParameterReleaseState.ROLLED_BACK, "SYSTEM_PARAMETER_ROLLED_BACK",
@@ -148,24 +150,24 @@ class SystemParameterReleaseService {
             audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + parameter.key(), eventType, requestId, authentication);
             return result(saved, release);
         } catch (ObjectOptimisticLockingFailureException exception) {
-            throw new SystemParameterVersionConflictException();
+            throw SummerException.withMessage(SystemParameterErrorCode.VERSION_CONFLICT, "The system parameter was changed by another request", exception);
         }
     }
 
     private SystemParameterEntity current(String key, Authentication authentication) {
         return parameters.findScoped(key, dataScopes.filter(resolve(authentication), "system-parameters", authentication))
-                .orElseThrow(() -> new SystemParameterNotFoundException(key));
+                .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter not found: " + key));
     }
 
     private SystemParameterVersionEntity version(String tenant, String key, Long revision) {
-        if (revision == null || revision < 0) throw new SystemParameterReleaseValidationException("revision is required");
+        if (revision == null || revision < 0) throw invalidRelease("revision is required");
         return versions.findByTenantIdAndParameterKeyAndRevision(tenant, key, revision)
-                .orElseThrow(() -> new SystemParameterReleaseNotFoundException(key, revision));
+                .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter version not found: " + key + ":" + revision));
     }
 
     private void checkExpected(SystemParameterEntity parameter, SystemParameterReleaseCommand command) {
         if (command == null || command.expectedVersion() == null || command.expectedVersion() != parameter.version()) {
-            throw new SystemParameterVersionConflictException();
+            throw SummerException.withMessage(SystemParameterErrorCode.VERSION_CONFLICT, "The system parameter was changed by another request");
         }
     }
 
@@ -175,7 +177,7 @@ class SystemParameterReleaseService {
     }
 
     private SystemParameterSnapshot merge(SystemParameterEntity parameter, SystemParameterDraftRequest request) {
-        if (request == null) throw new SystemParameterReleaseValidationException("request is required");
+        if (request == null) throw invalidRelease("request is required");
         return new SystemParameterSnapshot(parameter.type(), request.value() == null ? deserialize(parameter.valueJson()) : request.value(),
                 request.required() == null ? parameter.required() : request.required(),
                 request.min() == null ? parameter.min() : request.min(),
@@ -223,7 +225,7 @@ class SystemParameterReleaseService {
             }
         }
         if (value.type() != SystemParameterType.STRING && value.pattern() != null) violations.add(new SummerException.Violation("pattern", "is only supported for string parameters"));
-        if (!violations.isEmpty()) throw new SystemParameterReleaseValidationException(violations);
+        if (!violations.isEmpty()) throw new FieldValidationException(SystemParameterErrorCode.INVALID, violations, "System parameter release validation failed", null);
     }
 
     private SystemParameterReleaseResult result(SystemParameterEntity parameter, SystemParameterVersionEntity version) {
@@ -256,25 +258,18 @@ class SystemParameterReleaseService {
     }
 
     private static String idempotency(String value) {
-        if (value == null || value.isBlank() || value.length() > 120) throw new SystemParameterReleaseValidationException("idempotencyKey is required");
+        if (value == null || value.isBlank() || value.length() > 120) throw invalidRelease("idempotencyKey is required");
         return value;
+    }
+
+    private static FieldValidationException invalidRelease(String message) {
+        return new FieldValidationException(SystemParameterErrorCode.INVALID,
+                List.of(new SummerException.Violation("request", message)), message, null);
     }
 
     private static String principal(Authentication authentication) { return authentication == null ? "system" : authentication.getName(); }
     private static String blank(String value) { return value == null || value.isBlank() ? null : value; }
 }
 
-final class SystemParameterReleaseValidationException extends RuntimeException {
-    private final List<SummerException.Violation> violations;
-    SystemParameterReleaseValidationException(String message) { super(message); this.violations = List.of(new SummerException.Violation("request", message)); }
-    SystemParameterReleaseValidationException(List<SummerException.Violation> violations) { super("System parameter release validation failed"); this.violations = List.copyOf(violations); }
-    List<SummerException.Violation> violations() { return violations; }
-}
 
-final class SystemParameterReleaseConflictException extends RuntimeException {
-    SystemParameterReleaseConflictException(String message) { super(message); }
-}
 
-final class SystemParameterReleaseNotFoundException extends RuntimeException {
-    SystemParameterReleaseNotFoundException(String key, long revision) { super("System parameter version not found: " + key + ":" + revision); }
-}

@@ -60,7 +60,8 @@ class MenuManifestHttpTest {
                         .content(body.replace("\"manifestVersion\":2", "\"manifestVersion\":1"))
                         .header("Idempotency-Key", "manifest-older").with(platformAdmin("platform.menu.write")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_MENU_MANIFEST_CONFLICT"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_MENU_MANIFEST_CONFLICT"))
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_MENU_MANIFEST_CONFLICT", "Manifest version must increase"));
 
         mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/roles")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -87,7 +88,8 @@ class MenuManifestHttpTest {
                         .content("{\"manifestVersion\":1,\"items\":[{\"menuId\":\"bad id\",\"path\":\"javascript:alert(1)\",\"titleKey\":\"menu.x\",\"iconKey\":\"x\",\"sortOrder\":0}]}" )
                         .header("Idempotency-Key", "manifest-invalid").with(platformAdmin("platform.menu.write")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_MENU_MANIFEST_INVALID"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_MENU_MANIFEST_INVALID"))
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_MENU_MANIFEST_INVALID", "Invalid menuId"));
     }
 
     @Test
@@ -135,13 +137,15 @@ class MenuManifestHttpTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
         mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":true}").header("Idempotency-Key", "missing-version").with(enterpriseAdmin("enterprise.menu.write")))
-                .andExpect(status().isPreconditionFailed());
+                .andExpect(status().isPreconditionFailed())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
         mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":true}").header("Idempotency-Key", "enable-parent").header("If-Match", "\"2\"")
                         .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(3));
         mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false}").header("Idempotency-Key", "stale-version").header("If-Match", "\"1\"")
-                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed());
+                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
     }
 
     @Test
@@ -177,7 +181,8 @@ class MenuManifestHttpTest {
         }
         mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/root").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":true}").header("If-Match", "\"1\"").header("Idempotency-Key", "stale-initial-editor")
-                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed());
+                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
         mockMvc.perform(put("/api/v1/platform/menu-manifest").contentType(MediaType.APPLICATION_JSON)
                         .content(body.replace("\"manifestVersion\":1", "\"manifestVersion\":2").replace("\"sortOrder\":10", "\"sortOrder\":50"))
                         .header("Idempotency-Key", "next-manifest").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());

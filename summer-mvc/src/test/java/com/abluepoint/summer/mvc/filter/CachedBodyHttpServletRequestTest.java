@@ -1,5 +1,7 @@
 package com.abluepoint.summer.mvc.filter;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.mvc.error.MvcErrorCode;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
 import org.junit.jupiter.api.Test;
@@ -35,7 +37,8 @@ class CachedBodyHttpServletRequestTest {
         assertThat(cached.body()).isEqualTo("12345678".getBytes(StandardCharsets.UTF_8));
         assertThat(cached.getInputStream().readAllBytes()).isEqualTo(cached.body());
         assertThatThrownBy(() -> new CachedBodyHttpServletRequest(over, 8))
-                .isInstanceOf(RequestBodyTooLargeException.class);
+                .isInstanceOfSatisfying(SummerException.class, exception ->
+                        assertThat(exception.errorCode()).isEqualTo(MvcErrorCode.REQUEST_BODY_TOO_LARGE));
     }
 
     @Test
@@ -79,7 +82,7 @@ class CachedBodyHttpServletRequestTest {
 
         assertThatThrownBy(() -> new CachedBodyHttpServletRequest(interrupted, 8))
                 .isInstanceOf(IOException.class)
-                .isNotInstanceOf(RequestBodyTooLargeException.class)
+                .isNotInstanceOf(SummerException.class)
                 .hasMessage("interrupted request stream");
     }
 

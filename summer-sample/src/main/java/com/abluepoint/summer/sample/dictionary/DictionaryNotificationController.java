@@ -1,10 +1,9 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import com.abluepoint.summer.common.response.ApiError;
-import com.abluepoint.summer.common.response.ApiResponse;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,9 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.List;
 
 @RestController
 class DictionaryNotificationController {
@@ -41,14 +38,10 @@ class DictionaryNotificationController {
                     .header("Cache-Control", "no-cache")
                     .header("X-Request-Id", requestId.currentRequestId())
                     .body(notifications.subscribe(enterpriseId, code, parseLastEventId(lastEventId), authentication));
-        } catch (DictionaryNotificationNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", "Dictionary was not found");
-        } catch (DictionaryNotificationConnectionLimitException exception) {
-            return failure(HttpStatus.TOO_MANY_REQUESTS, "SUMMER_DICTIONARY_SSE_LIMIT", "Too many dictionary notification connections");
         } catch (AccessDeniedException exception) {
-            return failure(HttpStatus.FORBIDDEN, "SUMMER_FORBIDDEN", "Dictionary capability denied");
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Dictionary capability denied", exception);
         } catch (IllegalArgumentException exception) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_DICTIONARY_SSE_LAST_EVENT_ID", "Last-Event-ID must be a non-negative integer");
+            throw SummerException.withMessage(DictionaryNotificationErrorCode.LAST_EVENT_ID, "Last-Event-ID must be a non-negative integer", exception);
         }
     }
 
@@ -63,9 +56,4 @@ class DictionaryNotificationController {
         }
     }
 
-    private ResponseEntity<ApiResponse<Void>> failure(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON)
-                .header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
-    }
 }

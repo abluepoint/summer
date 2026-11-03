@@ -33,17 +33,9 @@ class MemberController {
     ResponseEntity<ApiResponse<MemberDetail>> create(@PathVariable String enterpriseId,
             @jakarta.validation.Valid @RequestBody MemberCreateRequest body,
             @RequestHeader("Idempotency-Key") String key, Authentication auth) {
-        try {
-            MemberDetail result = service.create(enterpriseId, body, key, requestId.currentRequestId(), auth);
-            return ResponseEntity.status(201).eTag(quote(result.revision())).header("X-Request-Id", requestId.currentRequestId())
-                    .body(ApiResponse.success(result, requestId.currentRequestId()));
-        } catch (MemberConflictException conflict) {
-            return ResponseEntity.status(409).header("X-Request-Id", requestId.currentRequestId())
-                    .body(ApiResponse.failure(new ApiError("SUMMER_MEMBER_CONFLICT", conflict.getMessage(), List.of()), requestId.currentRequestId()));
-        } catch (IdempotencyConflictException conflict) {
-            return ResponseEntity.status(409).header("X-Request-Id", requestId.currentRequestId())
-                    .body(ApiResponse.failure(new ApiError("SUMMER_IDEMPOTENCY_CONFLICT", conflict.getMessage(), List.of()), requestId.currentRequestId()));
-        }
+        MemberDetail result = service.create(enterpriseId, body, key, requestId.currentRequestId(), auth);
+        return ResponseEntity.status(201).eTag(quote(result.revision())).header("X-Request-Id", requestId.currentRequestId())
+                .body(ApiResponse.success(result, requestId.currentRequestId()));
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/members")
@@ -103,17 +95,10 @@ class MemberController {
     }
 
     private ResponseEntity<ApiResponse<MemberDetail>> change(String e, String m, String s, String ifMatch, String idempotencyKey, Authentication a) {
-        try {
-            MemberDetail b = service.changeStatus(e, m, s, ifMatch, idempotencyKey, requestId.currentRequestId(), a);
-            return ResponseEntity.ok().eTag(quote(b.revision())).body(ApiResponse.success(b, requestId.currentRequestId()));
-        } catch (PreconditionFailedException ex) {
-            ApiError error = new ApiError("SUMMER_PRECONDITION_FAILED", "The resource has changed", List.of());
-            return ResponseEntity.status(412).body(ApiResponse.failure(error, requestId.currentRequestId()));
-        } catch (IdempotencyConflictException ex) {
-            ApiError error = new ApiError("SUMMER_IDEMPOTENCY_CONFLICT", ex.getMessage(), List.of());
-            return ResponseEntity.status(409).body(ApiResponse.failure(error, requestId.currentRequestId()));
-        }
+        MemberDetail b = service.changeStatus(e, m, s, ifMatch, idempotencyKey, requestId.currentRequestId(), a);
+        return ResponseEntity.ok().eTag(quote(b.revision())).body(ApiResponse.success(b, requestId.currentRequestId()));
     }
+
     private static String quote(String v) { return "\"" + v + "\""; }
 }
 

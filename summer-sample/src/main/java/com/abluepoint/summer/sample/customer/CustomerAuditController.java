@@ -61,11 +61,7 @@ class CustomerAuditController {
     @GetMapping("/{eventId}")
     @RawResponse
     ResponseEntity<ApiResponse<CustomerAuditEventView>> detail(@PathVariable String eventId) {
-        try {
-            return body(HttpStatus.OK, service.find(eventId));
-        } catch (CustomerAuditNotFoundException exception) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_NOT_FOUND", exception.getMessage());
-        }
+        return body(HttpStatus.OK, service.find(eventId));
     }
 
     @GetMapping(value = "/export", produces = "text/csv")

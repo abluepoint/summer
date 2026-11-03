@@ -20,15 +20,3 @@ record PluginInsightsView(String pluginId, String version, String requestId, lon
 
 enum PluginStatus { REGISTERED, ENABLED, DISABLED, INCOMPATIBLE }
 
-final class PluginValidationException extends RuntimeException {
-    PluginValidationException(String message) { super(message); }
-}
-final class PluginTrustException extends RuntimeException {
-    PluginTrustException(String message) { super(message); }
-}
-final class PluginCompatibilityException extends RuntimeException {
-    PluginCompatibilityException(String message) { super(message); }
-}
-final class PluginNotFoundException extends RuntimeException {
-    PluginNotFoundException(String message) { super(message); }
-}

@@ -69,8 +69,8 @@ class ManualKeyRotationTransactionTest {
                     new TransactionTemplate(transactions).executeWithoutResult(status ->
                             node.rotate(1, version, UUID.randomUUID().toString()));
                     return 200;
-                } catch (MysqlSummerKeyStore.KeyRotationPreconditionException expected) {
-                    return 412;
+                } catch (com.abluepoint.summer.common.error.SummerException expected) {
+                    return expected.errorCode() == com.abluepoint.summer.sample.error.SampleTransportErrorCode.PRECONDITION_FAILED ? 412 : 500;
                 } catch (RuntimeException failure) {
                     return 500;
                 }

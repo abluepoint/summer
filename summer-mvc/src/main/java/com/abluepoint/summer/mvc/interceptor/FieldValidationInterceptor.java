@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.interceptor;
 
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldContract;
 import com.abluepoint.summer.mvc.annotation.FieldList;
@@ -71,7 +72,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         JsonNode jsonBody = readJsonBody(request, fields, fieldLists, fieldContract);
 
         Map<String, Object> values = new LinkedHashMap<>();
-        List<FieldValidationException.Violation> violations = new ArrayList<>();
+        List<SummerException.Violation> violations = new ArrayList<>();
         if (fieldContract) {
             rejectUnknownRequestFields(request, jsonBody, fields, fieldLists, violations);
         }
@@ -82,12 +83,12 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             validateFieldListConfiguration(fieldList);
             EnumSet<FieldSource> presentSources = presentListSources(request, jsonBody, fieldList.param());
             if (presentSources.size() > 1) {
-                violations.add(new FieldValidationException.Violation(
+                violations.add(new SummerException.Violation(
                         fieldList.param(), "must be provided by one input source"
                 ));
             } else if (presentSources.isEmpty()) {
                 if (fieldList.required()) {
-                    violations.add(new FieldValidationException.Violation(fieldList.param(), "is required"));
+                    violations.add(new SummerException.Violation(fieldList.param(), "is required"));
                 }
             } else if (presentSources.contains(FieldSource.JSON)) {
                 readJsonFieldList(jsonBody, fieldList, values, violations);
@@ -146,12 +147,12 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             JsonNode jsonBody,
             FieldList fieldList,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         JsonNode arrayNode = resolveJsonNode(jsonBody, fieldList.param());
         if (arrayNode == null) {
             if (fieldList.required()) {
-                violations.add(new FieldValidationException.Violation(fieldList.param(), "is required"));
+                violations.add(new SummerException.Violation(fieldList.param(), "is required"));
             }
             return;
         }
@@ -159,12 +160,12 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             if (fieldList.nullable()) {
                 values.put(exportName(fieldList), null);
             } else {
-                violations.add(new FieldValidationException.Violation(fieldList.param(), "must not be null"));
+                violations.add(new SummerException.Violation(fieldList.param(), "must not be null"));
             }
             return;
         }
         if (!arrayNode.isArray()) {
-            violations.add(new FieldValidationException.Violation(
+            violations.add(new SummerException.Violation(
                     fieldList.param(), "must be a JSON object array"
             ));
             return;
@@ -179,7 +180,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             JsonNode itemNode = arrayNode.get(index);
             String itemPath = fieldList.param() + "[" + index + "]";
             if (!itemNode.isObject()) {
-                violations.add(new FieldValidationException.Violation(itemPath, "must be a JSON object"));
+                violations.add(new SummerException.Violation(itemPath, "must be a JSON object"));
                 continue;
             }
             Map<String, Object> valuesAtIndex = new LinkedHashMap<>();
@@ -197,7 +198,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             HttpServletRequest request,
             FieldList fieldList,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         Pattern itemPattern = Pattern.compile(
                 Pattern.quote(fieldList.param()) + "\\[(\\d+)]\\.(.+)"
@@ -209,7 +210,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
                 try {
                     indexes.put(Integer.parseInt(matcher.group(1)), Boolean.TRUE);
                 } catch (NumberFormatException exception) {
-                    violations.add(new FieldValidationException.Violation(
+                    violations.add(new SummerException.Violation(
                             parameter, "index must be a valid non-negative integer"
                     ));
                 }
@@ -219,7 +220,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             return;
         }
         if (indexes.isEmpty()) {
-            violations.add(new FieldValidationException.Violation(
+            violations.add(new SummerException.Violation(
                     fieldList.param(), "must contain indexed item fields"
             ));
             return;
@@ -227,7 +228,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         int expected = 0;
         for (Integer index : indexes.keySet()) {
             if (index != expected) {
-                violations.add(new FieldValidationException.Violation(
+                violations.add(new SummerException.Violation(
                         fieldList.param(), "indexes must start at 0 and be contiguous"
                 ));
                 return;
@@ -254,17 +255,17 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
     private boolean validateListSize(
             FieldList fieldList,
             int size,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         if (size < fieldList.minSize()) {
-            violations.add(new FieldValidationException.Violation(
+            violations.add(new SummerException.Violation(
                     fieldList.param(), "must contain at least " + fieldList.minSize() + " items"
             ));
             return false;
         }
         int max = effectiveMax(fieldList);
         if (size > max) {
-            violations.add(new FieldValidationException.Violation(
+            violations.add(new SummerException.Violation(
                     fieldList.param(), "must contain at most " + max + " items"
             ));
             return false;
@@ -281,13 +282,13 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             String itemPath,
             Field field,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         String fieldPath = itemPath + "." + field.param();
         JsonNode node = resolveJsonNode(itemNode, field.param());
         if (node == null) {
             if (field.required()) {
-                violations.add(new FieldValidationException.Violation(fieldPath, "is required"));
+                violations.add(new SummerException.Violation(fieldPath, "is required"));
             }
             return;
         }
@@ -305,24 +306,24 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             String parameter,
             Field field,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         String rawValue = request.getParameter(parameter);
         if (rawValue == null) {
             if (field.required()) {
-                violations.add(new FieldValidationException.Violation(parameter, "is required"));
+                violations.add(new SummerException.Violation(parameter, "is required"));
             }
             return;
         }
         Style style = styleRegistry.require(field.style());
         if (!style.validate(rawValue)) {
-            violations.add(new FieldValidationException.Violation(parameter, "must be " + style.getDesc()));
+            violations.add(new SummerException.Violation(parameter, "must be " + style.getDesc()));
             return;
         }
         try {
             values.put(exportName(field), style.getTypedObject(rawValue));
         } catch (RuntimeException exception) {
-            violations.add(new FieldValidationException.Violation(parameter, "must be " + style.getDesc()));
+            violations.add(new SummerException.Violation(parameter, "must be " + style.getDesc()));
         }
     }
 
@@ -330,12 +331,12 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             HttpServletRequest request,
             Field field,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations,
+            List<SummerException.Violation> violations,
             JsonNode jsonBody
     ) {
         EnumSet<FieldSource> presentSources = presentSources(request, jsonBody, field.param());
         if (presentSources.size() > 1) {
-            violations.add(new FieldValidationException.Violation(
+            violations.add(new SummerException.Violation(
                     field.param(),
                     "must be provided by one input source"
             ));
@@ -343,7 +344,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         }
         if (presentSources.isEmpty()) {
             if (field.required()) {
-                violations.add(new FieldValidationException.Violation(field.param(), "is required"));
+                violations.add(new SummerException.Violation(field.param(), "is required"));
             }
             return;
         }
@@ -364,20 +365,20 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         String rawValue = readRawValue(request, source, field.param());
         if (rawValue == null) {
             if (field.required()) {
-                violations.add(new FieldValidationException.Violation(field.param(), "is required"));
+                violations.add(new SummerException.Violation(field.param(), "is required"));
             }
             return;
         }
 
         Style style = styleRegistry.require(field.style());
         if (!style.validate(rawValue)) {
-            violations.add(new FieldValidationException.Violation(field.param(), "must be " + style.getDesc()));
+            violations.add(new SummerException.Violation(field.param(), "must be " + style.getDesc()));
             return;
         }
         try {
             values.put(StringUtils.hasText(field.name()) ? field.name() : field.param(), style.getTypedObject(rawValue));
         } catch (RuntimeException exception) {
-            violations.add(new FieldValidationException.Violation(field.param(), "must be " + style.getDesc()));
+            violations.add(new SummerException.Violation(field.param(), "must be " + style.getDesc()));
         }
     }
 
@@ -408,12 +409,12 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             boolean nullable,
             String styleName,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         JsonNode node = resolveJsonNode(jsonBody, param);
         if (node == null) {
             if (required) {
-                violations.add(new FieldValidationException.Violation(param, "is required"));
+                violations.add(new SummerException.Violation(param, "is required"));
             }
             return;
         }
@@ -435,25 +436,25 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             boolean nullable,
             String styleName,
             Map<String, Object> values,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         if (node.isNull()) {
             if (nullable) {
                 values.put(exportName, null);
             } else {
-                violations.add(new FieldValidationException.Violation(fieldPath, "must not be null"));
+                violations.add(new SummerException.Violation(fieldPath, "must not be null"));
             }
             return;
         }
         if (!node.isString() && !node.isNumber() && !node.isBoolean()) {
-            violations.add(new FieldValidationException.Violation(fieldPath, "must be a JSON scalar"));
+            violations.add(new SummerException.Violation(fieldPath, "must be a JSON scalar"));
             return;
         }
 
         Style style = styleRegistry.require(styleName);
         JsonScalarType jsonType = requiredJsonType(style.getParamType());
         if (!acceptsJsonType(node, jsonType)) {
-            violations.add(new FieldValidationException.Violation(
+            violations.add(new SummerException.Violation(
                     fieldPath,
                     "must be a JSON " + jsonType.description
             ));
@@ -461,13 +462,13 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         }
         String rawValue = node.isString() ? node.asString() : node.toString();
         if (!style.validate(rawValue)) {
-            violations.add(new FieldValidationException.Violation(fieldPath, "must be " + style.getDesc()));
+            violations.add(new SummerException.Violation(fieldPath, "must be " + style.getDesc()));
             return;
         }
         try {
             values.put(exportName, style.getTypedObject(rawValue));
         } catch (RuntimeException exception) {
-            violations.add(new FieldValidationException.Violation(fieldPath, "must be " + style.getDesc()));
+            violations.add(new SummerException.Violation(fieldPath, "must be " + style.getDesc()));
         }
     }
 
@@ -538,7 +539,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             return objectMapper.readTree(cachedRequest.body());
         } catch (JacksonException exception) {
             throw new FieldValidationException(List.of(
-                    new FieldValidationException.Violation("$", "must be valid JSON")
+                    new SummerException.Violation("$", "must be valid JSON")
             ));
         }
     }
@@ -556,7 +557,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             JsonNode jsonBody,
             Iterable<Field> fields,
             Iterable<FieldList> fieldLists,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         Set<String> declaredParameters = new LinkedHashSet<>();
         List<FieldList> lists = new ArrayList<>();
@@ -572,7 +573,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
                 declared = lists.stream().anyMatch(fieldList -> isDeclaredListParameter(parameter, fieldList));
             }
             if (!declared) {
-                violations.add(new FieldValidationException.Violation(parameter, "is not allowed"));
+                violations.add(new SummerException.Violation(parameter, "is not allowed"));
             }
         }
 
@@ -580,7 +581,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
         if (pathVariables instanceof Map<?, ?> variables) {
             for (Object key : variables.keySet()) {
                 if (!(key instanceof String parameter) || !declaredParameters.contains(parameter)) {
-                    violations.add(new FieldValidationException.Violation(String.valueOf(key), "is not allowed"));
+                    violations.add(new SummerException.Violation(String.valueOf(key), "is not allowed"));
                 }
             }
         }
@@ -610,7 +611,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             JsonNode jsonBody,
             Iterable<Field> fields,
             Iterable<FieldList> fieldLists,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         if (jsonBody == null || !jsonBody.isObject()) {
             return;
@@ -632,14 +633,14 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             String parentPath,
             Set<String> declaredPaths,
             Map<String, FieldList> jsonFieldLists,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         for (Map.Entry<String, JsonNode> property : objectNode.properties()) {
             String path = parentPath.isEmpty() ? property.getKey() : parentPath + "." + property.getKey();
             boolean exactDeclaration = declaredPaths.contains(path);
             boolean declaredParent = declaredPaths.stream().anyMatch(declaredPath -> declaredPath.startsWith(path + "."));
             if (!exactDeclaration && !declaredParent) {
-                violations.add(new FieldValidationException.Violation(path, "is not allowed"));
+                violations.add(new SummerException.Violation(path, "is not allowed"));
                 continue;
             }
             FieldList fieldList = jsonFieldLists.get(path);
@@ -656,7 +657,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             JsonNode arrayNode,
             String listPath,
             FieldList fieldList,
-            List<FieldValidationException.Violation> violations
+            List<SummerException.Violation> violations
     ) {
         for (int index = 0; index < arrayNode.size(); index++) {
             JsonNode itemNode = arrayNode.get(index);

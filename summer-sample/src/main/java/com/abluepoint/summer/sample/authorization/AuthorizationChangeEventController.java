@@ -1,6 +1,7 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -11,7 +12,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -41,11 +41,10 @@ class AuthorizationChangeEventController {
     ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                             @RequestParam(required = false) String resourceType,
                                                             Authentication authentication) {
-        try {
-            authorization.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.read");
-            AuthorizationChangeEventPage page = service.list(enterpriseId, resourceType);
-            return body(HttpStatus.OK, Map.of("items", page.items(), "totalElements", page.totalElements()));
-        } catch (Exception exception) { return error(exception); }
+        requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.read");
+        AuthorizationChangeEventPage page = service.list(enterpriseId, resourceType);
+        return body(HttpStatus.OK, Map.of("items", page.items(), "totalElements", page.totalElements()));
+
     }
 
     @PostMapping("/{eventId}/retry")
@@ -54,20 +53,20 @@ class AuthorizationChangeEventController {
     ResponseEntity<ApiResponse<AuthorizationChangeEventView>> retry(@PathVariable String eventId,
                                                                       @RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                                       Authentication authentication) {
-        try {
-            authorization.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.write");
-            return body(HttpStatus.OK, service.retry(enterpriseId, eventId));
-        } catch (Exception exception) { return error(exception); }
+        requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.write");
+        return body(HttpStatus.OK, service.retry(enterpriseId, eventId));
+
     }
 
     private <T> ResponseEntity<ApiResponse<T>> body(HttpStatus status, T value) {
         return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.success(value, requestId.currentRequestId()));
     }
-    private <T> ResponseEntity<ApiResponse<T>> error(Exception exception) {
-        HttpStatus status = exception instanceof AccessDeniedException ? HttpStatus.FORBIDDEN
-                : exception instanceof AuthorizationChangeEventNotFoundException ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
-        String code = status == HttpStatus.FORBIDDEN ? "SUMMER_FORBIDDEN" : status == HttpStatus.NOT_FOUND ? "SUMMER_NOT_FOUND" : "SUMMER_INTERNAL_ERROR";
-        return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId())
-                .body(ApiResponse.failure(new ApiError(code, exception.getMessage(), List.of()), requestId.currentRequestId()));
+
+    private void requireEnterpriseMenu(String enterpriseId, Authentication authentication, String capability) {
+        try {
+            authorization.requireEnterpriseMenu(enterpriseId, authentication, capability);
+        } catch (AccessDeniedException denied) {
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, denied.getMessage(), denied);
+        }
     }
 }

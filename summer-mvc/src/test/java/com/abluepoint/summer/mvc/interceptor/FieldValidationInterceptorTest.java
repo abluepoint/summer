@@ -1,5 +1,6 @@
 package com.abluepoint.summer.mvc.interceptor;
 
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.annotation.FieldList;
 import com.abluepoint.summer.mvc.annotation.FieldSource;
@@ -78,8 +79,8 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("invalid"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("email", "must be non-blank text"),
-                        new FieldValidationException.Violation("age", "must be an integer")
+                        new SummerException.Violation("email", "must be non-blank text"),
+                        new SummerException.Violation("age", "must be an integer")
                 ));
         assertThat(FieldValues.from(request).asMap()).isEmpty();
     }
@@ -164,7 +165,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).contains(
-                        new FieldValidationException.Violation("items.count", "is not allowed")
+                        new SummerException.Violation("items.count", "is not allowed")
                 ));
     }
 
@@ -214,7 +215,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).contains(
-                        new FieldValidationException.Violation(
+                        new SummerException.Violation(
                                 "items", "indexes must start at 0 and be contiguous"
                         )
                 ));
@@ -239,7 +240,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("items", "is required")
+                        new SummerException.Violation("items", "is required")
                 ));
     }
 
@@ -268,7 +269,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("batch"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("items", "must contain at most 2 items")
+                        new SummerException.Violation("items", "must contain at most 2 items")
                 ));
     }
 
@@ -307,7 +308,7 @@ class FieldValidationInterceptorTest {
                 new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("create"))
         )).isInstanceOfSatisfying(FieldValidationException.class, exception ->
                 assertThat(exception.violations()).containsExactly(
-                        new FieldValidationException.Violation("age", "must be an integer")
+                        new SummerException.Violation("age", "must be an integer")
                 ));
     }
 

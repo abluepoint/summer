@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import java.io.IOException;
 import java.util.List;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -27,7 +29,8 @@ class SessionFailureConfiguration {
                     Throwable cause = failure;
                     boolean unavailable = false;
                     for (int i = 0; cause != null && i < 20; i++, cause = cause.getCause()) {
-                        if (cause instanceof SessionIndexUnavailableException
+                        if ((cause instanceof SummerException summerFailure
+                                && summerFailure.errorCode() == SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE)
                                 || cause instanceof org.springframework.data.redis.RedisConnectionFailureException
                                 || cause instanceof org.springframework.data.redis.RedisSystemException
                                 // Lettuce translates command timeouts to the generic QueryTimeoutException.

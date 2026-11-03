@@ -1,6 +1,7 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.SummerException;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.security.audit.SecurityAuditLogger;
@@ -67,10 +68,14 @@ class OAuthClientManagementController {
             clients.register(client);
             audit.record("oauth_client_created", authentication.getName(), Map.of("clientId", client.getClientId(), "requestId", requestId.currentRequestId(), "publicClient", true));
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(Map.of("clientId", client.getClientId(), "status", "ACTIVE"), requestId.currentRequestId()));
-        } catch (JdbcSummerOAuthClientStore.DuplicateClientException e) {
-            return failure(HttpStatus.CONFLICT, "SUMMER_OAUTH_CLIENT_EXISTS", "Client ID already exists", authentication);
+        } catch (SummerException e) {
+            if (e.errorCode() != OAuthManagementErrorCode.CLIENT_EXISTS) throw e;
+            recordFailure(e, authentication);
+            throw e;
         } catch (IllegalArgumentException e) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_OAUTH_CLIENT_INVALID", e.getMessage(), authentication);
+            SummerException failure = SummerException.withMessage(OAuthManagementErrorCode.CLIENT_INVALID, e.getMessage(), e);
+            recordFailure(failure, authentication);
+            throw failure;
         }
     }
 
@@ -90,12 +95,15 @@ class OAuthClientManagementController {
                     body.scopes() == null ? null : scopes(body.scopes()), body.version());
             audit.record("oauth_client_updated", authentication.getName(), Map.of("clientId", clientId, "version", result.get("version"), "requestId", requestId.currentRequestId()));
             return ok(result);
-        } catch (JdbcSummerOAuthClientStore.ClientVersionException e) {
-            return failure(HttpStatus.PRECONDITION_FAILED, "SUMMER_OAUTH_CLIENT_VERSION_CONFLICT", "Client version has changed; reload before retrying", authentication);
-        } catch (JdbcSummerOAuthClientStore.ClientNotFoundException e) {
-            return failure(HttpStatus.NOT_FOUND, "SUMMER_OAUTH_CLIENT_NOT_FOUND", "Client was not found", authentication);
+        } catch (SummerException e) {
+            if (e.errorCode() != com.abluepoint.summer.sample.error.SampleTransportErrorCode.OAUTH_CLIENT_VERSION_CONFLICT
+                    && e.errorCode() != OAuthManagementErrorCode.CLIENT_NOT_FOUND) throw e;
+            recordFailure(e, authentication);
+            throw e;
         } catch (IllegalArgumentException e) {
-            return failure(HttpStatus.BAD_REQUEST, "SUMMER_OAUTH_CLIENT_INVALID", e.getMessage(), authentication);
+            SummerException failure = SummerException.withMessage(OAuthManagementErrorCode.CLIENT_INVALID, e.getMessage(), e);
+            recordFailure(failure, authentication);
+            throw failure;
         }
     }
 
@@ -113,7 +121,11 @@ class OAuthClientManagementController {
                                                                     @PathVariable String principalName,
                                                                     Authentication authentication) {
         OAuth2AuthorizationConsent consent = consents.findById(clientId, principalName);
-        if (consent == null) return failure(HttpStatus.NOT_FOUND, "SUMMER_OAUTH_CONSENT_NOT_FOUND", "Authorization consent was not found", authentication);
+        if (consent == null) {
+            SummerException failure = SummerException.withMessage(OAuthManagementErrorCode.CONSENT_NOT_FOUND, "Authorization consent was not found");
+            recordFailure(failure, authentication);
+            throw failure;
+        }
         consents.remove(consent);
         audit.record("oauth_consent_revoked", authentication.getName(), Map.of("clientId", clientId, "principal", principalName, "requestId", requestId.currentRequestId()));
         return ok(Map.of("clientId", clientId, "principalName", principalName, "status", "REVOKED"));
@@ -127,9 +139,9 @@ class OAuthClientManagementController {
         return ResponseEntity.ok().header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.success(value, requestId.currentRequestId()));
     }
 
-    private ResponseEntity<ApiResponse<Map<String, Object>>> failure(HttpStatus status, String code, String message, Authentication authentication) {
-        audit.record("oauth_management_failed", authentication == null ? "unknown" : authentication.getName(), Map.of("code", code, "requestId", requestId.currentRequestId()));
-        return ResponseEntity.status(status).header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId.currentRequestId()));
+    private void recordFailure(SummerException failure, Authentication authentication) {
+        audit.record("oauth_management_failed", authentication == null ? "unknown" : authentication.getName(),
+                Map.of("code", failure.errorCode().code(), "requestId", requestId.currentRequestId()));
     }
 
     private static boolean blank(String value) { return value == null || value.isBlank(); }

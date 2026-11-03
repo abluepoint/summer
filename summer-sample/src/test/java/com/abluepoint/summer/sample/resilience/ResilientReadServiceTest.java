@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.resilience;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -41,7 +43,8 @@ class ResilientReadServiceTest {
         ResilientReadService service = service(p);
         assertThat(service.read(ResilientReadService.DICTIONARIES, "code", () -> "v1", () -> true)).isEqualTo("v1");
         assertThatThrownBy(() -> service.read(ResilientReadService.DICTIONARIES, "code", () -> { throw new IllegalStateException("down"); }, () -> true))
-                .isInstanceOf(DependencyDegradedException.class);
+                .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
     }
 
     @Test
@@ -49,9 +52,11 @@ class ResilientReadServiceTest {
         var service = service(new ResilienceProperties());
         service.read(ResilientReadService.PARAMETERS, "key", () -> "v1", () -> true);
         assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException(); }))
-                .isInstanceOf(DependencyDegradedException.class);
+                .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
         assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException(); }, () -> { throw new IllegalStateException("policy offline"); }))
-                .isInstanceOf(DependencyDegradedException.class);
+                .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
         AtomicInteger writes = new AtomicInteger();
         assertThatThrownBy(() -> service.read("write.operation", "key", writes::incrementAndGet, () -> true))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -65,7 +70,8 @@ class ResilientReadServiceTest {
         assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new org.springframework.security.access.AccessDeniedException("denied"); }, () -> true))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "key", () -> { throw new IllegalStateException(); }, () -> true))
-                .isInstanceOf(DependencyDegradedException.class);
+                .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
     }
 
     @Test
@@ -83,7 +89,8 @@ class ResilientReadServiceTest {
                 finally { finished.countDown(); }
             }, () -> true)).isEqualTo("alice");
             assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "bob:v1", () -> { throw new IllegalStateException(); }, () -> true))
-                    .isInstanceOf(DependencyDegradedException.class);
+                    .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
         } finally { release.countDown(); }
         assertThat(finished.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
         assertThat(service.<String>read(ResilientReadService.PARAMETERS, "alice:v1", () -> { throw new IllegalStateException(); }, () -> true)).isEqualTo("alice");
@@ -141,13 +148,15 @@ class ResilientReadServiceTest {
         try {
             for (int i = 0; i < 2; i++) {
                 assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "cold", slow))
-                        .isInstanceOf(DependencyDegradedException.class);
+                        .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
             }
             var view = service.snapshot().stream().filter(v -> v.name().equals(ResilientReadService.PARAMETERS)).findFirst().orElseThrow();
             assertThat(view.timedOut()).isEqualTo(2);
             assertThat(view.circuitBreaker()).isEqualTo("OPEN");
             assertThatThrownBy(() -> service.read(ResilientReadService.PARAMETERS, "cold", slow))
-                    .isInstanceOf(DependencyDegradedException.class);
+                    .isInstanceOfSatisfying(SummerException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE));
             assertThat(calls).hasValue(2);
         } finally { release.countDown(); }
         assertThat(finished.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();

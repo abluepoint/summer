@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.bff;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import jakarta.servlet.http.Cookie;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -86,31 +88,28 @@ final class BffSessionController {
             HttpServletRequest httpRequest) {
         OidcIdentity identity = sessionService.identity(cookie(httpRequest, BffCookiePolicy.PRODUCT_SESSION_COOKIE));
         if (identity == null || identity.expiresAt() == null || !identity.expiresAt().isAfter(Instant.now())) {
-            return error(HttpStatus.UNAUTHORIZED, "BFF_SESSION_REQUIRED", "Product session is missing or expired");
+            throw SummerException.withMessage(BffErrorCode.SESSION_REQUIRED, "Product session is missing or expired");
         }
         if (enterpriseId == null || enterpriseId.isBlank() || !identity.enterpriseIds().contains(enterpriseId)) {
-            return error(HttpStatus.FORBIDDEN, "BFF_ENTERPRISE_CONTEXT_DENIED", "Enterprise context is not available in the Product Session");
+            throw SummerException.withMessage(BffErrorCode.ENTERPRISE_CONTEXT_DENIED, "Enterprise context is not available in the Product Session");
         }
         if (request == null || blank(request.connectionId()) || blank(request.tool())) {
-            return error(HttpStatus.BAD_REQUEST, "BFF_MCP_REQUEST_INVALID", "connectionId and tool are required");
+            throw SummerException.withMessage(BffErrorCode.MCP_REQUEST_INVALID, "connectionId and tool are required");
         }
         if (request.agentId() != null && !request.agentId().isBlank()) {
-            return error(HttpStatus.BAD_REQUEST, "BFF_AGENT_ID_FORBIDDEN", "agentId is derived by the server and cannot be supplied by the browser");
+            throw SummerException.withMessage(BffErrorCode.AGENT_ID_FORBIDDEN, "agentId is derived by the server and cannot be supplied by the browser");
         }
         try {
             return ResponseEntity.ok(Map.of("data", summerMcpClient.invoke(enterpriseId, identity, request)));
-        } catch (SummerMcpUnavailableException unavailable) {
-            return error(HttpStatus.SERVICE_UNAVAILABLE, "BFF_SUMMER_UNAVAILABLE", unavailable.getMessage());
         } catch (RuntimeException upstreamFailure) {
-            // Never expose provider credentials, transport details, or adapter
-            // exception text through the browser-facing BFF contract.
-            return error(HttpStatus.BAD_GATEWAY, "BFF_MCP_UPSTREAM_ERROR",
-                    "MCP execution is temporarily unavailable");
+            if (upstreamFailure instanceof SummerException business
+                    && business.errorCode() == SampleTransportErrorCode.BFF_UNAVAILABLE) {
+                throw business;
+            }
+            // The adapter boundary exposes only its declared safe failure message.
+            throw SummerException.withMessage(SampleTransportErrorCode.BFF_UPSTREAM_ERROR,
+                    "MCP execution is temporarily unavailable", upstreamFailure);
         }
-    }
-
-    private static ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).body(Map.of("error", Map.of("code", code, "message", message)));
     }
 
     private static boolean blank(String value) {

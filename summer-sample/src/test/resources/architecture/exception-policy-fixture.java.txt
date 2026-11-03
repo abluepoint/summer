@@ -1,0 +1,21 @@
+package compiledfixture;
+
+class NativeUses {
+    IllegalArgumentException nativeFailure;
+    org.springframework.security.access.AccessDeniedException thirdPartyFailure;
+}
+class Oddity extends RuntimeException {}
+class Indirect extends Oddity {}
+class Container { static class Hidden extends Exception {} }
+class AnonymousOwner { Throwable create() { return new Error() {}; } }
+class Direct extends Throwable {}
+class LooksLikeValidation extends IllegalArgumentException {}
+class ForeignDerived extends org.springframework.security.access.AccessDeniedException {
+    ForeignDerived() { super("fixture"); }
+}
+class SummerDerived extends com.abluepoint.summer.common.error.SummerException {
+    SummerDerived() { super(com.abluepoint.summer.common.error.CommonErrorCode.CONFLICT); }
+}
+class InitializationProbe extends RuntimeException {
+    static { System.setProperty("summer.guard.fixture.initialized", "yes"); }
+}

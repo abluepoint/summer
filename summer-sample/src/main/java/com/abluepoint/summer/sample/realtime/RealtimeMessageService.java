@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.realtime;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.ObjectProvider;
@@ -71,7 +74,7 @@ class RealtimeMessageService {
             lockEnterprise(enterpriseId);
             require(enterpriseId, auth, WRITE);
             RealtimeMessageEntity entity = repository.findById(messageId)
-                    .filter(e -> enterpriseId.equals(e.enterpriseId())).orElseThrow(RealtimeMessageNotFoundException::new);
+                    .filter(e -> enterpriseId.equals(e.enterpriseId())).orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Message was not found"));
             entity.acknowledge();
             return view(repository.saveAndFlush(entity), false);
         });
@@ -95,13 +98,13 @@ class RealtimeMessageService {
     RealtimeMessageView find(String enterpriseId, String messageId, Authentication auth) {
         require(enterpriseId, auth, READ);
         return view(repository.findById(messageId).filter(e -> enterpriseId.equals(e.enterpriseId()))
-                .orElseThrow(RealtimeMessageNotFoundException::new), false);
+                .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Message was not found")), false);
     }
 
     static long cursor(String raw) {
         if (raw == null || raw.isBlank()) return 0;
         try { long value = Long.parseLong(raw.trim()); if (value < 0) throw new NumberFormatException(); return value; }
-        catch (NumberFormatException e) { throw new RealtimeMessageCursorException(); }
+        catch (NumberFormatException e) { throw SummerException.withMessage(RealtimeErrorCode.CURSOR_INVALID, "Message cursor must be a non-negative integer", e); }
     }
 
     private RealtimeMessageView view(RealtimeMessageEntity e, boolean duplicate) {
@@ -115,18 +118,18 @@ class RealtimeMessageService {
     private String encode(Map<String, Object> payload) {
         try {
             String result = objectMapper.writeValueAsString(payload);
-            if (result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES) throw new RealtimeMessageValidationException("Message payload is too large");
+            if (result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES) throw SummerException.withMessage(RealtimeErrorCode.INVALID, "Message payload is too large");
             return result;
-        } catch (JacksonException e) { throw new RealtimeMessageValidationException("Message payload is invalid"); }
+        } catch (JacksonException e) { throw SummerException.withMessage(RealtimeErrorCode.INVALID, "Message payload is invalid", e); }
     }
 
     private static void validate(RealtimeMessageCreateRequest request) {
         if (request == null || blank(request.clientMessageId()) || !request.clientMessageId().matches("[A-Za-z0-9._:-]{1,128}"))
-            throw new RealtimeMessageValidationException("clientMessageId is required and must be a safe identifier");
-        if (request.payload() == null || request.payload().isEmpty()) throw new RealtimeMessageValidationException("payload must not be empty");
+            throw SummerException.withMessage(RealtimeErrorCode.INVALID, "clientMessageId is required and must be a safe identifier");
+        if (request.payload() == null || request.payload().isEmpty()) throw SummerException.withMessage(RealtimeErrorCode.INVALID, "payload must not be empty");
         if (request.ttlSeconds() != null && (request.ttlSeconds() < 1 || request.ttlSeconds() > MAX_TTL_SECONDS))
-            throw new RealtimeMessageValidationException("ttlSeconds is outside the supported range");
-        if (!blank(request.recipient()) && request.recipient().trim().length() > 128) throw new RealtimeMessageValidationException("recipient is too long");
+            throw SummerException.withMessage(RealtimeErrorCode.INVALID, "ttlSeconds is outside the supported range");
+        if (!blank(request.recipient()) && request.recipient().trim().length() > 128) throw SummerException.withMessage(RealtimeErrorCode.INVALID, "recipient is too long");
     }
 
     void require(String enterpriseId, Authentication authentication, String capability) {

@@ -29,7 +29,10 @@ class RealtimeConnectionLimitTest {
                             "sessionActive", (BooleanSupplier) () -> true)));
                     start.await(5, TimeUnit.SECONDS);
                     try { hub.register("ent-acme", session); accepted.incrementAndGet(); }
-                    catch (RealtimeConnectionLimitException full) { rejected.incrementAndGet(); }
+                    catch (com.abluepoint.summer.common.error.SummerException full) {
+                        if (full.errorCode() != RealtimeErrorCode.CONNECTION_LIMIT) throw full;
+                        rejected.incrementAndGet();
+                    }
                     return null;
                 }));
             }

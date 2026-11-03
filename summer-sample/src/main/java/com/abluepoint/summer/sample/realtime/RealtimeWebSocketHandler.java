@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.realtime;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -26,7 +29,10 @@ class RealtimeWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String enterpriseId = (String) session.getAttributes().get("enterpriseId");
         try { hub.register(enterpriseId, session); }
-        catch (RealtimeConnectionLimitException e) { session.close(new CloseStatus(1013, "connection limit")); return; }
+        catch (SummerException e) {
+            if (e.errorCode() != RealtimeErrorCode.CONNECTION_LIMIT) throw e;
+            session.close(new CloseStatus(1013, "connection limit")); return;
+        }
         catch (org.springframework.security.access.AccessDeniedException denied) { hub.closeDenied(session); return; }
         long after = (long) session.getAttributes().getOrDefault("after", 0L);
         hub.connected(session, Map.of("type", "connected", "enterpriseId", enterpriseId,
@@ -62,8 +68,10 @@ class RealtimeWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             protocolError(session, "SUMMER_MESSAGE_INVALID", "Unsupported message type");
-        } catch (RealtimeMessageValidationException e) { protocolError(session, "SUMMER_MESSAGE_INVALID", e.getMessage()); }
-        catch (RealtimeMessageNotFoundException e) { protocolError(session, "SUMMER_NOT_FOUND", e.getMessage()); }
+        } catch (SummerException e) {
+            if (e.errorCode() != RealtimeErrorCode.INVALID && e.errorCode() != CommonErrorCode.NOT_FOUND) throw e;
+            protocolError(session, e.errorCode().code(), e.getMessage());
+        }
         catch (org.springframework.security.access.AccessDeniedException e) { session.close(CloseStatus.POLICY_VIOLATION); }
     }
 

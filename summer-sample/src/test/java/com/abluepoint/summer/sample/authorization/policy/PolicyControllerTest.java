@@ -34,6 +34,25 @@ class PolicyControllerTest {
     MockMvc mockMvc;
 
     @Test
+    void unpublishedPolicyAndReusedKeyUseUnifiedFailures() throws Exception {
+        String body = policyBody("Draft", "unified-draft");
+        MvcResult created = create("unified-policy", body);
+        String id = JsonPath.read(created.getResponse().getContentAsString(), "$.data.policyId");
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/policies/{id}:pause", id)
+                        .header("If-Match", "\"1\"").header("Idempotency-Key", "pause-draft")
+                        .with(admin("enterprise.policies.write")))
+                .andExpect(status().isConflict())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_POLICY_CONFLICT", "Policy is not published"));
+        mockMvc.perform(post("/api/v1/enterprises/ent-acme/policies").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("Draft", "Changed")).header("Idempotency-Key", "unified-policy")
+                        .with(admin("enterprise.policies.write")))
+                .andExpect(status().isConflict())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified(
+                        "SUMMER_IDEMPOTENCY_CONFLICT", "Idempotency key reused"));
+    }
+
+    @Test
     void createsAndListsAnEnterprisePolicyDraft() throws Exception {
         MvcResult created = mockMvc.perform(post("/api/v1/enterprises/ent-acme/policies")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -77,7 +96,8 @@ class PolicyControllerTest {
                         .with(admin("enterprise.policies.write")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_POLICY_INVALID"))
-                .andExpect(jsonPath("$.error.message").value(containsString("Unsupported condition")));
+                .andExpect(jsonPath("$.error.message").value(containsString("Unsupported condition")))
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_POLICY_INVALID", "Unsupported condition: devicePosture"));
     }
 
     @Test
@@ -227,7 +247,8 @@ class PolicyControllerTest {
                         .header("If-Match", "\"999\"").header("Idempotency-Key", "policy-stale")
                         .with(admin("enterprise.policies.write")))
                 .andExpect(status().isPreconditionFailed())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"))
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
         mockMvc.perform(post("/internal/v1/authorization/evaluate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"initiator\":\"alice\",\"actor\":\"alice\",\"effectiveSubject\":\"alice\",\"enterpriseId\":\"ent-other\",\"resource\":\"customers/42\",\"action\":\"read\",\"risk\":\"LOW\",\"requestId\":\"req-policy-cross-tenant\",\"allow\":true}")

@@ -10,6 +10,3 @@ record ResilienceOperationView(String name, String circuitBreaker, int retryMaxA
                                long calls, long successes, long failures, long fallbacks,
                                long rejected, long timedOut, long retryAttempts, Instant lastFailureAt) {}
 
-final class DependencyDegradedException extends RuntimeException {
-    DependencyDegradedException(String message, Throwable cause) { super(message, cause); }
-}

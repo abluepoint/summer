@@ -77,7 +77,8 @@ class AuthorizationVersionConcurrencyTest {
         barrier.await(10, TimeUnit.SECONDS);
         try {
             return tx.execute(s -> node.updateRole("ent-acme", id, new RoleUpdateRequest(name, null, null, null, null), "\"1\"", name, name, admin()).name());
-        } catch (AuthorizationPreconditionException expected) {
+        } catch (com.abluepoint.summer.common.error.SummerException expected) {
+            if (expected.errorCode() != com.abluepoint.summer.sample.error.SampleTransportErrorCode.PRECONDITION_FAILED) throw expected;
             return "PRECONDITION_FAILED";
         }
     }
@@ -127,7 +128,8 @@ class AuthorizationVersionConcurrencyTest {
         try {
             tx.execute(s -> node.assignUserRoles("ent-acme", username, new UserRoleAssignmentRequest(List.of(), List.of(name)), "\"1\"", name, name, admin()));
             return name;
-        } catch (AuthorizationPreconditionException expected) {
+        } catch (com.abluepoint.summer.common.error.SummerException expected) {
+            if (expected.errorCode() != com.abluepoint.summer.sample.error.SampleTransportErrorCode.PRECONDITION_FAILED) throw expected;
             return "PRECONDITION_FAILED";
         }
     }

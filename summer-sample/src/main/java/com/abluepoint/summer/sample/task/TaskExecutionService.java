@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.task;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.common.error.CommonErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -49,10 +51,9 @@ class TaskExecutionService {
             String failureCode = null;
             try {
                 runWithTimeout(run.task(), parameters, value -> recordProgress(run, currentAttempt, value));
-            } catch (TaskTimedOutException timeout) {
-                failureCode = "TASK_TIMEOUT";
             } catch (RuntimeException failure) {
-                failureCode = "TASK_HANDLER_FAILED";
+                failureCode = failure instanceof SummerException summer && summer.errorCode() == TaskErrorCode.TIMED_OUT
+                        ? "TASK_TIMEOUT" : "TASK_HANDLER_FAILED";
             }
             String result = failureCode;
             Boolean retry = transactions.execute(ignored -> finishAttempt(run, currentAttempt, attemptId, result));
@@ -62,7 +63,7 @@ class TaskExecutionService {
 
     private ExecutionRun claim(String taskId, String fireInstanceId, String key, boolean recovering) {
         // The definition lock serializes creation of this task's idempotency receipt on every node.
-        TaskDefinitionEntity task = definitions.findForExecution(taskId).orElseThrow(TaskNotFoundException::new);
+        TaskDefinitionEntity task = definitions.findForExecution(taskId).orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Task not found"));
         var existing = executions.findClaimForUpdate(task.taskId(), key);
         String owner = nodeId() + "/" + UUID.randomUUID();
         TaskExecutionEntity execution = existing.orElseGet(() -> new TaskExecutionEntity(
@@ -135,11 +136,11 @@ class TaskExecutionService {
             future.get(task.timeoutMs(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException timeout) {
             future.cancel(true);
-            throw new TaskTimedOutException();
+            throw new SummerException(TaskErrorCode.TIMED_OUT, timeout);
         } catch (InterruptedException interrupted) {
             future.cancel(true);
             Thread.currentThread().interrupt();
-            throw new TaskTimedOutException();
+            throw new SummerException(TaskErrorCode.TIMED_OUT, interrupted);
         } catch (ExecutionException failed) {
             Throwable cause = failed.getCause();
             if (cause instanceof RuntimeException runtime) throw runtime;
@@ -178,4 +179,3 @@ class TaskExecutionService {
     private record ExecutionRun(TaskDefinitionEntity task, String executionId, String owner, int firstAttempt, int maxAttempts) {}
 }
 
-final class TaskTimedOutException extends RuntimeException {}

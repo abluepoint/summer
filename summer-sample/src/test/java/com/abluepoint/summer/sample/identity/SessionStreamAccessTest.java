@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import com.abluepoint.summer.security.autoconfigure.SummerSecurityProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
@@ -41,9 +44,9 @@ class SessionStreamAccessTest {
     void sharedBackendFailureCannotBecomeAnAllowDecision() {
         var index = mock(SessionIndexService.class);
         String id = request.getSession().getId();
-        when(index.load(id)).thenThrow(new SessionIndexUnavailableException());
+        when(index.load(id)).thenThrow(SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable"));
         var lease = access("redis", index).capture(request, authentication);
-        assertThatThrownBy(lease::getAsBoolean).isInstanceOf(SessionIndexUnavailableException.class);
+        assertThatThrownBy(lease::getAsBoolean).isInstanceOfSatisfying(SummerException.class, failure -> assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE));
     }
 
     @Test

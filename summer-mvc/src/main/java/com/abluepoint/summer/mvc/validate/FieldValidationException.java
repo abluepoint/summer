@@ -1,20 +1,27 @@
 package com.abluepoint.summer.mvc.validate;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.ErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+
 import java.util.List;
 
-public final class FieldValidationException extends RuntimeException {
+/** A field-level failure using the shared error information and violation model. */
+public final class FieldValidationException extends SummerException {
 
-    private final List<Violation> violations;
-
-    public FieldValidationException(List<Violation> violations) {
-        super("Field validation failed");
-        this.violations = List.copyOf(violations);
+    public FieldValidationException(List<SummerException.Violation> violations) {
+        this(CommonErrorCode.INVALID_ARGUMENT, violations);
     }
 
-    public List<Violation> violations() {
-        return violations;
+    public FieldValidationException(ErrorCode errorCode, List<SummerException.Violation> violations) {
+        this(errorCode, violations, null, null);
     }
 
-    public record Violation(String field, String message) {
+    /** A null message retains error-code resolution; non-null messages are literal. */
+    public FieldValidationException(
+            ErrorCode errorCode, List<SummerException.Violation> violations,
+            String message, Throwable cause, Object... messageArguments
+    ) {
+        super(errorCode, message, cause, messageArguments, violations);
     }
 }

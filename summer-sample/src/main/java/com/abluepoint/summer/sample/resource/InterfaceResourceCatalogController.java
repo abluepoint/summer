@@ -1,6 +1,7 @@
 package com.abluepoint.summer.sample.resource;
 
-import com.abluepoint.summer.common.response.ApiError;
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 
 @RestController
 @ResourcePermission("platform.interface-resources.read")
@@ -54,10 +54,7 @@ final class InterfaceResourceCatalogController {
                     .header("X-Request-Id", requestId)
                     .body(ApiResponse.success(view, requestId));
         } catch (AccessDeniedException exception) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .header("X-Request-Id", requestId)
-                    .body(ApiResponse.failure(
-                            new ApiError("SUMMER_FORBIDDEN", exception.getMessage(), List.of()), requestId));
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, exception.getMessage(), exception);
         }
     }
     @GetMapping("/api/v1/platform/interface-resources/history")
@@ -81,19 +78,14 @@ final class InterfaceResourceCatalogController {
 
     private ResponseEntity<?> historyResponse(Authentication authentication, java.util.function.Supplier<?> value) {
         String requestId = requestIdAccessor.currentRequestId();
-        HttpStatus status; String code; String message;
         try {
             InterfaceResourceCatalogService.requirePlatformRead(authentication);
             return ResponseEntity.ok().header("X-Request-Id", requestId).body(ApiResponse.success(value.get(), requestId));
         } catch (AccessDeniedException denied) {
-            status = HttpStatus.FORBIDDEN; code = "SUMMER_FORBIDDEN"; message = "Interface resource catalog denied";
-        } catch (InterfaceResourceHistory.RevisionNotFoundException missing) {
-            status = HttpStatus.NOT_FOUND; code = "SUMMER_RESOURCE_REVISION_NOT_FOUND"; message = "Interface resource revision was not found";
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Interface resource catalog denied", denied);
         } catch (IllegalArgumentException invalid) {
-            status = HttpStatus.BAD_REQUEST; code = "SUMMER_RESOURCE_HISTORY_INVALID"; message = invalid.getMessage();
+            throw SummerException.withMessage(InterfaceResourceErrorCode.HISTORY_INVALID, invalid.getMessage(), invalid);
         }
-        return ResponseEntity.status(status).header("X-Request-Id", requestId)
-                .body(ApiResponse.failure(new ApiError(code, message, List.of()), requestId));
     }
 
 }

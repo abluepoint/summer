@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -33,10 +36,17 @@ class RedisSummerSessionStoreTest {
 
     @Test void redisOutageCannotUseLocalAuthentication() {
         var request = localAuthenticatedRequest();
-        when(index.touch(anyString(), anyInt())).thenThrow(new SessionIndexUnavailableException());
-        assertThatThrownBy(() -> store.loadDeferredContext(request).get()).isInstanceOf(SessionIndexUnavailableException.class);
-        when(index.load(anyString())).thenThrow(new SessionIndexUnavailableException());
+        when(index.touch(anyString(), anyInt())).thenThrow(SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable"));
+        assertThatThrownBy(() -> store.loadDeferredContext(request).get()).isInstanceOfSatisfying(SummerException.class, failure -> assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE));
+        when(index.load(anyString())).thenThrow(SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable"));
         assertThat(store.containsContext(request)).isFalse();
+    }
+
+    @Test void unrelatedBusinessFailureIsNotSilentlyClassifiedAsAStorageOutage() {
+        var request = localAuthenticatedRequest();
+        var failure = SummerException.withMessage(IdentityErrorCode.USER_CONFLICT, "Username already exists");
+        when(index.load(anyString())).thenThrow(failure);
+        assertThatThrownBy(() -> store.containsContext(request)).isSameAs(failure);
     }
 
     @Test void revokedOrExpiredSharedRecordCannotUseLocalAuthentication() {
@@ -62,9 +72,9 @@ class RedisSummerSessionStoreTest {
         var request = localAuthenticatedRequest();
         var context = (org.springframework.security.core.context.SecurityContext) request.getSession()
                 .getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
-        when(index.ensureCurrent(any(), any())).thenThrow(new SessionIndexUnavailableException());
+        when(index.ensureCurrent(any(), any())).thenThrow(SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable"));
         assertThatThrownBy(() -> store.saveContext(context, request, new MockHttpServletResponse()))
-                .isInstanceOf(SessionIndexUnavailableException.class);
+                .isInstanceOfSatisfying(SummerException.class, failure -> assertThat(failure.errorCode()).isSameAs(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE));
         assertThat(request.getSession().getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
     }
 
@@ -73,6 +83,26 @@ class RedisSummerSessionStoreTest {
         store.saveContext(SecurityContextHolder.createEmptyContext(), request, new MockHttpServletResponse());
         verify(index).revokeCurrent(request, null);
         assertThat(request.getSession().getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+    }
+
+    @Test @SuppressWarnings("unchecked") void revokedBusinessCallbackIsNotRetriedAsAStorageFailure() {
+        var request = localAuthenticatedRequest();
+        var context = (org.springframework.security.core.context.SecurityContext) request.getSession()
+                .getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+        var mapper = tools.jackson.databind.json.JsonMapper.builder().build();
+        var redis = mock(org.springframework.data.redis.core.StringRedisTemplate.class);
+        org.springframework.data.redis.core.ValueOperations<String, String> values = mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(values.get(anyString())).thenReturn(mapper.writeValueAsString(record("REVOKED", Instant.now().plusSeconds(300))))
+                .thenThrow(new org.springframework.data.redis.RedisConnectionFailureException("unexpected business retry"));
+        var realIndex = new SessionIndexService(redis, mapper, new SessionIndexProperties());
+        try {
+            var repository = new RedisSummerSessionStore(realIndex);
+            assertThatThrownBy(() -> repository.saveContext(context, request, new MockHttpServletResponse()))
+                    .isInstanceOfSatisfying(SummerException.class, failure ->
+                            assertThat(failure.errorCode()).isSameAs(IdentityErrorCode.SESSION_REVOKED));
+            assertThat(request.getSession().getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        } finally { realIndex.close(); }
     }
 
     private SessionRecord record(String status, Instant expiry) {

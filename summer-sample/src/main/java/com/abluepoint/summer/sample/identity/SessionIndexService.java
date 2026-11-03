@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -68,8 +70,8 @@ final class SessionIndexService {
             SessionRecord record = new SessionRecord(reference, authentication.getName(), clientId(authentication),
                     old != null && "REVOKED".equals(old.status()) ? "REVOKED" : "ACTIVE",
                     old == null ? now : old.createdAt(), now, expiresAt, auth.claims(), auth.authorities());
-            if ("REVOKED".equals(record.status())) throw new SessionRevokedException();
-            if (!writeActive(record, ttl(expiresAt, now), true)) throw new SessionRevokedException();
+            if ("REVOKED".equals(record.status())) throw SummerException.withMessage(IdentityErrorCode.SESSION_REVOKED, "The server session has been revoked");
+            if (!writeActive(record, ttl(expiresAt, now), true)) throw SummerException.withMessage(IdentityErrorCode.SESSION_REVOKED, "The server session has been revoked");
             return view(record, true);
         });
     }
@@ -101,7 +103,7 @@ final class SessionIndexService {
         requireWrite(authentication);
         return execute(() -> {
             SessionRecord prior = read(reference);
-            if (prior == null || expired(prior)) throw new SessionNotFoundException();
+            if (prior == null || expired(prior)) throw SummerException.withMessage(IdentityErrorCode.SESSION_NOT_FOUND, "The session was not found");
             if (!prior.principal().equals(authentication.getName()) && !has(authentication, "ROLE_ADMIN")) {
                 throw new AccessDeniedException("Session belongs to another principal");
             }
@@ -136,8 +138,8 @@ final class SessionIndexService {
         HttpSession session = request.getSession(false);
         if (session == null) return;
         SessionRecord record = load(session.getId());
-        if (record != null && "REVOKED".equals(record.status())) throw new SessionRevokedException();
-        if (record != null && expired(record)) throw new SessionRevokedException();
+        if (record != null && "REVOKED".equals(record.status())) throw SummerException.withMessage(IdentityErrorCode.SESSION_REVOKED, "The server session has been revoked");
+        if (record != null && expired(record)) throw SummerException.withMessage(IdentityErrorCode.SESSION_REVOKED, "The server session has been revoked");
     }
 
     SessionAuthenticationSnapshot authenticationSnapshot(Authentication authentication) {
@@ -154,8 +156,9 @@ final class SessionIndexService {
     private <T> T execute(Callable<T> callback) {
         long now = System.currentTimeMillis();
         long opened = openedAt.get();
-        if (opened > 0 && now - opened < properties.getOpenDurationMs()) throw new SessionIndexUnavailableException();
+        if (opened > 0 && now - opened < properties.getOpenDurationMs()) throw SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable");
         if (opened > 0) openedAt.compareAndSet(opened, 0);
+        Throwable lastFailure = null;
         for (int attempt = 0; attempt <= properties.getRetries(); attempt++) {
             Future<T> future = executor.submit(callback);
             try {
@@ -163,25 +166,31 @@ final class SessionIndexService {
                 consecutiveFailures.set(0);
                 return value;
             } catch (TimeoutException exception) {
+                lastFailure = exception;
                 future.cancel(true);
             } catch (InterruptedException exception) {
+                lastFailure = exception;
                 Thread.currentThread().interrupt();
                 break;
             } catch (ExecutionException exception) {
                 Throwable cause = exception.getCause() == null ? exception : exception.getCause();
-                if (cause instanceof SessionRevokedException || cause instanceof SessionNotFoundException || cause instanceof AccessDeniedException) throw (RuntimeException) cause;
+                if (cause instanceof SummerException failure
+                        && (failure.errorCode() == IdentityErrorCode.SESSION_REVOKED
+                        || failure.errorCode() == IdentityErrorCode.SESSION_NOT_FOUND)) throw failure;
+                if (cause instanceof AccessDeniedException denied) throw denied;
+                lastFailure = cause;
             }
         }
         int failures = consecutiveFailures.incrementAndGet();
         if (failures >= properties.getFailureThreshold()) openedAt.set(System.currentTimeMillis());
-        throw new SessionIndexUnavailableException();
+        throw SummerException.withMessage(SampleTransportErrorCode.SESSION_STORE_UNAVAILABLE, "Shared session storage is unavailable", lastFailure);
     }
 
     private SessionRecord read(String reference) {
         String json = redis.opsForValue().get(properties.getNamespace() + ":session:" + reference);
         if (json == null) return null;
         try { return mapper.readValue(json, SessionRecord.class); }
-        catch (JacksonException exception) { throw new IllegalStateException("Invalid shared session record"); }
+        catch (JacksonException exception) { throw new IllegalStateException("Invalid shared session record", exception); }
     }
 
     // Each mutation is atomic with respect to revocation. No stale ACTIVE write can
@@ -231,7 +240,7 @@ final class SessionIndexService {
                     create ? "create" : "touch", record.sessionRef());
             return Long.valueOf(1).equals(result);
         } catch (JacksonException exception) {
-            throw new IllegalStateException("Unable to encode shared session record");
+            throw new IllegalStateException("Unable to encode shared session record", exception);
         }
     }
 
@@ -258,7 +267,7 @@ final class SessionIndexService {
             return result.toString();
         } catch (NoSuchAlgorithmException exception) { throw new IllegalStateException("SHA-256 is required", exception); }
     }
-    private static void validateReference(String reference) { if (reference == null || !reference.matches("[a-f0-9]{64}")) throw new SessionReferenceInvalidException(); }
+    private static void validateReference(String reference) { if (reference == null || !reference.matches("[a-f0-9]{64}")) throw SummerException.withMessage(IdentityErrorCode.SESSION_REFERENCE_INVALID, "The session reference must be a 64-character hexadecimal value"); }
     private static String currentReference(HttpServletRequest request) { HttpSession session = request.getSession(false); return session == null ? null : reference(session.getId()); }
     private static void requireRead(Authentication authentication) { if (!has(authentication, "SCOPE_platform.capabilities.read") && !has(authentication, "ROLE_ADMIN")) throw new AccessDeniedException("Session read capability denied"); }
     private static void requireWrite(Authentication authentication) { if (!has(authentication, "SCOPE_platform.capabilities.write") && !has(authentication, "ROLE_ADMIN")) throw new AccessDeniedException("Session write capability denied"); }

@@ -1,3 +1,10 @@
+import java.io.File
+import org.gradle.api.file.FileCollection
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.testing.Test
+import org.gradle.process.CommandLineArgumentProvider
+
 plugins {
     alias(libs.plugins.spring.boot)
     java
@@ -42,4 +49,29 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("summer-sample.jar")
+}
+
+// Keep class directories lazy: candidate validation relocates each project's buildDirectory.
+class ProductionClassesArgumentProvider(
+    @get:Classpath val outputs: FileCollection
+) : CommandLineArgumentProvider {
+    override fun asArguments(): Iterable<String> {
+        // Empty starter SourceSets produce no directory; all main classes tasks still run.
+        val directories = outputs.files.filter { it.isDirectory }.map { it.absolutePath }.sorted()
+        check(directories.isNotEmpty()) { "No compiled main outputs for the exception architecture guard" }
+        return listOf("-Dsummer.architecture.productionClasses=" + directories.joinToString(File.pathSeparator))
+    }
+}
+
+gradle.projectsEvaluated {
+    val mains = rootProject.allprojects.mapNotNull { module ->
+        module.extensions.findByType<SourceSetContainer>()?.findByName("main")?.let { module to it }
+    }
+    val productionClasses = files(mains.map { (_, main) -> main.output.classesDirs })
+    tasks.named<Test>("test") {
+        dependsOn(mains.map { (module, main) -> module.tasks.named(main.classesTaskName) })
+        // Load owned types from their declared outputs before dependency JAR copies.
+        classpath = productionClasses + classpath
+        jvmArgumentProviders.add(ProductionClassesArgumentProvider(productionClasses))
+    }
 }

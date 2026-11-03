@@ -51,7 +51,9 @@ class AuthorizationCapabilityUpgradeTest {
 
         assertThatThrownBy(() -> service.createRole("ent-acme",
                 new RoleCreateRequest("Reader", "reader", List.of(CODE), null), "create-disabled", "upgrade", admin()))
-                .isInstanceOf(AuthorizationValidationException.class).hasMessage("Capability is disabled");
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class).hasMessage("Capability is disabled")
+                .satisfies(error -> assertThat(((com.abluepoint.summer.common.error.SummerException) error).errorCode())
+                        .isSameAs(AuthorizationErrorCode.INVALID));
         assertThat(service.capabilities("ent-acme", admin()).capabilities())
                 .filteredOn(capability -> CODE.equals(capability.code()))
                 .singleElement().satisfies(capability -> {
