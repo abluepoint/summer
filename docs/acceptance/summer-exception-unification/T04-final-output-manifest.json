@@ -1,0 +1,28 @@
+{
+  "state": "final_technical_outputs_frozen",
+  "implementation_commit": "f67d7617c482b5cca9359f34404fb22ae38b594f",
+  "tested_source_tree": "907687818954065d356964df2007eb108ddebef1",
+  "reviewer": "T04",
+  "technical_acceptances": {
+    "T00": "requirements/integration/M4 accepted actual record",
+    "T04": "Spec/M5 accepted actual record; own04/06 nonauthor semantic exclusions retained"
+  },
+  "spec_findings": 0,
+  "blockers": 0,
+  "denominator": 489,
+  "numerator": 489,
+  "files": {
+    "contracts-final.json": "2f9e6cc99c54d962c89ac55834dc680ac3a4940f4c1c1f347adaf032caf452fe",
+    "traceability-final.json": "dd14b1c864247895c704de19f039514193cf8514ce31504c0a24a379a7f6a6e1",
+    "traceability-final.schema.json": "f67282bd4c8dcf1d6bcf36ec6f017b39382c539f820f43bff2ebf620e22e36d5",
+    "traceability-final-validation.json": "187a0281b98ffae8c70c38121919d4899481b4f32e0329118ef84de6dab189f2",
+    "final-spec-quality-review-T04.md": "2e690faf02dcf7e07e2613f4adfa3b7ae4ebce50c76b405eaff64d02e8c6e4ff",
+    "final-spec-quality-inputs-T04.json": "30e45126fd8fa12d396e835d9f9d953dc3c7e2094a85383ec63902fa555422dc",
+    "T04-final-technical-exit.json": "9eaf5cc9a6f56c0d0c33dff437fe8f02708520990d76dbd96ea360b83f4903b3",
+    "final-defect-reconciliation-T04.json": "892e9b6b1428da77702d7c2401eb79f4875b583e513cab6a617fef9bea9e6c16",
+    "guard-equivalence-adjudication-T04.json": "ff87b617f99d82ed55178df66ce6127a9a8b516567f690fd5d912a9d4b939630",
+    "implementation-commit-binding-T04.json": "505b8fb25fa0fb10f2e36e3e2576701385470c07e5b73632f7b181b082c9e9dd",
+    "T00-integration-acceptance.json": "595138cef317dcce63aa98a68fe3c7cc5adf9635cd73dc181ad66931e660ca79"
+  },
+  "remaining": "T00 durable documentation copy/link/schema review and docs-only commit; no source edit or product test rerun by T04"
+}

@@ -1,0 +1,335 @@
+{
+  "state": "reviewed",
+  "tree": "907687818954065d356964df2007eb108ddebef1",
+  "reviewer": "T04",
+  "register": {
+    "path": ".scratch/exception-unification/execution/control/defects.json",
+    "sha256": "71a26785c2d5c92384453ce16f6f9b430ee3c73e91bc91c6ab79754e079396c2"
+  },
+  "defects": [
+    {
+      "id": "DEF-EX-0001",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[6]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0002",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[1]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[2]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[3]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[4]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[5]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[6]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[7]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[8]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[9]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[10]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[11]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[12]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[13]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[14]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[15]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[16]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[17]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[18]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[19]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[20]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[21]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[22]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[23]",
+        "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[24]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0003",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.identity.ConfiguredBootstrapMembershipTest.xml#testcase[1]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "core886 and all958 passed; bounded1GiB/onefork/forkEvery40/contextCache4/gradleMaxWorkers2; no skipped failures or OOM"
+    },
+    {
+      "id": "DEF-EX-0004",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-mvc/TEST-com.abluepoint.summer.mvc.validate.FieldValidationExceptionTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[7]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[8]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[9]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0005",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[7]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[8]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[9]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[10]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0006",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[2]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0007",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[7]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[8]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[9]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[10]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0008",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[2]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0009",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[7]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[8]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[9]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[10]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0010",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskErrorStatusHttpTest.xml#testcase[1]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0011",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[5]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0012",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.plugin.PluginFailureHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseFailureHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseFailureHttpTest.xml#testcase[2]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0013",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.agent.AgentControllerTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.application.ApplicationControllerTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest.xml#testcase[7]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest.xml#testcase[8]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.connection.ConnectionServiceControllerTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.physicalconnection.PhysicalConnectionControllerTest.xml#testcase[1]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0014",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [],
+      "additional_evidence": [
+        {
+          "path": ".scratch/exception-unification/execution/16/independent-resolution-review.md",
+          "sha256": "5a4e4e3ab243e35ffd86c264a23e068eabd482ef447da595d7b5d0bc3c65706d"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/final-freeze-record.json",
+          "sha256": "b2ae7358ad5df5b87d7868eb3d27d82fa03194f5e73b4c631c8b38cdcb11a3bc"
+        }
+      ],
+      "original_record_preserved": true,
+      "reason": "fatal merge statuses negative model plus independent review remain direct fix evidence; final actual candidate admitted from approved resolution"
+    },
+    {
+      "id": "DEF-EX-0015",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[2]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[3]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[4]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[5]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[6]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[7]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[8]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[9]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[10]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    },
+    {
+      "id": "DEF-EX-0016",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [],
+      "additional_evidence": [
+        {
+          "path": ".scratch/exception-unification/execution/16/artifact-schema-failure-check-b01",
+          "kind": "preserved_negative_fixture_directory"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/independent-artifact-tools-review-T03.md",
+          "sha256": "6fde545a014396fd5469e8b9b60d5df59484d01587dd93caeeb86896b576d969"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/final-startup-b02/result.json",
+          "sha256": "7d4cb8bba1d4e48b16120c32703ee5ce2578645028516cb583f868bb13f1351d"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/m2-rollback-startup-b03/result.json",
+          "sha256": "2d6bdcef848cb920c11d478cc6cfbd113bfd8d0b206fb88c958772e6fc3ade63"
+        }
+      ],
+      "original_record_preserved": true,
+      "reason": "negative ownership/error JDBC fixtures plus actual final and whole rollback own UUID schemas removed"
+    },
+    {
+      "id": "DEF-EX-0017",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [],
+      "additional_evidence": [
+        {
+          "path": ".scratch/exception-unification/execution/16/independent-artifact-tools-review-T03.md",
+          "sha256": "6fde545a014396fd5469e8b9b60d5df59484d01587dd93caeeb86896b576d969"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/independent-build-layout-review-T03.md",
+          "sha256": "64ccde704f37aaffd0a6061bc043d285341dcea1b5689a940e3fba3d7e81103d"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/manifest.json",
+          "sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56"
+        },
+        {
+          "path": ".scratch/exception-unification/execution/16/final-artifacts-verified-b02.json",
+          "sha256": "57a48bf286f8c36cf4f73a71135b29fd060ec616c930733ca09acf82ac996ef4"
+        }
+      ],
+      "original_record_preserved": true,
+      "reason": "independent negative metadata models plus actual fresh29 JAR archive accepted matching sealed before/after attestation"
+    },
+    {
+      "id": "DEF-EX-0018",
+      "decision": "independently_verified_closed",
+      "passed_execution_ids": [
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.ModulithArchitectureTest.xml#testcase[1]",
+        "core/summer-sample/TEST-com.abluepoint.summer.sample.ModulithArchitectureTest.xml#testcase[2]"
+      ],
+      "additional_evidence": [],
+      "original_record_preserved": true,
+      "reason": "actual final matching methods and original issue/fix record reviewed"
+    }
+  ],
+  "open_confirmed_blockers": 0,
+  "limitations": "tool defects14/16/17 use retained negative fixtures and independent tool review, not invented product testcases; original failures and fixture corrections remain in register"
+}

@@ -1,0 +1,1254 @@
+{
+  "schema_version": 1,
+  "status": "final source Standards and completed dynamic evidence binding; not final Spec/coverage or release signoff",
+  "tree": "907687818954065d356964df2007eb108ddebef1",
+  "reviewer_scope": {
+    "independent": [
+      "02-04",
+      "06-07",
+      "09-13",
+      "15 deletion",
+      "16 native fixtures and evidence binding"
+    ],
+    "author_excluded": [
+      "05",
+      "08",
+      "14"
+    ],
+    "author_ranges_use_non_author_reviews": true
+  },
+  "pre_update_report": {
+    "path": ".scratch/exception-unification/execution/16/final-standards-review.pre-final-dynamic-evidence-9076878.md",
+    "sha256": "4c56c81a620583cf3273f97096657d1187c539985fe58bf6c56ccca638e69be6",
+    "bytes": 15961
+  },
+  "source_evidence_record": {
+    "path": ".scratch/exception-unification/execution/16/final-evidence-record.json",
+    "sha256": "0a1e899c6cfcc232d0ed676d459c7525726a9508b878348655b01a6d4c5f5179",
+    "bytes": 32898
+  },
+  "execution_union": {
+    "path": ".scratch/exception-unification/execution/16/final-execution-union.json",
+    "sha256": "cf11885bcefc6e4deefcd09e9888849db89bd3436e2b58dc183e6b445dfa1667",
+    "bytes": 7120
+  },
+  "execution_cases": {
+    "path": ".scratch/exception-unification/execution/16/final-execution-cases.json",
+    "sha256": "bb188cecf67e7e2d5802133d85ea85c0010a636177d77153bae36f87a291e2da",
+    "bytes": 636299
+  },
+  "verified_record_file_references": 36,
+  "referenced_file_sha_mismatches": [],
+  "profiles": [
+    {
+      "profile": "core",
+      "summary": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-summary.json",
+        "sha256": "12aec38822b98bb2bbb4b9a56eff05d6e2585f0fed8f58258410dd7f18d68a1a",
+        "bytes": 470
+      },
+      "seal": {
+        "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084452Z-4e4e3f6f/seal.json",
+        "sha256": "1b063b88495c4e85fecb9528948999e4dec3c491a618cf7b97b91bb0b6e55ed9",
+        "bytes": 637
+      },
+      "manifest_sha256": "722e978dde5a45c3f9386bd1a6452ce229c6dc3c403c5ad47138b53583f86935",
+      "before": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-inputs-before.json",
+        "sha256": "0636ec04112e25131770149d6f9b02e4410e567f4ecf78bd6afcff1677817a60",
+        "bytes": 400412
+      },
+      "after": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-inputs-after.json",
+        "sha256": "7174d15ecc174a97e40264ffe216d1e6a848f78b0c6d30175ff2beebe40c766d",
+        "bytes": 136963
+      },
+      "counts": {
+        "tests": 886,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": 208,
+      "elapsed_seconds": 1035.951,
+      "sealed_input_attestations": true
+    },
+    {
+      "profile": "redis",
+      "summary": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-summary.json",
+        "sha256": "f4436d735c8ce264e2623842ac2c5aa62134488695652c79aad85e30361f6ede",
+        "bytes": 467
+      },
+      "seal": {
+        "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084519Z-fa740fb3/seal.json",
+        "sha256": "484513538a028175c49685ee23debb21b9ef72e93e631b9dfde7020db1bf7e77",
+        "bytes": 637
+      },
+      "manifest_sha256": "3b1ea5f168104b770c3acb11806e27a7560405aae824d8ca082960e3f391180e",
+      "before": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-inputs-before.json",
+        "sha256": "76e041130a2cc4e953f311573014a97fa1ffdf1e4323e17cc9d7b201d674803e",
+        "bytes": 400412
+      },
+      "after": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-inputs-after.json",
+        "sha256": "40f3f5e55dceead235dde042f7f29d605c3b29ef830b7008fdead40453414381",
+        "bytes": 136963
+      },
+      "counts": {
+        "tests": 48,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": 4,
+      "elapsed_seconds": 66.545,
+      "sealed_input_attestations": true
+    },
+    {
+      "profile": "mysql",
+      "summary": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-summary.json",
+        "sha256": "20579fe8da87ebc8bb1e6d1ab92560cd912d98ec4ed81c699a7717c9cdc56915",
+        "bytes": 467
+      },
+      "seal": {
+        "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/seal.json",
+        "sha256": "f2a2f5a8ffce96ebf1ce0aa307bbbda5167c1a1a3bd4a03dc7064709bfa363e4",
+        "bytes": 637
+      },
+      "manifest_sha256": "b14345d44884acea83f3cf51fd9d50512f34a4b3635ff032c2c272c858997220",
+      "before": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-inputs-before.json",
+        "sha256": "2fec64ca48c7de8d418d0fbb629f39231710742a96dbcb04bc22a93dd1513ec9",
+        "bytes": 400412
+      },
+      "after": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-inputs-after.json",
+        "sha256": "34e9f19be52dadf6ce53522b479a045f3219c24b23d6a395b5d8a53119588871",
+        "bytes": 136963
+      },
+      "counts": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": 7,
+      "elapsed_seconds": 106.047,
+      "sealed_input_attestations": true
+    }
+  ],
+  "xml_inputs": [
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-common-autoconfigure/TEST-com.abluepoint.summer.common.autoconfigure.SummerCommonAutoConfigurationTest.xml",
+      "sha256": "0c0f1772a245b238f39929dba41b22f1781c395218dab3186dacc3e265eb6182"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-common/TEST-com.abluepoint.summer.common.error.CommonErrorCodeTest.xml",
+      "sha256": "2c530e978ec6fb4ecb5d2140a75290115c3979e4d08d40d9bc7a74f5f2344900"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-common/TEST-com.abluepoint.summer.common.error.SummerExceptionTest.xml",
+      "sha256": "1939ed0b9b5fed49414ce36fabe4f810784ddf0ae01c2bf00904bc346d13231e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-data-jpa-autoconfigure/TEST-com.abluepoint.summer.data.jpa.autoconfigure.SummerDataJpaAutoConfigurationTest.xml",
+      "sha256": "c812753d48d630ace0fc6de5e8e74b9aaff6ac2bb48d491049a11af970eab323"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-data-jpa/TEST-com.abluepoint.summer.data.jpa.template.ClasspathSqlTemplateSourceTest.xml",
+      "sha256": "7e5256a6c28c96d7e51c8269070e5b0471097e00f442c0990be9bfdcf3b2c3c7"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-data-jpa/TEST-com.abluepoint.summer.data.jpa.template.FreemarkerSqlRendererTest.xml",
+      "sha256": "2d09fbe155fcabbfdbee9e5ee6a90a4021c550b2b1acd39e91d4c7fc56591076"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-data-jpa/TEST-com.abluepoint.summer.data.jpa.template.SqlResultProjectionAdapterTest.xml",
+      "sha256": "bdd8cee651721afd68de03cf76e5751f1bed658ea79a76d7f5a422bb77768d3f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc-autoconfigure/TEST-com.abluepoint.summer.mvc.autoconfigure.SummerMvcAutoConfigurationTest.xml",
+      "sha256": "8a4ab258cafee85a8cdaeb118b17b539f15b43b8072305135cb234463fd1cd70"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.annotation.FieldAnnotationContractTest.xml",
+      "sha256": "904a7d4ea49fd20305d397df5e51498418804488dc30423d7d923d5329948a4e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.error.DefaultErrorStatusResolverTest.xml",
+      "sha256": "47d2674d606612027c11c478075ad83df6956a2c6c22264de7e0c001e7429571"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.filter.CachedBodyFilterTest.xml",
+      "sha256": "ae7a6991316cd0bb04aa922665dcdfcf3928030aa93ee7b87e35280b7551641d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.filter.CachedBodyHttpServletRequestTest.xml",
+      "sha256": "356af05cd8ddfbc796338e7f142302aeaa24b8c075d49c957c090a639840ea75"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.filter.RequestCorrelationFilterTest.xml",
+      "sha256": "a86e4a2eeaf05162562a479a91b04a9263ca1ffb94f42c109fbedc9f57a007d0"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.filter.RequestLoggingFilterTest.xml",
+      "sha256": "47cab5cbcd34ea80144f3ea503ea28693da6e36262e52edbcca3c1edfffa2876"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.interceptor.FieldValidationInterceptorTest.xml",
+      "sha256": "c7626d4f0850e8fca98c17f806cdb48f3904c3751f322dcb449f0f4ead3d0e2a"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.interceptor.FieldValidationMvcTest.xml",
+      "sha256": "0d9b591aa623c88d52c24c198c7c0c532bb6d9a1285e7facb8854488abfeac03"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.support.ApiExceptionHandlerTest.xml",
+      "sha256": "4f770fb28c6c4d70faa729a61aa1ce8e229b8fe716ba38e79fa55d2a4d3d1667"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.support.SummerResponseBodyAdviceTest.xml",
+      "sha256": "345e5ef48c4676a3b133b0979b27a3639100c609208f584c1a94e508909d5eca"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.validate.FieldValidationExceptionTest.xml",
+      "sha256": "d30ed56d0c83b8831c61076ec04b5277066bf574a0881d3c3895dac7a9da834e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-mvc/TEST-com.abluepoint.summer.mvc.validate.StylesTest.xml",
+      "sha256": "2a6a41e6373d5538c32481c5d03f07b1ec569200f88ab59017c439c766f56d14"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.ModulithArchitectureTest.xml",
+      "sha256": "56a53410e34b74df068f7b2cc7a9c7b8a0dc09f7ad892161c0f9428eaec97048"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.PostgresContainerIntegrationTest.xml",
+      "sha256": "74687e538ea5c0820d51a39687ebc8d4ca473356b39b29206d075365a1327b44"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.PublicClientPkceIntegrationTest.xml",
+      "sha256": "f3e9b0abf70bf8ac2af14453241280f18d56750fbe55687be4e510aeb869852a"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.SecureSessionCookieIntegrationTest.xml",
+      "sha256": "bef7777ae29aba4d6b418faae73e9ade0f322aab7d7c454675db32c33589acbb"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.SessionCookieIntegrationTest.xml",
+      "sha256": "417e6cbb3f64090f470592319e34191aa0a3ce11144c4584a6e2c12afe450c34"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.agent.AgentControllerTest.xml",
+      "sha256": "cb0fb9a1544f84f4a74a24364b7ab93a5638083094b6e6f94d1cc0bbb5799ec9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.application.ApplicationControllerTest.xml",
+      "sha256": "05721fc290f1c2e8fab06dfbffd27207f105e586cbb3f457f72d1577343885fe"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.application.ApplicationErrorOverrideHttpTest.xml",
+      "sha256": "3cdd5e887fca968222f56dc4398a5a16b82d3c87437f0b6fdef6cbec42e1b06d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.architecture.CompiledExceptionPolicyTest.xml",
+      "sha256": "205ba051e15fa6413c974d0c66e460cba72383e995426477f065ce3d5471c382"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.architecture.ExceptionArchitectureTest.xml",
+      "sha256": "26cc2ae9c235a1e115fc4a25ad2068c4faf260f898eae72af8b6c6a0c10be4e3"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest.xml",
+      "sha256": "99a8d23a2e664132d90ded00bec6bd40a06fd54a2f082e5ec034fdac87a69a45"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerErrorOverrideHttpTest.xml",
+      "sha256": "32c7229563f7509463e6d651fe421fc288a837b33f16a7bd0295c041a902fc32"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerPersistenceContractTest.xml",
+      "sha256": "4f846c524d6542864a2b8eb3ce0972c0d6f43bd80a462c4279a626d98c9bc6a8"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationAssignmentHttpTest.xml",
+      "sha256": "98ede99d2169ebb042422d674f4cbe5b36ccf9cc80865b6114d05570ae03a039"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationAuditPersistenceTest.xml",
+      "sha256": "c0bbc5486d999b1db4ec32bb726bca3d9545ac34bef54b0208e640d7fec4d46c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationCapabilityUpgradeTest.xml",
+      "sha256": "86e4da2c20be4a37b10b7114f97d59c26aa92edc6b11359ea2e9a78b4ef60d86"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationChangeEventHttpTest.xml",
+      "sha256": "b21017299f0c52980f8a1a4c453596577184b1139cc05466e69efe93e21b0204"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationChangeEventStreamRecoveryIntegrationTest.xml",
+      "sha256": "4b1c878bfe77da5005143209d96809e801a2589a692f54b6e5fbebf5a2f1579f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationChangeEventTerminalTest.xml",
+      "sha256": "0a44c8cb7fa25c5b01f6fcbc6ebf4c1b5b2a67a8e47035f211859f0bdabf39d0"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationControllerTest.xml",
+      "sha256": "f227cb24247eaa9d96e00349bdf444cd6073d2fe30fb71e2fed11b159a47ac3e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest.xml",
+      "sha256": "7b65c89144ee39be217ac18adcc41a4e644703e60a55b7893d9ff66893c985ef"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationDefaultDenyTest.xml",
+      "sha256": "1761d2a9dec577c655430fb2f2e066eeb78737ea921122e424e8d43f1b70172a"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationEventTenantAuthorizationHttpTest.xml",
+      "sha256": "8cca332ad09790ea7f5c4d867b14a6c8c5cc672238ed78482ce4011ac0d0319b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationRequestInterceptorTest.xml",
+      "sha256": "0135c206cf8286dba04204e6f4bd7f3fb72fdfcb50e11cc65de2934e3511db04"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationVersionConcurrencyTest.xml",
+      "sha256": "1bce7c843318a5ff1c7ebee6c1f369024a6a86ba224ed5824a4b02d1db8fa5f3"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizedConfigurationHttpTest.xml",
+      "sha256": "52d1b4ff356c06d6cc856df7de2d56379f053b3205a676cbda470877edd94d74"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.DataScopeCompositionHttpTest.xml",
+      "sha256": "19a82e3b084024fea08a6ee6c0354832820c8f4d607601d6543812abb1cc0e35"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.DataScopeEffectivePolicyTest.xml",
+      "sha256": "0c57ae6f8508d3e18dc796da8f20d5745fd8015a3c39decd688f1de23697b7b4"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.DataScopeEnforcementHttpTest.xml",
+      "sha256": "a2a19f9ba43ec0bef265454c1c8a6e13e241f0cee800579a3c7bc9628e84cf6c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.DataScopeHttpTest.xml",
+      "sha256": "d05cd33a63aec1b284f0baa44873ed547ebc617e3b4424b132e253ee62e647da"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.InterfaceResourceAuthorizationHttpTest.xml",
+      "sha256": "2e60e6469ec421e440024dfbeec0fef4dea3fbdc97bd13184a4a60333f6712aa"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.InterfaceResourceExtensionAuthorizationHttpTest.xml",
+      "sha256": "70e3cbe1295be0fa08d388d8ac22b44449abd62e8ce1790cc240a53d825b3536"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.LocalConsoleAuthorizationPersistenceTest.xml",
+      "sha256": "01c8085877b25f057eb381d5cb087406c9fa2aa03669353f00649bad674444d2"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.MultiTenantConfigurationFallbackHttpTest.xml",
+      "sha256": "f3cec35334d138f71d20ce67fde6381c6bb5addcad744906a4e12a6e0a862f2b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.MultiTenantConfigurationHttpTest.xml",
+      "sha256": "9ff6a6c48c200392960defc6165552046bb2789a2e8ee44c1b4a3e4454895591"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml",
+      "sha256": "2cf14651a6f723d0249bb2a338e0a6f569005cae67a45e8ed0d3932a65bb2162"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.OAuthPersistenceHttpTest.xml",
+      "sha256": "dc68545845ce991b2a03cd99a886cabee0034ea78fce5161c0070a488346e986"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.PersistedMembershipAuthorizationHttpTest.xml",
+      "sha256": "faa21ecb8de2087c01f209ac41f07bbcc7f1886b1ef27d61ab250ce6e2b8d93b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.policy.PolicyControllerTest.xml",
+      "sha256": "bb694902ee86c37fd5e5d05b72932a9484ded636944ca76e7e8f70771364c624"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.bff.BffFailureHttpTest.xml",
+      "sha256": "998c5762973864ca9937dc639b2543bebef3fb9891a9bdb8aebc76f578e4ea9e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.bff.BffMcpControllerTest.xml",
+      "sha256": "bf1b62c30cc5ca13aca9dcf5f619f7820ab61eb864c1d4f0a1cf56537aadd6aa"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.bff.BffSessionControllerTest.xml",
+      "sha256": "27be03df9df1973f36a4a498b1e1798c17b96e47d5583103f7d5e1fa50294f11"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.bff.SameOriginBffSummerContractTest.xml",
+      "sha256": "077284bc14c0c8eca99233b96a3a6733567e2954880ed0f7805ba02dee9ca8b8"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml",
+      "sha256": "29e2c88c4b055a545efc47e8cd7c6f8795d5a8ab246ef1e18dc6f6eea5febf25"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml",
+      "sha256": "85402b79d3873674858e19e4ee15b779fa66b5668d483fdfb05e0cccd1d1086b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.cache.CacheObservationTest.xml",
+      "sha256": "dbec5e88773ba53dde84dfc7d9584a263c24ba1c124762dcc0091fbbbeed6d3f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.cache.VersionedTwoLevelCacheRedisIntegrationTest.xml",
+      "sha256": "8d4b3c031cc4410da7970ef6c6bbcfed81f917df8834586ac2db4594f9782cf2"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.cache.VersionedTwoLevelCacheTest.xml",
+      "sha256": "e412bfc5e956a6d29129279cde898474839180e8857ca304970f07f75b3446ac"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.connection.ConnectionServiceControllerTest.xml",
+      "sha256": "f6a306f7a6cbb27e68ccc1b33536e07dd5a2bcc2d0f6eaaaea5653b34c6bfc2e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.connection.ConnectionServicePortTest.xml",
+      "sha256": "284fcac63a7309b842ff004080bb088eb1a93ec169294cdb14dc49f9ce42eb54"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerArchitectureTest.xml",
+      "sha256": "9e7fd5c8bccc8657baae5f58a2384dcab3da4442f526fd6f6d763aec7d89d55d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerAuditLedgerHttpTest.xml",
+      "sha256": "939c01f79b9137b8755c7f16f9c03c7daec81454bedb47cfc7cfd62626d83931"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerAuditMySqlIntegrationTest.xml",
+      "sha256": "2f3b99ae81dde9019b2d87a52a25d597e52ce264fbbffd4a842a9fb38d7d09c3"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerListHttpTest.xml",
+      "sha256": "98774e17c387b0ccbe6fc3babfe1082c08bebb63af23eeb98d73f8966f523e97"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerMySqlFlywayIntegrationTest.xml",
+      "sha256": "d6af1a6f3a39b769f931e726de0e6a63ecd35d5e42b8fcbbf27fb8f5c3f1ec04"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerPersistenceTest.xml",
+      "sha256": "3b828b42e3e5250cbfac9cd5ae9f974449cfebea9cf5aa28968e3ea703ebfa9c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.CustomerUniqueConflictTest.xml",
+      "sha256": "6968881f87e85551876e09fd36feba90cf400eb7ba1c6eac1c165ca9e768118d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitHttpTest.xml",
+      "sha256": "8e8dc860f07980567de0e75340786b24ead0ef8b9ed26cbb7f58a64e2c868b06"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml",
+      "sha256": "5a6e826710005a88e3404df644b9476469786176b5377d9be7d41a73c13f8228"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml",
+      "sha256": "7436d6eaf8b8ed6e90f9312c4f4ae6eae974a5af0a6cc8da38106f83b572683d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.delegation.DelegationControllerTest.xml",
+      "sha256": "df0a66451cc18bdb21f843020d90db0c2f765bbef77b44511a4868d4eca90ad1"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.delegation.DelegationErrorContractHttpTest.xml",
+      "sha256": "b92274e9b960b4e8a1bdd8dc0c17249f7826bea59d03d5d3c12554938786a09b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.delegation.DelegationErrorPolicyHttpTest.xml",
+      "sha256": "7cbd58ecc21b8431695f6ed777f0426db53fec2c5f674886551c9672a7ecb67e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionaryHttpTest.xml",
+      "sha256": "26ba46343bda7201dfe3c70acdff768031c4394b796fa8b652035221235088df"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionaryMySqlIntegrationTest.xml",
+      "sha256": "1495b55fcdc38f157b05c7f19226b8b382733fc1679d1ae6e85c9d945b9ea1e5"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionaryNotificationFailureHttpTest.xml",
+      "sha256": "60fc2481b4ccdd06b7d88afe9289fb1493ccfc95325a4a85e7d4adcf1b6b6349"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionaryNotificationSseHttpTest.xml",
+      "sha256": "fb25757ed886d240972d462453424021048ca24f27925a34e0f7529f53ef80b2"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionaryNotificationTcpIntegrationTest.xml",
+      "sha256": "5ddb75de8aaf5a74ce9cdb29527943cefa00c9a25664d59ba37878bd8a730646"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionarySelectedItemHttpTest.xml",
+      "sha256": "1a1dd04a9045f97192be5daa4414432f8cd149fd15ffb544d445e7693c913655"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.dictionary.DictionaryVersionHttpTest.xml",
+      "sha256": "551b891c212cd1c090c7545e62a472561d315300b19de8cd4b0f74129d283a0e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.enterprise.DirectoryFailureHttpTest.xml",
+      "sha256": "04e373251c5c81893f70a891d3e38396ca663c6ed21da5e902964e6ac6392fc1"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.enterprise.DirectoryFailureOverrideHttpTest.xml",
+      "sha256": "faa47b104828eec77dd9d8ed7511372d85ce17712f9f70fb2c28764bb97c1b0f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.enterprise.EnterpriseReviewControllerTest.xml",
+      "sha256": "ff7edfa139bf1939b2ef124f341d8fc773113236f9a511bc7738ef2631bcf3a2"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.enterprise.PlatformEnterpriseDirectoryControllerTest.xml",
+      "sha256": "fdfe6b2428da9182bf5f9773902674a1c245acdecc0a30bb71c377ca6d8ddf02"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.AuthUserDuplicateHttpTest.xml",
+      "sha256": "1305f1e0905d773b2a82fc281f9ad73fcf4e21f876f84cdb80f7e9e3efb35e5e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.AuthUserServiceTest.xml",
+      "sha256": "efb856e866f8c3523b005a230a2a8d455fd45cb7beea0658d65744ab5f53c6ab"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.AuthorizationBootstrapHttpTest.xml",
+      "sha256": "1e10821283c11af05bd560a3f8f24dab2a44236a6f57b72833eb166c9962fe56"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.CapabilityControllerTest.xml",
+      "sha256": "bd5e4a260516177f9e346e76c7c0f0e9d97ff4b23d538dd70eb8b713b7bcbd84"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.ConfiguredBootstrapMembershipTest.xml",
+      "sha256": "7453cab9ac5385405592f576ed107571d9ff3a4d1c0f10dfe9fde199f545bb44"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.EnterpriseOnboardingHttpTest.xml",
+      "sha256": "55615cde55c63a50264495123877cc58d35707334d6b5332986b131b64c39545"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.H2ContextIsolationTest.xml",
+      "sha256": "a7df8939c847c6a052440ec5841cb6531740274ec2525a5b5174bd2e2b50babc"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.IdentityChainE2EContractTest.xml",
+      "sha256": "0ab16c9e57766be3ad043af955ef545e241580f1a7d223518a08ee2de185a309"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.IdentityErrorStatusOverrideHttpTest.xml",
+      "sha256": "96ad685a0e75f6d71f542c346d2b8e9d01f3fb88f61e4e804324c1c141f692e9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.LocalConsoleIdentityClaimsTest.xml",
+      "sha256": "fbabe54ad47ae4aa2fbc4eeef930b1579dd2cc298a17d1a97723259274f8808f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.LocalConsoleTokenContextTest.xml",
+      "sha256": "284265a135cd5f2dcf1a80cad34fa8e7a73a9ee3ceebcba047f38e520cf27521"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.MemberProvisioningHttpTest.xml",
+      "sha256": "54bdb26923732ddf1656539e2f7cbd722c40fb0b075e5157d597a926d36e4dac"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.RedisSummerSessionStoreTest.xml",
+      "sha256": "5e0e0d314cd8965eac729666358146b67eb71c0913cdf9169f41eeb481f87b25"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionCircuitRecoveryHttpTest.xml",
+      "sha256": "cbcd72fc1182f287af34da2fc3928c666cb1a989b88579eb91f946d824b748d8"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionControllerTest.xml",
+      "sha256": "38f00f3de4b3baf4d2dc380435eac8bae71ca502ba5dc09a1cd34ea32bb75ed2"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionErrorContractHttpTest.xml",
+      "sha256": "52cbfda930664b817fd745d4d8ed74f6b09a119536daccd4b11eb4c766858f48"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionErrorPolicyHttpTest.xml",
+      "sha256": "1b08c2304c807ff9c2d2e28d164c8280890fd23e853ac84f3b45e6125c3cea3c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionFailureConfigurationTest.xml",
+      "sha256": "e828acbbe9fc6d32d5e118875d1761c4cefe99d64ee24f240bac3a2193d4a4a4"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SessionStreamAccessTest.xml",
+      "sha256": "fda43dc1664675949600583feee7e78467109abe9487de6ccd1f40d8fc79a3a8"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SharedSessionRedisFailureHttpTest.xml",
+      "sha256": "83839e82976dcec136571ac8f97a9cb28e9e0f00d0cbc6f06aa0ad43635ce722"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.invitation.InvitationControllerTest.xml",
+      "sha256": "75d8e8b3e8725159aae6dc03931462e4149dbeedac00875aa749b7db00774584"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.invitation.InvitationFailureHttpTest.xml",
+      "sha256": "1dbcf10e28fd6962262a335e059c1f3e8a739926e58010d69fedb087f8a63793"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.AutomaticKeyRotationHttpTest.xml",
+      "sha256": "ac2990531d3d7a9787154aedbe3df9950e16faadaa3dd81be94beeccc251c188"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.AutomaticKeyRotationServiceTest.xml",
+      "sha256": "09031ce0cad36f5e63966e33c5e1e9dcfed257b4806558597d72391fd8a44578"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.AutomaticKeyRotationTransactionTest.xml",
+      "sha256": "7465b97e9d4313317f85ad4383a0d1bf4f1ffba9b8b68c6e0f8983480c6f7739"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.KeyCapabilityHttpTest.xml",
+      "sha256": "58139fd1fcc9a5acd0d75dca450b283fb7d6d5d4221b76ca95193b4041baeef9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.KeyFailureAuditTest.xml",
+      "sha256": "da6599788f4557e55cc8732cc510d68e722a8d9a349cec4d0bf04d25987ff01f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.KeyRotationErrorOverrideHttpTest.xml",
+      "sha256": "76896563f26f5952da05d35c785478bc41cc9e65d6db0ef4fd6c65cfe31ab900"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.KeyRotationFailureHttpTest.xml",
+      "sha256": "13854af14347e9a9825bfd0e4e0006dd60c7f751c485643631a23e9682e0b1b4"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.ManualKeyRotationTransactionTest.xml",
+      "sha256": "cb3b1b2adb6127c66dd8806ff3f56550c0dd57bbd01469bf499927f0d38e31f1"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.MysqlKeyFailureAuditTest.xml",
+      "sha256": "191f4c299ad5e25226dc08cd07de5a5ba7574d63a37acb0bb153b961e0a79faf"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.key.ReferenceKeyConfigurationTest.xml",
+      "sha256": "06498c1925f35cd535287b4b33f8c81626343fdd153abc3354a33166e1455118"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.mcpauthorization.McpAuthorizationControllerTest.xml",
+      "sha256": "8665d355f207dd7f3f09054ea153db38f0c1402d34d337d54aa32d82e1e27122"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.member.MemberControllerTest.xml",
+      "sha256": "c27709b9b73cdbcfaf0a45c07a71799f6d3cd4e5ad6d273b0235f08f30fa4478"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.menu.MenuManifestConcurrencyTest.xml",
+      "sha256": "ec85b27108355533e40dae51ad781b171889717856958929acd05a4353a33367"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.menu.MenuManifestHttpTest.xml",
+      "sha256": "5a1e278c4bab89946f7088f98a4af8414574b431c6fa30e5954a6567a5ea6e16"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.observability.MonitoringTagBoundaryTest.xml",
+      "sha256": "133ce5596dfbc3987eb908ffb3fefd73105ebb1b3bddfef0dab41e8a8b297ac9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.MonitoringRevocationHttpTest.xml",
+      "sha256": "e70f57ca4afa14b11aad8afd4b4d986744de1540e60c8544235cade71d34e9a6"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.RedisDiagnosticServiceTest.xml",
+      "sha256": "cf47a8dde5143530084afdf5fdbe32ac5bfcae94ae90c241b4b99598fdae91ee"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.RedisDiagnosticsControllerTest.xml",
+      "sha256": "69bf348ce8cb0a3703136d656beab08f67724eff6900e0e54ef6032196fedbe4"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.ResilienceDiagnosticsHttpTest.xml",
+      "sha256": "6ab914c2729b1abd3366c5f52d65558b6760e29ef912ac3886039de3abc0e5b6"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.ResilienceRevocationHttpTest.xml",
+      "sha256": "60ec0fa3d05a6cd6f794515ebe998ef080168dfacbffe1c309265f1d415d0dc2"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.RuntimeDiagnosticsControllerTest.xml",
+      "sha256": "d84680a87786b5c7bb24ce022020194c41f4385588250d444d72f147d12bd47d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.RuntimeMetricSummaryTest.xml",
+      "sha256": "67dc3d4c158bb8d2774f879d16cf298ff22fcd928e3b3dfbd3861f21e4f60ba7"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.RuntimeMigrationDiagnosticsHttpTest.xml",
+      "sha256": "cd442a3265121e5d1d238852c9da40cf69a36759374d9af841d1cfc5ccab9d8d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.operations.RuntimeObservabilityHttpTest.xml",
+      "sha256": "b462fa268bc4a10b0ec167a81788aa935b290b438ba417fee17bba974dcb72b1"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.EnterpriseDirectoryHttpTest.xml",
+      "sha256": "8bc293e5c7dde93727b3c011d8f1461c5aaafd6ec52e74d77c279c64543ce02f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.OrganizationContextHttpTest.xml",
+      "sha256": "82978aa54faa771d56968e3adb5d45324c5210981db2c7cd3dcc5cb729878b1b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.OrganizationControllerTest.xml",
+      "sha256": "844277d1fc4330c4da31e35d91874c5be3f157c18fd5d1c0b12ee23075649bc9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.OrganizationErrorContractHttpTest.xml",
+      "sha256": "4fb37879216ba49487f2e82a9b64046a97aac9c412ed6fded257c7f5d7e10e04"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.OrganizationErrorPolicyHttpTest.xml",
+      "sha256": "a426cf71eaf85a1a909f98091d1a0b728bee551db2518b6e7d76445ab8757767"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.OrganizationReadBoundaryHttpTest.xml",
+      "sha256": "c2a3a1548ae1827eca55e708f8b1d8d424b6b6a0a127ef3ec0faaaffd7376d0c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.physicalconnection.PhysicalConnectionControllerTest.xml",
+      "sha256": "e0dc0b013eaecb266fd5eacbd273d5a813e2487df21a2b9a22a9620fd57b5923"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.plugin.PluginConfigurationHttpTest.xml",
+      "sha256": "a963e012196c511ada595bd2f9f5ddf1f8774ade503cc386fd7fc8b66feae368"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.plugin.PluginFailureHttpTest.xml",
+      "sha256": "7680d9d1725453a016b493b52f3d104f252530e4cfe726afea8d1361ca34ed2e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.plugin.PluginLifecycleHttpTest.xml",
+      "sha256": "7a3b046453609fd41e7db23d48969401295e7f20ae3fd9b73eacb2f81c5a8695"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeAccessTest.xml",
+      "sha256": "d734a68172110f932452adacc19df6203679d32ec5893e5b43fd2f81e5bc03ae"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeConnectionLimitTest.xml",
+      "sha256": "84a73be826b499d2c0302d3117c634e5ddece2e4bd85fe6aec83ba9ef6ca36df"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeConnectionObservationTest.xml",
+      "sha256": "1f197cd730cf685a88ada3dbbb5e1346ffcde8ffc82f4f0fb46b586214ec3672"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeConnectionTimeoutTest.xml",
+      "sha256": "aa468ba07d54e3994cf8c840be96c888955645f8e029724a1dec425d2a09b806"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeDeliveryOrderTest.xml",
+      "sha256": "672d4e8308a40a4ac2ff6ae1cbb20e365d4a978b3b7eb73cfed84375f2551e58"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeMessageHttpTest.xml",
+      "sha256": "a03ccb093cd83983c9707aa057cf679750c22391741cc6bf0d57204e19f8424b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeWebSocketRevocationTest.xml",
+      "sha256": "a7ad425bab82c332fabf3f7e2fc821e9cabd2098f8795daf9ac2d10e3266152a"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.realtime.RealtimeWebSocketTcpIntegrationTest.xml",
+      "sha256": "3c970076d1784f7c8aa43a6ab516d5a1525b06dce33500bd7348e711b9052e75"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseErrorStatusHttpTest.xml",
+      "sha256": "902da3013aea287391bd1bef9ec49a0f5a855e2fa405e9e6d35d6c63d97987b9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseFailureHttpTest.xml",
+      "sha256": "cba27cd55e2eb796899abc06a235bca1377c656f092b74ef5359355de47872e4"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseGateControllerTest.xml",
+      "sha256": "afb5cc2f77e54985935f3e92fe45253ecc5e6d6ad79d3b42b6bf55ced753ea9b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleasePermissionRevocationHttpTest.xml",
+      "sha256": "66c177c867c05b1e9ac94267350072d5adcdc52c44ff150e769ec927094a4b17"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleasePlatformScopeHttpTest.xml",
+      "sha256": "02f0a9edad86547f592c8c1dad413bd52cc7986bce81b834cba17f05aa6a0f33"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.release.T36UpgradeAcceptanceHttpTest.xml",
+      "sha256": "4b5ecb81ab5ba36d78aac55c78162cc68246a56a3df30ef4463fd7b0de01925d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resilience.ResilientConfigurationHttpTest.xml",
+      "sha256": "ac841710de563ce8d1ee2aa24c062ff44bff91a4f2bc34670f52a6939c50fb92"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resilience.ResilientReadServiceTest.xml",
+      "sha256": "13867091df71943ef9315334cd7e1bee1d484285b3821b29852558ba8c624622"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.FunctionalResourceDiscoveryTest.xml",
+      "sha256": "a48e65eebb266b1dd6d6899b06440216418ab717c8c78bf614557c4d0348a564"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceCatalogHttpTest.xml",
+      "sha256": "3f117339e1ebafe09cca5725c7afd6a2156369970bb0fc03fe752006106e24a7"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceCatalogTest.xml",
+      "sha256": "e8cb38d5c562faee52dd0b68480da13be424c206c4bfd49101a4fb395a7321ee"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceDisabledSecurityHttpTest.xml",
+      "sha256": "1daff8f912809e515c81af64e3a18d33073dcddd0a8ba5b3d56cd2572c2bae21"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceDiscoveryHttpTest.xml",
+      "sha256": "5a0722dd2e990d8489e8a7143d8faee3b7bc8080933959430721c1f621b18f19"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceFailureHttpTest.xml",
+      "sha256": "b1761579ced4cadb59294af9822bf61dfc82dd0fb11c45940ce5469d67039c43"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceHistoryHttpTest.xml",
+      "sha256": "1d29551c0f920e9f1fea3a1381937a6b83ec2cd76f70a8bc31a41d4f20a66e46"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceIncompleteHttpTest.xml",
+      "sha256": "fed647fbfef567971899dc3084762376489b87bb6ceb483a4931feac0c89f56d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceManagementContextHttpTest.xml",
+      "sha256": "d1eb9fedc45f1853dc3911d695140668e711baa137f013e9a6ab60f99d162840"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.resource.InterfaceResourceUrlMappingHttpTest.xml",
+      "sha256": "817fccdef3c92482e2c109f35743025f910565938f7ef19e53eee0b251afa59f"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.statistics.StatisticsHttpTest.xml",
+      "sha256": "1d17b81d3df716f58dec316e94ab6b19c79d29ea453578629ef4c09fe2109b2e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.ParameterEventHttpTest.xml",
+      "sha256": "7c9221349e2002ccb46d241b7948c831d9450738460635a05c3e3e55f130ad67"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterErrorPolicyHttpTest.xml",
+      "sha256": "4e6c78ff03c61f15849ea409177ab7b8e3ba37e7d87cb09092a7f1351b3e91a5"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterEventConsumerTest.xml",
+      "sha256": "6dc05c4ad8f47829233a96a4f3f0e5bb3a090fe6cb0a53cbe7b6ccf70ff268ba"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterEventDeliveryServiceTest.xml",
+      "sha256": "f61f84012bb76d44956ce6066934106c7238d1452bc5ad7deed90d251c593e2b"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterEventRedisIntegrationTest.xml",
+      "sha256": "54b3746edd73e1adc6f4eac63cbbe3ca784d6f38ef15948c4f58416d103c62f9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterEventStreamRecoveryIntegrationTest.xml",
+      "sha256": "ef9dafbc276b6a669442a80bc3f33d081fdc54584d98338db824fabdcdf29d52"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterFailureHttpTest.xml",
+      "sha256": "05c5fef82740c4aea743139b9a9e3169cd37579e5417dcec219244f69b98b062"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterHttpTest.xml",
+      "sha256": "41499867361e69a41a136744f862c8b737703d34ac1d21a8e47578e8cbc2ec45"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterQueryHttpTest.xml",
+      "sha256": "ccbf4a58355b3fdfa1822c8a3d22b3120c677cfdb6797ad09f57dd48a140bd97"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterReleaseHttpTest.xml",
+      "sha256": "8274049cb07eb0ddfbd9119586a1fa47c2f0940fc5c01ef8a407baf212a7c2ae"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskBusinessIdempotencyTest.xml",
+      "sha256": "35f87011671349b44d53c412a8fc3f94a42c6db5a99822d02fad62442e38a832"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskErrorContractHttpTest.xml",
+      "sha256": "05c98791491d3ba463e913a474df2e40de140413861960c7690a1ebdd8e5e625"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskErrorStatusHttpTest.xml",
+      "sha256": "30f7bc34f3373a5f50f02affa10ea53697e46923b826dfda75816371fa4424cb"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskExecutionRecoveryTest.xml",
+      "sha256": "c90d312848dc0517759c9b0fc811c473ac7a177c51229884223e9107da33f520"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskMySqlFlywayIntegrationTest.xml",
+      "sha256": "4a6992ad8c161a7152e4eb39dbc8d0e1dc95e3d03647b20c597757774a08f5f0"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressAccessTest.xml",
+      "sha256": "79c9de2bf17b655f56209a031af6a6cba343e4201b07eae0005efd4f98978b0c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressBackpressureTest.xml",
+      "sha256": "37ad4cdc86ef37bb719690f30adabbbf3c4a9781269e11774fb03262907b132d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressLiveExecutionTest.xml",
+      "sha256": "25098471614e5bb4d95c502dae3f65135368b3801157d19434e022821261098e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml",
+      "sha256": "3705addcb968c8d2baba642f511729ba504813245f4b2a302d57addd177b4ec6"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressTcpIntegrationTest.xml",
+      "sha256": "5b35230fbb20530586122513a31654d959b81e5d0307bcf38d2c4e5814002da9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskRetryRecoveryHttpTest.xml",
+      "sha256": "45ef5621fc50fd4f26a53f59d789954b16bebaf6fe91a74533f874c03928be14"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskSchedulerHttpTest.xml",
+      "sha256": "282ebd81b528a46eeec2ba86436643a63cb7a84d0e4fa398af53a4b00ac6f90c"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskTriggerDispatchRecoveryTest.xml",
+      "sha256": "a93894a35da036a1421ac44166212c8fb8ba38e8ae6bf528fa1b2599b2372960"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml",
+      "sha256": "a2d63392ac7218b6f3f95f5c8cdb25a3fc406188e5417f56ae2699204ebf1bfa"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security-autoconfigure/TEST-com.abluepoint.summer.security.autoconfigure.MethodSecurityExceptionHandlerTest.xml",
+      "sha256": "fb148483f6d75da649196778b300da7405deb5eba84653254fc7de31a607f5df"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security-autoconfigure/TEST-com.abluepoint.summer.security.autoconfigure.SecurityApplicationOverrideTest.xml",
+      "sha256": "98d2246e0ded1c1a9c69c10608762bc88575ec792e37cdbff14812ad197fcce9"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security-autoconfigure/TEST-com.abluepoint.summer.security.autoconfigure.SecurityAuthenticationAuditTest.xml",
+      "sha256": "2a826f61f32fb5a4cc8ad942a3fb842d6e576767f69485fc78f743746db80957"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security-autoconfigure/TEST-com.abluepoint.summer.security.autoconfigure.SecurityStorageContractTest.xml",
+      "sha256": "2cf5ad63106765974dc3eb11e4ceac9144203ab863824668fb2adfdd9497d13d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security-autoconfigure/TEST-com.abluepoint.summer.security.autoconfigure.SummerUiClientPolicyTest.xml",
+      "sha256": "492e97c943a40bc0d06db4e4653f42fe5e8d1e44ebae7b6c28c1220572f6937a"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security/TEST-com.abluepoint.summer.security.context.SummerSecurityContextTest.xml",
+      "sha256": "9e2630f518e8b011fe256bb600a691645a1a2b7aec77bb81e3c86a81c3cc368a"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-junit/summer-security/TEST-com.abluepoint.summer.security.web.JsonSecurityHandlersTest.xml",
+      "sha256": "13e3f1bb0d184fe4802569cc8bf1effa74c76d0d81c4002c3f33ef4888c075f4"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.ConfigurationMySqlHttpTest.xml",
+      "sha256": "ce3be787071a5789fc2b0ace485f8716782973fc1ad2fb0f3474996cf15e744d"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.ConfigurationProjectionMySqlHttpTest.xml",
+      "sha256": "fb0e7c23270017db919bb1293ce24869f14950cab4cd8e92ba09098407d406aa"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.MultiTenantConfigurationMySqlHttpTest.xml",
+      "sha256": "598dc0070fe7ea207f69897ac79af5dcce2c7ab22154872f543f139015d9955e"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.authorization.PersistedMembershipAuthorizationMySqlHttpTest.xml",
+      "sha256": "7dde2ec51fa2f16e3d6896c642785e42e96fed83edfd5225b0039489dd4a7fe8"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.EnterpriseOnboardingMySqlHttpTest.xml",
+      "sha256": "e8076a55472b593057c21115839e6f1d0488b190f4339a9e39bf67a018e73c06"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.organization.OrganizationDirectoryMySqlHttpTest.xml",
+      "sha256": "90be4d7cc061a5eeb928137bc756efc8f2db7966c7955e076f2742843c970c50"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskBusinessIdempotencyMySqlTest.xml",
+      "sha256": "cc15c4780ff16afc1a4aec970ff89e99350c6a3ddbbc5f7ecdba760591aae979"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml",
+      "sha256": "e8681b1ab8c0fdd9dfb0ea425293d716ad59dfe288e286607be50df23e8c6546"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SharedSessionHttpTest.xml",
+      "sha256": "3a97160379cce4a9eaed8d5ff7c49f20503643a7be49d645686378ca25592463"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.identity.SharedSessionNodesHttpTest.xml",
+      "sha256": "dde7a98de4065e3d8fb205ee85eb691f99591273c2bab4aa2ee58282fe7c2a84"
+    },
+    {
+      "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-junit/summer-sample/TEST-com.abluepoint.summer.sample.systemparameter.SystemParameterCountHttpTest.xml",
+      "sha256": "dd6e9d0b9bdc3a05ee1b4ad3917b3cb9932280540fc907df2f2d6ece7cf965a4"
+    }
+  ],
+  "xml_execution_records": 958,
+  "distinct_display_keys": 956,
+  "distinct_suites": 219,
+  "cross_profile_suite_overlap": 0,
+  "display_key_collisions": {
+    "com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest#[1] suppliedId = \"\"": 2,
+    "com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest#[2] suppliedId = \"correlation id:/sample\"": 2
+  },
+  "case_record_vs_original_xml_mismatches": [],
+  "native_database_cleanup": [
+    {
+      "schema": "summer_identity_upgrade_eaa46ca21c4d44b489eb85ea95523e2d",
+      "owner": "com.abluepoint.summer.sample.identity.EnterpriseOnboardingMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_identity_upgrade_eaa46ca21c4d44b489eb85ea95523e2d.txt",
+      "sha256": "09d833d3b6119599b29ce9d3f5ad29569a82bdf268cafa64acf630dcf9dc60cc"
+    },
+    {
+      "schema": "summer_member_auth_3ebfaedb9c8f4d239da0df9b9fc667dc",
+      "owner": "com.abluepoint.summer.sample.authorization.PersistedMembershipAuthorizationMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_member_auth_3ebfaedb9c8f4d239da0df9b9fc667dc.txt",
+      "sha256": "b93ac13b873693bee85eb341740861ff719181cc6410a8fcbd057dda4fc65b7d"
+    },
+    {
+      "schema": "summer_multi_config_6fbc48855a1c45a8892e59faab76921b",
+      "owner": "com.abluepoint.summer.sample.authorization.MultiTenantConfigurationMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_multi_config_6fbc48855a1c45a8892e59faab76921b.txt",
+      "sha256": "513198fa15ba9c15988d4020b4079240963f49e3d6ec12be19b12603048d775d"
+    },
+    {
+      "schema": "summer_org_32b100857a6a45298a023f70e0925cf0",
+      "owner": "com.abluepoint.summer.sample.organization.OrganizationDirectoryMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_org_32b100857a6a45298a023f70e0925cf0.txt",
+      "sha256": "ea9359e017aa420060d2556cf35201461afadabb802dd05304611f2e3ba67b4c"
+    },
+    {
+      "schema": "summer_t19_a3797ab59ebc445a99639fb6063325bf",
+      "owner": "com.abluepoint.summer.sample.authorization.ConfigurationMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_t19_a3797ab59ebc445a99639fb6063325bf.txt",
+      "sha256": "55b6652fdf13cd2d6961d25f5a9a2cde25a94ff281f82996ac4bb080a3f53116"
+    },
+    {
+      "schema": "summer_t36_b1b6a2e0d1f7498eac0e716c251c5b4e",
+      "owner": "com.abluepoint.summer.sample.authorization.ConfigurationProjectionMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_t36_b1b6a2e0d1f7498eac0e716c251c5b4e.txt",
+      "sha256": "3d57245ee824f79753437384e1a7aef8a38ab6c1faaed629b51b9ff5f5ecfa23"
+    },
+    {
+      "schema": "summer_task_business_07912b4dbb3f445b9339caec8358c59e",
+      "owner": "com.abluepoint.summer.sample.task.TaskBusinessIdempotencyMySqlTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_task_business_07912b4dbb3f445b9339caec8358c59e.txt",
+      "sha256": "88ea868cbb8b194c6e68e73409a223d7f6e228ba5252d094dbf5950aedb3386e"
+    }
+  ],
+  "artifact_verification": {
+    "path": ".scratch/exception-unification/execution/16/final-artifacts-verified-b02.json",
+    "sha256": "57a48bf286f8c36cf4f73a71135b29fd060ec616c930733ca09acf82ac996ef4",
+    "bytes": 392
+  },
+  "artifact_result": {
+    "tree": "907687818954065d356964df2007eb108ddebef1",
+    "manifest_sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+    "archive_integrity": "passed",
+    "archived_jars": 29,
+    "embedded_same_set_libraries": 13,
+    "application_entries_equal": 730,
+    "migration_resources": 40,
+    "fat_jar_sha256": "2d0f3f95f220ea90bed603399f296961670ca5ab7692af23d0ceaad947d71a77"
+  },
+  "client_result": {
+    "result": {
+      "tree": "907687818954065d356964df2007eb108ddebef1",
+      "manifest_sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+      "legacy_common_bytecode": "passed",
+      "candidate_client": "passed",
+      "removed_field_violation_binary": "expected incompatibility verified",
+      "inherited_field_type_source": "recompiled and executed successfully",
+      "old_nested_canonical_import": "expected source incompatibility verified",
+      "baseline_scope": "five API source files only; not a complete M0 runtime or rollback set"
+    },
+    "result_record": {
+      "path": ".scratch/exception-unification/execution/16/final-clients-b02/result.json",
+      "sha256": "8b7c3301c85e5ba16886f11dbce401092527bb0cfcda4a0cfaa9277e157bb598",
+      "bytes": 7984
+    },
+    "commands": {
+      "path": ".scratch/exception-unification/execution/16/final-clients-b02/commands.json",
+      "sha256": "c77a8acf65aabe8421d5c05a3821f1dc379eaa4f0c475035aa60153c454b0f85",
+      "bytes": 7181
+    }
+  },
+  "whole_set_final_and_rollback": {
+    "record": {
+      "path": ".scratch/exception-unification/execution/16/final-whole-set-rollback.json",
+      "sha256": "44468d4239ccee0a9690ab156480a1d207addd04638d19853669fde7a396e534",
+      "bytes": 1068
+    },
+    "final_startup": {
+      "record": {
+        "path": ".scratch/exception-unification/execution/16/final-startup-b02/result.json",
+        "sha256": "7d4cb8bba1d4e48b16120c32703ee5ce2578645028516cb583f868bb13f1351d",
+        "bytes": 927
+      },
+      "result": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "manifest_sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+        "fat_jar_sha256": "2d0f3f95f220ea90bed603399f296961670ca5ab7692af23d0ceaad947d71a77",
+        "schema": "summer_exception_5c20a4d45e134d57883c8470aad3ee78",
+        "schema_created": true,
+        "schema_removed": true,
+        "schema_creation": "owned-schema-create-verified",
+        "whole_set": true,
+        "runtime": "/Users/bluepoint/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.12+8/Contents/Home",
+        "native_mysql": true,
+        "redis_features": "disabled for startup-only check",
+        "checks": [
+          {
+            "route": "/actuator/health",
+            "status": 200,
+            "health": "UP"
+          },
+          {
+            "route": "/api/customers",
+            "status": 401,
+            "code": "SUMMER_UNAUTHORIZED",
+            "request_id": "artifact-contract"
+          }
+        ],
+        "passed": true,
+        "pid": 60573,
+        "process_exit_code": 143
+      }
+    },
+    "rollback": {
+      "record": {
+        "path": ".scratch/exception-unification/execution/16/m2-rollback-startup-b03/result.json",
+        "sha256": "2d6bdcef848cb920c11d478cc6cfbd113bfd8d0b206fb88c958772e6fc3ade63",
+        "bytes": 927
+      },
+      "result": {
+        "tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+        "manifest_sha256": "3c4cbf88bd039f28ed37dbdfa8a8e1867f3469b7158d0090a5b0c2dfb2e63d0a",
+        "fat_jar_sha256": "4c1436db7f3a10a39a22835c95dabd32c960e3df6ed29dc315ab1e95516ada54",
+        "schema": "summer_exception_0c466ceccd4d46f78e5436137e5577fb",
+        "schema_created": true,
+        "schema_removed": true,
+        "schema_creation": "owned-schema-create-verified",
+        "whole_set": true,
+        "runtime": "/Users/bluepoint/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.12+8/Contents/Home",
+        "native_mysql": true,
+        "redis_features": "disabled for startup-only check",
+        "checks": [
+          {
+            "route": "/actuator/health",
+            "status": 200,
+            "health": "UP"
+          },
+          {
+            "route": "/api/customers",
+            "status": 401,
+            "code": "SUMMER_UNAUTHORIZED",
+            "request_id": "artifact-contract"
+          }
+        ],
+        "passed": true,
+        "pid": 61259,
+        "process_exit_code": 143
+      }
+    }
+  },
+  "non_author_final_artifact_review": {
+    "path": ".scratch/exception-unification/execution/16/independent-final-artifacts-review-T03.md",
+    "sha256": "30d33930d1d6682b65c7c2b97f010b8ba3cf7b14fb0ec7c260e0b4be112c037c",
+    "bytes": 8139
+  },
+  "non_author_final_artifact_review_inputs": {
+    "path": ".scratch/exception-unification/execution/16/independent-final-artifacts-review-T03.json",
+    "sha256": "0c846b8b0a3dbd6101ce5251fa010a58a0496fcaeac70649d780068f05c8a181",
+    "bytes": 91640
+  },
+  "defects": {
+    "input": {
+      "path": ".scratch/exception-unification/execution/control/defects.json",
+      "sha256": "71a26785c2d5c92384453ce16f6f9b430ee3c73e91bc91c6ab79754e079396c2",
+      "bytes": 40326
+    },
+    "records": 18,
+    "closed_final_verified": 18,
+    "original_failures_preserved": true
+  },
+  "whitespace": {
+    "command": [
+      "git",
+      "diff-tree",
+      "--check",
+      "29d027cd68a786417d771749a83350d9779d3929",
+      "907687818954065d356964df2007eb108ddebef1"
+    ],
+    "exit_code": 2,
+    "check_passed": false,
+    "diagnostic_count": 13,
+    "kind": "new blank line at EOF only",
+    "decision": "accepted nonblocking cosmetic result; preserve original non-target bytes in precise AST class removal; no explicit repository hard gate found",
+    "record": {
+      "path": ".scratch/exception-unification/execution/16/final-tree-whitespace-check.txt",
+      "sha256": "f5b193311e95245a8d73ca336985d2eebc9c5c4e0e90cc57658e2c6b30698fa0",
+      "bytes": 1582
+    },
+    "independent_review": {
+      "path": ".scratch/exception-unification/execution/16/final-standards-whitespace-review.json",
+      "sha256": "d68be99d92c3317f74f1c177898b28ffd3f2c7b7d6f843210809b8d573b6289b",
+      "bytes": 10378
+    }
+  },
+  "source_drift_recheck": {
+    "candidate_paths": 806,
+    "active_paths": 806,
+    "candidate_blob_sha_mismatches": [],
+    "active_source_drift": [],
+    "head": "29d027cd68a786417d771749a83350d9779d3929",
+    "index_entries_sha256": "9c4bcf2a0587e11f9db6a224a62f083e978a2a03c6e3bdafc432a62b02b053f2",
+    "index_bytes_sha256": "298a2e534ab1fe925d1c5e418c09db4704c6bf60b6356e3a583141781718520b"
+  },
+  "historical_pending_notes": "freeze-record and execution-union retain earlier pending labels; completed dynamic facts are superseded by final-evidence-record and final-whole-set-rollback, historical files untouched",
+  "independent_scope_limit": "T04 final Spec/finite denominator/coverage/quality exit, actual stage signoff, human or organization approval, commits and release remain outside this Standards verdict",
+  "new_standards_findings": 0,
+  "performed_functional_execution": false
+}

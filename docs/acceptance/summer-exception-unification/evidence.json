@@ -1,0 +1,708 @@
+{
+  "schema_version": "1.0",
+  "state": "technical_acceptance_complete",
+  "tested_product_tree": "907687818954065d356964df2007eb108ddebef1",
+  "implementation_baseline_head": "29d027cd68a786417d771749a83350d9779d3929",
+  "implementation_commit": "f67d7617c482b5cca9359f34404fb22ae38b594f",
+  "source_freeze": {
+    "path": ".scratch/exception-unification/execution/16/final-freeze-record.json",
+    "sha256": "b2ae7358ad5df5b87d7868eb3d27d82fa03194f5e73b4c631c8b38cdcb11a3bc",
+    "bytes": 1598
+  },
+  "candidate_source_approval": {
+    "path": ".scratch/exception-unification/execution/16/final-source-approval.json",
+    "sha256": "64f2c86fc157cb771af11407b0d070ef15cc37ab04d62fab5f8d1493e0a173f3",
+    "bytes": 92991
+  },
+  "environment": {
+    "jdk": "Eclipse Adoptium21.0.12+8, aarch64 macOS",
+    "gradle": "9.0.0",
+    "native_context": "docker-desktop",
+    "native_namespace": "local-base",
+    "mysql": {
+      "pod": "mysql-0",
+      "uid": "73daecc9-5c1e-441f-84e8-b52e154a551a",
+      "image": "mysql:9.7.1@sha256:cbade841779f1661300e705721f9d2ff159865cc7a8a291affbff43ac6ec7f1d"
+    },
+    "redis": {
+      "pod": "redis-0",
+      "uid": "450bfc20-9799-44af-8d3f-7da8ea0f0fb5",
+      "image": "redis:8.8.1@sha256:c88d347edef6249a6d2293f926f1eeb48bd40c57cbcd02c07f52e7f1fd2cb46b",
+      "db": 15
+    },
+    "credentials": "Fixed Kubernetes Secret values consumed only in worker/process memory; values and secret hashes are absent",
+    "test_heap": "1GiB",
+    "test_forks": 1,
+    "fork_every": 40,
+    "spring_context_cache": 4,
+    "gradle_parallel": false,
+    "gradle_max_workers": 2
+  },
+  "profiles": [
+    {
+      "profile": "core",
+      "seal": {
+        "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084452Z-4e4e3f6f/seal.json",
+        "sha256": "1b063b88495c4e85fecb9528948999e4dec3c491a618cf7b97b91bb0b6e55ed9",
+        "bytes": 637
+      },
+      "summary": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-summary.json",
+        "sha256": "12aec38822b98bb2bbb4b9a56eff05d6e2585f0fed8f58258410dd7f18d68a1a",
+        "bytes": 470
+      },
+      "result": {
+        "candidate_configured_inputs_attested": true,
+        "candidate_inputs_after_attested": true,
+        "class_and_result_reuse_allowed": false,
+        "exit_code": 0,
+        "fresh_suites": 208,
+        "integrity_error": null,
+        "note": "Primary isolated result; ordinary run_gradle summary scans default build paths and is not candidate evidence",
+        "tests": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 886
+        },
+        "tree": "907687818954065d356964df2007eb108ddebef1"
+      },
+      "elapsed_seconds": 1035.951,
+      "command": [
+        "./gradlew",
+        "--no-build-cache",
+        "--rerun-tasks",
+        "--console=plain",
+        "--no-configuration-cache",
+        "--no-daemon",
+        "--project-cache-dir",
+        "/Users/bluepoint/Project/abluepoint/summer/.scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084452Z-4e4e3f6f/project-cache",
+        "--init-script",
+        "/Users/bluepoint/Project/abluepoint/summer/.scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084452Z-4e4e3f6f/candidate.init.gradle",
+        "-Dsummer.verification.profile=core",
+        "--no-parallel",
+        "--max-workers=2",
+        "test",
+        "assemble"
+      ],
+      "before": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-inputs-before.json",
+        "sha256": "0636ec04112e25131770149d6f9b02e4410e567f4ecf78bd6afcff1677817a60",
+        "bytes": 400412
+      },
+      "after": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-inputs-after.json",
+        "sha256": "7174d15ecc174a97e40264ffe216d1e6a848f78b0c6d30175ff2beebe40c766d",
+        "bytes": 136963
+      },
+      "results": {
+        "path": ".scratch/exception-unification/execution/16/final-core-b02/candidate-results.json",
+        "sha256": "3967038f87c24b4a41983eb8948fa3ec948495e9d6a4bc2755a80ff9de20d370",
+        "bytes": 40345
+      },
+      "source_delta_during_run": []
+    },
+    {
+      "profile": "redis",
+      "seal": {
+        "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084519Z-fa740fb3/seal.json",
+        "sha256": "484513538a028175c49685ee23debb21b9ef72e93e631b9dfde7020db1bf7e77",
+        "bytes": 637
+      },
+      "summary": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-summary.json",
+        "sha256": "f4436d735c8ce264e2623842ac2c5aa62134488695652c79aad85e30361f6ede",
+        "bytes": 467
+      },
+      "result": {
+        "candidate_configured_inputs_attested": true,
+        "candidate_inputs_after_attested": true,
+        "class_and_result_reuse_allowed": false,
+        "exit_code": 0,
+        "fresh_suites": 4,
+        "integrity_error": null,
+        "note": "Primary isolated result; ordinary run_gradle summary scans default build paths and is not candidate evidence",
+        "tests": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 48
+        },
+        "tree": "907687818954065d356964df2007eb108ddebef1"
+      },
+      "elapsed_seconds": 66.545,
+      "command": [
+        "./gradlew",
+        "--no-build-cache",
+        "--rerun-tasks",
+        "--console=plain",
+        "--no-configuration-cache",
+        "--no-daemon",
+        "--project-cache-dir",
+        "/Users/bluepoint/Project/abluepoint/summer/.scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084519Z-fa740fb3/project-cache",
+        "--init-script",
+        "/Users/bluepoint/Project/abluepoint/summer/.scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084519Z-fa740fb3/candidate.init.gradle",
+        "-Dsummer.verification.profile=redis",
+        "--no-parallel",
+        "--max-workers=2",
+        ":summer-sample:test"
+      ],
+      "before": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-inputs-before.json",
+        "sha256": "76e041130a2cc4e953f311573014a97fa1ffdf1e4323e17cc9d7b201d674803e",
+        "bytes": 400412
+      },
+      "after": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-inputs-after.json",
+        "sha256": "40f3f5e55dceead235dde042f7f29d605c3b29ef830b7008fdead40453414381",
+        "bytes": 136963
+      },
+      "results": {
+        "path": ".scratch/exception-unification/execution/16/final-redis-b02/candidate-results.json",
+        "sha256": "615d1fdaae489f401d82955d37f6d2b173759942f8f85e8cc25a613a2cd6bddc",
+        "bytes": 752
+      },
+      "source_delta_during_run": []
+    },
+    {
+      "profile": "mysql",
+      "seal": {
+        "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/seal.json",
+        "sha256": "f2a2f5a8ffce96ebf1ce0aa307bbbda5167c1a1a3bd4a03dc7064709bfa363e4",
+        "bytes": 637
+      },
+      "summary": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-summary.json",
+        "sha256": "20579fe8da87ebc8bb1e6d1ab92560cd912d98ec4ed81c699a7717c9cdc56915",
+        "bytes": 467
+      },
+      "result": {
+        "candidate_configured_inputs_attested": true,
+        "candidate_inputs_after_attested": true,
+        "class_and_result_reuse_allowed": false,
+        "exit_code": 0,
+        "fresh_suites": 7,
+        "integrity_error": null,
+        "note": "Primary isolated result; ordinary run_gradle summary scans default build paths and is not candidate evidence",
+        "tests": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 24
+        },
+        "tree": "907687818954065d356964df2007eb108ddebef1"
+      },
+      "elapsed_seconds": 106.047,
+      "command": [
+        "./gradlew",
+        "--no-build-cache",
+        "--rerun-tasks",
+        "--console=plain",
+        "--no-configuration-cache",
+        "--no-daemon",
+        "--project-cache-dir",
+        "/Users/bluepoint/Project/abluepoint/summer/.scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/project-cache",
+        "--init-script",
+        "/Users/bluepoint/Project/abluepoint/summer/.scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/candidate.init.gradle",
+        "-Dsummer.verification.profile=mysql",
+        "--no-parallel",
+        "--max-workers=2",
+        ":summer-sample:test"
+      ],
+      "before": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-inputs-before.json",
+        "sha256": "2fec64ca48c7de8d418d0fbb629f39231710742a96dbcb04bc22a93dd1513ec9",
+        "bytes": 400412
+      },
+      "after": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-inputs-after.json",
+        "sha256": "34e9f19be52dadf6ce53522b479a045f3219c24b23d6a395b5d8a53119588871",
+        "bytes": 136963
+      },
+      "results": {
+        "path": ".scratch/exception-unification/execution/16/final-mysql-b02/candidate-results.json",
+        "sha256": "dc5576f4275d1553f1da3ea584e92e5a49154f3c31d32eae91f3395af6737e59",
+        "bytes": 1414
+      },
+      "source_delta_during_run": []
+    }
+  ],
+  "reported_test_counts": {
+    "tests": 958,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reported_execution_count": 958,
+  "distinct_display_keys": 956,
+  "distinct_suites": 219,
+  "parameterized_collision_policy": "Exact module/XML/testcase ordinal identifies each actual execution; classname#XML name is a potentially nonunique navigation key, never silently overwrite duplicate display names",
+  "parameterized_display_key_collisions": {
+    "com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest#[1] suppliedId = \"\"": [
+      "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest.xml#testcase[1]",
+      "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest.xml#testcase[3]"
+    ],
+    "com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest#[2] suppliedId = \"correlation id:/sample\"": [
+      "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest.xml#testcase[2]",
+      "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest.xml#testcase[4]"
+    ]
+  },
+  "execution_union": {
+    "path": ".scratch/exception-unification/execution/16/final-execution-union.json",
+    "sha256": "cf11885bcefc6e4deefcd09e9888849db89bd3436e2b58dc183e6b445dfa1667",
+    "bytes": 7120
+  },
+  "actual_cases": {
+    "path": ".scratch/exception-unification/execution/16/final-execution-cases.json",
+    "sha256": "bb188cecf67e7e2d5802133d85ea85c0010a636177d77153bae36f87a291e2da",
+    "bytes": 636299
+  },
+  "functional_credit_limit": "JUnit reported count; two pre-existing default-gated external identity placeholders are not credited as full external E2E",
+  "native_database_cleanup": [
+    {
+      "schema": "summer_identity_upgrade_eaa46ca21c4d44b489eb85ea95523e2d",
+      "owner": "com.abluepoint.summer.sample.identity.EnterpriseOnboardingMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_identity_upgrade_eaa46ca21c4d44b489eb85ea95523e2d.txt",
+      "sha256": "09d833d3b6119599b29ce9d3f5ad29569a82bdf268cafa64acf630dcf9dc60cc"
+    },
+    {
+      "schema": "summer_member_auth_3ebfaedb9c8f4d239da0df9b9fc667dc",
+      "owner": "com.abluepoint.summer.sample.authorization.PersistedMembershipAuthorizationMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_member_auth_3ebfaedb9c8f4d239da0df9b9fc667dc.txt",
+      "sha256": "b93ac13b873693bee85eb341740861ff719181cc6410a8fcbd057dda4fc65b7d"
+    },
+    {
+      "schema": "summer_multi_config_6fbc48855a1c45a8892e59faab76921b",
+      "owner": "com.abluepoint.summer.sample.authorization.MultiTenantConfigurationMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_multi_config_6fbc48855a1c45a8892e59faab76921b.txt",
+      "sha256": "513198fa15ba9c15988d4020b4079240963f49e3d6ec12be19b12603048d775d"
+    },
+    {
+      "schema": "summer_org_32b100857a6a45298a023f70e0925cf0",
+      "owner": "com.abluepoint.summer.sample.organization.OrganizationDirectoryMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_org_32b100857a6a45298a023f70e0925cf0.txt",
+      "sha256": "ea9359e017aa420060d2556cf35201461afadabb802dd05304611f2e3ba67b4c"
+    },
+    {
+      "schema": "summer_t19_a3797ab59ebc445a99639fb6063325bf",
+      "owner": "com.abluepoint.summer.sample.authorization.ConfigurationMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_t19_a3797ab59ebc445a99639fb6063325bf.txt",
+      "sha256": "55b6652fdf13cd2d6961d25f5a9a2cde25a94ff281f82996ac4bb080a3f53116"
+    },
+    {
+      "schema": "summer_t36_b1b6a2e0d1f7498eac0e716c251c5b4e",
+      "owner": "com.abluepoint.summer.sample.authorization.ConfigurationProjectionMySqlHttpTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_t36_b1b6a2e0d1f7498eac0e716c251c5b4e.txt",
+      "sha256": "3d57245ee824f79753437384e1a7aef8a38ab6c1faaed629b51b9ff5f5ecfa23"
+    },
+    {
+      "schema": "summer_task_business_07912b4dbb3f445b9339caec8358c59e",
+      "owner": "com.abluepoint.summer.sample.task.TaskBusinessIdempotencyMySqlTest",
+      "state": "removed-and-absence-verified",
+      "path": ".scratch/exception-unification/execution/control/candidate-validation-runs/20261103T084543Z-9bf97e9b/runtime/native-database/summer_task_business_07912b4dbb3f445b9339caec8358c59e.txt",
+      "sha256": "88ea868cbb8b194c6e68e73409a223d7f6e228ba5252d094dbf5950aedb3386e"
+    }
+  ],
+  "artifacts": {
+    "manifest": {
+      "path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/manifest.json",
+      "sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+      "bytes": 18114
+    },
+    "verification": {
+      "path": ".scratch/exception-unification/execution/16/final-artifacts-verified-b02.json",
+      "sha256": "57a48bf286f8c36cf4f73a71135b29fd060ec616c930733ca09acf82ac996ef4",
+      "bytes": 392
+    },
+    "result": {
+      "tree": "907687818954065d356964df2007eb108ddebef1",
+      "manifest_sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+      "archive_integrity": "passed",
+      "archived_jars": 29,
+      "embedded_same_set_libraries": 13,
+      "application_entries_equal": 730,
+      "migration_resources": 40,
+      "fat_jar_sha256": "2d0f3f95f220ea90bed603399f296961670ca5ab7692af23d0ceaad947d71a77"
+    },
+    "jars": [
+      {
+        "module": ":summer-boot-starter",
+        "name": "summer-boot-starter-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-boot-starter/summer-boot-starter-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-boot-starter",
+        "name": "summer-boot-starter-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-boot-starter/summer-boot-starter-4.0.0-SNAPSHOT.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-common",
+        "name": "summer-common-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-common/summer-common-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 4982,
+        "sha256": "645b91a51a2d3d82a2bf8299ea81d7310c363c0970ac7e74f087e305eb29abd4"
+      },
+      {
+        "module": ":summer-common",
+        "name": "summer-common-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-common/summer-common-4.0.0-SNAPSHOT.jar",
+        "bytes": 11161,
+        "sha256": "793d3620a0c1e5d5eb8be7f0e889e113c0d9cc3e5a7c869c7bfd4ccd00d00972"
+      },
+      {
+        "module": ":summer-common-autoconfigure",
+        "name": "summer-common-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-common-autoconfigure/summer-common-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 2273,
+        "sha256": "46af154dbb69b8d3f76610aa521e507723948b3ca32fdda56aed8ff289a749bb"
+      },
+      {
+        "module": ":summer-common-autoconfigure",
+        "name": "summer-common-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-common-autoconfigure/summer-common-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "bytes": 3117,
+        "sha256": "92743d2790348ec633a9982727f253d5cb1a1dcffe8bd5ac47bd9ec8499b47fe"
+      },
+      {
+        "module": ":summer-common-starter",
+        "name": "summer-common-starter-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-common-starter/summer-common-starter-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-common-starter",
+        "name": "summer-common-starter-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-common-starter/summer-common-starter-4.0.0-SNAPSHOT.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-data-jpa",
+        "name": "summer-data-jpa-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-data-jpa/summer-data-jpa-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 7887,
+        "sha256": "6c851e0d39261cf92e65d67c35a91a17771df4150e628007d87559cad0a53a2c"
+      },
+      {
+        "module": ":summer-data-jpa",
+        "name": "summer-data-jpa-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-data-jpa/summer-data-jpa-4.0.0-SNAPSHOT.jar",
+        "bytes": 15005,
+        "sha256": "295ba47b589dc435717bad423594fafb6634c1a65fab7439ccf0353e4afe3bb5"
+      },
+      {
+        "module": ":summer-data-jpa-autoconfigure",
+        "name": "summer-data-jpa-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-data-jpa-autoconfigure/summer-data-jpa-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 2609,
+        "sha256": "3566efbe1b50ddda1af181cd952ebe4297f877caab06f1ae85297e597966562f"
+      },
+      {
+        "module": ":summer-data-jpa-autoconfigure",
+        "name": "summer-data-jpa-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-data-jpa-autoconfigure/summer-data-jpa-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "bytes": 3608,
+        "sha256": "a78cc34738949cf60e3ddd048d276ecdffb2f1741a14bc3add03da1849b93989"
+      },
+      {
+        "module": ":summer-data-jpa-starter",
+        "name": "summer-data-jpa-starter-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-data-jpa-starter/summer-data-jpa-starter-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-data-jpa-starter",
+        "name": "summer-data-jpa-starter-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-data-jpa-starter/summer-data-jpa-starter-4.0.0-SNAPSHOT.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-mvc",
+        "name": "summer-mvc-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-mvc/summer-mvc-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 31837,
+        "sha256": "0e001860bff620c444d0f136c7028abdc6c0b9ad5b5bb1b40f3fb9e82dbc35be"
+      },
+      {
+        "module": ":summer-mvc",
+        "name": "summer-mvc-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-mvc/summer-mvc-4.0.0-SNAPSHOT.jar",
+        "bytes": 71402,
+        "sha256": "44309d9d1ee3467f919ac480380cf3d0c945de6803ee489a09aaffc71ffaf5fb"
+      },
+      {
+        "module": ":summer-mvc-autoconfigure",
+        "name": "summer-mvc-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-mvc-autoconfigure/summer-mvc-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 4583,
+        "sha256": "58d193f0c78bc359d81f8fb3f2bc297535d00bde5dd7c07af2dfffcd0bf749b7"
+      },
+      {
+        "module": ":summer-mvc-autoconfigure",
+        "name": "summer-mvc-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-mvc-autoconfigure/summer-mvc-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "bytes": 13252,
+        "sha256": "b7db54ac0287959fef430cb38584211665e0e6ba7604cc217ecdd03deef92089"
+      },
+      {
+        "module": ":summer-mvc-starter",
+        "name": "summer-mvc-starter-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-mvc-starter/summer-mvc-starter-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-mvc-starter",
+        "name": "summer-mvc-starter-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-mvc-starter/summer-mvc-starter-4.0.0-SNAPSHOT.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-sample",
+        "name": "summer-sample-4.0.0-SNAPSHOT-plain.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-sample/summer-sample-4.0.0-SNAPSHOT-plain.jar",
+        "bytes": 1301190,
+        "sha256": "ab12a7ee73060865b99378656f78a602a310c7c07c9e7a5ef3750b7888b36c56"
+      },
+      {
+        "module": ":summer-sample",
+        "name": "summer-sample-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-sample/summer-sample-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 470053,
+        "sha256": "728b6e4f3ab43e6ef8b8193695f28801eba4332d627c6a468df5e03bb542603c"
+      },
+      {
+        "module": ":summer-sample",
+        "name": "summer-sample.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-sample/summer-sample.jar",
+        "bytes": 96913491,
+        "sha256": "2d0f3f95f220ea90bed603399f296961670ca5ab7692af23d0ceaad947d71a77"
+      },
+      {
+        "module": ":summer-security",
+        "name": "summer-security-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-security/summer-security-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 4904,
+        "sha256": "9026754ee132ae5a7a928296b61b8027d98b6fdfc3b9b38347557a1925159afb"
+      },
+      {
+        "module": ":summer-security",
+        "name": "summer-security-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-security/summer-security-4.0.0-SNAPSHOT.jar",
+        "bytes": 7658,
+        "sha256": "2be9dd4702ce43029ff894eb5178789e12e8e1fbe0b63c2b17fb17265b6b8be8"
+      },
+      {
+        "module": ":summer-security-autoconfigure",
+        "name": "summer-security-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-security-autoconfigure/summer-security-autoconfigure-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 19625,
+        "sha256": "b0cb9ddb0f12e3471b2f8044310bfe91d08c0f129a289059f8e42377a7860b95"
+      },
+      {
+        "module": ":summer-security-autoconfigure",
+        "name": "summer-security-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-security-autoconfigure/summer-security-autoconfigure-4.0.0-SNAPSHOT.jar",
+        "bytes": 41038,
+        "sha256": "11dc2f42f10d948734ab244461724ea9c57b7df01718e2f95c898a6cf7846df8"
+      },
+      {
+        "module": ":summer-security-starter",
+        "name": "summer-security-starter-4.0.0-SNAPSHOT-sources.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-security-starter/summer-security-starter-4.0.0-SNAPSHOT-sources.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      },
+      {
+        "module": ":summer-security-starter",
+        "name": "summer-security-starter-4.0.0-SNAPSHOT.jar",
+        "archive_path": ".scratch/exception-unification/execution/16/final-artifacts-b02/candidate-jars/summer-security-starter/summer-security-starter-4.0.0-SNAPSHOT.jar",
+        "bytes": 261,
+        "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3"
+      }
+    ]
+  },
+  "public_clients": {
+    "result": {
+      "tree": "907687818954065d356964df2007eb108ddebef1",
+      "manifest_sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+      "legacy_common_bytecode": "passed",
+      "candidate_client": "passed",
+      "removed_field_violation_binary": "expected incompatibility verified",
+      "inherited_field_type_source": "recompiled and executed successfully",
+      "old_nested_canonical_import": "expected source incompatibility verified",
+      "baseline_scope": "five API source files only; not a complete M0 runtime or rollback set"
+    },
+    "result_record": {
+      "path": ".scratch/exception-unification/execution/16/final-clients-b02/result.json",
+      "sha256": "8b7c3301c85e5ba16886f11dbce401092527bb0cfcda4a0cfaa9277e157bb598",
+      "bytes": 7984
+    },
+    "commands": {
+      "path": ".scratch/exception-unification/execution/16/final-clients-b02/commands.json",
+      "sha256": "c77a8acf65aabe8421d5c05a3821f1dc379eaa4f0c475035aa60153c454b0f85",
+      "bytes": 7181
+    }
+  },
+  "whole_set_final_and_rollback": {
+    "record": {
+      "path": ".scratch/exception-unification/execution/16/final-whole-set-rollback.json",
+      "sha256": "44468d4239ccee0a9690ab156480a1d207addd04638d19853669fde7a396e534",
+      "bytes": 1068
+    },
+    "final_startup": {
+      "record": {
+        "path": ".scratch/exception-unification/execution/16/final-startup-b02/result.json",
+        "sha256": "7d4cb8bba1d4e48b16120c32703ee5ce2578645028516cb583f868bb13f1351d",
+        "bytes": 927
+      },
+      "result": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "manifest_sha256": "2119063e783efbbe6672de16fac7a05b04814f523a0c397463773f838b6baa56",
+        "fat_jar_sha256": "2d0f3f95f220ea90bed603399f296961670ca5ab7692af23d0ceaad947d71a77",
+        "schema": "summer_exception_5c20a4d45e134d57883c8470aad3ee78",
+        "schema_created": true,
+        "schema_removed": true,
+        "schema_creation": "owned-schema-create-verified",
+        "whole_set": true,
+        "runtime": "/Users/bluepoint/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.12+8/Contents/Home",
+        "native_mysql": true,
+        "redis_features": "disabled for startup-only check",
+        "checks": [
+          {
+            "route": "/actuator/health",
+            "status": 200,
+            "health": "UP"
+          },
+          {
+            "route": "/api/customers",
+            "status": 401,
+            "code": "SUMMER_UNAUTHORIZED",
+            "request_id": "artifact-contract"
+          }
+        ],
+        "passed": true,
+        "pid": 60573,
+        "process_exit_code": 143
+      }
+    },
+    "rollback": {
+      "record": {
+        "path": ".scratch/exception-unification/execution/16/m2-rollback-startup-b03/result.json",
+        "sha256": "2d6bdcef848cb920c11d478cc6cfbd113bfd8d0b206fb88c958772e6fc3ade63",
+        "bytes": 927
+      },
+      "result": {
+        "tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+        "manifest_sha256": "3c4cbf88bd039f28ed37dbdfa8a8e1867f3469b7158d0090a5b0c2dfb2e63d0a",
+        "fat_jar_sha256": "4c1436db7f3a10a39a22835c95dabd32c960e3df6ed29dc315ab1e95516ada54",
+        "schema": "summer_exception_0c466ceccd4d46f78e5436137e5577fb",
+        "schema_created": true,
+        "schema_removed": true,
+        "schema_creation": "owned-schema-create-verified",
+        "whole_set": true,
+        "runtime": "/Users/bluepoint/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.12+8/Contents/Home",
+        "native_mysql": true,
+        "redis_features": "disabled for startup-only check",
+        "checks": [
+          {
+            "route": "/actuator/health",
+            "status": 200,
+            "health": "UP"
+          },
+          {
+            "route": "/api/customers",
+            "status": 401,
+            "code": "SUMMER_UNAUTHORIZED",
+            "request_id": "artifact-contract"
+          }
+        ],
+        "passed": true,
+        "pid": 61259,
+        "process_exit_code": 143
+      }
+    }
+  },
+  "defects": {
+    "path": ".scratch/exception-unification/execution/control/defects.json",
+    "sha256": "71a26785c2d5c92384453ce16f6f9b430ee3c73e91bc91c6ab79754e079396c2",
+    "bytes": 40326
+  },
+  "whitespace_check": {
+    "command": [
+      "git",
+      "diff-tree",
+      "--check",
+      "29d027cd68a786417d771749a83350d9779d3929",
+      "907687818954065d356964df2007eb108ddebef1"
+    ],
+    "exit_code": 2,
+    "check_passed": false,
+    "diagnostic_count": 13,
+    "kind": "new blank line at EOF only",
+    "decision": "accepted nonblocking cosmetic result; preserve original non-target bytes in precise AST class removal; no explicit repository hard gate found",
+    "record": {
+      "path": ".scratch/exception-unification/execution/16/final-tree-whitespace-check.txt",
+      "sha256": "f5b193311e95245a8d73ca336985d2eebc9c5c4e0e90cc57658e2c6b30698fa0",
+      "bytes": 1582
+    },
+    "independent_review": {
+      "path": ".scratch/exception-unification/execution/16/final-standards-whitespace-review.json",
+      "sha256": "d68be99d92c3317f74f1c177898b28ffd3f2c7b7d6f843210809b8d573b6289b",
+      "bytes": 10378
+    }
+  },
+  "publication": {
+    "version": "4.0.0-SNAPSHOT",
+    "pushed": false,
+    "published": false,
+    "deployed": false,
+    "parent173_modified": false
+  },
+  "organization_model_version": null,
+  "organization_maturity_target": null,
+  "organization_or_human_formal_signoff": null,
+  "source_evidence_snapshot": {
+    "path": ".scratch/exception-unification/execution/16/final-evidence-record.json",
+    "sha256": "0a1e899c6cfcc232d0ed676d459c7525726a9508b878348655b01a6d4c5f5179"
+  },
+  "technical_acceptance": {
+    "T00": {
+      "record": "T00-integration-acceptance.json",
+      "sha256": "595138cef317dcce63aa98a68fe3c7cc5adf9635cd73dc181ad66931e660ca79"
+    },
+    "T04": {
+      "record": "final-spec-quality-review-T04.md",
+      "sha256": "2e690faf02dcf7e07e2613f4adfa3b7ae4ebce50c76b405eaff64d02e8c6e4ff"
+    },
+    "metrics": {
+      "requirements_design_test_coverage": 1.0,
+      "story_trace_coverage": 1.0,
+      "migration_closure_rate": 1.0,
+      "protected_contract_coverage": 1.0,
+      "required_unexecuted_count": 0,
+      "open_blocker_count": 0
+    },
+    "protected_contracts": {
+      "covered": 489,
+      "required": 489,
+      "direct_asserted": 280,
+      "approved_equivalent": 209
+    },
+    "raw_record_state_policy": "Earlier capture remaining/status fields are preserved as historical observations; current technical acceptance is recorded here and in the final role records."
+  }
+}

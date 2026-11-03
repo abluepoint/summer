@@ -1,0 +1,802 @@
+{
+  "records": [
+    {
+      "id": "DEF-EX-0001",
+      "kind": "behavior",
+      "requirement": [
+        "R03"
+      ],
+      "acceptance": [
+        "AC03"
+      ],
+      "summary": "显式API消息被国际化目录替换",
+      "status": "closed-final-verified",
+      "original_batch": "02/b03-http-message-red",
+      "verification_batch": "02/b04-http-message-green",
+      "owner_ticket": "02",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest.xml#testcase[6]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "UnifiedExceptionHttpTest"
+        ],
+        "matched_class_names": [
+          "UnifiedExceptionHttpTest"
+        ]
+      },
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0002",
+      "kind": "verification-environment",
+      "requirement": [
+        "R12"
+      ],
+      "acceptance": [
+        "AC14"
+      ],
+      "summary": "健康回归连接共享Redis未认证，XML诊断为NOAUTH",
+      "status": "closed-final-verified",
+      "original_batch": "02/b10-full-affected",
+      "owner_ticket": "16",
+      "verification_batch": null,
+      "constraints": [
+        "保留健康断言与用户Redis鉴权",
+        "凭据仅限所需测试上下文，防止污染无认证容器"
+      ],
+      "status_before_final_verification": "open",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[1]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[2]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[3]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[4]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[5]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[6]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[7]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[8]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[9]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[10]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[11]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[12]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[13]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[14]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[15]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[16]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[17]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[18]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[19]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[20]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[21]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[22]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[23]",
+          "redis/summer-sample/TEST-com.abluepoint.summer.sample.SummerEndToEndTest.xml#testcase[24]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "SummerEndToEndTest"
+        ],
+        "matched_class_names": [
+          "SummerEndToEndTest"
+        ],
+        "native_profile": "16/final-redis-b02:48/0/0/0; fixed native credentials read only inside test worker; unauthenticated TC remains core"
+      }
+    },
+    {
+      "id": "DEF-EX-0003",
+      "kind": "verification-resource",
+      "requirement": [
+        "R11",
+        "R12"
+      ],
+      "acceptance": [
+        "AC13",
+        "AC14"
+      ],
+      "summary": "完整Sample测试上下文堆耗尽并以137中断",
+      "status": "closed-final-verified",
+      "original_batch": "02/b10-full-affected",
+      "owner_ticket": "16",
+      "verification_batch": null,
+      "evidence": [
+        "ConfiguredBootstrapMembershipTest: OutOfMemoryError / Java heap space",
+        "Gradle executor: exit 137"
+      ],
+      "planned_control": "verification-policy.init.gradle.kts；待实际运行证明",
+      "status_before_final_verification": "open",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.identity.ConfiguredBootstrapMembershipTest.xml#testcase[1]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "ConfiguredBootstrapMembershipTest"
+        ],
+        "matched_class_names": [
+          "ConfiguredBootstrapMembershipTest"
+        ],
+        "resource_result": "core886 and all958 passed; bounded1GiB/onefork/forkEvery40/contextCache4/gradleMaxWorkers2; no skipped failures or OOM"
+      }
+    },
+    {
+      "id": "DEF-EX-0004",
+      "kind": "behavior",
+      "requirement": [
+        "R05",
+        "R03"
+      ],
+      "acceptance": [
+        "AC03",
+        "AC04"
+      ],
+      "summary": "字段专用handler硬编码框架码/消息，未经过统一消息与业务ErrorCode契约",
+      "status": "closed-final-verified",
+      "original_batch": "03/b01-field-locale-red",
+      "owner_ticket": "03",
+      "verification_batch": null,
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-mvc/TEST-com.abluepoint.summer.mvc.validate.FieldValidationExceptionTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[7]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[8]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.validation.FieldValidationHttpTest.xml#testcase[9]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "FieldValidationHttpTest",
+          "FieldValidationExceptionTest"
+        ],
+        "matched_class_names": [
+          "FieldValidationExceptionTest",
+          "FieldValidationHttpTest"
+        ]
+      },
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0005",
+      "kind": "behavior",
+      "requirement": [
+        "R08"
+      ],
+      "acceptance": [
+        "AC10"
+      ],
+      "summary": "缺失静态资源被未知异常兜底错误映射为500",
+      "status": "closed-final-verified",
+      "original_batch": "05/b01-static-resource-red",
+      "owner_ticket": "05",
+      "verification_batch": null,
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[7]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[8]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[9]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[10]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "NativeBoundaryHttpIntegrationTest",
+          "NativeBoundaryTcpIntegrationTest"
+        ],
+        "matched_class_names": [
+          "NativeBoundaryHttpIntegrationTest",
+          "NativeBoundaryTcpIntegrationTest"
+        ]
+      },
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0006",
+      "kind": "behavior",
+      "requirement": [
+        "R06",
+        "R07"
+      ],
+      "acceptance": [
+        "AC07"
+      ],
+      "summary": "Filter超限直接序列化，未使用应用统一MessageResolver",
+      "status": "closed-final-verified",
+      "original_batch": "04/b01-resolver-red",
+      "verification_batch": "04/b02-resolver-green",
+      "owner_ticket": "04",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[2]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "RequestBodyLimitResolverHttpTest"
+        ],
+        "matched_class_names": [
+          "RequestBodyLimitResolverHttpTest"
+        ]
+      },
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0007",
+      "kind": "behavior",
+      "requirement": [
+        "R08"
+      ],
+      "acceptance": [
+        "AC10",
+        "AC11"
+      ],
+      "summary": "响应已提交后普通技术异常及SummerException均在已有字节后追加业务JSON",
+      "status": "closed-final-verified",
+      "original_batch": "05/b04-committed-outputstream-red",
+      "owner_ticket": "05",
+      "verification_batch": null,
+      "evidence_status": "b04逐XML确认实际字节包含already-streamed及SUMMER_INTERNAL_ERROR/SUMMER_NOT_FOUND信封",
+      "superseded_fixture_batch": "05/b03-committed-red",
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[7]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[8]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[9]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[10]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "NativeBoundaryHttpIntegrationTest",
+          "NativeBoundaryTcpIntegrationTest"
+        ],
+        "matched_class_names": [
+          "NativeBoundaryHttpIntegrationTest",
+          "NativeBoundaryTcpIntegrationTest"
+        ]
+      },
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0008",
+      "kind": "behavior",
+      "requirement": [
+        "R03",
+        "R07"
+      ],
+      "acceptance": [
+        "AC03",
+        "AC07"
+      ],
+      "summary": "DispatcherServlet前Filter超限委派尚无请求Locale，法语请求错误使用默认消息",
+      "status": "closed-final-verified",
+      "original_batch": "04/b07-filter-locale-red",
+      "verification_batch": "04/b08-filter-locale-green",
+      "owner_ticket": "04",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.customer.RequestBodyLimitResolverHttpTest.xml#testcase[2]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "RequestBodyLimitResolverHttpTest"
+        ],
+        "matched_class_names": [
+          "RequestBodyLimitResolverHttpTest"
+        ]
+      },
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0009",
+      "kind": "behavior",
+      "requirement": [
+        "R08"
+      ],
+      "acceptance": [
+        "AC10"
+      ],
+      "summary": "ProblemDetail及容器ERROR派发被包装为业务信封，真实committed错误派发追加第二段响应",
+      "status": "closed-final-verified",
+      "original_batch": [
+        "05/b06-native-problem-red",
+        "05/b08-native-tcp-boundaries"
+      ],
+      "verification_batch": [
+        "05/b11-final-native-gate",
+        "05/b12-final-filter-tcp"
+      ],
+      "owner_ticket": "05",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryHttpIntegrationTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[7]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[8]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[9]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.boundary.NativeBoundaryTcpIntegrationTest.xml#testcase[10]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "NativeBoundaryHttpIntegrationTest",
+          "NativeBoundaryTcpIntegrationTest"
+        ],
+        "matched_class_names": [
+          "NativeBoundaryHttpIntegrationTest",
+          "NativeBoundaryTcpIntegrationTest"
+        ]
+      },
+      "M2_verification": "control/m2-candidate-b01",
+      "M2_tree": "a064716563acb9bc62c72876cf15a3922bcb8d89",
+      "status_before_final_verification": "fixed-verified-M2"
+    },
+    {
+      "id": "DEF-EX-0010",
+      "kind": "behavior",
+      "requirement": [
+        "R06"
+      ],
+      "acceptance": [
+        "AC06"
+      ],
+      "summary": "任务Controller硬编码409绕过应用ErrorStatusResolver",
+      "status": "closed-final-verified",
+      "original_batch": "12/b01-status-policy-red",
+      "verification_batch": "12/b07-complete-regression",
+      "owner_ticket": "12",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskErrorStatusHttpTest.xml#testcase[1]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "TaskErrorStatusHttpTest"
+        ],
+        "matched_class_names": [
+          "TaskErrorStatusHttpTest"
+        ]
+      },
+      "status_before_final_verification": "fixed-targeted-verified"
+    },
+    {
+      "id": "DEF-EX-0011",
+      "kind": "behavior",
+      "requirement": [
+        "R06",
+        "R08"
+      ],
+      "acceptance": [
+        "AC06",
+        "AC11"
+      ],
+      "summary": "统一SummerException在Accept text/event-stream入口未固定JSON，旧SSE游标错误不能渲染",
+      "status": "closed-final-verified",
+      "original_batch": "12/b03-task-resilience-regression",
+      "verification_batch": "12/b07-complete-regression",
+      "owner_ticket": "12",
+      "evidence": "TaskProgressSseHttpTest.invalidCursorReturnsJsonFailureForAnEventStreamClient failed after local catch removal",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.task.TaskProgressSseHttpTest.xml#testcase[5]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "TaskProgressSseHttpTest"
+        ],
+        "matched_class_names": [
+          "TaskProgressSseHttpTest"
+        ]
+      },
+      "status_before_final_verification": "fixed-targeted-verified"
+    },
+    {
+      "id": "DEF-EX-0012",
+      "kind": "behavior",
+      "requirement": [
+        "R02",
+        "R03",
+        "R08"
+      ],
+      "acceptance": [
+        "AC02",
+        "AC03",
+        "AC10"
+      ],
+      "summary": "最高优先级MethodSecurityAdvice先匹配SummerException内层AccessDenied cause，覆盖原业务消息",
+      "status": "closed-final-verified",
+      "original_batch": "13/b03-complete-contract",
+      "verification_batch": "13/b04-cause-advice-priority",
+      "owner_ticket": "13",
+      "cases": [
+        "PluginFailureHttpTest",
+        "ReleaseFailureHttpTest.nativeOperatorRejectionKeepsItsPublicMessage"
+      ],
+      "fix": "highest-precedence Summer-only advice delegates existing renderer; native security order MIN+1; generic order unchanged",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.plugin.PluginFailureHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseFailureHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.release.ReleaseFailureHttpTest.xml#testcase[2]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "PluginFailureHttpTest",
+          "ReleaseFailureHttpTest"
+        ],
+        "matched_class_names": [
+          "PluginFailureHttpTest",
+          "ReleaseFailureHttpTest"
+        ]
+      },
+      "status_before_final_verification": "fixed-targeted-verified"
+    },
+    {
+      "id": "DEF-EX-0013",
+      "kind": "behavior-review",
+      "requirement": [
+        "R02",
+        "R03",
+        "R08"
+      ],
+      "acceptance": [
+        "AC03",
+        "AC08"
+      ],
+      "summary": "审计两类及应用执行四域共6个HTTP断言均复现原403字面消息被全局Access is denied覆盖，需保留必要窄原生适配",
+      "status": "closed-final-verified",
+      "owner_ticket": "11",
+      "verification_batch": "11/b13-final-11-and-10-contracts",
+      "original_batch": "11/b09-native403-compatibility-red",
+      "cases": 6,
+      "fix": "Necessary native AccessDenied adapters at original application boundaries, original message/cause preserved; corrected-fixture before-source red retained",
+      "status_before_final_verification": "fixed-targeted-independently-reviewed",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.agent.AgentControllerTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.application.ApplicationControllerTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest.xml#testcase[7]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest.xml#testcase[8]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.connection.ConnectionServiceControllerTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.physicalconnection.PhysicalConnectionControllerTest.xml#testcase[1]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "matched_class_names": [
+          "com.abluepoint.summer.sample.agent.AgentControllerTest",
+          "com.abluepoint.summer.sample.application.ApplicationControllerTest",
+          "com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest",
+          "com.abluepoint.summer.sample.connection.ConnectionServiceControllerTest",
+          "com.abluepoint.summer.sample.physicalconnection.PhysicalConnectionControllerTest"
+        ],
+        "original_six_red_display_keys": [
+          "com.abluepoint.summer.sample.agent.AgentControllerTest#nativeAccessDenialsKeepTheirOriginalMessageAndCause()",
+          "com.abluepoint.summer.sample.application.ApplicationControllerTest#nativeAccessDenialsKeepTheirOriginalMessageAndCause()",
+          "com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest#auditServiceDenialsKeepTheirOriginalMessageCauseAndEnvelope()",
+          "com.abluepoint.summer.sample.auditledger.AuditLedgerControllerTest#auditAdminDenialsKeepTheirOriginalMessageCauseAndEnvelope()",
+          "com.abluepoint.summer.sample.connection.ConnectionServiceControllerTest#nativeAccessDenialsKeepTheirOriginalMessageAndCause()",
+          "com.abluepoint.summer.sample.physicalconnection.PhysicalConnectionControllerTest#nativeAccessDenialsKeepTheirOriginalMessageAndCause()"
+        ],
+        "note": "b09 originally included three fixture-origin errors, preserved corrected b11/b12 effective red evidence; final all exact six methods passed"
+      }
+    },
+    {
+      "id": "DEF-EX-0014",
+      "kind": "candidate-control",
+      "requirement": [
+        "R12",
+        "R13",
+        "R14"
+      ],
+      "acceptance": [
+        "AC13",
+        "AC15",
+        "AC16"
+      ],
+      "summary": "新人工冲突决议入口将git merge-file执行失败也当内容冲突，独立T05用exit128复现",
+      "status": "closed-final-verified",
+      "owner_ticket": "16",
+      "fix": "Only content conflict exit range plus complete diff3 markers reaches reviewed resolver; 128/255/signal/no-markers reject",
+      "verification": "control/test_candidate_resolution.py: 8/0/0/0; independent-resolution-review.md retains original finding",
+      "independent_review": "16/independent-resolution-review.md; latest builder e913a5c1; seven decision branches independently simulated",
+      "status_before_final_verification": "fixed-unit-independently-verified",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "additional_evidence": [
+          "16/independent-resolution-review.md",
+          "16/final-freeze-record.json"
+        ],
+        "meaning": "fatal merge statuses negative model plus independent review remain direct fix evidence; final actual candidate admitted from approved resolution"
+      }
+    },
+    {
+      "id": "DEF-EX-0015",
+      "kind": "behavior-review",
+      "requirement": [
+        "R02",
+        "R03",
+        "R07",
+        "R08"
+      ],
+      "acceptance": [
+        "AC03",
+        "AC08"
+      ],
+      "summary": "T01跨域独立审阅发现08五Controller原AccessDenied消息遗漏窄适配，已重新指派T02核验修复",
+      "status": "closed-final-verified",
+      "owner_ticket": "08",
+      "root_cause": "Local error assemblers mixed native adaptation with ordinary JSON mapping; preserve native adaptation when removing pure mapping",
+      "verification": {
+        "batch": "08/native-denial-correction/b05-final-complete-contracts",
+        "tests": {
+          "tests": 121,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "fresh_suites": 17,
+        "source_delta": [],
+        "effective_red_batches": [
+          "b01-native-message-red",
+          "b02-platform-scope-red"
+        ],
+        "independent_review": "08/native-denial-correction/independent-review-T01.md"
+      },
+      "status_before_final_verification": "fixed-targeted-independently-reviewed",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[2]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[3]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[4]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[5]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[6]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[7]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[8]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[9]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest.xml#testcase[10]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "NativeDenialCompatibilityHttpTest"
+        ],
+        "matched_class_names": [
+          "NativeDenialCompatibilityHttpTest"
+        ]
+      }
+    },
+    {
+      "id": "DEF-EX-0016",
+      "kind": "verification-tool",
+      "requirement": [
+        "R11",
+        "R14"
+      ],
+      "acceptance": [
+        "AC13",
+        "AC16"
+      ],
+      "summary": "创建成功但后续确认失败时，制品启动工具可能遗漏自有schema清理与准确状态",
+      "status": "closed-final-verified",
+      "owner_ticket": "16",
+      "root_cause": "Tool metadata gate omitted ownership/attestation failure windows",
+      "verification": {
+        "checks": "16/artifact-tool-failure-checks-b01.json",
+        "review": "16/independent-artifact-tools-review-T03.md"
+      },
+      "status_before_final_verification": "fixed-unit-independently-verified",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "additional_evidence": [
+          "16/artifact-schema-failure-check-b01",
+          "16/independent-artifact-tools-review-T03.md",
+          "16/final-startup-b02/result.json",
+          "16/m2-rollback-startup-b03/result.json"
+        ],
+        "meaning": "negative ownership/error JDBC fixtures plus actual final and whole rollback own UUID schemas removed"
+      }
+    },
+    {
+      "id": "DEF-EX-0017",
+      "kind": "verification-tool",
+      "requirement": [
+        "R11",
+        "R14"
+      ],
+      "acceptance": [
+        "AC13",
+        "AC16"
+      ],
+      "summary": "制品归档入口未绑定seal与before/after的manifest摘要",
+      "status": "closed-final-verified",
+      "owner_ticket": "16",
+      "root_cause": "Tool metadata gate omitted ownership/attestation failure windows",
+      "verification": {
+        "checks": "16/artifact-tool-failure-checks-b01.json",
+        "review": "16/independent-artifact-tools-review-T03.md"
+      },
+      "status_before_final_verification": "fixed-unit-independently-verified",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "additional_evidence": [
+          "16/independent-artifact-tools-review-T03.md",
+          "16/independent-build-layout-review-T03.md",
+          "16/final-artifacts-b02/candidate-jars/manifest.json",
+          "16/final-artifacts-verified-b02.json"
+        ],
+        "meaning": "independent negative metadata models plus actual fresh29 JAR archive accepted matching sealed before/after attestation"
+      }
+    },
+    {
+      "id": "DEF-EX-0018",
+      "kind": "architecture-gate",
+      "requirement": [
+        "R11",
+        "R12",
+        "R14"
+      ],
+      "acceptance": [
+        "AC13",
+        "AC14",
+        "AC16"
+      ],
+      "summary": "实际Modulith门禁因验证布局误导入255测试类；工具修正独立通过，等待新封印全量重跑",
+      "status": "closed-final-verified",
+      "owner_ticket": "16",
+      "root_cause": "Candidate custom buildDirectory broke ArchUnit standard Gradle test-output exclusion;255 test classes were imported as production",
+      "verification": {
+        "failed_batch": "16/final-core-b01",
+        "tests": {
+          "tests": 866,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "diagnosis": "16/modulith-diagnostic-b01/diagnosis.md",
+        "effective_red": "16/build-layout-red-b01",
+        "tool_checks": "16/build-layout-green-b01",
+        "product_source_changed": false,
+        "final_fresh_full_run": {
+          "batch": "16/final-core-b02",
+          "tree": "907687818954065d356964df2007eb108ddebef1",
+          "tests": {
+            "tests": 886,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "fresh_suites": 208,
+          "exit_code": 0,
+          "candidate_configured_inputs_attested": true,
+          "candidate_inputs_after_attested": true,
+          "integrity_error": null
+        },
+        "independent_review": "16/independent-build-layout-review-T03.md",
+        "fresh_batch": "16/final-core-b02"
+      },
+      "status_before_final_verification": "fixed-final-core-independently-reviewed",
+      "final_integration_reverification": {
+        "tree": "907687818954065d356964df2007eb108ddebef1",
+        "execution_union": "16/final-execution-union.json",
+        "source_inputs": "all three final b02 batches attested before/after with no source delta",
+        "passed_execution_ids": [
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.ModulithArchitectureTest.xml#testcase[1]",
+          "core/summer-sample/TEST-com.abluepoint.summer.sample.ModulithArchitectureTest.xml#testcase[2]"
+        ],
+        "case_details": "16/final-execution-cases.json",
+        "requested_class_names": [
+          "ModulithArchitectureTest"
+        ],
+        "matched_class_names": [
+          "ModulithArchitectureTest"
+        ]
+      }
+    }
+  ],
+  "note": "编译红灯零执行不计为测试通过；最终关闭需要真实集成重测，不预填通过。"
+}

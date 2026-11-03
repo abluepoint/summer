@@ -1,0 +1,198 @@
+{
+  "product_tree": "907687818954065d356964df2007eb108ddebef1",
+  "head": "29d027cd68a786417d771749a83350d9779d3929",
+  "command": [
+    "git",
+    "diff-tree",
+    "--check",
+    "29d027cd68a786417d771749a83350d9779d3929",
+    "907687818954065d356964df2007eb108ddebef1"
+  ],
+  "exit_code": 2,
+  "check_passed": false,
+  "stdout_sha256": "f5b193311e95245a8d73ca336985d2eebc9c5c4e0e90cc57658e2c6b30698fa0",
+  "matches_root_saved_diagnostics": true,
+  "diagnostics": [
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationChangeEventService.java",
+      "line": 77,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "70921774c1afbf515ace203ee44d1ccf2dfea0061527c2a7be21b783a02df53d",
+      "candidate_sha256": "8f57b2e7a8661e0b9ea3298e2b7ad0a8657fd145abdaf4a439cb637ec716ba34",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/bff/UnavailableSummerMcpClient.java",
+      "line": 12,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "f7b85e7756f01399c27a5914bdd3af87a2aa4d1006f1756b21cc2610b5ea90f8",
+      "candidate_sha256": "a8aa78033fd7d0231a5bd06c42fbfadcc036b9f7297fc73c20c8334351374d61",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/dictionary/DictionaryNotificationService.java",
+      "line": 210,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "7b607fdbf4c618524d06b68e3fcfb0192102051be4e8e3bf2b2c5a9761f0e3b0",
+      "candidate_sha256": "e6d04323d876bb43f24dc7344bb0651d9645d4546f3cd84a1720f147f6b8f69b",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/identity/AuthUserService.java",
+      "line": 81,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "97f9004a86f29366ee260b9e0f7d9112a1a357a82160a6425a1c4dbff44d606b",
+      "candidate_sha256": "a857aea0028cff022a333aa3b3f901bb608572ed7b14b11c5d576da70d6d2861",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/member/MemberService.java",
+      "line": 127,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "e0608bfdcd820580d0b1075017d4ee9dab1c51b6d21b2d5c462a9e69b8d09e11",
+      "candidate_sha256": "8066ecf5099bb4160453be8d26ab6122406a54211852d2a41340b599f4cbee53",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginModels.java",
+      "line": 22,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "cb1f7e8bed8923605100a5c609153457b01949efd63ae69032f01e5af6f5e07c",
+      "candidate_sha256": "d263af1b75adfa0589e807e940437dd2b3d558abe9ea598cb000beb3df92078f",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeMessageModels.java",
+      "line": 23,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "b7f0c175469116d89c4e9c14f8e3da1d8f0277c8f9756cbbf3a502d7fbd5e1e2",
+      "candidate_sha256": "c4e782237fabb2c2780c342e4f71e27d777a68c933d649fefad081d692c22adb",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 4
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/realtime/RealtimeWebSocketHub.java",
+      "line": 208,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "54c19f410716cc44123a7e467881f2bcd5246aacad699eafb0c7c9b6219246cf",
+      "candidate_sha256": "025f03ffddbb404c6fc4e6a75cfb7723f46326a579da2ccbca65416e66731cb9",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/resilience/ResilienceModels.java",
+      "line": 12,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "fa620419f3f1be0fe1a7c47819b1db1bacba4678d7b61986d8f6764194b88292",
+      "candidate_sha256": "d86b5dfb4e34166845790b553fc3d3e14e5a95bd9904f61001845c92494ea890",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterEventService.java",
+      "line": 69,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "d0ecb75546ba0183fd9aa8082cab7f9a58f2162a1fb6615c527dfbfc1f7d2529",
+      "candidate_sha256": "9aa414c49d59a70c0c28a6ef3a3446f4e2a8d9827c253a8c48bf64e678adbd43",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/systemparameter/SystemParameterReleaseService.java",
+      "line": 273,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "056365fb4aab538dfcc2d57736271a48afbbb6773ce2bd4caec46720a597095a",
+      "candidate_sha256": "9948161bec6174f0f211cc5735f8021af46599c5ee7d4411b2016a30b4576f76",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 4
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskExecutionService.java",
+      "line": 181,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "b98e3b23bd00ab028227712b28c479549bc1b2c6ef439a324b10c571f6ac01ff",
+      "candidate_sha256": "8676845c5ad5d6542e7ffdc8e382e7c483448a4072ebc005e8b6a7976dd0d636",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    },
+    {
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/task/TaskProgressEventService.java",
+      "line": 256,
+      "diagnostic": "new blank line at EOF.",
+      "operation": "remove-definitions",
+      "before_sha256": "43fa7b77294a130324d9ac69c162b36107770a7f5f4da580da5a91791036253e",
+      "candidate_sha256": "606ec371bd2564b6988f1b3798e6e13442a414eef52699117d2064990b42e240",
+      "exact_ast_removal_and_no_other_byte_change": true,
+      "before_and_after_equal_15_manifest": true,
+      "terminal_newline_bytes": 2
+    }
+  ],
+  "other_check_diagnostics": [],
+  "policy": {
+    "candidate_policy_build_docs_scripts_utf8_files_scanned": 381,
+    "hard_rule_requiring_no_blank_at_eof_found": false,
+    "configured_ci_or_gradle_formatter_gate_found": false,
+    "tracked_editorconfig_gitattributes_ci_hook_configs": [],
+    "local_active_hooks": [],
+    "core_whitespace_explicit_config": null,
+    "core_hooksPath_explicit_config": null,
+    "apply_whitespace_explicit_config": null,
+    "historical_document_matches": "prior check/format-cleanup results only, not current normative requirement",
+    "global_rule": "pre-commit diff inspection required; performed and actual nonzero result retained",
+    "files_sha256": {
+      "AGENTS.md": "239896463b1ee7b40b0006cbffe9ca435c14a64583b0dda80c559b3f58ed65b7",
+      "build.gradle.kts": "97f26a848b7775768c0b900d817737f52e6f58fba4442bb9ebf49b92e4763176",
+      "settings.gradle.kts": "6b395393c0f5f013a10d2a3a91847d3a914ed7e3c4bf08bbe0a0df6fd58ba799",
+      "docs/agents/domain.md": "b400a85fd545ef10a461d68f021be4581d043c06d4aa8ecbb9ccfc1a9f3a7998",
+      "docs/architecture/包结构与命名规范.md": "9fa4a33f4147a98c2fa3bcee74bb2c64b4cf6cf5b582d66044472460b505a51c",
+      "docs/acceptance/automatic-key-rotation-136.md": "7d302332ebc99e3e15cf92165ed0598341c7d52fb0c66db30674fb958dc4ac2a",
+      "docs/guides/summer4-deployment-93.md": "685f1a0c9ad52beb236f2c1181def7e3ce1b726e8e9330c5577497ad9b8a5e78",
+      "docs/guides/summer4-request-body-logging-78.md": "56069ea6a5cc302725c34630dc9eab5ad1826860a241639cc1da6b9f9aaf8493",
+      "docs/guides/summer4-t32-t35-acceptance.md": "2ed3b83c47d2c0a6fa443d8d45b11df6728782966d533c3cb14b0b9cbe587a65",
+      "/Users/bluepoint/Project/codex-workspace/规矩文档.md": "58e67b13b8aed2321418778fef67991fb20e569149cab31d2639d7bc41776d78"
+    }
+  },
+  "decision": {
+    "blocking": false,
+    "classification": "cosmetic EOF blank lines; check failed and accepted as explicit narrow technical tradeoff",
+    "authority": "T00 current explicit instruction: if no mandatory hard rule, accept minimal AST deletion preserving nontarget bytes",
+    "action": "no source cleanup, keep frozen tree; no business retest required solely for accepted cosmetic diagnostics",
+    "future_scope": "does not waive other whitespace or conflict diagnostics"
+  },
+  "previous_report_backup": {
+    "path": ".scratch/exception-unification/execution/16/final-standards-review.pre-whitespace-review-9076878.md",
+    "sha256": "cea9b627215c19683534126852c7dd19afcd76e94c220541d46cee64168fe292"
+  },
+  "reviewer_gradle_runs": 0,
+  "index_entries_sha256": "9c4bcf2a0587e11f9db6a224a62f083e978a2a03c6e3bdafc432a62b02b053f2"
+}

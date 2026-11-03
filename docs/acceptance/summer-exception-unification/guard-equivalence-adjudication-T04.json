@@ -1,0 +1,719 @@
+{
+  "state": "final_static_scope_decision",
+  "reviewer": "T04 nonauthor for08/13; own04/06 semantic approvals referenced separately",
+  "candidate_tree": "907687818954065d356964df2007eb108ddebef1",
+  "recorded_at": "2026-11-03T09:17:06.686587+00:00",
+  "independent_report": "16/guard-equivalence-review-T01.json",
+  "independent_report_sha256": "acb9eead6d95a2313e9ab85ab3e21a8f480ed25a68eb0c3139bf815a5abe4bf4",
+  "normalization": "Java lexical token comparison ignores comments/formatting and replaces only four exact old exception constructor carriers with their approved typed withMessage form; all other tokens, predicates, guards, message literals and effects must match",
+  "source_proof": [
+    {
+      "method": "com.abluepoint.summer.sample.plugin.PluginService#diagnostic",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginService.java",
+      "m0_lines": [
+        100,
+        111
+      ],
+      "candidate_lines": [
+        102,
+        113
+      ],
+      "m0_source_sha256": "3ca636429e1ba85d99e0344f413448a7713909f85a635a8c1e87ca383b1f9eb9",
+      "candidate_source_sha256": "bcb01036ce2bc8af3fcc3acd4e2af34669821adab3a731874387540a3cf5fe07",
+      "m0_method_sha256": "40c8e6a4819508999f1b6823b6bda22e3502cf19874009b15b40f6d442a3743e",
+      "candidate_method_sha256": "40c8e6a4819508999f1b6823b6bda22e3502cf19874009b15b40f6d442a3743e",
+      "normalized_tokens_sha256": "30f2d391dcb216b3c45bae5997e952390dff2e176230a1783b0227f167d0122a",
+      "equal_after_only_explicit_exception_carrier_substitution": true,
+      "token_count": 173
+    },
+    {
+      "method": "com.abluepoint.summer.sample.plugin.PluginService#customerInsights",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginService.java",
+      "m0_lines": [
+        122,
+        134
+      ],
+      "candidate_lines": [
+        124,
+        136
+      ],
+      "m0_source_sha256": "3ca636429e1ba85d99e0344f413448a7713909f85a635a8c1e87ca383b1f9eb9",
+      "candidate_source_sha256": "bcb01036ce2bc8af3fcc3acd4e2af34669821adab3a731874387540a3cf5fe07",
+      "m0_method_sha256": "bcf39669a112ea185fb5a74a4701472e6f40740ecf088b456129d3465c776401",
+      "candidate_method_sha256": "bc3fd5bbca92659162f5ee09887fc013bec8c3c92665024b758b77330c6065a9",
+      "normalized_tokens_sha256": "b579c062045ce87246aee395747ba7cb0ab93d7ef45ed4ed02cfd515424071e8",
+      "equal_after_only_explicit_exception_carrier_substitution": true,
+      "token_count": 227
+    },
+    {
+      "method": "com.abluepoint.summer.sample.plugin.PluginService#requireEntity",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginService.java",
+      "m0_lines": [
+        177,
+        177
+      ],
+      "candidate_lines": [
+        179,
+        179
+      ],
+      "m0_source_sha256": "3ca636429e1ba85d99e0344f413448a7713909f85a635a8c1e87ca383b1f9eb9",
+      "candidate_source_sha256": "bcb01036ce2bc8af3fcc3acd4e2af34669821adab3a731874387540a3cf5fe07",
+      "m0_method_sha256": "623235ad7f733c8441513adc76be4566326d202fa950add7a2fabf221386f660",
+      "candidate_method_sha256": "8149edcc347868bc1cfbbf8e3f9a30fab5f75ff6728803e49689d8032101a663",
+      "normalized_tokens_sha256": "e8571f11cfe1ca264a2319f368084dc7a5190a54b131da187045997ee635242f",
+      "equal_after_only_explicit_exception_carrier_substitution": true,
+      "token_count": 54
+    },
+    {
+      "method": "com.abluepoint.summer.sample.plugin.PluginService#requirePlatform",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginService.java",
+      "m0_lines": [
+        182,
+        182
+      ],
+      "candidate_lines": [
+        184,
+        184
+      ],
+      "m0_source_sha256": "3ca636429e1ba85d99e0344f413448a7713909f85a635a8c1e87ca383b1f9eb9",
+      "candidate_source_sha256": "bcb01036ce2bc8af3fcc3acd4e2af34669821adab3a731874387540a3cf5fe07",
+      "m0_method_sha256": "b0a9662c1ad832a4a50384649efbce04ccf655af885597a65082e0a644c1f7ea",
+      "candidate_method_sha256": "b0a9662c1ad832a4a50384649efbce04ccf655af885597a65082e0a644c1f7ea",
+      "normalized_tokens_sha256": "73cdf75e996881dae52d76a8d03336d5f3fbc35ac74f758055fd9c11068ba576",
+      "equal_after_only_explicit_exception_carrier_substitution": true,
+      "token_count": 71
+    },
+    {
+      "method": "com.abluepoint.summer.sample.plugin.PluginService#platformList",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginService.java",
+      "m0_lines": [
+        36,
+        41
+      ],
+      "candidate_lines": [
+        38,
+        43
+      ],
+      "m0_source_sha256": "3ca636429e1ba85d99e0344f413448a7713909f85a635a8c1e87ca383b1f9eb9",
+      "candidate_source_sha256": "bcb01036ce2bc8af3fcc3acd4e2af34669821adab3a731874387540a3cf5fe07",
+      "m0_method_sha256": "57ade2042a2f607f73117aaf99d448ae0f49bc488abbdd80e0b7065288ca8eb7",
+      "candidate_method_sha256": "57ade2042a2f607f73117aaf99d448ae0f49bc488abbdd80e0b7065288ca8eb7",
+      "normalized_tokens_sha256": "fdc8012ab76e4ba8f776c77535154c4bbd8af46caa3c2725713869e44389a66f",
+      "equal_after_only_explicit_exception_carrier_substitution": true,
+      "token_count": 93
+    },
+    {
+      "method": "com.abluepoint.summer.sample.plugin.PluginService#enable",
+      "path": "summer-sample/src/main/java/com/abluepoint/summer/sample/plugin/PluginService.java",
+      "m0_lines": [
+        58,
+        73
+      ],
+      "candidate_lines": [
+        60,
+        75
+      ],
+      "m0_source_sha256": "3ca636429e1ba85d99e0344f413448a7713909f85a635a8c1e87ca383b1f9eb9",
+      "candidate_source_sha256": "bcb01036ce2bc8af3fcc3acd4e2af34669821adab3a731874387540a3cf5fe07",
+      "m0_method_sha256": "d57033a5b08ea13ef5a8ab9b5966fdf0d3570736bc8ee612618caec262e6ca66",
+      "candidate_method_sha256": "72fb9fe7412423b94ff665910828160b669f5e350c041fa04928cbbbedfb1896",
+      "normalized_tokens_sha256": "52d4822931fe25eacf2bafc84a5367fd9cd54ebe29fe9bd5662846c6c7fbe572",
+      "equal_after_only_explicit_exception_carrier_substitution": true,
+      "token_count": 172
+    }
+  ],
+  "decisions": [
+    {
+      "review_id": "G01",
+      "contract_id": "PC017",
+      "guards": [
+        "@ResourcePermission(\"enterprise.capabilities.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capabilities/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:disable",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:enable"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "require/requireKey and validation throw before the first resource mutation; the PLATFORM-scope native denial stays separate and has its own origin assertion.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 129,
+        "line_end": 155,
+        "methods": [
+          "createCapability",
+          "setCapabilityStatus",
+          "requireKey"
+        ],
+        "explicit_messages": [
+          "Idempotency-Key is required",
+          "code, resource and action are required",
+          "Invalid capability scope",
+          "Invalid capability status"
+        ]
+      }
+    },
+    {
+      "review_id": "G02",
+      "contract_id": "PC017",
+      "guards": [
+        "@ResourcePermission(\"enterprise.bundles.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capability-bundles",
+        "PUT /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Validation uses the same concrete INVALID and explicit-message renderer; bundle history/success and replay are not counted as new failure executions.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 188,
+        "line_end": 195,
+        "methods": [
+          "createBundle",
+          "updateBundle",
+          "validateNameCode",
+          "resolveCapabilities"
+        ],
+        "explicit_messages": [
+          "Idempotency-Key is required",
+          "name and code are required",
+          "Bundle update is required",
+          "Capability is required",
+          "Capability is disabled"
+        ]
+      }
+    },
+    {
+      "review_id": "G03",
+      "contract_id": "PC017",
+      "guards": [
+        "@ResourcePermission(\"platform.capabilities.write\")"
+      ],
+      "route_members": [
+        "POST /api/v1/platform/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#platformCapabilityChecksKeepTheirOriginalMessages()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Platform capability claim AND scope check precedes the same validation; platform/enterprise denial messages remain separate.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 143,
+        "line_end": 149,
+        "methods": [
+          "createPlatformCapability",
+          "requireKey"
+        ],
+        "explicit_messages": [
+          "Idempotency-Key is required",
+          "code, resource and action are required"
+        ]
+      }
+    },
+    {
+      "review_id": "G04",
+      "contract_id": "PC018",
+      "guards": [
+        "@ResourcePermission(\"enterprise.bundles.read\")"
+      ],
+      "route_members": [
+        "GET /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}",
+        "GET /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/versions"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Read-only missing-bundle throw is before response construction; no mutation/retry/recovery behavior is merged with duplicate-role creation.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 186,
+        "line_end": 198,
+        "methods": [
+          "bundle",
+          "bundleVersions",
+          "bundle(String,String)"
+        ],
+        "explicit_messages": [
+          "Bundle not found"
+        ]
+      }
+    },
+    {
+      "review_id": "G05",
+      "contract_id": "PC018",
+      "guards": [
+        "@ResourcePermission(\"enterprise.roles.read\")"
+      ],
+      "route_members": [
+        "GET /api/v1/enterprises/{enterpriseId}/roles/{id}",
+        "GET /api/v1/enterprises/{enterpriseId}/roles/{id}/capabilities",
+        "GET /api/v1/enterprises/{enterpriseId}/users/{username}/roles"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Two missing-record messages remain named source branches; each is a pure throw after its roles.read check and before response construction.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 160,
+        "line_end": 251,
+        "methods": [
+          "role",
+          "userAssignment",
+          "role(String,String)"
+        ],
+        "explicit_messages": [
+          "Role not found",
+          "User assignment not found"
+        ]
+      }
+    },
+    {
+      "review_id": "G06",
+      "contract_id": "PC018",
+      "guards": [
+        "@ResourcePermission(\"enterprise.capabilities.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capabilities/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:disable",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:enable"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Duplicate/missing capability throws precede the first mutation; the PLATFORM-principal native branch is separate.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 129,
+        "line_end": 155,
+        "methods": [
+          "createCapability",
+          "setCapabilityStatus",
+          "capability"
+        ],
+        "explicit_messages": [
+          "Capability code already exists",
+          "Capability not found"
+        ]
+      }
+    },
+    {
+      "review_id": "G07",
+      "contract_id": "PC018",
+      "guards": [
+        "@ResourcePermission(\"enterprise.bundles.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capability-bundles",
+        "PUT /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "All reused failure branches throw before bundle write/history/receipt/audit; no success/recovery credit is inferred.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 188,
+        "line_end": 195,
+        "methods": [
+          "createBundle",
+          "updateBundle",
+          "bundle",
+          "resolveCapabilities"
+        ],
+        "explicit_messages": [
+          "Bundle code already exists",
+          "Bundle not found",
+          "Capability not found"
+        ]
+      }
+    },
+    {
+      "review_id": "G08",
+      "contract_id": "PC018",
+      "guards": [
+        "@ResourcePermission(\"platform.capabilities.write\")"
+      ],
+      "route_members": [
+        "POST /api/v1/platform/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#platformCapabilityChecksKeepTheirOriginalMessages()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Platform-specific guard has a matching native-origin HTTP assertion; duplicate validation precedes mutation.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 143,
+        "line_end": 149,
+        "methods": [
+          "createPlatformCapability"
+        ],
+        "explicit_messages": [
+          "Capability code already exists"
+        ]
+      }
+    },
+    {
+      "review_id": "G09",
+      "contract_id": "PC019",
+      "guards": [
+        "@ResourcePermission(\"enterprise.capabilities.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capabilities/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:disable",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:enable"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#idempotentRoleWriteReplaysAndStaleEtagIsRejected()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Exact etag helper at line 424 is shared with bundle update; capability status/version write follows the check. Role DB compare-and-set behavior is not claimed equivalent.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 153,
+        "line_end": 155,
+        "methods": [
+          "setCapabilityStatus",
+          "etag"
+        ],
+        "explicit_messages": [
+          "The resource has changed"
+        ]
+      }
+    },
+    {
+      "review_id": "G10",
+      "contract_id": "PC019",
+      "guards": [
+        "@ResourcePermission(\"enterprise.bundles.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}",
+        "PUT /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#idempotentRoleWriteReplaysAndStaleEtagIsRejected()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Same etag helper/message at line 424; version/history mutation follows the failed precondition. Role concurrency/recovery is kept separate.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 194,
+        "line_end": 195,
+        "methods": [
+          "updateBundle",
+          "etag"
+        ],
+        "explicit_messages": [
+          "The resource has changed"
+        ]
+      }
+    },
+    {
+      "review_id": "G11",
+      "contract_id": "PC020",
+      "guards": [
+        "@ResourcePermission(\"enterprise.capabilities.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capabilities/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:disable",
+        "POST /api/v1/enterprises/{enterpriseId}/capabilities/{id}:enable"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Same replay(Receipt,String) at line 444 compares fingerprint and throws before any resource mutation; successful replay/state recovery earns no new coverage.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 129,
+        "line_end": 155,
+        "methods": [
+          "createCapability",
+          "setCapabilityStatus",
+          "replay"
+        ],
+        "explicit_messages": [
+          "Idempotency key reused"
+        ]
+      }
+    },
+    {
+      "review_id": "G12",
+      "contract_id": "PC020",
+      "guards": [
+        "@ResourcePermission(\"enterprise.bundles.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}",
+        "POST /api/v1/enterprises/{enterpriseId}/capability-bundles",
+        "PUT /api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Same receipt namespace helper and replay throw at line 444 before mutation; bundle history and successful replay remain independent behavior.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 188,
+        "line_end": 195,
+        "methods": [
+          "createBundle",
+          "updateBundle",
+          "replay"
+        ],
+        "explicit_messages": [
+          "Idempotency key reused"
+        ]
+      }
+    },
+    {
+      "review_id": "G13",
+      "contract_id": "PC020",
+      "guards": [
+        "@ResourcePermission(\"platform.capabilities.write\")"
+      ],
+      "route_members": [
+        "POST /api/v1/platform/capabilities"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.authorization.AuthorizationControllerTest#invalidRoleDuplicateCodeAndReusedIdempotencyKeyUseUnifiedFailures()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#platformCapabilityChecksKeepTheirOriginalMessages()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Same replay throw/message with platform receipt namespace; platform permission guard independently asserted.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/AuthorizationService.java",
+        "source_sha256": "712746379aff19cd301e39c42f2770f948ed860c58bf708314e535994bddcd7b",
+        "line_start": 143,
+        "line_end": 149,
+        "methods": [
+          "createPlatformCapability",
+          "replay"
+        ],
+        "explicit_messages": [
+          "Idempotency key reused"
+        ]
+      }
+    },
+    {
+      "review_id": "G14",
+      "contract_id": "PC091",
+      "guards": [
+        "@ResourcePermission(\"enterprise.menu.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/menu-manifest",
+        "PATCH /api/v1/enterprises/{enterpriseId}/menu-manifest/{menuId}"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.menu.MenuManifestHttpTest#rejectsUnauthenticatedAndInvalidManifestInput()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#menuManagementKeepsPlatformEnterpriseAndMembershipGuardMessages()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Both route forms reach exactly override; pure validation throws before save/compareAndSet/receipt/audit. Platform menu validation message literal is not claimed to be an independently executed override failure.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestService.java",
+        "source_sha256": "1838e1481fa2a41502ac688b6cf0a007bc95fb801ee1f92cf001dbddbb8fcb5e",
+        "line_start": 124,
+        "line_end": 145,
+        "methods": [
+          "override",
+          "validateOverride",
+          "validateOverrideParent"
+        ],
+        "explicit_messages": [
+          "Idempotency-Key is required",
+          "Menu override is required",
+          "Unknown parent menu",
+          "Menu parent cycle"
+        ]
+      }
+    },
+    {
+      "review_id": "G15",
+      "contract_id": "PC092",
+      "guards": [
+        "@ResourcePermission(\"enterprise.menu.write\")"
+      ],
+      "route_members": [
+        "PATCH /api/v1/enterprises/{enterpriseId}/menu-manifest",
+        "PATCH /api/v1/enterprises/{enterpriseId}/menu-manifest/{menuId}"
+      ],
+      "independent_initial_decision": "approved",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.menu.MenuManifestHttpTest#manifestSyncIsIdempotentAndRejectsInvalidVersionAndAdminCanOverrideMetadata()",
+        "com.abluepoint.summer.sample.authorization.NativeDenialCompatibilityHttpTest#menuManagementKeepsPlatformEnterpriseAndMembershipGuardMessages()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "Both route forms reach exactly override; lookup/fingerprint conflicts throw before override mutation; platform manifest version rollback and override 412 stay separate.",
+      "independent_production_evidence": {
+        "source_path": "summer-sample/src/main/java/com/abluepoint/summer/sample/menu/MenuManifestService.java",
+        "source_sha256": "1838e1481fa2a41502ac688b6cf0a007bc95fb801ee1f92cf001dbddbb8fcb5e",
+        "line_start": 124,
+        "line_end": 145,
+        "methods": [
+          "override"
+        ],
+        "explicit_messages": [
+          "Menu item not found",
+          "Idempotency key reused"
+        ]
+      }
+    },
+    {
+      "review_id": "G16",
+      "contract_id": "PC110",
+      "guards": [
+        "@PreAuthorize(\"hasAuthority(\\'SCOPE_platform.plugins.read\\')\")"
+      ],
+      "route_members": [
+        "GET /api/v1/platform/plugins/{pluginId}/diagnostic"
+      ],
+      "independent_initial_decision": "pending",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.plugin.PluginLifecycleHttpTest#invalidRegistrationUsesTheSampleBusinessNamespace()"
+      ],
+      "decision": "excluded_unconfirmed_route_combination",
+      "new_http_execution_credit": 0,
+      "reason": "diagnostic INVALID is reachable only through blank pluginId in requireEntity; HTTP blank path reachability was not established. Do not promote AST navigation to a required fixed tuple, do not mark it covered. PC110/register INVALID remains required.",
+      "excluded_tuple": {
+        "entry": "GET /api/v1/platform/plugins/{pluginId}/diagnostic",
+        "code": "SAMPLE_PLUGIN_INVALID",
+        "status": 400
+      }
+    },
+    {
+      "review_id": "G17",
+      "contract_id": "PC111",
+      "guards": [
+        "@PreAuthorize(\"hasAuthority(\\'SCOPE_platform.plugins.read\\')\")"
+      ],
+      "route_members": [
+        "GET /api/v1/platform/plugins/{pluginId}/diagnostic"
+      ],
+      "independent_initial_decision": "pending",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.plugin.PluginLifecycleHttpTest#requiresRegistrationAndPermission()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "diagnostic and platformList call the same unchanged requirePlatform(authentication, platform.plugins.read), and diagnostic calls the exact unchanged requireEntity. Existing missing-registration lifecycle HTTP asserts the same UNTRUSTED/code/409/message producer; the real TCP allowed read feature proves the read guard can pass. Native write denial and managed pre-controller denial are not relabeled as executed native read denial.",
+      "source_proof_methods": [
+        "diagnostic",
+        "platformList",
+        "requirePlatform",
+        "requireEntity"
+      ],
+      "positive_read_source_method": "com.abluepoint.summer.sample.authorization.AuthorizationCorrelationHttpTest#allowedRequestAndPersistedDecisionShareTheResponseCorrelation",
+      "positive_read_identity_policy": "all four suite XML occurrences retained; two source methods share the display names, so ordinal-to-source-method is not fabricated",
+      "limitation": "no direct diagnostic HTTP failure or native read-denial execution claimed"
+    },
+    {
+      "review_id": "G18",
+      "contract_id": "PC112",
+      "guards": [
+        "@ResourcePermission(\"enterprise.plugins.customer-insights.read\")"
+      ],
+      "route_members": [
+        "GET /api/v1/enterprises/{enterpriseId}/plugins/customer-insights/summary"
+      ],
+      "independent_initial_decision": "rejected",
+      "required_assertion_case_ids": [
+        "com.abluepoint.summer.sample.plugin.PluginFailureHttpTest#failuresKeepEveryBusinessMappingAndCannotMutateTheIncompatibleRegistration()",
+        "com.abluepoint.summer.sample.plugin.PluginLifecycleHttpTest#incompatibleEnableUsesTheSampleBusinessNamespace()",
+        "com.abluepoint.summer.sample.plugin.PluginLifecycleHttpTest#rejectsUntrustedArtifactAndIncompatibleUpgradeAndEnforcesDataPermission()"
+      ],
+      "decision": "approved_explicit_compositional_reuse",
+      "new_http_execution_credit": 0,
+      "reason": "retain summary as a separate group; enable is not state/transaction equivalent. Same summary entry real HTTP 404 passes both enterprise guards; summary missing-customer.read native denial exercises the shared requireEnterprise helper. enable 409 proves only concrete INCOMPATIBLE/shared renderer. Exact M0-to-candidate token comparison preserves summary non-ENABLED predicate, literal Plugin is not enabled, ordering and absence of mutation before throw. This narrowly approved equivalent evidence covers unchanged refusal/rendering, not a simulated execution or state-recovery merge.",
+      "source_proof_methods": [
+        "customerInsights",
+        "enable"
+      ],
+      "limitation": "non-ENABLED summary failure and first enterprise native denial are not claimed separately HTTP-executed; enable transactional outcome remains independently tested"
+    }
+  ],
+  "summary": {
+    "approved_compositional": 17,
+    "excluded_unconfirmed_navigation": 1,
+    "confirmed_product_test_gaps": 0,
+    "new_functional_test_executions": 0
+  },
+  "coverage": "final XML joined separately; static scope freeze does not claim runtime coverage"
+}

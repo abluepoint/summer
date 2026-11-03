@@ -1,0 +1,296 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-11-03T09:35:58.506210+00:00",
+  "implementation_commit": "f67d7617c482b5cca9359f34404fb22ae38b594f",
+  "tested_product_tree": "907687818954065d356964df2007eb108ddebef1",
+  "purpose": "durable docs-only acceptance snapshot; manifest intentionally excludes its own bytes",
+  "files": [
+    {
+      "path": "docs/acceptance/summer-exception-unification/README.md",
+      "source": ".scratch/exception-unification/execution/16/acceptance-report-draft.md",
+      "kind": "derived_final_report",
+      "source_sha256": "5054a72b0dca4e565096f0237ab7aa049af37dcd52d95f89a872d49613083410",
+      "sha256": "e2c19aea85bed82058d3b077117b27b88133744c6937db602ab5357d52ffd590",
+      "bytes": 11263
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/T00-integration-acceptance.json",
+      "source": ".scratch/exception-unification/execution/16/T00-integration-acceptance.json",
+      "kind": "exact",
+      "source_sha256": "595138cef317dcce63aa98a68fe3c7cc5adf9635cd73dc181ad66931e660ca79",
+      "sha256": "595138cef317dcce63aa98a68fe3c7cc5adf9635cd73dc181ad66931e660ca79",
+      "bytes": 7847
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/T04-final-output-manifest.json",
+      "source": ".scratch/exception-unification/execution/16/T04-final-output-manifest.json",
+      "kind": "exact",
+      "source_sha256": "036f966012ec54cbd6f3f748c85ee30b6b5eb573979afc1985b061d582829122",
+      "sha256": "036f966012ec54cbd6f3f748c85ee30b6b5eb573979afc1985b061d582829122",
+      "bytes": 1814
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/T04-final-technical-exit.json",
+      "source": ".scratch/exception-unification/execution/16/T04-final-technical-exit.json",
+      "kind": "exact",
+      "source_sha256": "9eaf5cc9a6f56c0d0c33dff437fe8f02708520990d76dbd96ea360b83f4903b3",
+      "sha256": "9eaf5cc9a6f56c0d0c33dff437fe8f02708520990d76dbd96ea360b83f4903b3",
+      "bytes": 1765
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/change-records.json",
+      "source": ".scratch/exception-unification/execution/control/change-records.json",
+      "kind": "exact",
+      "source_sha256": "33127ea8aabe4993cfae391e150cbc220071f074ddbe8859126f08be5639f6fd",
+      "sha256": "33127ea8aabe4993cfae391e150cbc220071f074ddbe8859126f08be5639f6fd",
+      "bytes": 1634
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/contracts-final.json",
+      "source": ".scratch/exception-unification/execution/16/contracts-final.json",
+      "kind": "exact",
+      "source_sha256": "2f9e6cc99c54d962c89ac55834dc680ac3a4940f4c1c1f347adaf032caf452fe",
+      "sha256": "2f9e6cc99c54d962c89ac55834dc680ac3a4940f4c1c1f347adaf032caf452fe",
+      "bytes": 1178971
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/defects.json",
+      "source": ".scratch/exception-unification/execution/control/defects.json",
+      "kind": "exact",
+      "source_sha256": "71a26785c2d5c92384453ce16f6f9b430ee3c73e91bc91c6ab79754e079396c2",
+      "sha256": "71a26785c2d5c92384453ce16f6f9b430ee3c73e91bc91c6ab79754e079396c2",
+      "bytes": 40326
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/evidence.json",
+      "source": ".scratch/exception-unification/execution/16/final-evidence-record.json",
+      "kind": "derived_final_evidence",
+      "source_sha256": "0a1e899c6cfcc232d0ed676d459c7525726a9508b878348655b01a6d4c5f5179",
+      "sha256": "4b8bef2326a177c0c57478c79b7c5c86c869c94b96d10ef3807ae3e85ad1a2b0",
+      "bytes": 34012,
+      "allowed_changes": [
+        "state",
+        "implementation_commit",
+        "source_evidence_snapshot",
+        "technical_acceptance"
+      ]
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/final-defect-reconciliation-T04.json",
+      "source": ".scratch/exception-unification/execution/16/final-defect-reconciliation-T04.json",
+      "kind": "exact",
+      "source_sha256": "892e9b6b1428da77702d7c2401eb79f4875b583e513cab6a617fef9bea9e6c16",
+      "sha256": "892e9b6b1428da77702d7c2401eb79f4875b583e513cab6a617fef9bea9e6c16",
+      "bytes": 21976
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/final-spec-quality-inputs-T04.json",
+      "source": ".scratch/exception-unification/execution/16/final-spec-quality-inputs-T04.json",
+      "kind": "exact",
+      "source_sha256": "30e45126fd8fa12d396e835d9f9d953dc3c7e2094a85383ec63902fa555422dc",
+      "sha256": "30e45126fd8fa12d396e835d9f9d953dc3c7e2094a85383ec63902fa555422dc",
+      "bytes": 5392
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/final-spec-quality-review-T04.md",
+      "source": ".scratch/exception-unification/execution/16/final-spec-quality-review-T04.md",
+      "kind": "exact",
+      "source_sha256": "2e690faf02dcf7e07e2613f4adfa3b7ae4ebce50c76b405eaff64d02e8c6e4ff",
+      "sha256": "2e690faf02dcf7e07e2613f4adfa3b7ae4ebce50c76b405eaff64d02e8c6e4ff",
+      "bytes": 11019
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/final-standards-dynamic-evidence.json",
+      "source": ".scratch/exception-unification/execution/16/final-standards-dynamic-evidence.json",
+      "kind": "exact",
+      "source_sha256": "98eb0aecd08092b50a3cba1187d10f0ada667067abb56629a09b022adaf0d21a",
+      "sha256": "98eb0aecd08092b50a3cba1187d10f0ada667067abb56629a09b022adaf0d21a",
+      "bytes": 78160
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/final-standards-review.md",
+      "source": ".scratch/exception-unification/execution/16/final-standards-review.md",
+      "kind": "relocated_markdown_links",
+      "source_sha256": "967d4aaef86de2bcf0261596efdfd7a20ab3c33a3a107a1adfa62416bc4062f6",
+      "sha256": "6abcaa3c5f33637c11b46f4e7437a6733fb110789fbbf17bfc37778a1a5455b7",
+      "bytes": 21170,
+      "link_relocations": [
+        {
+          "from": "final-standards-review.pre-freeze-20261103T082516Z-e88b2848.md",
+          "to": "../../../.scratch/exception-unification/execution/16/final-standards-review.pre-freeze-20261103T082516Z-e88b2848.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-standards-review.pre-freeze-20261103T082516Z-e88b2848.md"
+        },
+        {
+          "from": "final-standards-freeze-inputs.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-standards-freeze-inputs.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-standards-freeze-inputs.json"
+        },
+        {
+          "from": "independent-resolution-review.md",
+          "to": "../../../.scratch/exception-unification/execution/16/independent-resolution-review.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/independent-resolution-review.md"
+        },
+        {
+          "from": "../05/final-independent-standards-T04.md",
+          "to": "../../../.scratch/exception-unification/execution/05/final-independent-standards-T04.md",
+          "resolved_original": ".scratch/exception-unification/execution/05/final-independent-standards-T04.md"
+        },
+        {
+          "from": "../control/m2-technical-review.md",
+          "to": "../../../.scratch/exception-unification/execution/control/m2-technical-review.md",
+          "resolved_original": ".scratch/exception-unification/execution/control/m2-technical-review.md"
+        },
+        {
+          "from": "../08/independent-review-T00.md",
+          "to": "../../../.scratch/exception-unification/execution/08/independent-review-T00.md",
+          "resolved_original": ".scratch/exception-unification/execution/08/independent-review-T00.md"
+        },
+        {
+          "from": "../08/native-denial-correction/independent-review-T01.md",
+          "to": "../../../.scratch/exception-unification/execution/08/native-denial-correction/independent-review-T01.md",
+          "resolved_original": ".scratch/exception-unification/execution/08/native-denial-correction/independent-review-T01.md"
+        },
+        {
+          "from": "../14/independent-review-T00.md",
+          "to": "../../../.scratch/exception-unification/execution/14/independent-review-T00.md",
+          "resolved_original": ".scratch/exception-unification/execution/14/independent-review-T00.md"
+        },
+        {
+          "from": "../15/independent-review-T05.md",
+          "to": "../../../.scratch/exception-unification/execution/15/independent-review-T05.md",
+          "resolved_original": ".scratch/exception-unification/execution/15/independent-review-T05.md"
+        },
+        {
+          "from": "independent-preparation-review.md",
+          "to": "../../../.scratch/exception-unification/execution/16/independent-preparation-review.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/independent-preparation-review.md"
+        },
+        {
+          "from": "independent-artifact-tools-review-T03.md",
+          "to": "../../../.scratch/exception-unification/execution/16/independent-artifact-tools-review-T03.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/independent-artifact-tools-review-T03.md"
+        },
+        {
+          "from": "independent-release-notes-review-T01.md",
+          "to": "../../../.scratch/exception-unification/execution/16/independent-release-notes-review-T01.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/independent-release-notes-review-T01.md"
+        },
+        {
+          "from": "final-evidence-record.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-evidence-record.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-evidence-record.json"
+        },
+        {
+          "from": "final-standards-review.pre-final-dynamic-evidence-9076878.md",
+          "to": "../../../.scratch/exception-unification/execution/16/final-standards-review.pre-final-dynamic-evidence-9076878.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-standards-review.pre-final-dynamic-evidence-9076878.md"
+        },
+        {
+          "from": "final-execution-cases.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-execution-cases.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-execution-cases.json"
+        },
+        {
+          "from": "final-execution-union.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-execution-union.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-execution-union.json"
+        },
+        {
+          "from": "final-artifacts-verified-b02.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-artifacts-verified-b02.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-artifacts-verified-b02.json"
+        },
+        {
+          "from": "final-clients-b02/result.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-clients-b02/result.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-clients-b02/result.json"
+        },
+        {
+          "from": "final-whole-set-rollback.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-whole-set-rollback.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-whole-set-rollback.json"
+        },
+        {
+          "from": "independent-build-layout-review-T03.md",
+          "to": "../../../.scratch/exception-unification/execution/16/independent-build-layout-review-T03.md",
+          "resolved_original": ".scratch/exception-unification/execution/16/independent-build-layout-review-T03.md"
+        },
+        {
+          "from": "final-standards-layout-delta.json",
+          "to": "../../../.scratch/exception-unification/execution/16/final-standards-layout-delta.json",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-standards-layout-delta.json"
+        },
+        {
+          "from": "final-tree-whitespace-check.txt",
+          "to": "../../../.scratch/exception-unification/execution/16/final-tree-whitespace-check.txt",
+          "resolved_original": ".scratch/exception-unification/execution/16/final-tree-whitespace-check.txt"
+        }
+      ]
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/final-standards-whitespace-review.json",
+      "source": ".scratch/exception-unification/execution/16/final-standards-whitespace-review.json",
+      "kind": "exact",
+      "source_sha256": "d68be99d92c3317f74f1c177898b28ffd3f2c7b7d6f843210809b8d573b6289b",
+      "sha256": "d68be99d92c3317f74f1c177898b28ffd3f2c7b7d6f843210809b8d573b6289b",
+      "bytes": 10378
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/guard-equivalence-adjudication-T04.json",
+      "source": ".scratch/exception-unification/execution/16/guard-equivalence-adjudication-T04.json",
+      "kind": "exact",
+      "source_sha256": "ff87b617f99d82ed55178df66ce6127a9a8b516567f690fd5d912a9d4b939630",
+      "sha256": "ff87b617f99d82ed55178df66ce6127a9a8b516567f690fd5d912a9d4b939630",
+      "bytes": 34305
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/implementation-commit-binding-T04.json",
+      "source": ".scratch/exception-unification/execution/16/implementation-commit-binding-T04.json",
+      "kind": "exact",
+      "source_sha256": "505b8fb25fa0fb10f2e36e3e2576701385470c07e5b73632f7b181b082c9e9dd",
+      "sha256": "505b8fb25fa0fb10f2e36e3e2576701385470c07e5b73632f7b181b082c9e9dd",
+      "bytes": 752
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/independent-final-artifacts-review-T03.json",
+      "source": ".scratch/exception-unification/execution/16/independent-final-artifacts-review-T03.json",
+      "kind": "exact",
+      "source_sha256": "0c846b8b0a3dbd6101ce5251fa010a58a0496fcaeac70649d780068f05c8a181",
+      "sha256": "0c846b8b0a3dbd6101ce5251fa010a58a0496fcaeac70649d780068f05c8a181",
+      "bytes": 91640
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/independent-final-artifacts-review-T03.md",
+      "source": ".scratch/exception-unification/execution/16/independent-final-artifacts-review-T03.md",
+      "kind": "exact",
+      "source_sha256": "30d33930d1d6682b65c7c2b97f010b8ba3cf7b14fb0ec7c260e0b4be112c037c",
+      "sha256": "30d33930d1d6682b65c7c2b97f010b8ba3cf7b14fb0ec7c260e0b4be112c037c",
+      "bytes": 8139
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/traceability-final-validation.json",
+      "source": ".scratch/exception-unification/execution/16/traceability-final-validation.json",
+      "kind": "exact",
+      "source_sha256": "187a0281b98ffae8c70c38121919d4899481b4f32e0329118ef84de6dab189f2",
+      "sha256": "187a0281b98ffae8c70c38121919d4899481b4f32e0329118ef84de6dab189f2",
+      "bytes": 1924
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/traceability-final.json",
+      "source": ".scratch/exception-unification/execution/16/traceability-final.json",
+      "kind": "exact",
+      "source_sha256": "dd14b1c864247895c704de19f039514193cf8514ce31504c0a24a379a7f6a6e1",
+      "sha256": "dd14b1c864247895c704de19f039514193cf8514ce31504c0a24a379a7f6a6e1",
+      "bytes": 5431938
+    },
+    {
+      "path": "docs/acceptance/summer-exception-unification/traceability-final.schema.json",
+      "source": ".scratch/exception-unification/execution/16/traceability-final.schema.json",
+      "kind": "exact",
+      "source_sha256": "f67282bd4c8dcf1d6bcf36ec6f017b39382c539f820f43bff2ebf620e22e36d5",
+      "sha256": "f67282bd4c8dcf1d6bcf36ec6f017b39382c539f820f43bff2ebf620e22e36d5",
+      "bytes": 2164450
+    }
+  ],
+  "raw_evidence_publication": "retained locally, not pushed or deployed"
+}

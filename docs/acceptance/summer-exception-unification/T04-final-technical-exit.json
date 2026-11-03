@@ -1,0 +1,52 @@
+{
+  "state": "accepted",
+  "role": "M5 technical quality",
+  "reviewer": "T04",
+  "recorded_at": "2026-11-03T09:26:47.898368+00:00",
+  "tested_source_tree": "907687818954065d356964df2007eb108ddebef1",
+  "implementation_baseline_head": "29d027cd68a786417d771749a83350d9779d3929",
+  "implementation_commit": "f67d7617c482b5cca9359f34404fb22ae38b594f",
+  "spec_findings": 0,
+  "confirmed_product_or_necessary_verification_blockers": 0,
+  "required_unexecuted": 0,
+  "protected_contracts": {
+    "numerator": 489,
+    "denominator": 489,
+    "direct_asserted": 280,
+    "approved_equivalent": 209,
+    "equivalence_groups": 268
+  },
+  "actual_tests": {
+    "tests": 958,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "technical_acceptance": {
+    "path": ".scratch/exception-unification/execution/16/final-spec-quality-review-T04.md",
+    "sha256": "2e690faf02dcf7e07e2613f4adfa3b7ae4ebce50c76b405eaff64d02e8c6e4ff"
+  },
+  "final_matrix": {
+    "path": ".scratch/exception-unification/execution/16/traceability-final.json",
+    "sha256": "dd14b1c864247895c704de19f039514193cf8514ce31504c0a24a379a7f6a6e1"
+  },
+  "allows": "technical acceptance complete; T00 handles durable documentation and docs-only commit, no product/source revalidation required by this metadata binding",
+  "pending_integration_timing": [
+    "durable docs exact-content review and docs-only commit"
+  ],
+  "no_authority_granted_for": [
+    "push",
+    "deploy",
+    "Issue mutation"
+  ],
+  "own_semantic_approval_exclusions": [
+    "04",
+    "06"
+  ],
+  "actual_requirements_role_acceptance": {
+    "owner": "T00",
+    "decision": "accepted",
+    "record": "16/T00-integration-acceptance.json",
+    "sha256": "595138cef317dcce63aa98a68fe3c7cc5adf9635cd73dc181ad66931e660ca79"
+  }
+}

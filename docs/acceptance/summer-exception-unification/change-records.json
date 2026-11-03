@@ -1,0 +1,41 @@
+{
+  "records": [
+    {
+      "id": "CR-EX-0001",
+      "kind": "implementation-dependency",
+      "status": "engineering-approved-native-graph-verified",
+      "owner": "T00",
+      "reason": "10预检发现PhysicalExecutionService实际调用08 MCP许可及11 audit.recordExecution，旧Controller以类名containsConflict作跨域适配，必须先有公开typed ErrorCode契约再移除旧类型选择。",
+      "scope_change": false,
+      "contract_change": false,
+      "adds_dependencies": {
+        "10": [
+          "08",
+          "11"
+        ]
+      },
+      "typed_contracts": [
+        "public McpAuthorizationErrorCode.INVALID/CONFLICT",
+        "public AuditLedgerErrorCode.INVALID/CONFLICT/IDEMPOTENCY_CONFLICT/EVENT_IMMUTABLE/CONTRADICTORY_RECEIPT"
+      ],
+      "constraints": [
+        "physical只将实际可达旧MCP冲突和审计幂等冲突按精确对象适配409，不按整个CONFLICT类别扩大",
+        "可达AuditEventImmutable保持旧500/公共固定业务消息，unknown技术失败安全默认500，不泄露第三方正文",
+        "保持许可/资源/会话/执行/缓存/审计/发布顺序与状态，不改协议或父173正文"
+      ],
+      "evidence": [
+        "execution/10/preflight.md",
+        "execution/08/preflight.md"
+      ],
+      "approval": "existing user authorization to implement complete approved scope; routine dependency correction, no new feature or external publication",
+      "native_receipt": "control/CR-EX-0001-native-dependencies-retry.json",
+      "actual_blockers": [
+        176,
+        177,
+        178,
+        181,
+        184
+      ]
+    }
+  ]
+}
