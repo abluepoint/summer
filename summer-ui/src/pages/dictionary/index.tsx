@@ -22,6 +22,7 @@ import {
 } from './api';
 
 import { DictionarySelect } from './select';
+import { DictionaryCascade, DictionaryCascadeLevel } from './cascade';
 import {
   DictionaryNameDisplay,
   dictionaryName,
@@ -30,6 +31,24 @@ import {
 
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 const dictionaryCode = 'customer-segment';
+const cascadeLevels: DictionaryCascadeLevel[] = [
+  { code: dictionaryCode, label: '一级：客户分类' },
+  {
+    code: 'cascade-second',
+    label: '二级：分类分组',
+    groups: {
+      '1': 'one',
+      '01': 'zero-one',
+      missing: 'absent',
+      disabled: 'disabled',
+    },
+  },
+  {
+    code: 'cascade-third',
+    label: '三级：业务选项',
+    groups: { shared: 'shared', other: 'other' },
+  },
+];
 
 export default function DictionaryConsumerPage() {
   const tenant = useActiveEnterprise();
@@ -74,6 +93,7 @@ function DictionaryContent({
   const t = useLocale();
   const history = useHistory();
   const [value, setValue] = useState('');
+  const [cascadeValues, setCascadeValues] = useState<string[]>(['', '', '']);
   const [error, setError] = useState('');
   const [streamState, setStreamState] =
     useState<DictionaryStreamState>('CONNECTING');
@@ -101,21 +121,30 @@ function DictionaryContent({
   );
   useEffect(() => onBusyChange(saving), [saving, onBusyChange]);
   const overrideDirty = useRef(false);
+  const cascadeDirty = useRef(false);
   const [overrideOrg, setOverrideOrg] = useState('_tenant');
   const [overrideJson, setOverrideJson] = useState('[]');
   const [overrideVersion, setOverrideVersion] = useState<number | undefined>();
   useEffect(
-    () => onDirtyChange(overrideDirty.current),
-    [overrideJson, overrideOrg, overrideVersion, error, onDirtyChange]
+    () => onDirtyChange(overrideDirty.current || cascadeDirty.current),
+    [
+      overrideJson,
+      overrideOrg,
+      overrideVersion,
+      error,
+      cascadeValues,
+      onDirtyChange,
+    ]
   );
   useEffect(() => {
-    if (!overrideDirty.current && !saving) return undefined;
+    if (!overrideDirty.current && !cascadeDirty.current && !saving)
+      return undefined;
     const unblock = history.block(() =>
       isAuthRedirecting()
         ? undefined
         : saving
         ? false
-        : '字典覆盖有未保存修改，确认离开？'
+        : '字典表单有未保存修改，确认离开？'
     );
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (!isAuthRedirecting()) {
@@ -128,7 +157,14 @@ function DictionaryContent({
       unblock();
       window.removeEventListener('beforeunload', beforeUnload);
     };
-  }, [overrideJson, overrideOrg, overrideVersion, saving, history]);
+  }, [
+    overrideJson,
+    overrideOrg,
+    overrideVersion,
+    cascadeValues,
+    saving,
+    history,
+  ]);
 
   useEffect(() => {
     const unsubscribe = subscribeDictionaryNotifications(
@@ -251,6 +287,16 @@ function DictionaryContent({
             },
           ]}
         />
+        <Form.Item label="跨字典三级联动（页面配置）">
+          <DictionaryCascade
+            levels={cascadeLevels}
+            values={cascadeValues}
+            onChange={(next) => {
+              cascadeDirty.current = true;
+              setCascadeValues(next);
+            }}
+          />
+        </Form.Item>
         <Form.Item label="覆盖范围（_tenant 或组织 ID）">
           <Input
             disabled={saving}
