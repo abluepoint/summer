@@ -15,18 +15,28 @@ class DictionaryController {
     private final DictionaryVersionService versions;
     private final PublishedDictionaryReader published;
     private final RequestIdAccessor requestId;
+    private final DictionaryNameResolver names;
 
-    DictionaryController(DictionaryService service, DictionaryVersionService versions, PublishedDictionaryReader published, RequestIdAccessor requestId) {
+    DictionaryController(DictionaryService service, DictionaryVersionService versions, PublishedDictionaryReader published, RequestIdAccessor requestId, DictionaryNameResolver names) {
         this.service = service;
         this.versions = versions;
         this.published = published;
         this.requestId = requestId;
+        this.names = names;
     }
 
     @GetMapping({"/api/dictionaries", "/api/v1/enterprises/{enterpriseId}/dictionaries"})
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
     List<DictionaryTypeView> list(Authentication authentication) { return service.list(authentication); }
+
+    @PostMapping({"/api/dictionaries/{code}/resolve-names", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/resolve-names"})
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    DictionaryNameResolution resolveNames(@PathVariable String code, @RequestBody DictionaryNameRequest request,
+                                          Authentication authentication) {
+        return names.resolve(code, request, authentication);
+    }
 
     @GetMapping({"/api/dictionaries/{code}/effective", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/effective"})
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")

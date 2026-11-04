@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
-import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber } from '@arco-design/web-react';
+import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber, Table, Descriptions } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { DictionaryOption, getPublicDictionary, getPublicDictionaryItem, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
+
+import { DictionaryNameDisplay, dictionaryName, useDictionaryNames } from './names';
 
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 const dictionaryCode = 'customer-segment';
@@ -24,6 +26,9 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
   const [selectedUnavailable, setSelectedUnavailable] = useState(false);
   const [streamState, setStreamState] = useState<DictionaryStreamState>('CONNECTING');
   const [streamError, setStreamError] = useState(false);
+  const names = useDictionaryNames(dictionaryCode, [...options.map((item) => item.value), value].filter(Boolean));
+  const namesRef = useRef(names);
+  namesRef.current = names;
   const valueRef = useRef('');
   const readRequest = useRef(0);
   const alive = useRef(true);
@@ -48,6 +53,7 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
     setSelectedUnavailable(true);
     if (!selectedItem || [401, 403].includes(failure.status || 0)) { setOptions([]); setVersion(undefined); }
     if ([401, 403].includes(failure.status || 0)) {
+      namesRef.current.forbid();
       valueRef.current = ''; setValue(''); setOverrideJson('[]'); overrideDirty.current = false;
     } else {
       if (!selectedItem && failure.status === 404) { valueRef.current = ''; setValue(''); }
@@ -99,6 +105,7 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
       dictionaryCode,
       () => {
         setStreamError(false);
+        namesRef.current.refresh();
         load();
       },
       setStreamState,
@@ -115,7 +122,7 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
           <Tag color={streamState === 'OPEN' ? 'green' : 'orange'} style={{ marginRight: 8 }}>
             {streamState}
           </Tag>
-          <Button size="small" disabled={saving} loading={loading} onClick={() => load()}>{t['dictionary.refresh']}</Button>
+          <Button size="small" disabled={saving} loading={loading} onClick={() => { names.refresh(); load(); }}>{t['dictionary.refresh']}</Button>
         </span>
       )}
     >
@@ -124,7 +131,7 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
           <Alert type="info" content="覆盖优先级：组织 > 租户 > 基础值。高优先级覆盖不可访问时不会回退；发布覆盖需要独立授权。" style={{ marginBottom: 16 }} />
           {error && <Alert type="error" content={error} style={{ marginBottom: 16 }} />}
           {streamError && <Alert type="warning" content={t['dictionary.streamDisconnected']} style={{ marginBottom: 16 }} />}
-          {selectedUnavailable && <Alert type="warning" content={t['dictionary.reselect']} style={{ marginBottom: 16 }} />}
+          {selectedUnavailable && names.status === 'ready' && names.items.get(value)?.status === 'disabled' && <Alert type="warning" content={t['dictionary.reselect']} style={{ marginBottom: 16 }} />}
           <Form.Item label={t['dictionary.segment']}>
             <Select
               value={value}
@@ -133,6 +140,11 @@ function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { ente
               options={options.map((item) => ({ label: item.label, value: item.value }))}
             />
           </Form.Item>
+          <Form.Item label="已有业务值（仅展示，不改变选择范围）"><Input aria-label="已有业务值" value={value} onChange={(next) => { valueRef.current = next; setValue(next); }} /></Form.Item>
+          <Descriptions title="业务详情" data={[{ label: '原值', value: value || '—' }, { label: '名称', value: <DictionaryNameDisplay names={names} value={value} /> }]} />
+          <Table rowKey="value" pagination={false} data={Array.from(new Set([...options.map((item) => item.value), value].filter(Boolean))).map((item) => ({ value: item }))}
+            columns={[{ title: '业务值', dataIndex: 'value' }, { title: '当前名称（转换函数）', render: (_, row) => dictionaryName(names, row.value) },
+              { title: '当前名称（展示组件）', render: (_, row) => <DictionaryNameDisplay names={names} value={row.value} /> }]} />
           <Form.Item label="覆盖范围（_tenant 或组织 ID）"><Input disabled={saving} value={overrideOrg} onChange={(v) => { overrideDirty.current = true; setOverrideOrg(v); setOverrideVersion(undefined); }} /></Form.Item>
           <Form.Item label="覆盖版本（新建留空）"><InputNumber disabled={saving} min={0} value={overrideVersion} onChange={(v) => { overrideDirty.current = true; setOverrideVersion(v); }} /></Form.Item>
           <Form.Item label="覆盖选项 JSON"><Input.TextArea disabled={saving} aria-label="覆盖选项 JSON" value={overrideJson} onChange={(text) => { overrideDirty.current = true; setOverrideJson(text); }} /></Form.Item>

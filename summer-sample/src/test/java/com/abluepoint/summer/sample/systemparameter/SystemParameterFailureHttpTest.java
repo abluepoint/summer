@@ -1,11 +1,15 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -13,6 +17,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -23,7 +28,15 @@ class SystemParameterFailureHttpTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired PublishedParameterReader published;
+    @MockitoBean StringRedisTemplate redis;
     private static final String ROOT = "/api/system-parameters/";
+
+    @BeforeEach
+    void unavailableRedis() {
+        // Exercise the real database path without spending the HTTP contract's timeout on Redis connection setup.
+        doThrow(new RedisConnectionFailureException("Redis unavailable in HTTP contract fixture"))
+                .when(redis).opsForValue();
+    }
 
     @Test
     void invalidCreateKeepsOrderedFieldReasonsAndCreatesNoParameter() throws Exception {
