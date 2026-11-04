@@ -65,7 +65,7 @@ class DictionaryMySqlIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/dictionaries/mysql-segment/publish").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mockMvc, "/api/dictionaries/mysql-segment/publish", "{\"expectedVersion\":0}")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/mysql-segment"))

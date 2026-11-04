@@ -81,7 +81,7 @@ class DictionaryNotificationSseHttpTest {
         assertThat(stream.getResponse().getContentAsString()).contains("event:DICTIONARY_PUBLISHED");
         jdbc.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values('revoke-sse','ent-acme','reader','','platform.dictionary.read',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         http.perform(post("/api/dictionaries/live-segment/publish").with(writer()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"expectedVersion\":1}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/live-segment/publish", "{\"expectedVersion\":1}"))) .andExpect(status().isOk());
         assertThat(stream.getResponse().getContentAsString().split("event:DICTIONARY_PUBLISHED",-1)).hasSize(2);
     }
 
@@ -96,7 +96,7 @@ class DictionaryNotificationSseHttpTest {
     private void publish() throws Exception {
         http.perform(post("/api/dictionaries/live-segment/publish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":0}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/live-segment/publish", "{\"expectedVersion\":0}"))
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(1));

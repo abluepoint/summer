@@ -70,7 +70,7 @@ class MultiTenantConfigurationHttpTest {
             mvc.perform(post(path+"/shared-dict/items").with(member()).contentType(MediaType.APPLICATION_JSON)
                     .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, path+"/shared-dict/items", "{\"value\":\"same-value\",\"label\":\""+tenant+"\",\"sortOrder\":1}"))) .andExpect(status().isOk());
             mvc.perform(post(path+"/shared-dict/publish").with(member()).contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"expectedVersion\":0,\"idempotencyKey\":\"same-publish\"}")) .andExpect(status().isOk());
+                    .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, path+"/shared-dict/publish", "{\"expectedVersion\":0,\"idempotencyKey\":\"same-publish\"}"))) .andExpect(status().isOk());
         }
         for(String tenant:List.of("ent-alpha","ent-beta")) {
             mvc.perform(get("/public/enterprises/"+tenant+"/dictionaries/shared-dict"))

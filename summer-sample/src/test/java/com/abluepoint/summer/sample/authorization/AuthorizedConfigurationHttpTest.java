@@ -39,7 +39,7 @@ class AuthorizedConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries/scope-public/items").with(member("bob", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/scope-public/items", "{\"value\":\"hidden\",\"label\":\"Hidden option\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/scope-public/publish").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/scope-public/publish", "{\"expectedVersion\":0}"))) .andExpect(status().isOk());
         policy("dictionaries", "SELF");
         mvc.perform(get("/public/enterprises/ent-acme/dictionaries/scope-public").with(member("alice", "org-engineering")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
@@ -95,7 +95,7 @@ class AuthorizedConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries/override-dict/items").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/override-dict/items", "{\"value\":\"option\",\"label\":\"Base\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/override-dict/publish").with(member("alice", "org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/override-dict/publish", "{\"expectedVersion\":0}"))) .andExpect(status().isOk());
         String payload="{\"value\":[{\"value\":\"option\",\"label\":\"Org\",\"sortOrder\":1,\"enabled\":true}],\"publicReadable\":true}";
         mvc.perform(put("/api/dictionaries/override-dict/overrides/org-engineering").with(member("alice","org-engineering"))
                 .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(0));

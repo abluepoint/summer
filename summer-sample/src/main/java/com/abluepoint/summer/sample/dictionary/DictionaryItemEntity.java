@@ -33,11 +33,10 @@ class DictionaryItemEntity {
     @Column(length = 2000, nullable = false)
     private String description = "";
     @org.hibernate.annotations.ColumnDefault("false")
-    @Column(name = "ever_published", nullable = false)
+    @Column(name = "ever_published", nullable = false, updatable = false)
     private boolean everPublished;
     String description() { return description; }
     boolean everPublished() { return everPublished; }
-    void markPublished() { everPublished = true; }
     void edit(String value, String description) { this.value = value; this.description = description == null ? "" : description; }
 
     protected DictionaryItemEntity() {}

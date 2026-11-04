@@ -46,7 +46,7 @@ class PluginConfigurationHttpTest {
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Draft"));
         mvc.perform(post("/api/dictionaries/customer-segment/rollback").with(actor("alice","org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":2,\"targetVersion\":1}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/customer-segment/rollback", "{\"expectedVersion\":2,\"targetVersion\":1}")))
                 .andExpect(status().isOk());
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Published"));
@@ -84,7 +84,7 @@ class PluginConfigurationHttpTest {
         setup();
         jdbc.update("update summer_system_parameter set public_flag=false,version=version+1 where parameter_key='customer-insights.label'");
         mvc.perform(post("/api/dictionaries/customer-segment/disable").with(actor("alice","org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}")) .andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/customer-segment/disable", "{\"expectedVersion\":1}"))) .andExpect(status().isOk());
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").doesNotExist())
                 .andExpect(jsonPath("$.data.dictionary.items").isEmpty());
@@ -119,7 +119,7 @@ class PluginConfigurationHttpTest {
     }
     private void publish(int expected) throws Exception {
         mvc.perform(post("/api/dictionaries/customer-segment/publish").with(actor("alice","org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":"+expected+"}")) .andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/customer-segment/publish", "{\"expectedVersion\":"+expected+"}"))) .andExpect(status().isOk());
     }
     private void policy(String resource,String type) throws Exception {
         mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/"+resource).with(actor("alice","org-engineering"))

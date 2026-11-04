@@ -16,6 +16,7 @@ import java.util.UUID;
 @Service
 class DictionaryService {
     @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
+    private final tools.jackson.databind.ObjectMapper objectMapper;
     private final DictionaryTypeRepository types;
     private final DictionaryItemRepository items;
     private final DictionaryAuditService audit;
@@ -25,7 +26,8 @@ class DictionaryService {
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
 
     DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
-                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions) {
+                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, tools.jackson.databind.ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
         this.types = types;
         this.actions = actions;
         this.items = items;
@@ -82,6 +84,7 @@ class DictionaryService {
         type.change(request.name().trim(), bool(request.published(), type.published()),
                 bool(request.publicReadable(), type.publicReadable()), bool(request.enabled(), type.enabled()));
         DictionaryTypeView result = view(types.saveAndFlush(type), dataScopes.filter(resolve(authentication), "dictionaries", authentication));
+        ensureCapacity(type);
         cache.invalidate(resolve(authentication), "dictionary");
         audit.recordSuccess(code, "DICTIONARY_UPDATED", requestId, authentication);
         return result;
@@ -106,6 +109,7 @@ class DictionaryService {
         } catch (DataIntegrityViolationException exception) {
             throw new SummerException(DictionaryErrorCode.CONFLICT, exception);
         }
+        ensureCapacity(type);
         cache.invalidate(resolve(authentication), "dictionary");
         audit.recordSuccess(code, "DICTIONARY_ITEM_CREATED", requestId, authentication);
         return result;
@@ -123,13 +127,14 @@ class DictionaryService {
         if (request.enabled() != null && request.enabled() != item.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", authentication);
         actions.require("dictionaries", "update", authentication);
         String nextValue = request.value() == null ? value : validValue(request.value());
-        if (!value.equals(nextValue) && item.everPublished()) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
+        if (!value.equals(nextValue) && items.publishedIdentity(item.id()) == 1) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
         item.edit(nextValue, request.description() == null ? item.description() : request.description());
         advance(type, request.expectedDraftRevision());
         item.change(request.label().trim(), request.sortOrder(), bool(request.enabled(), item.enabled()));
         DictionaryItemView result;
         try { result = view(items.saveAndFlush(item)); }
         catch (DataIntegrityViolationException exception) { throw new SummerException(DictionaryErrorCode.CONFLICT, exception); }
+        ensureCapacity(type);
         cache.invalidate(resolve(authentication), "dictionary");
         audit.recordSuccess(code, "DICTIONARY_ITEM_UPDATED", requestId, authentication);
         return result;
@@ -144,7 +149,7 @@ class DictionaryService {
     private DictionaryTypeView view(DictionaryTypeEntity type, DataScopeService.ScopeFilter scope) {
         List<DictionaryItemEntity> values = scope == null ? items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(type.tenantId(), type.code()) : items.findScoped(type.code(), scope);
         long version = type.publishedVersion() == null ? 0 : type.publishedVersion();
-        return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(), values.stream().map(DictionaryService::view).toList(), version, type.publishedVersion(), type.tenantId(), type.organizationId(), type.draftRevision());
+        return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(), values.stream().map(DictionaryService::view).toList(), version, type.publishedVersion(), type.tenantId(), type.organizationId(), type.draftRevision(), type.effectiveRevision());
     }
 
     private static DictionaryItemView view(DictionaryItemEntity item) {
@@ -170,8 +175,9 @@ class DictionaryService {
         scopedType(code, auth);
         DictionaryTypeEntity type = types.lock(resolve(auth), code).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
         entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        items.lockAll(type.tenantId(), code).forEach(item -> entityManager.refresh(item, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE));
         if (!(expected instanceof Integer || expected instanceof Long) || ((Number) expected).longValue() < 0) throw invalid("expectedDraftRevision");
-        if (type.draftRevision() != ((Number) expected).longValue()) throw new SummerException(DictionaryErrorCode.CONFLICT);
+        if (types.currentControl(type.tenantId(), code).getDraftRevision() != ((Number) expected).longValue()) throw new SummerException(DictionaryErrorCode.CONFLICT);
         return type;
     }
 
@@ -187,15 +193,21 @@ class DictionaryService {
     }
 
     private DictionaryDraftView draftView(DictionaryTypeEntity type, Authentication auth) {
+        return draftView(type, auth, false);
+    }
+
+    private DictionaryDraftView draftView(DictionaryTypeEntity type, Authentication auth, boolean currentIdentity) {
+        var control = currentIdentity ? types.currentControl(type.tenantId(), type.code()) : null;
+        var published = currentIdentity ? java.util.Set.copyOf(items.publishedIds(type.tenantId(), type.code())) : java.util.Set.<String>of();
         var values = items.findScoped(type.code(), dataScopes.filter(resolve(auth), "dictionaries", auth));
-        return new DictionaryDraftView(type.code(), type.name(), type.publicReadable(), type.enabled(), type.draftRevision(),
-                type.publishedVersion() == null ? 0 : type.publishedVersion(), values.stream().map(i -> new DictionaryDraftItem(i.id(), i.value(), i.label(), i.description(), i.enabled(), i.everPublished())).toList(), values.stream().map(DictionaryItemEntity::id).toList());
+        return new DictionaryDraftView(type.code(), type.name(), type.publicReadable(), type.enabled(), currentIdentity ? control.getDraftRevision() : type.draftRevision(),
+                currentIdentity ? control.getPublishedVersion() : type.publishedVersion() == null ? 0 : type.publishedVersion(), currentIdentity ? control.getEffectiveRevision() : type.effectiveRevision(), values.stream().map(i -> new DictionaryDraftItem(i.id(), i.value(), i.label(), i.description(), i.enabled(), currentIdentity ? published.contains(i.id()) : i.everPublished())).toList(), values.stream().map(DictionaryItemEntity::id).toList());
     }
 
     @Transactional
     DictionaryDraftView saveDraft(String code, DictionaryDraftRequest request, String requestId, Authentication auth) {
         DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), auth);
-        var all = items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(type.tenantId(), code);
+        var all = items.lockAll(type.tenantId(), code);
         var visible = items.findScoped(code, dataScopes.filter(resolve(auth), "dictionaries", auth));
         if (visible.size() != all.size()) throw new org.springframework.security.access.AccessDeniedException("Full dictionary maintenance required");
         dataScopes.assertWrite(resolve(auth), "dictionaries", auth, type.organizationId());
@@ -216,13 +228,13 @@ class DictionaryService {
             var old = existing.get(i.id());
             if (old == null || !old.value().equals(i.value()) || !old.label().equals(i.label()) || !old.description().equals(i.description() == null ? "" : i.description()) || old.enabled() != i.enabled() || orderChanged) { unchanged = false; break; }
         }
-        if (unchanged) return draftView(type, auth);
+        if (unchanged) { ensureCapacity(type); return draftView(type, auth, true); }
         if (!type.name().equals(request.name())) actions.require("dictionaries", "update", auth);
         if (type.publicReadable() != request.publicReadable()) actions.require("dictionaries", "publish", auth);
         if (type.enabled() != request.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", auth);
         for (var old : all) if (!ids.contains(old.id())) {
             actions.require("dictionaries", "update", auth);
-            if (old.everPublished()) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
+            if (items.publishedIdentity(old.id()) == 1) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
             items.delete(old);
         }
         // Flush deletions before reusing a never-published value; transaction rollback covers failures.
@@ -235,7 +247,7 @@ class DictionaryService {
                 if (!i.enabled()) actions.require("dictionaries", "disable", auth);
                 old = new DictionaryItemEntity(type.tenantId(), UUID.randomUUID().toString(), code, value, i.label(), order, i.enabled(), type.organizationId(), auth.getName(), auth.getName());
             } else {
-                if (!old.value().equals(value) && old.everPublished()) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
+                if (!old.value().equals(value) && items.publishedIdentity(old.id()) == 1) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
                 if (!old.value().equals(value) || !old.label().equals(i.label()) || !old.description().equals(description) || reorderedExisting) actions.require("dictionaries", "update", auth);
                 if (old.enabled() != i.enabled()) actions.require("dictionaries", i.enabled() ? "publish" : "disable", auth);
             }
@@ -245,8 +257,14 @@ class DictionaryService {
         type.change(request.name(), type.published(), request.publicReadable(), request.enabled());
         try { items.flush(); types.flush(); }
         catch (DataIntegrityViolationException exception) { throw new SummerException(DictionaryErrorCode.CONFLICT, exception); }
+        ensureCapacity(type);
         audit.recordSuccess(code, "DICTIONARY_DRAFT_SAVED", requestId, auth);
-        return draftView(type, auth);
+        return draftView(type, auth, true);
+    }
+
+    private void ensureCapacity(DictionaryTypeEntity type) {
+        DictionarySnapshot.encode(objectMapper, new DictionarySnapshot(type.name(), type.publicReadable(), type.enabled(),
+                items.lockAll(type.tenantId(), type.code()).stream().map(DictionaryService::view).toList()));
     }
 
     private static SummerException invalid(String field) {

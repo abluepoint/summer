@@ -115,6 +115,13 @@ class DictionaryController {
         return versions.list(code, authentication);
     }
 
+    @GetMapping({"/api/dictionaries/{code}/versions/{version}", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/versions/{version}"})
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    DictionaryHistoryView history(@PathVariable String code, @PathVariable long version, Authentication authentication) {
+        return versions.history(code, version, authentication);
+    }
+
     @PutMapping({"/api/dictionaries/{code}/overrides/{organization}", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/overrides/{organization}"})
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.publish")
     @PreAuthorize("hasAnyAuthority('SCOPE_platform.dictionary.publish','SCOPE_platform.dictionary.write')")

@@ -66,8 +66,13 @@ class DictionaryNotificationTcpIntegrationTest {
                     assertThat(error.path("requestId").asString()).isEqualTo("dictionary-tcp");
                 }
                 streams.removeFirst().close();
+                var draftResponse = client.send(request("/api/dictionaries/tcp-contract/draft", token).GET().build(), HttpResponse.BodyHandlers.ofString());
+                assertThat(draftResponse.statusCode()).isEqualTo(200);
+                var draft = json.readTree(draftResponse.body()).path("data");
+                String publishBody = json.writeValueAsString(Map.of("expectedVersion", draft.path("publishedVersion").asLong(),
+                        "expectedDraftRevision", draft.path("draftRevision").asLong(), "expectedEffectiveRevision", draft.path("effectiveRevision").asLong()));
                 var publish = client.send(request("/api/dictionaries/tcp-contract/publish", token).header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString("{\"expectedVersion\":0}")).build(), HttpResponse.BodyHandlers.ofString());
+                        .POST(HttpRequest.BodyPublishers.ofString(publishBody)).build(), HttpResponse.BodyHandlers.ofString());
                 assertThat(publish.statusCode()).isEqualTo(200);
                 int reopened = 429;
                 Instant deadline = Instant.now().plusSeconds(25);

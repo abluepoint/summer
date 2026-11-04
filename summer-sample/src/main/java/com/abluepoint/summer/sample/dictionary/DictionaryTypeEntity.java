@@ -34,6 +34,11 @@ class DictionaryTypeEntity {
     long draftRevision() { return draftRevision; }
     void advanceDraft() { draftRevision++; }
 
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "effective_revision", nullable = false)
+    private long effectiveRevision;
+    long effectiveRevision() { return effectiveRevision; }
+
     protected DictionaryTypeEntity() {}
 
     DictionaryTypeEntity(String tenantId, String id, String code, String name, boolean published, boolean publicReadable, boolean enabled, String organizationId, String createdBy, String ownerId) {

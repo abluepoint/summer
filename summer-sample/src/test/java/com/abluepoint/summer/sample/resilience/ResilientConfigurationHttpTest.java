@@ -70,7 +70,7 @@ class ResilientConfigurationHttpTest {
         failure(() -> {
             try {
                 mvc.perform(post("/api/dictionaries/resilient-dict/disable").with(actor())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
+                        .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/resilient-dict/disable", "{\"expectedVersion\":1}")))
                         .andExpect(status().isOk());
             } catch (Exception exception) { throw new IllegalStateException(exception); }
         });
@@ -79,6 +79,11 @@ class ResilientConfigurationHttpTest {
     @Test void changingPublishedPointerDuringFailureCannotReturnObsoleteSnapshot() throws Exception {
         dictionary();
         failure(()->jdbc.update("update summer_dictionary_type set published_version=2 where code='resilient-dict'"));
+        mvc.perform(get("/public/dictionaries/resilient-dict").with(actor())).andExpect(status().isServiceUnavailable());
+    }
+    @Test void samePublishedPointerWithNewEffectiveRevisionCannotFallback() throws Exception {
+        dictionary();
+        failure(() -> jdbc.update("update summer_dictionary_type set effective_revision=effective_revision+2 where code='resilient-dict'"));
         mvc.perform(get("/public/dictionaries/resilient-dict").with(actor())).andExpect(status().isServiceUnavailable());
     }
     @Test void changedPermissionDuringFailureInvalidatesFallback() throws Exception {
@@ -104,7 +109,7 @@ class ResilientConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries/resilient-dict/items").with(actor()).contentType(MediaType.APPLICATION_JSON)
                 .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/resilient-dict/items", "{\"value\":\"option\",\"label\":\"Published\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/resilient-dict/publish").with(actor()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/resilient-dict/publish", "{\"expectedVersion\":0}"))) .andExpect(status().isOk());
         mvc.perform(get("/public/dictionaries/resilient-dict").with(actor())).andExpect(status().isOk());
     }
     private void parameter() throws Exception {

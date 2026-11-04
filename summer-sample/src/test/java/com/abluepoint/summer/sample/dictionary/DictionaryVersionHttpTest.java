@@ -40,7 +40,7 @@ class DictionaryVersionHttpTest {
         http.perform(post("/api/dictionaries/versioned-segment/publish")
                         .header("X-Request-Id", "publish-v1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":0}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", "{\"expectedVersion\":0}"))
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(1))
@@ -58,7 +58,7 @@ class DictionaryVersionHttpTest {
 
         http.perform(post("/api/dictionaries/versioned-segment/publish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":1}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", "{\"expectedVersion\":1}"))
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(2));
@@ -66,7 +66,7 @@ class DictionaryVersionHttpTest {
         http.perform(post("/api/dictionaries/versioned-segment/disable")
                         .header("X-Request-Id", "disable-v2")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":2}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/disable", "{\"expectedVersion\":2}"))
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DISABLED"));
@@ -76,7 +76,7 @@ class DictionaryVersionHttpTest {
         http.perform(post("/api/dictionaries/versioned-segment/rollback")
                         .header("X-Request-Id", "rollback-v1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":2,\"targetVersion\":1}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/rollback", "{\"expectedVersion\":2,\"targetVersion\":1}"))
                         .with(writer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(1))
@@ -96,27 +96,27 @@ class DictionaryVersionHttpTest {
         addItem("standard", "Standard", true);
         http.perform(post("/api/dictionaries/versioned-segment/publish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":0}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", "{\"expectedVersion\":0}"))
                         .with(writer()))
                 .andExpect(status().isOk());
 
         http.perform(post("/api/dictionaries/versioned-segment/publish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":0}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", "{\"expectedVersion\":0}"))
                         .with(writer()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_DICTIONARY_VERSION_CONFLICT"));
 
         http.perform(post("/api/dictionaries/versioned-segment/rollback")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":1,\"targetVersion\":9}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/rollback", "{\"expectedVersion\":1,\"targetVersion\":9}"))
                         .with(writer()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_DICTIONARY_INVALID_STATE"));
 
         http.perform(post("/api/dictionaries/versioned-segment/disable")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"expectedVersion\":1}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/disable", "{\"expectedVersion\":1}"))
                         .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
@@ -128,13 +128,32 @@ class DictionaryVersionHttpTest {
         addItem("standard", "Standard", true);
         String body = "{\"expectedVersion\":0,\"idempotencyKey\":\"publish-once\"}";
         http.perform(post("/api/dictionaries/versioned-segment/publish")
-                        .contentType(MediaType.APPLICATION_JSON).content(body).with(writer()))
+                        .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", body)).with(writer()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(1));
         http.perform(post("/api/dictionaries/versioned-segment/publish")
-                        .contentType(MediaType.APPLICATION_JSON).content(body).with(writer()))
+                        .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", body)).with(writer()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(1));
-        assertThat(jdbc.queryForObject("select count(*) from summer_dictionary_version", Integer.class)).isEqualTo(1);
-        assertThat(jdbc.queryForObject("select count(*) from summer_dictionary_outbox", Integer.class)).isEqualTo(1);
+        http.perform(post("/api/dictionaries/versioned-segment/disable").with(writer())
+                        .contentType(MediaType.APPLICATION_JSON).content(DraftRevisionFixture.lifecycle(http,
+                                "/api/dictionaries/versioned-segment/disable", "{\"expectedVersion\":1}")))
+                .andExpect(status().isOk());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/dictionaries/versioned-segment").with(writer())
+                        .contentType(MediaType.APPLICATION_JSON).content(DraftRevisionFixture.revised(http,
+                                "/api/dictionaries/versioned-segment", "{\"name\":\"Later draft name\"}")))
+                .andExpect(status().isOk());
+        http.perform(post("/api/dictionaries/versioned-segment/publish").with(writer())
+                        .contentType(MediaType.APPLICATION_JSON).content(DraftRevisionFixture.lifecycle(http,
+                                "/api/dictionaries/versioned-segment/publish", "{\"expectedVersion\":1}")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(2));
+        http.perform(post("/api/dictionaries/versioned-segment/publish").with(writer())
+                        .contentType(MediaType.APPLICATION_JSON).content(DraftRevisionFixture.lifecycle(http,
+                                "/api/dictionaries/versioned-segment/publish", body)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(1))
+                .andExpect(jsonPath("$.data.status").value("PUBLISHED"))
+                .andExpect(jsonPath("$.data.effectiveRevision").value(1))
+                .andExpect(jsonPath("$.data.name").value("Versioned Segment"));
+        assertThat(jdbc.queryForObject("select count(*) from summer_dictionary_version", Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("select count(*) from summer_dictionary_outbox", Integer.class)).isEqualTo(3);
     }
 
     @Test
@@ -142,7 +161,7 @@ class DictionaryVersionHttpTest {
         createDictionary();
         addItem("standard", "Standard", true);
         http.perform(post("/api/dictionaries/versioned-segment/publish").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/publish", "{\"expectedVersion\":0}")))
                 .andExpect(status().isOk());
         http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/dictionaries/versioned-segment")
                 .with(writer()).contentType(MediaType.APPLICATION_JSON)
@@ -160,6 +179,21 @@ class DictionaryVersionHttpTest {
         http.perform(post("/api/dictionaries").with(writer()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"boolean-bypass\",\"name\":\"Bypass\",\"published\":true,\"publicReadable\":true}"))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void lifecycleRevisionsRejectCoercedValuesBeforeAnyPublication() throws Exception {
+        createDictionary();
+        for (String field : java.util.List.of("expectedVersion", "expectedDraftRevision", "expectedEffectiveRevision")) {
+            for (String value : java.util.List.of("null", "-1", "true", "\"0\"", "0.9")) {
+                String body = "{\"expectedVersion\":0,\"expectedDraftRevision\":0,\"expectedEffectiveRevision\":0}";
+                body = body.replace("\"" + field + "\":0", "\"" + field + "\":" + value);
+                http.perform(post("/api/dictionaries/versioned-segment/publish").with(writer())
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.requestId").exists());
+            }
+        }
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment")).andExpect(status().isNotFound());
     }
 
     private void createDictionary() throws Exception {

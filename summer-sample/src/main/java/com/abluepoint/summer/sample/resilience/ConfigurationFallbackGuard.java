@@ -41,16 +41,17 @@ public class ConfigurationFallbackGuard {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
-    public boolean dictionary(String tenant, String code, long version, String fingerprint, Set<String> allowedValues, Authentication auth) {
+    public boolean dictionary(String tenant, String code, long version, long effectiveRevision, String fingerprint, Set<String> allowedValues, Authentication auth) {
         actions.requirePublic(tenant, "dictionaries", auth);
         var scope = scopes.filter(tenant, "dictionaries", auth);
         if (!scope.fingerprint().equals(fingerprint)) return false;
         var bindings = new HashMap<String, Object>(scope.sqlBindings());
         bindings.put("expectedCode", code);
+        bindings.put("expectedEffectiveRevision", effectiveRevision);
         bindings.put("expectedTenant", tenant);
         bindings.put("expectedVersion", version);
         if (jdbc.queryForObject("select count(*) from summer_dictionary_type where code=:expectedCode "
-                + "and published_version=:expectedVersion and published=true and ("
+                + "and published_version=:expectedVersion and effective_revision=:expectedEffectiveRevision and published=true and ("
                 + scope.sqlPredicate() + ")", bindings, Long.class) != 1) return false;
         var currentValues = jdbc.queryForList("select item_value from summer_dictionary_item where dictionary_code=:expectedCode and ("
                 + scope.sqlPredicate() + ")", bindings, String.class);

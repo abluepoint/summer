@@ -56,7 +56,7 @@ class DictionaryHttpTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/dictionaries/customer-segment/publish").with(dictionaryWriter())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mockMvc, "/api/dictionaries/customer-segment/publish", "{\"expectedVersion\":0}")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/customer-segment"))
@@ -73,7 +73,7 @@ class DictionaryHttpTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/dictionaries/customer-segment/publish").with(dictionaryWriter())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mockMvc, "/api/dictionaries/customer-segment/publish", "{\"expectedVersion\":1}")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/customer-segment"))

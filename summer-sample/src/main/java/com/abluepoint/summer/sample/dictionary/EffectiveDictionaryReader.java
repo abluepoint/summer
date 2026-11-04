@@ -33,18 +33,18 @@ class EffectiveDictionaryReader {
         var type = types.findScoped(code, scope).orElseThrow(EffectiveDictionaryReader::missing);
         if (!type.published() || type.publishedVersion() == null) {
             if (publicRead) throw missing();
-            return new Effective(code, null, 0, Set.of(), scope.fingerprint());
+            return new Effective(code, null, type.publishedVersion() == null ? 0 : type.publishedVersion(), Set.of(), scope.fingerprint(), type.effectiveRevision(), type.draftRevision());
         }
         var version = versions.findByTenantIdAndDictionaryCodeAndVersion(tenant, code, type.publishedVersion())
                 .orElseThrow(EffectiveDictionaryReader::missing);
         var snapshot = mapper.readValue(version.snapshotJson(), DictionarySnapshot.class);
         if (publicRead && (!snapshot.publicReadable() || !snapshot.enabled())) throw missing();
         Set<String> visible = items.findScoped(code, scope).stream().map(DictionaryItemEntity::value).collect(Collectors.toSet());
-        return new Effective(code, snapshot, version.version(), visible, scope.fingerprint());
+        return new Effective(code, snapshot, version.version(), visible, scope.fingerprint(), type.effectiveRevision(), type.draftRevision());
     }
 
     record Effective(String code, DictionarySnapshot snapshot, long publishedVersion,
-                     Set<String> visibleValues, String scopeFingerprint) {
+                     Set<String> visibleValues, String scopeFingerprint, long effectiveRevision, long draftRevision) {
         Set<String> selectableValues() {
             return snapshot == null ? Set.of() : snapshot.items().stream().filter(DictionaryItemView::enabled)
                     .map(DictionaryItemView::value).filter(visibleValues::contains).collect(Collectors.toSet());

@@ -80,7 +80,7 @@ class DictionarySelectedItemHttpTest {
     void selectedItemComesFromThePublishedSnapshotInsteadOfTheLatestDraft() throws Exception {
         create();
         http.perform(post("/api/dictionaries/selected-item/publish").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/selected-item/publish", "{\"expectedVersion\":1}")))
                 .andExpect(status().isOk());
         http.perform(post("/api/dictionaries/selected-item/items").with(writer())
                 .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/selected-item/items", "{\"value\":\"new-draft\",\"label\":\"Draft\",\"sortOrder\":1,\"enabled\":true}")))
@@ -102,7 +102,7 @@ class DictionarySelectedItemHttpTest {
 
     private void publish(long version) throws Exception {
         http.perform(post("/api/dictionaries/selected-item/publish").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + version + "}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/selected-item/publish", "{\"expectedVersion\":" + version + "}")))
                 .andExpect(status().isOk());
     }
 

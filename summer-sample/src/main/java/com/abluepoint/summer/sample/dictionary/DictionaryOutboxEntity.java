@@ -31,6 +31,14 @@ class DictionaryOutboxEntity {
     @Lob
     @Column(name = "payload_json", nullable = false, updatable = false)
     private String payloadJson;
+    @Column(name="request_fingerprint", length=64, updatable=false)
+    private String requestFingerprint;
+    @Column(name="result_json", columnDefinition="longtext", updatable=false)
+    private String resultJson;
+    void receipt(String fingerprint, String result) { requestFingerprint = fingerprint; resultJson = result; }
+    String requestFingerprint() { return requestFingerprint; }
+    String resultJson() { return resultJson; }
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private DictionaryOutboxStatus status = DictionaryOutboxStatus.PENDING;

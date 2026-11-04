@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Input,
+  Modal,
   Select,
   Space,
   Switch,
@@ -15,6 +16,10 @@ import { Link, Prompt } from 'react-router-dom';
 import useActiveEnterprise from '../../data-scopes/useActiveEnterprise';
 import {
   DictionaryDraft,
+  DictionaryHistory,
+  getDictionaryHistory,
+  getDictionaryHistoryDetail,
+  changeDictionaryVersion,
   DictionaryDraftItem,
   EffectiveDictionary,
   getDictionaryDraft,
@@ -68,6 +73,11 @@ function Content({
   const [reload, setReload] = useState(0);
   const [value, setValue] = useState<EffectiveDictionary>();
   const [draft, setDraft] = useState<DictionaryDraft>();
+  const [history, setHistory] = useState<DictionaryHistory[]>([]);
+  const [historical, setHistorical] = useState<DictionaryHistory>();
+  const [preview, setPreview] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'disable' | 'rollback'>();
+  const [selectedVersion, setSelectedVersion] = useState<number>();
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,8 +92,8 @@ function Content({
     []
   );
   useEffect(() => {
-    onDirty(dirty);
-  }, [dirty, onDirty]);
+    onDirty(dirty || preview || !!pendingAction);
+  }, [dirty, preview, pendingAction, onDirty]);
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -113,6 +123,11 @@ function Content({
   useEffect(() => {
     let active = true;
     setValue(undefined);
+    setHistory([]);
+    setHistorical(undefined);
+    setSelectedVersion(undefined);
+    setPreview(false);
+    setPendingAction(undefined);
     setDraft(undefined);
     setError('');
     if (code) {
@@ -120,11 +135,13 @@ function Content({
       Promise.all([
         getEffectiveDictionary(enterpriseId, code),
         getDictionaryDraft(enterpriseId, code),
+        getDictionaryHistory(enterpriseId, code),
       ])
-        .then(([effective, edit]) => {
+        .then(([effective, edit, versions]) => {
           if (active) {
             setValue(effective);
             setDraft(edit);
+            setHistory(versions);
           }
         })
         .catch((e) => {
@@ -139,6 +156,79 @@ function Content({
       active = false;
     };
   }, [enterpriseId, code, tab, reload]);
+  useEffect(() => {
+    let active = true;
+    setHistorical(undefined);
+    if (selectedVersion !== undefined && code) {
+      getDictionaryHistoryDetail(enterpriseId, code, selectedVersion)
+        .then((result) => {
+          if (active) setHistorical(result);
+        })
+        .catch((e) => {
+          if (active)
+            setError(`${e.message}${e.requestId ? ` (${e.requestId})` : ''}`);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [enterpriseId, code, selectedVersion]);
+  const transition = async (action: 'publish' | 'disable' | 'rollback') => {
+    if (!draft || !value || loading || writing.current || dirty) return;
+    if (action === 'rollback' && !historical) return;
+    writing.current = true;
+    setSaving(true);
+    setError('');
+    try {
+      await changeDictionaryVersion(enterpriseId, code, action, {
+        expectedVersion: value.publishedVersion,
+        expectedEffectiveRevision: value.effectiveRevision,
+        ...(action === 'publish'
+          ? { expectedDraftRevision: draft.draftRevision }
+          : {}),
+        ...(action === 'rollback' ? { targetVersion: historical.version } : {}),
+        idempotencyKey: Array.from(
+          window.crypto.getRandomValues(new Uint8Array(16)),
+          (byte) => byte.toString(16).padStart(2, '0')
+        ).join(''),
+      });
+      if (alive.current) {
+        setPreview(false);
+        setPendingAction(undefined);
+        setLoading(true);
+        setReload((n) => n + 1);
+      }
+    } catch (e) {
+      if (alive.current)
+        setError(
+          `${
+            e.status === 409
+              ? '版本或草稿已变化，请刷新后重新核对；当前输入已保留。'
+              : e.message
+          }${e.requestId ? ` (${e.requestId})` : ''}`
+        );
+    } finally {
+      writing.current = false;
+      if (alive.current) setSaving(false);
+    }
+  };
+  const readOnlyItems = (items: EffectiveDictionary['items']) => (
+    <Table
+      rowKey="value"
+      pagination={false}
+      data={items}
+      columns={[
+        { title: '值', dataIndex: 'value' },
+        { title: '显示名称', dataIndex: 'label' },
+        { title: '说明', dataIndex: 'description' },
+        { title: '默认顺序', dataIndex: 'sortOrder' },
+        {
+          title: '状态',
+          render: (_, item) => (item.enabled ? '启用' : '停用'),
+        },
+      ]}
+    />
+  );
   const proceed = () => !dirty || window.confirm('有未保存修改，是否放弃？');
   const edit = (patch: Partial<DictionaryDraft>) => {
     setDraft((old) => ({ ...old, ...patch }));
@@ -205,7 +295,7 @@ function Content({
       <Prompt when={dirty} message="有未保存修改，是否放弃？" />
       <Select
         aria-label="字典编码"
-        disabled={saving}
+        disabled={saving || preview || !!pendingAction}
         value={code || undefined}
         options={codes}
         onChange={(next) => {
@@ -237,6 +327,12 @@ function Content({
             <>
               <h3>{value.name}</h3>
               <Tag>基础发布版本 {value.publishedVersion}</Tag>
+              <Button
+                disabled={loading || saving}
+                onClick={() => setPendingAction('disable')}
+              >
+                停用字典
+              </Button>
               <Table
                 loading={loading}
                 rowKey="value"
@@ -380,6 +476,12 @@ function Content({
                   保存草稿
                 </Button>
                 <Button
+                  disabled={dirty || saving || loading}
+                  onClick={() => setPreview(true)}
+                >
+                  核对并发布
+                </Button>
+                <Button
                   disabled={saving || loading}
                   onClick={() => {
                     if (proceed()) {
@@ -395,7 +497,87 @@ function Content({
             </Space>
           )}
         </Tabs.TabPane>
+        <Tabs.TabPane key="history" title="历史版本">
+          <Alert content="历史发布内容（只读），回滚保留当前草稿。" />
+          <Select
+            aria-label="历史版本号"
+            value={selectedVersion}
+            disabled={saving || loading}
+            options={history.map((row) => ({
+              value: row.version,
+              label: `版本 ${row.version} · ${row.createdAt}`,
+            }))}
+            onChange={setSelectedVersion}
+          />
+          {historical?.snapshot && (
+            <>
+              <h3>{historical.snapshot.name}</h3>
+              <p>
+                公开读取：{historical.snapshot.publicReadable ? '是' : '否'}
+                ；启用字典：{historical.snapshot.enabled ? '是' : '否'}
+              </p>
+              {readOnlyItems(historical.snapshot.items)}
+              <Button
+                disabled={
+                  saving ||
+                  loading ||
+                  historical.version === value?.publishedVersion
+                }
+                onClick={() => setPendingAction('rollback')}
+              >
+                回滚此版本
+              </Button>
+            </>
+          )}
+        </Tabs.TabPane>
       </Tabs>
+      <Modal
+        title={
+          pendingAction === 'disable'
+            ? '停用当前字典？'
+            : `回滚至版本 ${historical?.version}？`
+        }
+        visible={!!pendingAction}
+        confirmLoading={saving}
+        onCancel={() => {
+          if (!saving) setPendingAction(undefined);
+        }}
+        onOk={() => transition(pendingAction)}
+      >
+        {pendingAction === 'disable'
+          ? '停用后业务将无法读取此字典。'
+          : '完整切换生效内容，草稿保持当前内容。'}
+      </Modal>
+      <Modal
+        title="核对完整草稿后发布"
+        visible={preview}
+        onCancel={() => {
+          if (!saving) setPreview(false);
+        }}
+        confirmLoading={saving}
+        onOk={() => transition('publish')}
+        okText="确认发布"
+      >
+        {draft && (
+          <>
+            <h3>{draft.name}</h3>
+            <p>
+              草稿修订 {draft.draftRevision}；当前发布版本{' '}
+              {value?.publishedVersion}；生效修订 {value?.effectiveRevision}
+            </p>
+            <p>
+              公开读取：{draft.publicReadable ? '是' : '否'}；启用字典：
+              {draft.enabled ? '是' : '否'}
+            </p>
+            {readOnlyItems(
+              draft.itemOrder.map((id, index) => ({
+                ...draft.items.find((i) => i.id === id),
+                sortOrder: index,
+              }))
+            )}
+          </>
+        )}
+      </Modal>
     </Card>
   );
 }
