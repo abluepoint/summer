@@ -50,7 +50,7 @@ public class ConfigurationFallbackGuard {
         bindings.put("expectedTenant", tenant);
         bindings.put("expectedVersion", version);
         if (jdbc.queryForObject("select count(*) from summer_dictionary_type where code=:expectedCode "
-                + "and published_version=:expectedVersion and enabled=true and published=true and public_readable=true and ("
+                + "and published_version=:expectedVersion and published=true and ("
                 + scope.sqlPredicate() + ")", bindings, Long.class) != 1) return false;
         var currentValues = jdbc.queryForList("select item_value from summer_dictionary_item where dictionary_code=:expectedCode and ("
                 + scope.sqlPredicate() + ")", bindings, String.class);

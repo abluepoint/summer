@@ -50,7 +50,10 @@ class DictionaryService {
             scopedType(code, authentication);
             throw new SummerException(DictionaryErrorCode.CONFLICT);
         }
-        if (bool(request.published())) actions.require("dictionaries", "publish", authentication);
+        if (bool(request.published())) {
+            actions.require("dictionaries", "publish", authentication);
+            throw new SummerException(DictionaryErrorCode.INVALID_STATE);
+        }
         if (blank(request.name())) throw invalid("name");
         DictionaryTypeEntity type = new DictionaryTypeEntity(resolve(authentication), UUID.randomUUID().toString(), code, request.name().trim(),
                 bool(request.published()), bool(request.publicReadable()), bool(request.enabled(), true), request.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName());
@@ -70,7 +73,7 @@ class DictionaryService {
         if (request == null || blank(request.name())) throw invalid("name");
         if (request.organizationId() != null && !java.util.Objects.equals(request.organizationId(), type.organizationId())) throw invalid("organizationId");
         if (request.publicReadable() != null && request.publicReadable() != type.publicReadable()) actions.require("dictionaries", "publish", authentication);
-        if (request.published() != null && request.published() != type.published()) actions.require("dictionaries", request.published() ? "publish" : "disable", authentication);
+        if (request.published() != null && request.published() != type.published()) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
         if (request.enabled() != null && request.enabled() != type.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", authentication);
         type.change(request.name().trim(), bool(request.published(), type.published()),
                 bool(request.publicReadable(), type.publicReadable()), bool(request.enabled(), type.enabled()));

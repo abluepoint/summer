@@ -52,7 +52,7 @@ class DictionaryMySqlIntegrationTest {
         mockMvc.perform(post("/api/dictionaries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"mysql-segment","name":"MySQL Segment","published":true,"publicReadable":true,"enabled":true}
+                                {"code":"mysql-segment","name":"MySQL Segment","published":false,"publicReadable":true,"enabled":true}
                                 """)
                         .with(writer()))
                 .andExpect(status().isOk());
@@ -62,6 +62,10 @@ class DictionaryMySqlIntegrationTest {
                                 {"value":"standard","label":"Standard","sortOrder":1,"enabled":true}
                                 """)
                         .with(writer()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/dictionaries/mysql-segment/publish").with(writer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/mysql-segment"))

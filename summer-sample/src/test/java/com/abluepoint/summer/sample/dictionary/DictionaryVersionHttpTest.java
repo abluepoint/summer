@@ -137,6 +137,31 @@ class DictionaryVersionHttpTest {
         assertThat(jdbc.queryForObject("select count(*) from summer_dictionary_outbox", Integer.class)).isEqualTo(1);
     }
 
+    @Test
+    void draftMetadataCannotHideOrRenameEffectiveSnapshot() throws Exception {
+        createDictionary();
+        addItem("standard", "Standard", true);
+        http.perform(post("/api/dictionaries/versioned-segment/publish").with(writer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .andExpect(status().isOk());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/dictionaries/versioned-segment")
+                .with(writer()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Draft name\",\"publicReadable\":false,\"enabled\":false}"))
+                .andExpect(status().isOk());
+        http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Standard"));
+        http.perform(get("/api/dictionaries/versioned-segment/effective").with(jwt()
+                .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.name").value("Versioned Segment"));
+    }
+
+    @Test
+    void ordinaryCreateCannotPublishByBoolean() throws Exception {
+        http.perform(post("/api/dictionaries").with(writer()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"boolean-bypass\",\"name\":\"Bypass\",\"published\":true,\"publicReadable\":true}"))
+                .andExpect(status().isConflict());
+    }
+
     private void createDictionary() throws Exception {
         http.perform(post("/api/dictionaries")
                         .contentType(MediaType.APPLICATION_JSON)

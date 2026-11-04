@@ -8,10 +8,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.*;
 @Component
 class DictionaryOverrideValidator implements ConfigurationValueValidator {
-    private final DictionaryTypeRepository types; private final DictionaryItemRepository items;
+    private final DictionaryTypeRepository types;
     private final DataScopeService scopes; private final ObjectMapper mapper;
-    DictionaryOverrideValidator(DictionaryTypeRepository types,DictionaryItemRepository items,DataScopeService scopes,ObjectMapper mapper) {
-        this.types=types;this.items=items;this.scopes=scopes;this.mapper=mapper;
+    private final EffectiveDictionaryReader effective;
+    DictionaryOverrideValidator(DictionaryTypeRepository types,DataScopeService scopes,ObjectMapper mapper,EffectiveDictionaryReader effective) {
+        this.effective=effective;
+        this.types=types;this.scopes=scopes;this.mapper=mapper;
     }
     public String resource() { return "dictionaries"; }
     public void requireBase(String tenant,String key,Authentication auth) {
@@ -23,7 +25,7 @@ class DictionaryOverrideValidator implements ConfigurationValueValidator {
         List<DictionaryItemView> options;
         try { options=mapper.convertValue(value,mapper.getTypeFactory().constructCollectionType(List.class,DictionaryItemView.class)); }
         catch(RuntimeException e) { throw invalid(); }
-        Set<String> allowed=new HashSet<>();items.findScoped(key,scopes.filter(tenant,resource(),auth)).forEach(i->allowed.add(i.value()));
+        Set<String> allowed=effective.read(tenant,key,auth,true).selectableValues();
         if(options.stream().anyMatch(i->i==null||i.value()==null||!allowed.contains(i.value())||i.label()==null||i.label().isBlank()||i.label().length()>200||i.sortOrder()<0)
             ||options.stream().map(DictionaryItemView::value).distinct().count()!=options.size()) throw invalid();
     }

@@ -67,7 +67,13 @@ class ResilientConfigurationHttpTest {
     }
     @Test void withdrawingDictionaryDuringFailureCannotReturnSnapshot() throws Exception {
         dictionary();
-        failure(()->jdbc.update("update summer_dictionary_type set public_readable=false where code='resilient-dict'"));
+        failure(() -> {
+            try {
+                mvc.perform(post("/api/dictionaries/resilient-dict/disable").with(actor())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
+                        .andExpect(status().isOk());
+            } catch (Exception exception) { throw new IllegalStateException(exception); }
+        });
         mvc.perform(get("/public/dictionaries/resilient-dict").with(actor())).andExpect(status().isServiceUnavailable());
     }
     @Test void changingPublishedPointerDuringFailureCannotReturnObsoleteSnapshot() throws Exception {

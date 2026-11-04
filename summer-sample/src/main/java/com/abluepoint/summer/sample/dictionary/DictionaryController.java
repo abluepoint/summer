@@ -28,6 +28,13 @@ class DictionaryController {
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
     List<DictionaryTypeView> list(Authentication authentication) { return service.list(authentication); }
 
+    @GetMapping({"/api/dictionaries/{code}/effective", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/effective"})
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    EffectiveDictionaryView effective(@PathVariable String code, Authentication authentication) {
+        return versions.effectiveRead(code, authentication);
+    }
+
     @PostMapping({"/api/dictionaries", "/api/v1/enterprises/{enterpriseId}/dictionaries"})
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.create")
     @PreAuthorize("hasAnyAuthority('SCOPE_platform.dictionary.create','SCOPE_platform.dictionary.write')")

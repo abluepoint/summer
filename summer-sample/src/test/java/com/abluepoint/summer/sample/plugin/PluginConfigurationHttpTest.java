@@ -54,7 +54,10 @@ class PluginConfigurationHttpTest {
     @Test void privateAndDisabledValuesAreNotPluginConfiguration() throws Exception {
         setup();
         jdbc.update("update summer_system_parameter set status='INACTIVE', version=version+1 where parameter_key='customer-insights.label'");
-        jdbc.update("update summer_dictionary_type set public_readable=false where code='customer-segment'");
+        mvc.perform(patch("/api/dictionaries/customer-segment").with(actor("alice","org-engineering"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Segment\",\"publicReadable\":false}"))
+                .andExpect(status().isOk());
+        publish(1);
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").doesNotExist())
                 .andExpect(jsonPath("$.data.dictionary.items").isEmpty());

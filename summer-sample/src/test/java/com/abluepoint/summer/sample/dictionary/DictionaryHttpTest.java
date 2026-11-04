@@ -34,7 +34,7 @@ class DictionaryHttpTest {
         mockMvc.perform(post("/api/dictionaries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"customer-segment","name":"Customer Segment","published":true,"publicReadable":true,"enabled":true}
+                                {"code":"customer-segment","name":"Customer Segment","published":false,"publicReadable":true,"enabled":true}
                                 """)
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk())
@@ -55,6 +55,10 @@ class DictionaryHttpTest {
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
 
+        mockMvc.perform(post("/api/dictionaries/customer-segment/publish").with(dictionaryWriter())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/customer-segment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items", hasSize(1)))
@@ -66,6 +70,10 @@ class DictionaryHttpTest {
                                 {"label":"VIP","sortOrder":1,"enabled":true}
                                 """)
                         .with(dictionaryWriter()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/dictionaries/customer-segment/publish").with(dictionaryWriter())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/public/enterprises/ent-acme/dictionaries/customer-segment"))
@@ -93,7 +101,7 @@ class DictionaryHttpTest {
         mockMvc.perform(post("/api/dictionaries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"forbidden","name":"Forbidden","published":true,"publicReadable":true,"enabled":true}
+                                {"code":"forbidden","name":"Forbidden","published":false,"publicReadable":true,"enabled":true}
                                 """)
                         .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
                 .andExpect(status().isForbidden())
@@ -106,7 +114,7 @@ class DictionaryHttpTest {
         mockMvc.perform(post("/api/dictionaries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"invalid","name":"Invalid","published":true,"publicReadable":true,"enabled":true}
+                                {"code":"invalid","name":"Invalid","published":false,"publicReadable":true,"enabled":true}
                                 """)
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());

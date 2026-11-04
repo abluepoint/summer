@@ -31,6 +31,7 @@ class DictionarySelectedItemHttpTest {
         http.perform(patch("/api/dictionaries/selected-item/items/selected").with(writer())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":false}"))
                 .andExpect(status().isOk());
+        publish(1);
         http.perform(get(PUBLIC)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(0)));
         http.perform(get(PUBLIC + "/items/selected").header("X-Request-Id", "selected-disabled"))
@@ -64,11 +65,14 @@ class DictionarySelectedItemHttpTest {
     @Test
     void privateUnpublishedAndDisabledTypesCannotExposeASelectedItem() throws Exception {
         create();
-        for (String flag : List.of("publicReadable", "published", "enabled")) {
+        long currentVersion = 1;
+        for (String flag : List.of("publicReadable", "enabled")) {
             changeFlag(flag, false);
+            publish(currentVersion++);
             http.perform(get(PUBLIC + "/items/selected")).andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"));
             changeFlag(flag, true);
+            publish(currentVersion++);
         }
     }
 
@@ -76,7 +80,7 @@ class DictionarySelectedItemHttpTest {
     void selectedItemComesFromThePublishedSnapshotInsteadOfTheLatestDraft() throws Exception {
         create();
         http.perform(post("/api/dictionaries/selected-item/publish").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
                 .andExpect(status().isOk());
         http.perform(post("/api/dictionaries/selected-item/items").with(writer())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"new-draft\",\"label\":\"Draft\",\"sortOrder\":1,\"enabled\":true}"))
@@ -88,10 +92,17 @@ class DictionarySelectedItemHttpTest {
 
     private void create() throws Exception {
         http.perform(post("/api/dictionaries").with(writer()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"selected-item\",\"name\":\"Selected item\",\"published\":true,\"publicReadable\":true,\"enabled\":true}"))
+                .content("{\"code\":\"selected-item\",\"name\":\"Selected item\",\"published\":false,\"publicReadable\":true,\"enabled\":true}"))
                 .andExpect(status().isOk());
         http.perform(post("/api/dictionaries/selected-item/items").with(writer()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"value\":\"selected\",\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":true}"))
+                .andExpect(status().isOk());
+        publish(0);
+    }
+
+    private void publish(long version) throws Exception {
+        http.perform(post("/api/dictionaries/selected-item/publish").with(writer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + version + "}"))
                 .andExpect(status().isOk());
     }
 

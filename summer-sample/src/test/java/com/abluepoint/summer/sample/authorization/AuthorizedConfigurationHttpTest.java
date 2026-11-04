@@ -91,9 +91,11 @@ class AuthorizedConfigurationHttpTest {
     }
     @Test void dictionaryOverridesAreScopedVersionedAndValidatedAgainstVisibleItems() throws Exception {
         mvc.perform(post("/api/dictionaries").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"override-dict\",\"name\":\"Override\",\"published\":true,\"publicReadable\":true}")) .andExpect(status().isOk());
+                .content("{\"code\":\"override-dict\",\"name\":\"Override\",\"published\":false,\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/override-dict/items").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"value\":\"option\",\"label\":\"Base\",\"sortOrder\":1}")) .andExpect(status().isOk());
+        mvc.perform(post("/api/dictionaries/override-dict/publish").with(member("alice", "org-engineering"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
         String payload="{\"value\":[{\"value\":\"option\",\"label\":\"Org\",\"sortOrder\":1,\"enabled\":true}],\"publicReadable\":true}";
         mvc.perform(put("/api/dictionaries/override-dict/overrides/org-engineering").with(member("alice","org-engineering"))
                 .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(0));
@@ -101,6 +103,18 @@ class AuthorizedConfigurationHttpTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Org"));
         mvc.perform(get("/public/enterprises/ent-acme/dictionaries/override-dict").with(member("alice","org-operations")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Base"));
+        mvc.perform(post("/api/dictionaries/override-dict/overrides/org-engineering/draft").with(member("alice","org-engineering"))
+                .contentType(MediaType.APPLICATION_JSON).content(payload.replace("Org", "Draft").replace("\"publicReadable\":true", "\"expectedVersion\":0,\"publicReadable\":true")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/public/enterprises/ent-acme/dictionaries/override-dict").with(member("alice","org-engineering")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Org"))
+                .andExpect(jsonPath("$.data.publishedVersion").value(1)).andExpect(jsonPath("$.data.publishedRevision").value(1));
+        mvc.perform(post("/api/dictionaries/override-dict/items").with(member("alice","org-engineering"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"draft-only\",\"label\":\"Draft\",\"sortOrder\":2}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/dictionaries/override-dict/overrides/_tenant/draft").with(member("alice","org-engineering"))
+                .contentType(MediaType.APPLICATION_JSON).content(payload.replace("option", "draft-only")))
+                .andExpect(status().isBadRequest());
         mvc.perform(put("/api/dictionaries/override-dict/overrides/org-engineering").with(member("alice","org-engineering"))
                 .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isConflict());
         mvc.perform(put("/api/dictionaries/override-dict/overrides/org-operations").with(member("alice","org-operations"))

@@ -32,7 +32,7 @@ public class ConfigurationOverrideService {
         this.repository=repository; this.revisions=revisions; this.scopes=scopes; this.audit=audit; this.mapper=mapper;
         this.jdbc=jdbc; this.actions=actions; this.validators=validators; this.events=events; this.cache=cache;
     }
-    public record Value(String valueJson,long version) {}
+    public record Value(String valueJson,long version,long publishedRevision,String sourceId) {}
 
     @Transactional(readOnly=true)
     public Optional<Value> resolve(String resource,String key,Authentication auth) { return resolve(ConfigurationTenantContext.resolve(auth),resource,key,auth); }
@@ -48,7 +48,7 @@ public class ConfigurationOverrideService {
             var row=repository.findOne(scope.<ConfigurationOverrideEntity>specification().and((root,q,b)->b.and(
                     b.equal(root.get("resource"),resource), b.equal(root.get("key"),key), b.equal(root.get("scopeId"),candidate))))
                     .filter(v->v.publicReadable && v.enabled).orElseThrow(ConfigurationOverrideService::hidden);
-            return Optional.of(new Value(row.valueJson,row.version));
+            return Optional.of(new Value(row.valueJson,row.version,row.publishedRevision,row.id));
         }
         return Optional.empty();
     }

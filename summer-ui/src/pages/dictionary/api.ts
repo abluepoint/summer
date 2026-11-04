@@ -103,3 +103,12 @@ export async function saveDictionaryOverride(code: string, organization: string,
     throw Object.assign(new Error(failure.message), failure);
   }
 }
+
+export type EffectiveDictionary = {
+  code: string; name: string | null; publishedVersion: number; status: string;
+  publicReadable: boolean; enabled: boolean; items: DictionaryOption[]; groups: unknown[];
+};
+export const getDictionaryDraftList = (enterpriseId: string) =>
+  readPublicDictionary<{ code: string }[]>(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries`);
+export const getEffectiveDictionary = (enterpriseId: string, code: string) =>
+  readPublicDictionary<EffectiveDictionary>(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}/effective`);

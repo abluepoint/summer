@@ -283,6 +283,12 @@ export const routes: IRoute[] = [
     key: 'dictionary',
     children: [
       {
+        name: '字典管理',
+        key: 'dictionary/manage',
+        capabilityCode: 'platform.dictionary.read',
+        requiredPermissions: [{ resource: 'platform.dictionary', actions: ['read'] }],
+      },
+      {
         name: 'menu.dictionary.form',
         key: 'dictionary/form',
       },

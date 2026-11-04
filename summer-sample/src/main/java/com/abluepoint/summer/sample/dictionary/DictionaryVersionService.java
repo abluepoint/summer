@@ -17,6 +17,7 @@ import java.util.UUID;
 @Service
 class DictionaryVersionService {
     private final DictionaryTypeRepository types;
+    private final EffectiveDictionaryReader effective;
     private final DictionaryItemRepository items;
     private final DictionaryVersionRepository versions;
     private final DictionaryOutboxRepository outbox;
@@ -34,7 +35,8 @@ class DictionaryVersionService {
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              DataScopeService dataScopes, ObjectMapper objectMapper,
-                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard) {
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective) {
+        this.effective = effective;
         this.types = types;
         this.items = items;
         this.versions = versions;
@@ -125,48 +127,40 @@ class DictionaryVersionService {
     @Transactional(readOnly = true)
     PublicDictionaryView publicRead(String tenant, String code, Authentication authentication) {
         actions.requirePublic(tenant, "dictionaries", authentication);
-        DataScopeService.ScopeFilter scope = dataScopes.filter(tenant, "dictionaries", authentication);
-        DictionaryTypeEntity type = types.findScoped(code, scope)
-                .filter(t -> t.enabled() && t.publicReadable() && t.published())
-                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
-        // Recheck both type and item scope before any cache/fallback read. Snapshot values remain immutable.
-        List<DictionaryItemEntity> visible = items.findScoped(code, scope);
-        java.util.Set<String> allowedValues = visible.stream().map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
+        var base = effective.read(tenant, code, authentication, true);
+        var snapshot = base.snapshot();
+        var allowedValues = base.visibleValues();
         var override = overrides.resolve(tenant, "dictionaries", code, authentication);
         if (override.isPresent()) {
-            List<DictionaryItemView> options = objectMapper.readValue(override.get().valueJson(), objectMapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class));
-            return new PublicDictionaryView(code, options.stream().filter(DictionaryItemView::enabled).filter(i -> allowedValues.contains(i.value())).toList(), override.get().version());
+            var selected = override.get();
+            List<DictionaryItemView> options = objectMapper.readValue(selected.valueJson(), objectMapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class));
+            var selectable = base.selectableValues();
+            return new PublicDictionaryView(code, options.stream().filter(DictionaryItemView::enabled)
+                    .filter(i -> selectable.contains(i.value())).toList(), selected.version(), base.publishedVersion(),
+                    selected.publishedRevision(), "override", token(tenant, code, base.publishedVersion(), selected.sourceId() + ":" + selected.publishedRevision(), base));
         }
-        if (type.publishedVersion() == null) {
-            return new PublicDictionaryView(code, visible.stream().filter(DictionaryItemEntity::enabled)
-                    .map(i -> new DictionaryItemView(i.value(), i.label(), i.sortOrder(), i.enabled())).toList(), 0);
-        }
-        DictionaryVersionEntity version = versions.findByTenantIdAndDictionaryCodeAndVersion(tenant, code, type.publishedVersion())
-                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
-        DictionarySnapshot snapshot = objectMapper.readValue(version.snapshotJson(), DictionarySnapshot.class);
-        if (!snapshot.publicReadable() || !snapshot.enabled()) throw new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
-        String cacheKey = tenant + ":" + code + ":" + (authentication == null ? "" : authentication.getName()) + ":" + version.version() + ":" + scope.fingerprint() + ":" + new java.util.TreeSet<>(allowedValues);
+        String cacheKey = tenant + ":" + code + ":" + (authentication == null ? "" : authentication.getName()) + ":" + base.publishedVersion() + ":" + base.scopeFingerprint() + ":" + new java.util.TreeSet<>(allowedValues);
         return resilientReads.read(ResilientReadService.DICTIONARIES, cacheKey, () -> cache.get(tenant, "dictionary", cacheKey, PublicDictionaryView.class,
                 () -> new PublicDictionaryView(code, snapshot.items().stream().filter(DictionaryItemView::enabled)
-                        .filter(i -> allowedValues.contains(i.value())).toList(), version.version())),
-                () -> fallbackGuard.dictionary(tenant, code, version.version(), scope.fingerprint(), allowedValues, authentication));
+                        .filter(i -> allowedValues.contains(i.value())).toList(), base.publishedVersion(), base.publishedVersion(), null,
+                        "base", token(tenant, code, base.publishedVersion(), "base", base))),
+                () -> fallbackGuard.dictionary(tenant, code, base.publishedVersion(), base.scopeFingerprint(), allowedValues, authentication));
+    }
+
+    @Transactional(readOnly = true)
+    EffectiveDictionaryView effectiveRead(String code, Authentication authentication) {
+        var base = effective.read(resolve(authentication), code, authentication, false);
+        var snapshot = base.snapshot();
+        return new EffectiveDictionaryView(code, snapshot == null ? null : snapshot.name(), base.publishedVersion(),
+                snapshot == null ? "UNPUBLISHED" : "PUBLISHED", snapshot == null ? false : snapshot.publicReadable(),
+                snapshot == null ? false : snapshot.enabled(), snapshot == null ? List.of() : snapshot.items().stream()
+                .filter(i -> base.visibleValues().contains(i.value())).toList(), snapshot == null ? List.of() : snapshot.groups());
     }
 
     @Transactional
     com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(String code, String organization,
             com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth, String requestId) {
-        scopedType(code, auth);
-        if (request == null || !(request.value() instanceof java.util.Collection<?> values) || values.size() > 200)
-            throw invalidOverride();
-        List<DictionaryItemView> options;
-        try { options = objectMapper.convertValue(request.value(), objectMapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class)); }
-        catch (RuntimeException e) { throw invalidOverride(); }
-        java.util.Set<String> allowed = items.findScoped(code, dataScopes.filter(resolve(auth), "dictionaries", auth))
-                .stream().map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
-        if (options.stream().anyMatch(i -> i.value() == null || !allowed.contains(i.value()) || i.label() == null || i.label().isBlank() || i.label().length() > 200 || i.sortOrder() < 0)
-                || options.stream().map(DictionaryItemView::value).distinct().count() != options.size())
-            throw invalidOverride();
-        return overrides.save("dictionaries", code, organization, new com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest(options, request.publicReadable(), request.enabled(), request.expectedVersion()), auth, requestId);
+        return overrides.save("dictionaries", code, organization, request, auth, requestId);
     }
 
     private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
@@ -208,17 +202,17 @@ class DictionaryVersionService {
         return view(type, version);
     }
 
+    private static String token(String tenant, String code, long version, String source, EffectiveDictionaryReader.Effective base) {
+        return UUID.nameUUIDFromBytes((tenant + ":" + code + ":" + version + ":" + source + ":" + base.scopeFingerprint() + ":" + new java.util.TreeSet<>(base.visibleValues()))
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+    }
+
     private static long currentVersion(DictionaryTypeEntity type) { return type.publishedVersion() == null ? 0 : type.publishedVersion(); }
 
     private static void requireExpected(DictionaryVersionRequest request, long current) {
         if (request == null || request.expectedVersion() == null || request.expectedVersion() != current) {
             throw new SummerException(DictionaryErrorCode.VERSION_CONFLICT);
         }
-    }
-
-    private static SummerException invalidOverride() {
-        return new SummerException(DictionaryErrorCode.INVALID,
-                List.of(new SummerException.Violation("value", "Override options must contain unique visible dictionary items with valid labels and sort order")));
     }
 
     private static SummerException invalidState(String message) {
@@ -237,6 +231,17 @@ class DictionaryVersionService {
     }
 }
 
-record DictionarySnapshot(String name, boolean publicReadable, boolean enabled, List<DictionaryItemView> items) {}
+record DictionarySnapshot(String name, boolean publicReadable, boolean enabled, List<DictionaryItemView> items,
+                          Integer formatVersion, List<Object> groups) {
+    DictionarySnapshot {
+        items = items == null ? List.of() : List.copyOf(items);
+        groups = groups == null ? List.of() : List.copyOf(groups);
+    }
+    DictionarySnapshot(String name, boolean publicReadable, boolean enabled, List<DictionaryItemView> items) {
+        this(name, publicReadable, enabled, items, 1, List.of());
+    }
+}
+record EffectiveDictionaryView(String code, String name, long publishedVersion, String status,
+                               boolean publicReadable, boolean enabled, List<DictionaryItemView> items, List<Object> groups) {}
 record DictionaryEvent(String eventId, String tenantId, String dictionaryCode, String eventType,
                        long version, String requestId) {}
