@@ -1,157 +1,336 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
-import { Alert, Button, Card, Form, Select, Spin, Tag, Input, InputNumber, Table, Descriptions } from '@arco-design/web-react';
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  Select,
+  Spin,
+  Tag,
+  Input,
+  InputNumber,
+  Table,
+  Descriptions,
+} from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import { DictionaryOption, getPublicDictionary, getPublicDictionaryItem, subscribeDictionaryNotifications, DictionaryStreamState, saveDictionaryOverride } from './api';
+import {
+  subscribeDictionaryNotifications,
+  DictionaryStreamState,
+  saveDictionaryOverride,
+} from './api';
 
-import { DictionaryNameDisplay, dictionaryName, useDictionaryNames } from './names';
+import { DictionarySelect } from './select';
+import {
+  DictionaryNameDisplay,
+  dictionaryName,
+  useDictionaryNames,
+} from './names';
 
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 const dictionaryCode = 'customer-segment';
 
 export default function DictionaryConsumerPage() {
   const tenant = useActiveEnterprise();
-  return <><Select aria-label="活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240, marginBottom: 16 }} />
-    {tenant.enterpriseId ? <DictionaryContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} onDirtyChange={tenant.setDirty} onBusyChange={tenant.setBusy} /> : tenant.ready && <Alert type="info" content="请选择一个活动成员租户；没有可用租户时不会读取配置。" />}</>;
+  return (
+    <>
+      <Select
+        aria-label="活动租户"
+        placeholder="选择活动租户"
+        value={tenant.enterpriseId || undefined}
+        options={tenant.options}
+        onChange={tenant.change}
+        disabled={tenant.busy}
+        style={{ width: 240, marginBottom: 16 }}
+      />
+      {tenant.enterpriseId ? (
+        <DictionaryContent
+          key={tenant.enterpriseId}
+          enterpriseId={tenant.enterpriseId}
+          onDirtyChange={tenant.setDirty}
+          onBusyChange={tenant.setBusy}
+        />
+      ) : (
+        tenant.ready && (
+          <Alert
+            type="info"
+            content="请选择一个活动成员租户；没有可用租户时不会读取配置。"
+          />
+        )
+      )}
+    </>
+  );
 }
-function DictionaryContent({ enterpriseId, onDirtyChange, onBusyChange }: { enterpriseId: string; onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }) {
+function DictionaryContent({
+  enterpriseId,
+  onDirtyChange,
+  onBusyChange,
+}: {
+  enterpriseId: string;
+  onDirtyChange: (value: boolean) => void;
+  onBusyChange: (value: boolean) => void;
+}) {
   const t = useLocale();
   const history = useHistory();
-  const [options, setOptions] = useState<DictionaryOption[]>([]);
   const [value, setValue] = useState('');
-  const [version, setVersion] = useState<number | undefined>();
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedUnavailable, setSelectedUnavailable] = useState(false);
-  const [streamState, setStreamState] = useState<DictionaryStreamState>('CONNECTING');
+  const [streamState, setStreamState] =
+    useState<DictionaryStreamState>('CONNECTING');
   const [streamError, setStreamError] = useState(false);
-  const names = useDictionaryNames(dictionaryCode, [...options.map((item) => item.value), value].filter(Boolean));
+  const [groupCode, setGroupCode] = useState('');
+  const names = useDictionaryNames(
+    dictionaryCode,
+    value ? [value] : [],
+    groupCode || undefined,
+    true
+  );
+  const options = names.status === 'ready' ? names.choices || [] : [];
+  const loading = names.status === 'loading';
+  const version = names.identity?.publishedVersion;
   const namesRef = useRef(names);
   namesRef.current = names;
-  const valueRef = useRef('');
-  const readRequest = useRef(0);
   const alive = useRef(true);
   const writing = useRef(false);
   const [saving, setSaving] = useState(false);
-  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    []
+  );
   useEffect(() => onBusyChange(saving), [saving, onBusyChange]);
   const overrideDirty = useRef(false);
   const [overrideOrg, setOverrideOrg] = useState('_tenant');
   const [overrideJson, setOverrideJson] = useState('[]');
   const [overrideVersion, setOverrideVersion] = useState<number | undefined>();
-  useEffect(() => onDirtyChange(overrideDirty.current), [overrideJson, overrideOrg, overrideVersion, error, onDirtyChange]);
+  useEffect(
+    () => onDirtyChange(overrideDirty.current),
+    [overrideJson, overrideOrg, overrideVersion, error, onDirtyChange]
+  );
   useEffect(() => {
     if (!overrideDirty.current && !saving) return undefined;
-    const unblock = history.block(() => isAuthRedirecting() ? undefined : saving ? false : '字典覆盖有未保存修改，确认离开？');
-    const beforeUnload = (event: BeforeUnloadEvent) => { if (!isAuthRedirecting()) { event.preventDefault(); event.returnValue = ''; } };
+    const unblock = history.block(() =>
+      isAuthRedirecting()
+        ? undefined
+        : saving
+        ? false
+        : '字典覆盖有未保存修改，确认离开？'
+    );
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isAuthRedirecting()) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
     window.addEventListener('beforeunload', beforeUnload);
-    return () => { unblock(); window.removeEventListener('beforeunload', beforeUnload); };
+    return () => {
+      unblock();
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
   }, [overrideJson, overrideOrg, overrideVersion, saving, history]);
 
-  function readFailure(failure: Error & { status?: number; requestId?: string }, selectedItem = false) {
-    setSelectedUnavailable(true);
-    if (!selectedItem || [401, 403].includes(failure.status || 0)) { setOptions([]); setVersion(undefined); }
-    if ([401, 403].includes(failure.status || 0)) {
-      namesRef.current.forbid();
-      valueRef.current = ''; setValue(''); setOverrideJson('[]'); overrideDirty.current = false;
-    } else {
-      if (!selectedItem && failure.status === 404) { valueRef.current = ''; setValue(''); }
-      if (!selectedItem && !overrideDirty.current) setOverrideJson('[]');
-    }
-    const message = failure.status === 403 ? '无权读取此字典' : failure.status === 404 ? (selectedItem ? '所选字典项不可用，请重新选择' : '字典不可用或不在授权范围内') : failure.message || t['dictionary.error'];
-    setError(`${message}${failure.requestId ? ` (${failure.requestId})` : ''}`);
-  }
-
-  function validateSelection(next: string, request: number) {
-    return getPublicDictionaryItem(dictionaryCode, next, enterpriseId)
-      .then(() => { if (request === readRequest.current) setSelectedUnavailable(false); })
-      .catch((failure) => { if (request === readRequest.current) readFailure(failure, true); });
-  }
-
-  function selectValue(next: string) {
-    const request = ++readRequest.current;
-    valueRef.current = next; setValue(next); setError(''); setSelectedUnavailable(false); setLoading(true);
-    validateSelection(next, request).finally(() => { if (request === readRequest.current) setLoading(false); });
-  }
-
-  const load = useCallback(() => {
-    const request = ++readRequest.current;
-    setLoading(true);
-    setError('');
-    return getPublicDictionary(dictionaryCode, enterpriseId)
-      .then((dictionary) => {
-        if (request !== readRequest.current) return;
-        setOptions(dictionary.items); if (!overrideDirty.current) setOverrideJson(JSON.stringify(dictionary.items, null, 2));
-        setVersion(dictionary.version);
-        const current = valueRef.current;
-        const next = current || dictionary.items[0]?.value || '';
-        setSelectedUnavailable(Boolean(current && !dictionary.items.some((item) => item.value === current)));
-        valueRef.current = next;
-        setValue(next);
-        if (next) return validateSelection(next, request);
-      })
-      .catch((failure) => {
-        if (request !== readRequest.current) return;
-        readFailure(failure);
-      })
-      .finally(() => { if (request === readRequest.current) setLoading(false); });
-  }, [t]);
-
   useEffect(() => {
-    load();
     const unsubscribe = subscribeDictionaryNotifications(
       enterpriseId,
       dictionaryCode,
       () => {
         setStreamError(false);
         namesRef.current.refresh();
-        load();
       },
       setStreamState,
-      () => setStreamError(true),
+      () => setStreamError(true)
     );
-    return () => { readRequest.current++; unsubscribe(); };
-  }, [load]);
+    return () => {
+      unsubscribe();
+    };
+  }, [enterpriseId]);
 
   return (
     <Card
       title={t['dictionary.title']}
-      extra={(
+      extra={
         <span>
-          <Tag color={streamState === 'OPEN' ? 'green' : 'orange'} style={{ marginRight: 8 }}>
+          <Tag
+            color={streamState === 'OPEN' ? 'green' : 'orange'}
+            style={{ marginRight: 8 }}
+          >
             {streamState}
           </Tag>
-          <Button size="small" disabled={saving} loading={loading} onClick={() => { names.refresh(); load(); }}>{t['dictionary.refresh']}</Button>
+          <Button
+            size="small"
+            disabled={saving}
+            loading={loading}
+            onClick={() => {
+              names.refresh();
+            }}
+          >
+            {t['dictionary.refresh']}
+          </Button>
         </span>
-      )}
+      }
     >
-      {loading && !options.length ? <Spin /> : (
-        <Form layout="vertical" style={{ maxWidth: 520 }}>
-          <Alert type="info" content="覆盖优先级：组织 > 租户 > 基础值。高优先级覆盖不可访问时不会回退；发布覆盖需要独立授权。" style={{ marginBottom: 16 }} />
-          {error && <Alert type="error" content={error} style={{ marginBottom: 16 }} />}
-          {streamError && <Alert type="warning" content={t['dictionary.streamDisconnected']} style={{ marginBottom: 16 }} />}
-          {selectedUnavailable && names.status === 'ready' && names.items.get(value)?.status === 'disabled' && <Alert type="warning" content={t['dictionary.reselect']} style={{ marginBottom: 16 }} />}
-          <Form.Item label={t['dictionary.segment']}>
-            <Select
-              value={value}
-              onChange={selectValue}
-              placeholder={t['dictionary.choose']}
-              options={options.map((item) => ({ label: item.label, value: item.value }))}
+      {loading && <Spin />}
+      <Form layout="vertical" style={{ maxWidth: 520 }}>
+        <Alert
+          type="info"
+          content="覆盖优先级：组织 > 租户 > 基础值。高优先级覆盖不可访问时不会回退；发布覆盖需要独立授权。"
+          style={{ marginBottom: 16 }}
+        />
+        {names.status === 'ready' && names.identity?.overrideReviewRequired && (
+          <Alert
+            type="warning"
+            content={`覆盖发布修订 ${names.identity.publishedRevision} 包含基础生效版本缺失的引用，请管理员核对覆盖历史并整理；原数组和历史已保留。`}
+          />
+        )}
+        {error && (
+          <Alert type="error" content={error} style={{ marginBottom: 16 }} />
+        )}
+        {streamError && (
+          <Alert
+            type="warning"
+            content={t['dictionary.streamDisconnected']}
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        {names.status === 'ready' &&
+          names.items.get(value)?.status === 'disabled' && (
+            <Alert
+              type="warning"
+              content={t['dictionary.reselect']}
+              style={{ marginBottom: 16 }}
             />
-          </Form.Item>
-          <Form.Item label="已有业务值（仅展示，不改变选择范围）"><Input aria-label="已有业务值" value={value} onChange={(next) => { valueRef.current = next; setValue(next); }} /></Form.Item>
-          <Descriptions title="业务详情" data={[{ label: '原值', value: value || '—' }, { label: '名称', value: <DictionaryNameDisplay names={names} value={value} /> }]} />
-          <Table rowKey="value" pagination={false} data={Array.from(new Set([...options.map((item) => item.value), value].filter(Boolean))).map((item) => ({ value: item }))}
-            columns={[{ title: '业务值', dataIndex: 'value' }, { title: '当前名称（转换函数）', render: (_, row) => dictionaryName(names, row.value) },
-              { title: '当前名称（展示组件）', render: (_, row) => <DictionaryNameDisplay names={names} value={row.value} /> }]} />
-          <Form.Item label="覆盖范围（_tenant 或组织 ID）"><Input disabled={saving} value={overrideOrg} onChange={(v) => { overrideDirty.current = true; setOverrideOrg(v); setOverrideVersion(undefined); }} /></Form.Item>
-          <Form.Item label="覆盖版本（新建留空）"><InputNumber disabled={saving} min={0} value={overrideVersion} onChange={(v) => { overrideDirty.current = true; setOverrideVersion(v); }} /></Form.Item>
-          <Form.Item label="覆盖选项 JSON"><Input.TextArea disabled={saving} aria-label="覆盖选项 JSON" value={overrideJson} onChange={(text) => { overrideDirty.current = true; setOverrideJson(text); }} /></Form.Item>
-          <Button disabled={saving} loading={saving} onClick={() => { if (writing.current) return; try { const items = JSON.parse(overrideJson); writing.current = true; setSaving(true); saveDictionaryOverride(dictionaryCode, overrideOrg, items, overrideVersion, enterpriseId).then((result) => { if (!alive.current) return; setOverrideVersion(result.version); overrideDirty.current = false; load(); }).catch((e) => { if (alive.current) setError(`${e.status === 403 ? '无权发布字典覆盖' : e.message}${e.requestId ? ` (${e.requestId})` : ''}`); }).finally(() => { writing.current = false; if (alive.current) setSaving(false); }); } catch { setError('请输入有效选项 JSON'); } }}>发布字典覆盖</Button>
-          {version !== undefined && <div data-testid="dictionary-version">{t['dictionary.version']}: {version}</div>}
-        </Form>
-      )}
+          )}
+        <Form.Item label={t['dictionary.segment']}>
+          <DictionarySelect
+            code={dictionaryCode}
+            groupCode={groupCode || undefined}
+            value={value}
+            onChange={setValue}
+          />
+        </Form.Item>
+        <Form.Item label="字典组编码（留空使用默认顺序）">
+          <Input
+            aria-label="字典组编码"
+            value={groupCode}
+            onChange={setGroupCode}
+          />
+        </Form.Item>
+        <Form.Item label="已有业务值（仅展示，不改变选择范围）">
+          <Input aria-label="已有业务值" value={value} onChange={setValue} />
+        </Form.Item>
+        <Descriptions
+          title="业务详情"
+          data={[
+            { label: '原值', value: value || '—' },
+            {
+              label: '名称',
+              value: <DictionaryNameDisplay names={names} value={value} />,
+            },
+          ]}
+        />
+        <Table
+          rowKey="value"
+          pagination={false}
+          data={Array.from(
+            new Set(
+              [...options.map((item) => item.value), value].filter(Boolean)
+            )
+          ).map((item) => ({ value: item }))}
+          columns={[
+            { title: '业务值', dataIndex: 'value' },
+            {
+              title: '当前名称（转换函数）',
+              render: (_, row) => dictionaryName(names, row.value),
+            },
+            {
+              title: '当前名称（展示组件）',
+              render: (_, row) => (
+                <DictionaryNameDisplay names={names} value={row.value} />
+              ),
+            },
+          ]}
+        />
+        <Form.Item label="覆盖范围（_tenant 或组织 ID）">
+          <Input
+            disabled={saving}
+            value={overrideOrg}
+            onChange={(v) => {
+              overrideDirty.current = true;
+              setOverrideOrg(v);
+              setOverrideVersion(undefined);
+            }}
+          />
+        </Form.Item>
+        <Form.Item label="覆盖版本（新建留空）">
+          <InputNumber
+            disabled={saving}
+            min={0}
+            value={overrideVersion}
+            onChange={(v) => {
+              overrideDirty.current = true;
+              setOverrideVersion(v);
+            }}
+          />
+        </Form.Item>
+        <Form.Item label="覆盖选项 JSON">
+          <Input.TextArea
+            disabled={saving}
+            aria-label="覆盖选项 JSON"
+            value={overrideJson}
+            onChange={(text) => {
+              overrideDirty.current = true;
+              setOverrideJson(text);
+            }}
+          />
+        </Form.Item>
+        <Button
+          disabled={saving}
+          loading={saving}
+          onClick={() => {
+            if (writing.current) return;
+            try {
+              const items = JSON.parse(overrideJson);
+              writing.current = true;
+              setSaving(true);
+              saveDictionaryOverride(
+                dictionaryCode,
+                overrideOrg,
+                items,
+                overrideVersion,
+                enterpriseId
+              )
+                .then((result) => {
+                  if (!alive.current) return;
+                  setOverrideVersion(result.version);
+                  overrideDirty.current = false;
+                  names.refresh();
+                })
+                .catch((e) => {
+                  if (alive.current)
+                    setError(
+                      `${e.status === 403 ? '无权发布字典覆盖' : e.message}${
+                        e.requestId ? ` (${e.requestId})` : ''
+                      }`
+                    );
+                })
+                .finally(() => {
+                  writing.current = false;
+                  if (alive.current) setSaving(false);
+                });
+            } catch {
+              setError('请输入有效选项 JSON');
+            }
+          }}
+        >
+          发布字典覆盖
+        </Button>
+        {version !== undefined && (
+          <div data-testid="dictionary-version">
+            {t['dictionary.version']}: {version}
+          </div>
+        )}
+      </Form>
     </Card>
   );
 }

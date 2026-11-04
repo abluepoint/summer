@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.dictionary;
 import com.abluepoint.summer.sample.configuration.ConfigurationValueValidator;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
 import com.abluepoint.summer.common.error.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -8,16 +7,15 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.*;
 @Component
 class DictionaryOverrideValidator implements ConfigurationValueValidator {
-    private final DictionaryTypeRepository types;
-    private final DataScopeService scopes; private final ObjectMapper mapper;
+    private final ObjectMapper mapper;
     private final EffectiveDictionaryReader effective;
-    DictionaryOverrideValidator(DictionaryTypeRepository types,DataScopeService scopes,ObjectMapper mapper,EffectiveDictionaryReader effective) {
+    DictionaryOverrideValidator(ObjectMapper mapper,EffectiveDictionaryReader effective) {
         this.effective=effective;
-        this.types=types;this.scopes=scopes;this.mapper=mapper;
+        this.mapper=mapper;
     }
     public String resource() { return "dictionaries"; }
     public void requireBase(String tenant,String key,Authentication auth) {
-        types.findScoped(key,scopes.filter(tenant,resource(),auth)).orElseThrow(()->new SummerException(CommonErrorCode.NOT_FOUND));
+        effective.read(tenant,key,auth,true);
     }
     public void validate(String tenant,String key,Object value,Authentication auth) {
         requireBase(tenant,key,auth);

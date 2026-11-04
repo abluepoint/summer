@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { getAccessTokenFromMemory, oidcManager } from '@/auth/oidc';
 import { readEnvelope, readFailure } from '../customer/contract.mjs';
+import { DictionaryOption } from './api';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 
 export type DictionaryName = {
@@ -11,18 +12,29 @@ export type DictionaryName = {
   description: string;
   status: 'enabled' | 'disabled' | 'unknown';
 };
+type ChoiceFacet = {
+  choices: DictionaryOption[];
+  groupStatus: 'available' | 'unavailable';
+};
 type Resolution = {
+  facets?: Record<string, ChoiceFacet>;
+  choices?: DictionaryOption[];
+  groupStatus?: 'available' | 'unavailable';
   items: DictionaryName[];
   publishedVersion: number;
   effectiveRevision: number;
   publishedRevision: number | null;
   source: 'base' | 'override';
   effectiveToken: string;
+  overrideReviewRequired?: boolean;
 };
 export type DictionaryNames = {
   status: 'loading' | 'ready' | 'error' | 'forbidden';
   items: ReadonlyMap<string, DictionaryName>;
-  identity?: Omit<Resolution, 'items'>;
+  identity?: Omit<Resolution, 'items' | 'choices' | 'groupStatus' | 'facets'>;
+  choices?: DictionaryOption[];
+  groupStatus?: 'available' | 'unavailable';
+  facets?: Record<string, ChoiceFacet>;
   message?: string;
 };
 type Entry = {
@@ -35,6 +47,8 @@ type Entry = {
   pendingValues?: Set<string>;
   enterprise: string;
   code: string;
+  selectors: Map<symbol, string>;
+  pendingGroups?: Set<string>;
 };
 const entries = new Map<string, Entry>();
 const empty = (): DictionaryNames => ({ status: 'loading', items: new Map() });
@@ -48,7 +62,13 @@ function collectValues(entry: Entry) {
   );
   if (entry.state.status === 'ready') {
     const items = new Map(
-      Array.from(entry.state.items).filter(([value]) => entry.values.has(value))
+      Array.from(entry.state.items).filter(
+        ([value]) =>
+          entry.values.has(value) ||
+          Object.values(entry.state.facets || {}).some((facet) =>
+            facet.choices.some((item) => item.value === value)
+          )
+      )
     );
     if (items.size !== entry.state.items.size)
       publish(entry, { ...entry.state, items });
@@ -57,6 +77,7 @@ function collectValues(entry: Entry) {
 function invalidate(entry: Entry) {
   entry.generation++;
   entry.pendingValues = undefined;
+  entry.pendingGroups = undefined;
   publish(entry, empty());
 }
 function clearNames() {
@@ -68,12 +89,17 @@ oidcManager.events.addUserLoaded(clearNames);
 oidcManager.events.addUserUnloaded(clearNames);
 
 function schedule(entry: Entry, refresh = false) {
-  if (!entry.values.size) return;
+  if (!entry.values.size && !entry.selectors.size) return;
   if (
     entry.scheduled ||
     (!refresh &&
       entry.pendingValues &&
-      Array.from(entry.values).every((value) => entry.pendingValues.has(value)))
+      Array.from(entry.values).every((value) =>
+        entry.pendingValues.has(value)
+      ) &&
+      Array.from(entry.selectors.values()).every((group) =>
+        entry.pendingGroups?.has(group)
+      ))
   )
     return;
   entry.scheduled = true;
@@ -84,26 +110,60 @@ function schedule(entry: Entry, refresh = false) {
     entry.scheduled = false;
     const values = Array.from(entry.values);
     entry.pendingValues = new Set(values);
+    const groupCodes = Array.from(new Set(entry.selectors.values()));
+    entry.pendingGroups = new Set(groupCodes);
     try {
       const token = await getAccessTokenFromMemory();
       if (entry.generation !== generation) return;
-      const batches: string[][] = [];
+      const batches: string[][] = values.length ? [] : [[]];
       for (let start = 0; start < values.length; start += 500)
         batches.push(values.slice(start, start + 500));
+      const groupBatches: string[][] = groupCodes.length ? [] : [[]];
+      for (let start = 0; start < groupCodes.length; start += 200)
+        groupBatches.push(groupCodes.slice(start, start + 200));
+      // Values are requested once; extra group facets need no duplicate names payload.
+      const requests = [
+        ...batches.map((batch) => ({
+          values: batch,
+          groupCodes: groupBatches[0],
+        })),
+        ...groupBatches
+          .slice(1)
+          .map((groups) => ({ values: [], groupCodes: groups })),
+      ];
       const resolutions = await Promise.all(
-        batches.map(async (batch) => {
+        requests.map(async (request) => {
           const response = await axios.post(
             `/api/v1/enterprises/${encodeURIComponent(
               entry.enterprise
-            )}/dictionaries/${encodeURIComponent(entry.code)}/resolve-names`,
-            { values: batch },
-            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+            )}/dictionaries/${encodeURIComponent(entry.code)}/${
+              groupCodes.length ? 'resolve-selection' : 'resolve-names'
+            }`,
+            request,
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined
           );
           return readEnvelope(response.data, response.status) as Resolution;
         })
       );
       if (entry.generation !== generation) return;
-      const { items, ...identity } = resolutions[0];
+      const {
+        items,
+        choices,
+        groupStatus,
+        facets: firstFacets,
+        ...identity
+      } = resolutions[0];
+      // Null prototype also keeps valid codes such as "constructor" from inheriting a facet.
+      const facets: Record<string, ChoiceFacet> = Object.assign(
+        Object.create(null),
+        firstFacets || {},
+        ...resolutions.slice(1).map((result) => result.facets || {})
+      );
+      const choiceNames = Object.values(facets).flatMap(
+        (facet) => facet.choices
+      );
       if (
         resolutions.some(
           (result) =>
@@ -116,18 +176,35 @@ function schedule(entry: Entry, refresh = false) {
       )
         throw new Error('dictionary_name_identity_changed');
       entry.pendingValues = undefined;
+      entry.pendingGroups = undefined;
       publish(entry, {
         status: 'ready',
         items: new Map(
-          [...items, ...resolutions.slice(1).flatMap((result) => result.items)]
-            .filter((item) => entry.values.has(item.value))
+          [
+            ...choiceNames.map((item) => ({
+              ...item,
+              status: 'enabled' as const,
+              description: item.description || '',
+            })),
+            ...items,
+            ...resolutions.slice(1).flatMap((result) => result.items),
+          ]
+            .filter(
+              (item) =>
+                entry.values.has(item.value) ||
+                choiceNames.some((choice) => choice.value === item.value)
+            )
             .map((item) => [item.value, item])
         ),
         identity,
+        choices,
+        groupStatus,
+        facets,
       });
     } catch (error) {
       if (entry.generation !== generation) return;
       entry.pendingValues = undefined;
+      entry.pendingGroups = undefined;
       const status = axios.isAxiosError(error)
         ? error.response?.status || 0
         : 0;
@@ -150,7 +227,12 @@ function schedule(entry: Entry, refresh = false) {
 }
 
 /** Shared in-memory read for a page's business values. Cells only consume this result. */
-export function useDictionaryNames(code: string, values: readonly string[]) {
+export function useDictionaryNames(
+  code: string,
+  values: readonly string[],
+  groupCode?: string,
+  selection = false
+) {
   const tenant = useActiveEnterprise();
   const consumer = useRef(Symbol('dictionary-name-consumer')).current;
   const permissions = useSelector(
@@ -175,6 +257,7 @@ export function useDictionaryNames(code: string, values: readonly string[]) {
       scheduled: false,
       enterprise: tenant.enterpriseId,
       code,
+      selectors: new Map(),
     };
     entries.set(key, entry);
   }
@@ -189,6 +272,7 @@ export function useDictionaryNames(code: string, values: readonly string[]) {
     return () => {
       current.listeners.delete(listener);
       current.consumers.delete(consumer);
+      current.selectors.delete(consumer);
       collectValues(current);
       window.removeEventListener('focus', refresh);
       if (!current.listeners.size) {
@@ -200,23 +284,36 @@ export function useDictionaryNames(code: string, values: readonly string[]) {
   useEffect(() => {
     const requested: string[] = JSON.parse(signature);
     current.consumers.set(consumer, new Set(requested));
+    if (selection) current.selectors.set(consumer, groupCode || '');
+    else current.selectors.delete(consumer);
     collectValues(current);
     const missing = Array.from(current.values).some(
       (value) => !current.state.items.has(value)
     );
     if (
       current.enterprise &&
-      current.values.size > 0 &&
-      (missing || current.state.status === 'loading')
+      (current.values.size > 0 || current.selectors.size > 0) &&
+      (missing ||
+        current.state.status === 'loading' ||
+        (selection && !current.state.facets?.[groupCode || '']))
     )
       schedule(current);
-  }, [current, key, signature, consumer]);
+  }, [current, key, signature, consumer, selection, groupCode]);
   return {
     ...current.state,
+    status:
+      selection &&
+      current.state.status === 'ready' &&
+      !current.state.facets?.[groupCode || '']
+        ? ('loading' as const)
+        : current.state.status,
+    choices: current.state.facets?.[groupCode || '']?.choices,
+    groupStatus: current.state.facets?.[groupCode || '']?.groupStatus,
     refresh: () => schedule(current, true),
     forbid: () => {
       current.generation++;
       current.pendingValues = undefined;
+      current.pendingGroups = undefined;
       publish(current, { status: 'forbidden', items: new Map() });
     },
   };
@@ -249,6 +346,7 @@ export function DictionaryNameDisplay({
           : names.message
       }
       data-dictionary-state={names.status}
+      data-effective-token={names.identity?.effectiveToken}
     >
       {dictionaryName(names, value)}
     </span>

@@ -9,7 +9,7 @@ for (const [text, pattern, label] of [
   [page, 'subscribeDictionaryNotifications', 'dictionary stream subscription'],
   [page, 'dictionary.reselect', 'disabled selected value feedback'],
   [page, 'dictionary.streamDisconnected', 'stream failure feedback'],
-  [page, 'valueRef.current', 'preserved selected value'],
+  [page, 'value={value}', 'controlled selected value'],
 ]) {
   if (!text.includes(pattern)) throw new Error(`Missing ${label}`);
 }

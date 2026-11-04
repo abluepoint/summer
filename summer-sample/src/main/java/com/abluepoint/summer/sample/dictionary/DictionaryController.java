@@ -38,6 +38,14 @@ class DictionaryController {
         return names.resolve(code, request, authentication);
     }
 
+    @PostMapping({"/api/dictionaries/{code}/resolve-selection", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/resolve-selection"})
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    DictionaryNameResolution resolveSelection(@PathVariable String code, @RequestBody DictionaryNameRequest request,
+                                              Authentication authentication) {
+        return names.selection(code, request, authentication);
+    }
+
     @GetMapping({"/api/dictionaries/{code}/effective", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/effective"})
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
     @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
