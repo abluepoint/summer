@@ -45,7 +45,13 @@ def mh(version=None):
     return {'Idempotency-Key': uuid.uuid4().hex,
             **({'If-Match': '"'+str(version)+'"'} if version is not None else {})}
 
+import sys as _dictionary_sys
+from pathlib import Path as _DictionaryPath
+_dictionary_sys.path.insert(0, str(_DictionaryPath(__file__).resolve().parents[1]))
+from dictionary_drafts import with_draft_revision
+
 def call(name, client, path, method='GET', body=None, expected=200, port=26081, headers=None):
+    if expected < 403: body = with_draft_revision(client, port, path, method, body)
     rid = 't32-'+uuid.uuid4().hex
     status, data, response = client.request(port, path, method, body,
                                            headers={'X-Request-Id': rid, **(headers or {})})

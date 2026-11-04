@@ -3,6 +3,7 @@ import { getAccessTokenFromMemory } from '@/auth/oidc';
 import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type DictionaryOption = {
+  description?: string;
   value: string;
   label: string;
   sortOrder: number;
@@ -112,3 +113,18 @@ export const getDictionaryDraftList = (enterpriseId: string) =>
   readPublicDictionary<{ code: string }[]>(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries`);
 export const getEffectiveDictionary = (enterpriseId: string, code: string) =>
   readPublicDictionary<EffectiveDictionary>(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}/effective`);
+
+export type DictionaryDraftItem = DictionaryOption & { id: string; everPublished: boolean };
+export type DictionaryDraft = { code: string; name: string; publicReadable: boolean; enabled: boolean; draftRevision: number; publishedVersion: number; items: DictionaryDraftItem[]; itemOrder: string[] };
+const draftPath = (enterpriseId: string, code: string) => `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries/${encodeURIComponent(code)}/draft`;
+export const getDictionaryDraft = (enterpriseId: string, code: string) => readPublicDictionary<DictionaryDraft>(draftPath(enterpriseId, code));
+export async function saveDictionaryDraft(enterpriseId: string, draft: DictionaryDraft): Promise<DictionaryDraft> {
+  try {
+    const response = await axios.put(draftPath(enterpriseId, draft.code), { expectedDraftRevision: draft.draftRevision, name: draft.name, publicReadable: draft.publicReadable, enabled: draft.enabled, items: draft.items.map(({ id, value, label, description, enabled }) => ({ id, value, label, description, enabled })), itemOrder: draft.itemOrder });
+    return readEnvelope(response.data, response.status) as DictionaryDraft;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    const failure = readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || ''));
+    throw Object.assign(new Error(failure.message), failure, { status: error.response?.status || 0 });
+  }
+}

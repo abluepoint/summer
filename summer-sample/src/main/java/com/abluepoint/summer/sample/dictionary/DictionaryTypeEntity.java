@@ -28,6 +28,12 @@ class DictionaryTypeEntity {
     @Column(name = "published_version")
     private Long publishedVersion;
 
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "draft_revision", nullable = false)
+    private long draftRevision;
+    long draftRevision() { return draftRevision; }
+    void advanceDraft() { draftRevision++; }
+
     protected DictionaryTypeEntity() {}
 
     DictionaryTypeEntity(String tenantId, String id, String code, String name, boolean published, boolean publicReadable, boolean enabled, String organizationId, String createdBy, String ownerId) {

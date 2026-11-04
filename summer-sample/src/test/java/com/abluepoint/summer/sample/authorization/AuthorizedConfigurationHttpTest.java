@@ -37,7 +37,7 @@ class AuthorizedConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"scope-public\",\"name\":\"Scope\",\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/scope-public/items").with(member("bob", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"hidden\",\"label\":\"Hidden option\",\"sortOrder\":1}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/scope-public/items", "{\"value\":\"hidden\",\"label\":\"Hidden option\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/scope-public/publish").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
         policy("dictionaries", "SELF");
@@ -93,7 +93,7 @@ class AuthorizedConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"override-dict\",\"name\":\"Override\",\"published\":false,\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/override-dict/items").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"option\",\"label\":\"Base\",\"sortOrder\":1}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/override-dict/items", "{\"value\":\"option\",\"label\":\"Base\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/override-dict/publish").with(member("alice", "org-engineering"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
         String payload="{\"value\":[{\"value\":\"option\",\"label\":\"Org\",\"sortOrder\":1,\"enabled\":true}],\"publicReadable\":true}";
@@ -110,7 +110,7 @@ class AuthorizedConfigurationHttpTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Org"))
                 .andExpect(jsonPath("$.data.publishedVersion").value(1)).andExpect(jsonPath("$.data.publishedRevision").value(1));
         mvc.perform(post("/api/dictionaries/override-dict/items").with(member("alice","org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"draft-only\",\"label\":\"Draft\",\"sortOrder\":2}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/override-dict/items", "{\"value\":\"draft-only\",\"label\":\"Draft\",\"sortOrder\":2}")))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/override-dict/overrides/_tenant/draft").with(member("alice","org-engineering"))
                 .contentType(MediaType.APPLICATION_JSON).content(payload.replace("option", "draft-only")))

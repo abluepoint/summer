@@ -16,7 +16,13 @@ base = '/api/v1/enterprises/ent-acme'; params = base + '/dictionaries'
 def check(name, passed, **facts):
     result['checks'].append({'name': name, 'passed': bool(passed), **facts})
     print(name, 'PASS' if passed else 'FAIL', flush=True)
+import sys as _dictionary_sys
+from pathlib import Path as _DictionaryPath
+_dictionary_sys.path.insert(0, str(_DictionaryPath(__file__).resolve().parents[1]))
+from dictionary_drafts import with_draft_revision
+
 def request(name, client, path, method='GET', body=None, expected=200, error_code=None, field=None, headers=None):
+    if expected < 403: body = with_draft_revision(client, 20081, path, method, body)
     rid = 't06-' + uuid.uuid4().hex
     status, data, response = client.request(20081, path, method, body, headers={'X-Request-Id': rid, **(headers or {})})
     check(name, status == expected, status=status, expected=expected)
@@ -27,6 +33,12 @@ def request(name, client, path, method='GET', body=None, expected=200, error_cod
         check(name + '_stable_error', error.get('code') == error_code, error_code=error.get('code'))
         if field: check(name + '_field_violation', any(v.get('field') == field for v in error.get('violations', [])))
     return data.get('data') if isinstance(data, dict) else None, response
+def publish_draft(name, client, target):
+    draft, _ = request(name+'_read_draft', client, target+'/draft')
+    return request(name, client, target+'/publish', 'POST', {'expectedVersion':draft['publishedVersion']})
+def disable_dictionary(name, client, target):
+    draft, _ = request(name+'_read_draft', client, target+'/draft')
+    return request(name, client, target+'/disable', 'POST', {'expectedVersion':draft['publishedVersion']})
 def mutation_headers(): return {'Idempotency-Key': uuid.uuid4().hex}
 def ui_inputs():
     return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'summer-ui/src').rglob('*')) if p.is_file()}
@@ -57,8 +69,9 @@ try:
     check('all_business_authorization_via_real_endpoints', True)
     result['stage']='ac4_actual_http';result['acceptanceScope']='T06 AC4 supplemental; original133 API/17 Chrome evidence preserved'
     target=params+'/customer-segment';public='/public/enterprises/ent-acme/dictionaries/customer-segment';item=public+'/items/acceptance-option'
-    request('create_selected_item_dictionary',admin,params,'POST',{'code':'customer-segment','name':'选中项消费验收','published':True,'publicReadable':True,'enabled':True})
+    request('create_selected_item_dictionary',admin,params,'POST',{'code':'customer-segment','name':'选中项消费验收','published':False,'publicReadable':True,'enabled':True})
     for value,label,order in [('acceptance-option','验收选项初版',0),('fallback-option','备用选项',10)]:request('create_consumable_'+value,admin,target+'/items','POST',{'value':value,'label':label,'sortOrder':order,'enabled':True})
+    publish_draft('publish_selected_item_dictionary',admin,target)
     visible,_=request('initial_public_list_allows_selection',LocalClient(),public);check('selected_value_was_enabled_in_public_list',any(x['value']=='acceptance-option' for x in visible['items']))
     request('enabled_item_can_be_consumed',LocalClient(),item)
     request('reader_can_consume_enabled_item',reader,item)
@@ -71,6 +84,7 @@ try:
     for line in browser.stdout:
         if line.strip()=='ITEM_DISABLE_READY':
             request('disable_previously_selected_item',admin,target+'/items/acceptance-option','PATCH',{'label':'验收选项初版','sortOrder':0,'enabled':False})
+            publish_draft('publish_selected_item_deactivation',admin,target)
             request('disabled_selected_item_is_unified_not_found',LocalClient(),item,expected=404,error_code='SUMMER_NOT_FOUND')
             browser.stdin.write('GO\n');browser.stdin.flush()
     result['browser_exit']=browser.wait(timeout=20);result['browser']=json.loads((OUT/'browser-ac4.json').read_text())
@@ -79,9 +93,13 @@ try:
     listed,_=request('administrator_still_lists_disabled_item',admin,params)
     check('management_keeps_disabled_item_visible',any(d['code']=='customer-segment' and any(x['value']=='acceptance-option' and not x['enabled'] for x in d['items']) for d in listed))
     for flag in ['publicReadable','published','enabled']:
-        request('hide_type_'+flag,admin,target,'PATCH',{'name':'选中项消费验收',flag:False})
+        if flag=='published':disable_dictionary('hide_type_'+flag,admin,target)
+        else:
+            request('hide_type_'+flag,admin,target,'PATCH',{'name':'选中项消费验收',flag:False})
+            publish_draft('publish_hidden_'+flag,admin,target)
         request('single_item_obeys_'+flag,LocalClient(),public+'/items/fallback-option',expected=404,error_code='SUMMER_NOT_FOUND')
-        request('restore_type_'+flag,admin,target,'PATCH',{'name':'选中项消费验收',flag:True})
+        if flag!='published':request('restore_type_'+flag,admin,target,'PATCH',{'name':'选中项消费验收',flag:True})
+        publish_draft('publish_restored_'+flag,admin,target)
     request('single_item_isolated_from_other_tenant',LocalClient(),'/public/enterprises/ent-other/dictionaries/customer-segment/items/fallback-option',expected=403,error_code='SUMMER_FORBIDDEN')
     binding,h=request('read_consumer_binding_for_deny',admin,base+'/users/'+env.denied_username+'/roles')
     request('explicit_consumer_read_deny',admin,base+'/users/'+env.denied_username+'/roles','PUT',{'roleIds':[read_role],'deniedCapabilityCodes':['platform.dictionary.read']},headers={**mutation_headers(),'If-Match':h['ETag']})

@@ -29,6 +29,17 @@ class DictionaryItemEntity {
     @Column(nullable = false)
     private boolean enabled;
 
+    @org.hibernate.annotations.ColumnDefault("''")
+    @Column(length = 2000, nullable = false)
+    private String description = "";
+    @org.hibernate.annotations.ColumnDefault("false")
+    @Column(name = "ever_published", nullable = false)
+    private boolean everPublished;
+    String description() { return description; }
+    boolean everPublished() { return everPublished; }
+    void markPublished() { everPublished = true; }
+    void edit(String value, String description) { this.value = value; this.description = description == null ? "" : description; }
+
     protected DictionaryItemEntity() {}
 
     DictionaryItemEntity(String tenantId, String id, String dictionaryCode, String value, String label, int sortOrder, boolean enabled, String organizationId, String createdBy, String ownerId) {

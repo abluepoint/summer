@@ -68,7 +68,7 @@ class MultiTenantConfigurationHttpTest {
             mvc.perform(post(path).with(member()).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"code\":\"shared-dict\",\"name\":\"Shared\",\"publicReadable\":true}")) .andExpect(status().isOk());
             mvc.perform(post(path+"/shared-dict/items").with(member()).contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"value\":\"same-value\",\"label\":\""+tenant+"\",\"sortOrder\":1}")) .andExpect(status().isOk());
+                    .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, path+"/shared-dict/items", "{\"value\":\"same-value\",\"label\":\""+tenant+"\",\"sortOrder\":1}"))) .andExpect(status().isOk());
             mvc.perform(post(path+"/shared-dict/publish").with(member()).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"expectedVersion\":0,\"idempotencyKey\":\"same-publish\"}")) .andExpect(status().isOk());
         }

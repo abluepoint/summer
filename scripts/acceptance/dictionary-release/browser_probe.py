@@ -15,7 +15,13 @@ from grants import bootstrap, create_role, bind, unwrap
 class Client(BaseClient):
     def request(self, port, *args, **kwargs): return super().request(24081 if port == 21081 else port, *args, **kwargs)
 
+import sys as _dictionary_sys
+from pathlib import Path as _DictionaryPath
+_dictionary_sys.path.insert(0, str(_DictionaryPath(__file__).resolve().parents[1]))
+from dictionary_drafts import with_draft_revision
+
 def call(client, path, method='GET', body=None, expected=200):
+    if expected < 403: body = with_draft_revision(client, 24081, path, method, body)
     status, data, headers = client.request(24081, path, method, body, headers={'Idempotency-Key': uuid.uuid4().hex})
     assert status == expected, 'http_status_' + str(status) + '_expected_' + str(expected)
     return unwrap(data)

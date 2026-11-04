@@ -42,16 +42,16 @@ class DictionaryHttpTest {
 
         mockMvc.perform(post("/api/dictionaries/customer-segment/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mockMvc, "/api/dictionaries/customer-segment/items", """
                                 {"value":"standard","label":"Standard","sortOrder":20,"enabled":true}
-                                """)
+                                """))
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/dictionaries/customer-segment/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mockMvc, "/api/dictionaries/customer-segment/items", """
                                 {"value":"vip","label":"VIP","sortOrder":10,"enabled":false}
-                                """)
+                                """))
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
 
@@ -66,9 +66,9 @@ class DictionaryHttpTest {
 
         mockMvc.perform(patch("/api/dictionaries/customer-segment/items/vip")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mockMvc, "/api/dictionaries/customer-segment/items/vip", """
                                 {"label":"VIP","sortOrder":1,"enabled":true}
-                                """)
+                                """))
                         .with(dictionaryWriter()))
                 .andExpect(status().isOk());
 
@@ -121,9 +121,9 @@ class DictionaryHttpTest {
 
         mockMvc.perform(post("/api/dictionaries/invalid/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mockMvc, "/api/dictionaries/invalid/items", """
                                 {"value":"bad value","label":"Bad","sortOrder":0,"enabled":true}
-                                """)
+                                """))
                         .with(dictionaryWriter()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))

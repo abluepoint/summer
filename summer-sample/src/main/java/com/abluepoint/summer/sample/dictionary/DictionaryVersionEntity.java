@@ -23,7 +23,7 @@ class DictionaryVersionEntity {
     private long version;
     @Column(name = "status", length = 20, nullable = false)
     private String status;
-    @Column(name = "snapshot_json", columnDefinition = "text", nullable = false, updatable = false)
+    @Column(name = "snapshot_json", columnDefinition = "longtext", nullable = false, updatable = false)
     private String snapshotJson;
     @Column(name = "created_by", length = 128, updatable = false)
     private String createdBy;

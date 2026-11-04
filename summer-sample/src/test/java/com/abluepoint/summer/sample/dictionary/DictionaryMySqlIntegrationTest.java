@@ -59,7 +59,7 @@ class DictionaryMySqlIntegrationTest {
         mockMvc.perform(post("/api/dictionaries/mysql-segment/items")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"value":"standard","label":"Standard","sortOrder":1,"enabled":true}
+                                {"expectedDraftRevision":0,"value":"standard","label":"Standard","sortOrder":1,"enabled":true}
                                 """)
                         .with(writer()))
                 .andExpect(status().isOk());

@@ -18,7 +18,13 @@ def persist():
 def check(name,condition,**facts):
     if not counting:return
     result['checks'].append({'name':name,'passed':bool(condition),**facts});persist();print(name,'PASS' if condition else 'FAIL',flush=True)
+import sys as _dictionary_sys
+from pathlib import Path as _DictionaryPath
+_dictionary_sys.path.insert(0, str(_DictionaryPath(__file__).resolve().parents[1]))
+from dictionary_drafts import with_draft_revision
+
 def call(client,path,method='GET',body=None,expected=200,port=23081,headers=None):
+    if expected < 403: body = with_draft_revision(client, port, path, method, body)
     rid='t31-'+uuid.uuid4().hex
     status,data,h=client.request(port,path,method,body,headers={'X-Request-Id':rid,'Idempotency-Key':uuid.uuid4().hex,**(headers or {})})
     assert status==expected,'http_status_'+str(status)+'_expected_'+str(expected)

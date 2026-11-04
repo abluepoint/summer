@@ -75,13 +75,13 @@ class DataScopeEnforcementHttpTest {
                 .content("{\"code\":\"scope-dictionary\",\"name\":\"Scope\"}"))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/scope-dictionary/items").with(member("bob")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"private\",\"label\":\"Private\",\"sortOrder\":1}"))
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/scope-dictionary/items", "{\"value\":\"private\",\"label\":\"Private\",\"sortOrder\":1}")))
                 .andExpect(status().isOk());
         policy("dictionaries", "{\"rules\":[{\"field\":\"CREATOR\",\"operator\":\"NE\",\"value\":\"bob\"}]}");
         mvc.perform(get("/api/dictionaries").with(member("alice"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.code == 'scope-dictionary')].items[0]").doesNotExist());
         mvc.perform(patch("/api/dictionaries/scope-dictionary/items/private").with(member("alice"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Not allowed\",\"sortOrder\":1}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/scope-dictionary/items/private", "{\"label\":\"Not allowed\",\"sortOrder\":1}")))
                 .andExpect(status().isNotFound());
     }
 

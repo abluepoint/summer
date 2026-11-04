@@ -102,7 +102,7 @@ class ResilientConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries").with(actor()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"resilient-dict\",\"name\":\"Resilient\",\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/resilient-dict/items").with(actor()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"option\",\"label\":\"Published\",\"sortOrder\":1}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/resilient-dict/items", "{\"value\":\"option\",\"label\":\"Published\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/resilient-dict/publish").with(actor()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
         mvc.perform(get("/public/dictionaries/resilient-dict").with(actor())).andExpect(status().isOk());

@@ -15,7 +15,13 @@ def mh(v=None):
  h={'Idempotency-Key':uuid.uuid4().hex}
  if v is not None:h['If-Match']=str(v)
  return h
+import sys as _dictionary_sys
+from pathlib import Path as _DictionaryPath
+_dictionary_sys.path.insert(0, str(_DictionaryPath(__file__).resolve().parents[1]))
+from dictionary_drafts import with_draft_revision
+
 def call(c,path,method='GET',body=None,expected=200,headers=None,name=None,strict=True):
+ if expected < 403: body = with_draft_revision(c, 21081, path, method, body)
  rid='t19-'+uuid.uuid4().hex;s,b,h=c.request(21081,path,method,body,headers={'X-Request-Id':rid,**(headers or {})})
  e=b.get('error') if isinstance(b,dict) else None;code=e.get('code') if isinstance(e,dict) else None
  good=s==expected and isinstance(b,dict) and b.get('success')==(s<400) and b.get('requestId')==h.get('X-Request-Id')==rid

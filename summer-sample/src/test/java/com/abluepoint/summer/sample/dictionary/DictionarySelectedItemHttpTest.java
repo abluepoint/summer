@@ -29,7 +29,7 @@ class DictionarySelectedItemHttpTest {
         http.perform(get(PUBLIC + "/items/selected")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.value").value("selected"));
         http.perform(patch("/api/dictionaries/selected-item/items/selected").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":false}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/selected-item/items/selected", "{\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":false}")))
                 .andExpect(status().isOk());
         publish(1);
         http.perform(get(PUBLIC)).andExpect(status().isOk())
@@ -83,7 +83,7 @@ class DictionarySelectedItemHttpTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":1}"))
                 .andExpect(status().isOk());
         http.perform(post("/api/dictionaries/selected-item/items").with(writer())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"new-draft\",\"label\":\"Draft\",\"sortOrder\":1,\"enabled\":true}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/selected-item/items", "{\"value\":\"new-draft\",\"label\":\"Draft\",\"sortOrder\":1,\"enabled\":true}")))
                 .andExpect(status().isOk());
         http.perform(get(PUBLIC + "/items/selected")).andExpect(status().isOk());
         http.perform(get(PUBLIC + "/items/new-draft")).andExpect(status().isNotFound())
@@ -95,7 +95,7 @@ class DictionarySelectedItemHttpTest {
                 .content("{\"code\":\"selected-item\",\"name\":\"Selected item\",\"published\":false,\"publicReadable\":true,\"enabled\":true}"))
                 .andExpect(status().isOk());
         http.perform(post("/api/dictionaries/selected-item/items").with(writer()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"selected\",\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":true}"))
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/selected-item/items", "{\"value\":\"selected\",\"label\":\"Selected\",\"sortOrder\":0,\"enabled\":true}")))
                 .andExpect(status().isOk());
         publish(0);
     }
@@ -108,7 +108,7 @@ class DictionarySelectedItemHttpTest {
 
     private void changeFlag(String flag, boolean value) throws Exception {
         http.perform(patch("/api/dictionaries/selected-item").with(writer()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Selected item\",\"" + flag + "\":" + value + "}"))
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/selected-item", "{\"name\":\"Selected item\",\"" + flag + "\":" + value + "}")))
                 .andExpect(status().isOk());
     }
 

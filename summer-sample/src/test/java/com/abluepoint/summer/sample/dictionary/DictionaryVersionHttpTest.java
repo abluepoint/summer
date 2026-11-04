@@ -146,7 +146,7 @@ class DictionaryVersionHttpTest {
                 .andExpect(status().isOk());
         http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/dictionaries/versioned-segment")
                 .with(writer()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Draft name\",\"publicReadable\":false,\"enabled\":false}"))
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/versioned-segment", "{\"name\":\"Draft name\",\"publicReadable\":false,\"enabled\":false}")))
                 .andExpect(status().isOk());
         http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Standard"));
@@ -173,7 +173,7 @@ class DictionaryVersionHttpTest {
     private void addItem(String value, String label, boolean enabled) throws Exception {
         http.perform(post("/api/dictionaries/versioned-segment/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"value\":\"" + value + "\",\"label\":\"" + label + "\",\"sortOrder\":1,\"enabled\":" + enabled + "}")
+                        .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(http, "/api/dictionaries/versioned-segment/items", "{\"value\":\"" + value + "\",\"label\":\"" + label + "\",\"sortOrder\":1,\"enabled\":" + enabled + "}"))
                         .with(writer()))
                 .andExpect(status().isOk());
     }

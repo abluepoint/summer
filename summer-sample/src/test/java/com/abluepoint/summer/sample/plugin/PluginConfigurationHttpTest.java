@@ -55,7 +55,7 @@ class PluginConfigurationHttpTest {
         setup();
         jdbc.update("update summer_system_parameter set status='INACTIVE', version=version+1 where parameter_key='customer-insights.label'");
         mvc.perform(patch("/api/dictionaries/customer-segment").with(actor("alice","org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Segment\",\"publicReadable\":false}"))
+                .contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/customer-segment", "{\"name\":\"Segment\",\"publicReadable\":false}")))
                 .andExpect(status().isOk());
         publish(1);
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
@@ -110,7 +110,7 @@ class PluginConfigurationHttpTest {
         mvc.perform(post("/api/dictionaries").with(actor("alice","org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"customer-segment\",\"name\":\"Segment\",\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/customer-segment/items").with(actor("alice","org-engineering")).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"standard\",\"label\":\"Published\",\"sortOrder\":1}")) .andExpect(status().isOk());
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/customer-segment/items", "{\"value\":\"standard\",\"label\":\"Published\",\"sortOrder\":1}"))) .andExpect(status().isOk());
         // Dictionary creation has no organization field; provision row ownership as fixture metadata.
         jdbc.update("update summer_system_parameter set organization_id='org-engineering' where parameter_key='customer-insights.label'");
         jdbc.update("update summer_dictionary_type set organization_id='org-engineering' where code='customer-segment'");

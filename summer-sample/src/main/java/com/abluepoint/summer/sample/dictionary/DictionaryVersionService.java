@@ -16,6 +16,7 @@ import java.util.UUID;
 
 @Service
 class DictionaryVersionService {
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
     private final DictionaryTypeRepository types;
     private final EffectiveDictionaryReader effective;
     private final DictionaryItemRepository items;
@@ -55,7 +56,7 @@ class DictionaryVersionService {
     @Transactional
     DictionaryTypeVersionView publish(String code, DictionaryVersionRequest request, String requestId,
                                       Authentication authentication) {
-        DictionaryTypeEntity type = scopedType(code, authentication);
+        DictionaryTypeEntity type = lockedType(code, authentication);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_PUBLISHED");
         if (replay != null) return replay;
         long current = currentVersion(type);
@@ -63,6 +64,7 @@ class DictionaryVersionService {
         long next = versions.findTopByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code)
                 .map(value -> value.version() + 1).orElse(1L);
         String snapshot = snapshot(type, code);
+        items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(type.tenantId(), code).forEach(DictionaryItemEntity::markPublished);
         DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), resolve(authentication),
                 code, next, "PUBLISHED", snapshot, principal(authentication), requestId);
         type.publish(next);
@@ -75,7 +77,7 @@ class DictionaryVersionService {
     @Transactional
     DictionaryTypeVersionView disable(String code, DictionaryVersionRequest request, String requestId,
                                       Authentication authentication) {
-        DictionaryTypeEntity type = scopedType(code, authentication);
+        DictionaryTypeEntity type = lockedType(code, authentication);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_DISABLED");
         if (replay != null) return replay;
         long current = currentVersion(type);
@@ -92,7 +94,7 @@ class DictionaryVersionService {
     @Transactional
     DictionaryTypeVersionView rollback(String code, DictionaryVersionRequest request, String requestId,
                                        Authentication authentication) {
-        DictionaryTypeEntity type = scopedType(code, authentication);
+        DictionaryTypeEntity type = lockedType(code, authentication);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_ROLLED_BACK");
         if (replay != null) return replay;
         long current = currentVersion(type);
@@ -165,15 +167,21 @@ class DictionaryVersionService {
 
     private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
         DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
-        return types.findScoped(code, scope)
-                .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
+        return types.findScoped(code, scope).orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
+    }
+
+    private DictionaryTypeEntity lockedType(String code, Authentication auth) {
+        scopedType(code, auth);
+        var type = types.lock(resolve(auth), code).orElseThrow();
+        entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return type;
     }
 
     private String snapshot(DictionaryTypeEntity type, String code) {
         try {
             return objectMapper.writeValueAsString(new DictionarySnapshot(type.name(), type.publicReadable(),
                     type.enabled(), items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(type.tenantId(), code).stream()
-                            .map(item -> new DictionaryItemView(item.value(), item.label(), item.sortOrder(), item.enabled())).toList()));
+                            .map(item -> new DictionaryItemView(item.value(), item.label(), item.sortOrder(), item.enabled(), item.description())).toList()));
         } catch (JacksonException exception) {
             throw new IllegalStateException("Dictionary snapshot cannot be serialized", exception);
         }

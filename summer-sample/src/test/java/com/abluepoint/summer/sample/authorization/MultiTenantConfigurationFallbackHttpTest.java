@@ -42,7 +42,7 @@ class MultiTenantConfigurationFallbackHttpTest {
             policy(tenant,"dictionaries");
             String path="/api/v1/enterprises/"+tenant+"/dictionaries";
             mvc.perform(post(path).with(member()).contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"cache-dict\",\"name\":\"Cache\",\"publicReadable\":true}")) .andExpect(status().isOk());
-            mvc.perform(post(path+"/cache-dict/items").with(member()).contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"same-value\",\"label\":\""+tenant+"\",\"sortOrder\":1}")) .andExpect(status().isOk());
+            mvc.perform(post(path+"/cache-dict/items").with(member()).contentType(MediaType.APPLICATION_JSON).content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, path+"/cache-dict/items", "{\"value\":\"same-value\",\"label\":\""+tenant+"\",\"sortOrder\":1}"))) .andExpect(status().isOk());
             mvc.perform(post(path+"/cache-dict/publish").with(member()).contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")) .andExpect(status().isOk());
             mvc.perform(get(publicDictionary(tenant)).with(member())).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value(tenant));
         }

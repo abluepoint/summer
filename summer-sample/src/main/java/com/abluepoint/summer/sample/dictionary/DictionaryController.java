@@ -35,6 +35,18 @@ class DictionaryController {
         return versions.effectiveRead(code, authentication);
     }
 
+    @GetMapping({"/api/dictionaries/{code}/draft", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/draft"})
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    DictionaryDraftView draft(@PathVariable String code, Authentication auth) { return service.draft(code, auth); }
+
+    @PutMapping({"/api/dictionaries/{code}/draft", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/draft"})
+    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
+    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    DictionaryDraftView saveDraft(@PathVariable String code, @RequestBody DictionaryDraftRequest request, Authentication auth) {
+        return service.saveDraft(code, request, requestId.currentRequestId(), auth);
+    }
+
     @PostMapping({"/api/dictionaries", "/api/v1/enterprises/{enterpriseId}/dictionaries"})
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.create")
     @PreAuthorize("hasAnyAuthority('SCOPE_platform.dictionary.create','SCOPE_platform.dictionary.write')")

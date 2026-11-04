@@ -16,7 +16,13 @@ base = '/api/v1/enterprises/ent-acme'; params = base + '/dictionaries'
 def check(name, passed, **facts):
     result['checks'].append({'name': name, 'passed': bool(passed), **facts})
     print(name, 'PASS' if passed else 'FAIL', flush=True)
+import sys as _dictionary_sys
+from pathlib import Path as _DictionaryPath
+_dictionary_sys.path.insert(0, str(_DictionaryPath(__file__).resolve().parents[1]))
+from dictionary_drafts import with_draft_revision
+
 def request(name, client, path, method='GET', body=None, expected=200, error_code=None, field=None, headers=None):
+    if expected < 403: body = with_draft_revision(client, 20081, path, method, body)
     rid = 't06-' + uuid.uuid4().hex
     status, data, response = client.request(20081, path, method, body, headers={'X-Request-Id': rid, **(headers or {})})
     check(name, status == expected, status=status, expected=expected)
@@ -27,6 +33,12 @@ def request(name, client, path, method='GET', body=None, expected=200, error_cod
         check(name + '_stable_error', error.get('code') == error_code, error_code=error.get('code'))
         if field: check(name + '_field_violation', any(v.get('field') == field for v in error.get('violations', [])))
     return data.get('data') if isinstance(data, dict) else None, response
+def publish_draft(name, client, target):
+    draft, _ = request(name+'_read_draft', client, target+'/draft')
+    return request(name, client, target+'/publish', 'POST', {'expectedVersion':draft['publishedVersion']})
+def disable_dictionary(name, client, target):
+    draft, _ = request(name+'_read_draft', client, target+'/draft')
+    return request(name, client, target+'/disable', 'POST', {'expectedVersion':draft['publishedVersion']})
 def mutation_headers(): return {'Idempotency-Key': uuid.uuid4().hex}
 def ui_inputs():
     return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'summer-ui/src').rglob('*')) if p.is_file()}
@@ -72,20 +84,28 @@ try:
         for name,payload,field in [('value',{'value':'INVALID','label':'无效','sortOrder':0},'value'),('label',{'value':'invalid-label','label':'','sortOrder':0},'item'),('order',{'value':'invalid-order','label':'无效','sortOrder':-1},'item')]:
             request('invalid_item_'+name,admin,target+'/items','POST',payload,400,'SUMMER_DICTIONARY_INVALID',field)
         request('duplicate_item_conflict',admin,target+'/items','POST',{'value':'alpha','label':'重复','sortOrder':0},409,'SUMMER_DICTIONARY_CONFLICT')
-        request('publish_basic_dictionary_state',admin,target,'PATCH',{'name':'验收字典新版','published':True})
+        request('save_basic_dictionary_state',admin,target,'PATCH',{'name':'验收字典新版'})
+        publish_draft('publish_basic_dictionary_state',admin,target)
         visible,_=request('anonymous_reads_published_public_dictionary',anonymous,public)
         check('public_items_sorted_and_disabled_item_filtered',[x['value'] for x in visible['items']]==['bravo','alpha'])
         request('edit_and_sort_item',admin,target+'/items/alpha','PATCH',{'label':'更新甲','sortOrder':0})
+        publish_draft('publish_edit_and_sort_item',admin,target)
         visible,_=request('public_reload_after_item_update',anonymous,public)
         check('updated_label_sort_and_version_visible',visible['items'][0]['value']=='alpha' and visible['items'][0]['label']=='更新甲')
         for flag in ['publicReadable','published','enabled']:
-            request('turn_off_'+flag,admin,target,'PATCH',{'name':'验收字典新版',flag:False})
+            if flag=='published':disable_dictionary('turn_off_'+flag,admin,target)
+            else:
+                request('turn_off_'+flag,admin,target,'PATCH',{'name':'验收字典新版',flag:False})
+                publish_draft('publish_off_'+flag,admin,target)
             request(flag+'_off_has_unified_not_found',anonymous,public,expected=404,error_code='SUMMER_NOT_FOUND')
-            request('restore_'+flag,admin,target,'PATCH',{'name':'验收字典新版',flag:True})
+            if flag!='published':request('restore_'+flag,admin,target,'PATCH',{'name':'验收字典新版',flag:True})
+            publish_draft('publish_restored_'+flag,admin,target)
         request('disable_enabled_item',admin,target+'/items/alpha','PATCH',{'label':'更新甲','sortOrder':0,'enabled':False})
+        publish_draft('publish_disable_enabled_item',admin,target)
         visible,_=request('read_after_item_disabled',anonymous,public)
         check('disabled_items_unavailable_to_form',[x['value'] for x in visible['items']]==['bravo'])
         request('enable_item_again',admin,target+'/items/alpha','PATCH',{'label':'更新甲','sortOrder':0,'enabled':True})
+        publish_draft('publish_enable_item_again',admin,target)
         request('read_only_management_query',reader,params)
         request('read_only_mutation_denied',reader,target+'/items','POST',{'value':'denied','label':'拒绝','sortOrder':0},403,'SUMMER_FORBIDDEN')
         request('anonymous_admin_api_denied',anonymous,params,expected=401)
@@ -97,9 +117,10 @@ try:
         restored,_=request('dictionary_read_after_restart',anonymous,public)
         check('dictionary_items_persist_after_restart',[x['value'] for x in restored['items']]==['alpha','bravo'] and restored['items'][0]['label']=='更新甲')
     form_target=params+'/customer-segment'
-    request('create_real_form_dictionary',admin,params,'POST',{'code':'customer-segment','name':'真实表单验收','published':True,'publicReadable':True,'enabled':True})
+    request('create_real_form_dictionary',admin,params,'POST',{'code':'customer-segment','name':'真实表单验收','published':False,'publicReadable':True,'enabled':True})
     request('create_real_form_option',admin,form_target+'/items','POST',{'value':'acceptance-option','label':'验收选项初版','sortOrder':0,'enabled':True})
     request('create_second_form_option',admin,form_target+'/items','POST',{'value':'fallback-option','label':'备用选项','sortOrder':10,'enabled':True})
+    publish_draft('publish_real_form_dictionary',admin,form_target)
     result['stage']='browser'
     child={**os.environ,'SUMMER_E2E_USERNAME':env.username,'SUMMER_E2E_PASSWORD':env.password,'SUMMER_E2E_READER':env.denied_username,'SUMMER_E2E_READER_PASSWORD':env.denied_password,'SUMMER_E2E_RUN':env.run}
     node='/opt/homebrew/opt/node@22/bin/node'
@@ -108,10 +129,10 @@ try:
     browser=subprocess.Popen([node,str(SCRIPT/'t06-browser.mjs')],cwd=ROOT/'summer-ui',env=child,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
     for line in browser.stdout:
         command=line.strip()
-        if command=='DICT_UPDATE_READY':request('chrome_external_option_update',admin,form_target+'/items/acceptance-option','PATCH',{'label':'验收选项新版','sortOrder':0})
-        elif command=='DICT_DISABLE_READY':request('chrome_external_option_disable',admin,form_target+'/items/acceptance-option','PATCH',{'label':'验收选项新版','sortOrder':0,'enabled':False})
-        elif command=='DICT_TYPE_DISABLE_READY':request('chrome_external_type_disable',admin,form_target,'PATCH',{'name':'真实表单验收','enabled':False})
-        elif command=='DICT_TYPE_RESTORE_READY':request('chrome_external_type_restore',admin,form_target,'PATCH',{'name':'真实表单验收','enabled':True})
+        if command=='DICT_UPDATE_READY':request('chrome_external_option_update',admin,form_target+'/items/acceptance-option','PATCH',{'label':'验收选项新版','sortOrder':0});publish_draft('chrome_publish_'+command,admin,form_target)
+        elif command=='DICT_DISABLE_READY':request('chrome_external_option_disable',admin,form_target+'/items/acceptance-option','PATCH',{'label':'验收选项新版','sortOrder':0,'enabled':False});publish_draft('chrome_publish_'+command,admin,form_target)
+        elif command=='DICT_TYPE_DISABLE_READY':request('chrome_external_type_disable',admin,form_target,'PATCH',{'name':'真实表单验收','enabled':False});publish_draft('chrome_publish_'+command,admin,form_target)
+        elif command=='DICT_TYPE_RESTORE_READY':request('chrome_external_type_restore',admin,form_target,'PATCH',{'name':'真实表单验收','enabled':True});publish_draft('chrome_publish_'+command,admin,form_target)
         elif command=='FAULT_READY':env.stop(20081)
         elif command=='RECOVER_READY':env.start(20081,jar=candidate)
         elif command=='DENY_READY':
