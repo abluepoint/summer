@@ -1,8 +1,8 @@
 # 业务字典设计访谈记录
 
-状态：逐项决定及整体设计基线均已确认（2026-11-04），尚未实现。
+状态：逐项决定及整体设计基线均已确认（2026-11-04）；已进入实施，前七个子任务完成并本地提交，第八个子任务尚未验收。
 
-本文记录本次访谈已确认的管理页面及组件交互约定，尚未进入实现。统一术语见 [CONTEXT](../../CONTEXT.md)，主体结构与级联边界见 [ADR 0036](../adr/0036-keep-business-dictionaries-flat-for-cascading-selection.md)，版本及名称转换规则见 [ADR 0037](../adr/0037-publish-dictionary-items-and-groups-as-one-version.md)。
+本文保留本次访谈已确认的管理页面及组件交互约定，当前实施进度见 [业务字典技术规格](business-dictionary-spec.md)。统一术语见 [CONTEXT](../../CONTEXT.md)，主体结构与级联边界见 [ADR 0036](../adr/0036-keep-business-dictionaries-flat-for-cascading-selection.md)，版本及名称转换规则见 [ADR 0037](../adr/0037-publish-dictionary-items-and-groups-as-one-version.md)。
 
 本文保留为已确认的访谈依据；可执行技术方案、旧功能兼容处置及验收边界见 [业务字典技术规格](business-dictionary-spec.md)，技术演进决定见 [ADR 0038](../adr/0038-evolve-existing-dictionaries-through-effective-snapshots.md)。
 
