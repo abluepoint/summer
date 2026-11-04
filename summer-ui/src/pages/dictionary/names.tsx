@@ -3,7 +3,11 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { getAccessTokenFromMemory, oidcManager } from '@/auth/oidc';
 import { readEnvelope, readFailure } from '../customer/contract.mjs';
-import { DictionaryOption } from './api';
+import {
+  DictionaryOption,
+  DictionaryStreamState,
+  subscribeDictionaryNotifications,
+} from './api';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 
 export type DictionaryName = {
@@ -49,8 +53,65 @@ type Entry = {
   code: string;
   selectors: Map<symbol, string>;
   pendingGroups?: Set<string>;
+  unsubscribe?: () => void;
+  streamConsumers: Set<symbol>;
+  streamState: DictionaryStreamState;
+  streamError: boolean;
 };
 const entries = new Map<string, Entry>();
+type NotificationSubscription = {
+  entries: Set<Entry>;
+  state: DictionaryStreamState;
+  error: boolean;
+  stop?: () => void;
+};
+const subscriptions = new Map<string, NotificationSubscription>();
+function subscribeEntry(entry: Entry, key: string): () => void {
+  let subscription = subscriptions.get(key);
+  if (!subscription) {
+    subscription = { entries: new Set(), state: 'CONNECTING', error: false };
+    subscriptions.set(key, subscription);
+  }
+  const shared = subscription;
+  shared.entries.add(entry);
+  entry.streamState = shared.state;
+  entry.streamError = shared.error;
+  if (!shared.stop) {
+    shared.stop = subscribeDictionaryNotifications(
+      entry.enterprise,
+      entry.code,
+      () => {
+        shared.error = false;
+        shared.entries.forEach((current) => {
+          current.streamError = false;
+          schedule(current, true);
+        });
+      },
+      (state) => {
+        shared.state = state;
+        shared.entries.forEach((current) => {
+          current.streamState = state;
+          current.listeners.forEach((notify) => notify());
+        });
+      },
+      () => {
+        // Revalidate every read context; stream failures do not reveal HTTP status.
+        shared.error = true;
+        shared.entries.forEach((current) => {
+          current.streamError = true;
+          schedule(current, true);
+        });
+      }
+    );
+  }
+  return () => {
+    shared.entries.delete(entry);
+    if (!shared.entries.size) {
+      shared.stop?.();
+      subscriptions.delete(key);
+    }
+  };
+}
 const empty = (): DictionaryNames => ({ status: 'loading', items: new Map() });
 function publish(entry: Entry, state: DictionaryNames) {
   entry.state = state;
@@ -108,6 +169,7 @@ function schedule(entry: Entry, refresh = false) {
   // Collect all values requested in this render turn, independently of cell count.
   Promise.resolve().then(async () => {
     entry.scheduled = false;
+    if (entry.generation !== generation) return;
     const values = Array.from(entry.values);
     entry.pendingValues = new Set(values);
     const groupCodes = Array.from(new Set(entry.selectors.values()));
@@ -244,6 +306,14 @@ export function useDictionaryNames(
     code,
     permissions,
   ]);
+  // Notifications carry metadata only and use the current session cookie.
+  // Distinct permission snapshots retain separate authorized reads, not duplicate streams.
+  const streamKey = JSON.stringify([
+    tenant.enterpriseId,
+    tenant.contextVersion,
+    code,
+  ]);
+  const interested = values.length > 0 || selection;
   const signature = JSON.stringify(Array.from(new Set(values)).sort());
   const [, update] = useState(0);
   let entry = entries.get(key);
@@ -258,6 +328,9 @@ export function useDictionaryNames(
       enterprise: tenant.enterpriseId,
       code,
       selectors: new Map(),
+      streamConsumers: new Set(),
+      streamState: 'CONNECTING',
+      streamError: false,
     };
     entries.set(key, entry);
   }
@@ -265,22 +338,37 @@ export function useDictionaryNames(
   useEffect(() => {
     const listener = () => update((value) => value + 1);
     current.listeners.add(listener);
+    if (interested) current.streamConsumers.add(consumer);
+    if (
+      !current.unsubscribe &&
+      current.enterprise &&
+      current.streamConsumers.size
+    ) {
+      current.unsubscribe = subscribeEntry(current, streamKey);
+    }
     const refresh = () => {
       if (current.enterprise) schedule(current, true);
     };
     window.addEventListener('focus', refresh);
     return () => {
       current.listeners.delete(listener);
+      current.streamConsumers.delete(consumer);
+      if (!current.streamConsumers.size) {
+        current.unsubscribe?.();
+        current.unsubscribe = undefined;
+      }
       current.consumers.delete(consumer);
       current.selectors.delete(consumer);
       collectValues(current);
       window.removeEventListener('focus', refresh);
       if (!current.listeners.size) {
+        current.unsubscribe?.();
+        current.unsubscribe = undefined;
         invalidate(current);
         if (entries.get(key) === current) entries.delete(key);
       }
     };
-  }, [current, key, consumer]);
+  }, [current, key, consumer, interested, streamKey]);
   useEffect(() => {
     const requested: string[] = JSON.parse(signature);
     current.consumers.set(consumer, new Set(requested));
@@ -301,6 +389,8 @@ export function useDictionaryNames(
   }, [current, key, signature, consumer, selection, groupCode]);
   return {
     ...current.state,
+    streamState: current.streamState,
+    streamError: current.streamError,
     status:
       selection &&
       current.state.status === 'ready' &&

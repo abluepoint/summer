@@ -15,11 +15,7 @@ import {
   Descriptions,
 } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import {
-  subscribeDictionaryNotifications,
-  DictionaryStreamState,
-  saveDictionaryOverride,
-} from './api';
+import { saveDictionaryOverride } from './api';
 
 import { DictionarySelect } from './select';
 import { DictionaryCascade, DictionaryCascadeLevel } from './cascade';
@@ -95,9 +91,6 @@ function DictionaryContent({
   const [value, setValue] = useState('');
   const [cascadeValues, setCascadeValues] = useState<string[]>(['', '', '']);
   const [error, setError] = useState('');
-  const [streamState, setStreamState] =
-    useState<DictionaryStreamState>('CONNECTING');
-  const [streamError, setStreamError] = useState(false);
   const [groupCode, setGroupCode] = useState('');
   const names = useDictionaryNames(
     dictionaryCode,
@@ -108,8 +101,7 @@ function DictionaryContent({
   const options = names.status === 'ready' ? names.choices || [] : [];
   const loading = names.status === 'loading';
   const version = names.identity?.publishedVersion;
-  const namesRef = useRef(names);
-  namesRef.current = names;
+  const { streamState, streamError } = names;
   const alive = useRef(true);
   const writing = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -165,22 +157,6 @@ function DictionaryContent({
     saving,
     history,
   ]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeDictionaryNotifications(
-      enterpriseId,
-      dictionaryCode,
-      () => {
-        setStreamError(false);
-        namesRef.current.refresh();
-      },
-      setStreamState,
-      () => setStreamError(true)
-    );
-    return () => {
-      unsubscribe();
-    };
-  }, [enterpriseId]);
 
   return (
     <Card

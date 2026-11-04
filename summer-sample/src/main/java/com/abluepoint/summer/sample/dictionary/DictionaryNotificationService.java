@@ -67,6 +67,23 @@ class DictionaryNotificationService {
                 event.dictionaryCode(), event.eventType(), event.version(), event.payloadJson()));
     }
 
+    @org.springframework.context.event.EventListener
+    void overridePublished(com.abluepoint.summer.sample.configuration.ConfigurationOverridePublished event) {
+        if (!"dictionaries".equals(event.resource())) return;
+        String type = switch (event.state()) {
+            case "PUBLISHED" -> "DICTIONARY_PUBLISHED";
+            case "DISABLED" -> "DICTIONARY_DISABLED";
+            case "ROLLED_BACK" -> "DICTIONARY_ROLLED_BACK";
+            default -> throw new IllegalArgumentException("Unsupported published override state");
+        };
+        var base = types.findByTenantIdAndCode(event.tenantId(), event.key())
+                .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
+        // The existing wire version remains the base published pointer, including rollback.
+        // Consumers obtain the independent override identity from their authorized reread.
+        record(event.tenantId(), event.key(), type,
+                base.publishedVersion() == null ? 0L : base.publishedVersion(), event.requestId());
+    }
+
     SseEmitter subscribe(String enterpriseId, String dictionaryCode, long lastEventId, Authentication authentication) {
         requireReadable(enterpriseId, dictionaryCode, authentication);
         SseEmitter emitter = new SseEmitter(TimeUnit.MINUTES.toMillis(30));

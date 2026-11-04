@@ -25,12 +25,15 @@ public class ConfigurationOverrideService {
     private final List<ConfigurationValueValidator> validators;
     private final AuthorizationChangeEventService events;
     private final VersionedTwoLevelCache cache;
+    private final org.springframework.context.ApplicationEventPublisher publications;
     ConfigurationOverrideService(ConfigurationOverrideRepository repository, ConfigurationOverrideRevisionRepository revisions,
             DataScopeService scopes, CustomerAuditService audit, ObjectMapper mapper, JdbcTemplate jdbc,
             ConfigurationActionAccess actions, List<ConfigurationValueValidator> validators,
-            AuthorizationChangeEventService events, VersionedTwoLevelCache cache) {
+            AuthorizationChangeEventService events, VersionedTwoLevelCache cache,
+            org.springframework.context.ApplicationEventPublisher publications) {
         this.repository=repository; this.revisions=revisions; this.scopes=scopes; this.audit=audit; this.mapper=mapper;
         this.jdbc=jdbc; this.actions=actions; this.validators=validators; this.events=events; this.cache=cache;
+        this.publications=publications;
     }
     public record Value(String valueJson,long version,long publishedRevision,String sourceId) {}
 
@@ -145,6 +148,8 @@ public class ConfigurationOverrideService {
         audit.recordTenantResourceSuccess(row.tenantId,"configuration-override:"+row.resource+":"+row.key+":"+row.scopeId,action,requestId,auth);
         events.enqueue(row.tenantId,"CONFIGURATION_OVERRIDE",row.id,action,row.latestRevision,requestId);
         cache.invalidate(row.tenantId,"dictionaries".equals(row.resource)?"dictionary":"system-parameter");
+        if (!"DRAFT".equals(state)) publications.publishEvent(new ConfigurationOverridePublished(
+                row.tenantId, row.resource, row.key, state, requestId));
     }
     private ConfigurationValueValidator validator(String resource) { return validators.stream().filter(v->v.resource().equals(resource)).findFirst().orElseThrow(ConfigurationOverrideService::invalid); }
     private ConfigurationOverrideView view(ConfigurationOverrideEntity r,String state) { return new ConfigurationOverrideView(r.resource,r.key,r.organizationId,r.publicReadable,r.enabled,r.version,r.latestRevision,r.publishedRevision,state); }
