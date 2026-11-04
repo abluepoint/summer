@@ -38,6 +38,9 @@
 | [0031](0031-resolve-configuration-tenants-and-version-overrides.md) | 显式配置租户、租户复合键与覆盖独立版本生命周期 | 部分替代 0028 的固定租户/无覆盖历史边界；浏览器与整应用双节点单独验收 |
 
 | [0032](0032-persist-enterprise-members-and-organization-context.md) | 持久化企业成员、组织上下文与企业目录 | 角色绑定不代替成员资格；邀请接桥、目录/审核共用持久记录；保留原邀请码生命周期边界 |
+| [0036](0036-keep-business-dictionaries-flat-for-cascading-selection.md) | 业务字典保持扁平，级联采用跨字典联动 | 已决定；字典组为同字典内可重叠的字典项子集，组内独立排序；页面配置上游值到下游组的对应关系，通用组件执行；整体版本见0037，尚未实现 |
+| [0037](0037-publish-dictionary-items-and-groups-as-one-version.md) | 字典项和全部字典组共用字典发布版本 | 补充字典快照ADR0027；草稿隔离，整体发布及回滚，分组无独立版本；详情随当前生效版本，新增分组及通用组件尚未实现 |
+| [0038](0038-evolve-existing-dictionaries-through-effective-snapshots.md) | 演进既有业务字典并统一生效读取边界 | 部分替代ADR0027的无快照编辑行读取例外；保留旧公开选项和组织覆盖，写入接入修订保护，迁移及验收见业务字典技术规格，尚未实现 |
 
 ## 来源与适用范围
 
