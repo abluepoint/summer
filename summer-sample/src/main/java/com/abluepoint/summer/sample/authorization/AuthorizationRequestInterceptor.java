@@ -33,13 +33,20 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
             "POST:/api/v1/invitations/{token}:reject", "enterprise.invitation.accept");
     private final AuthorizationService authorizationService;
     private final RequestIdAccessor requestId;
+    private final com.abluepoint.summer.sample.authorization.application.permission.PermissionManagementGuard permissionManagement;
     private final UnifiedAuthorizationService unified;
     private final LegacyResourceAdapter resources;
 
-    AuthorizationRequestInterceptor(AuthorizationService authorizationService, RequestIdAccessor requestId, UnifiedAuthorizationService unified, LegacyResourceAdapter resources) {
+    @org.springframework.beans.factory.annotation.Autowired
+    AuthorizationRequestInterceptor(AuthorizationService authorizationService, RequestIdAccessor requestId, UnifiedAuthorizationService unified, LegacyResourceAdapter resources, com.abluepoint.summer.sample.authorization.application.permission.PermissionManagementGuard permissionManagement) {
+        this.permissionManagement = permissionManagement;
         this.authorizationService = authorizationService;
         this.requestId = requestId;
         this.unified = unified; this.resources = resources;
+    }
+
+    AuthorizationRequestInterceptor(AuthorizationService authorizationService, RequestIdAccessor requestId, UnifiedAuthorizationService unified, LegacyResourceAdapter resources) {
+        this(authorizationService, requestId, unified, resources, null);
     }
 
     @Override
@@ -51,6 +58,12 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod method) || "OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (com.abluepoint.summer.sample.authorization.api.permission.PermissionController.class.equals(method.getBeanType())) {
+            if (permissionManagement == null) throw new AccessDeniedException("Permission management adapter unavailable");
+            permissionManagement.require(com.abluepoint.summer.sample.authorization.api.permission.PermissionController.domain(request), authentication,
+                    !"GET".equals(request.getMethod()));
+            return true;
+        }
         if (!(authentication instanceof JwtAuthenticationToken jwt)) return true;
         String permissionCode = permissionCode(request, method);
         if (method.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")

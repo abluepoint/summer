@@ -173,6 +173,7 @@ const officialExampleRoutes: IRoute[] = [
  * links from the upstream baseline continue to work.
  */
 export const routes: IRoute[] = [
+  { name: 'menu.permissions', key: 'permissions', capabilityCode: 'enterprise.roles.read', requiredPermissions: [{ resource: 'enterprise.roles', actions: ['read'] }] },
   {
     name: 'menu.oauthClients',
     key: 'oauth-clients',

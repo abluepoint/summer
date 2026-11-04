@@ -16,7 +16,7 @@ import java.util.Map;
 class AuthorizationAuditEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "audit_id") private Long auditId;
-    @Column(name = "enterprise_id", nullable = false, length = 64) private String enterpriseId;
+    @Column(name = "enterprise_id", nullable = false, length = 96) private String enterpriseId;
     @Column(name = "username", nullable = false, length = 128) private String username;
     @Column(name = "resource_id", nullable = false, length = 256) private String resourceId;
     @Column(name = "action", nullable = false, length = 64) private String action;

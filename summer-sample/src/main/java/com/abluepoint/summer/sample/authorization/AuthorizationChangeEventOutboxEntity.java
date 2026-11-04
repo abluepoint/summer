@@ -14,7 +14,7 @@ import java.time.Instant;
 @Table(name = "summer_authorization_change_outbox")
 class AuthorizationChangeEventOutboxEntity {
     @Id @Column(name = "event_id", nullable = false, updatable = false, length = 36) private String eventId;
-    @Column(name = "enterprise_id", nullable = false, updatable = false, length = 64) private String enterpriseId;
+    @Column(name = "enterprise_id", nullable = false, updatable = false, length = 96) private String enterpriseId;
     @Column(name = "resource_type", nullable = false, updatable = false, length = 40) private String resourceType;
     @Column(name = "resource_id", nullable = false, updatable = false, length = 200) private String resourceId;
     @Column(name = "event_type", nullable = false, updatable = false, length = 80) private String eventType;

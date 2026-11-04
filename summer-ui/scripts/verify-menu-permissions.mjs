@@ -43,7 +43,7 @@ const routes = evaluateModule('../src/routes.ts', {
   '@/menu/access': access,
   react: {},
 });
-assert.equal(routes.menuManifest.manifestVersion, 7, 'changed metadata must have a new version');
+assert.equal(routes.menuManifest.manifestVersion, 8, 'changed metadata must have a new version');
 const bootstrapCodes = {
   'diagnostics/release': 'internal.release.read',
   'plugins/customer-insights': 'enterprise.plugins.customer-insights.read',

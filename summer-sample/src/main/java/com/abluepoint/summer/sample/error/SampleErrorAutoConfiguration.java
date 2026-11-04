@@ -18,6 +18,8 @@ public class SampleErrorAutoConfiguration {
     @ConditionalOnMissingBean(ErrorStatusResolver.class)
     ErrorStatusResolver sampleErrorStatusResolver() {
         return new DefaultErrorStatusResolver(Map.of(
+                PERMISSION_STALE, HttpStatus.PRECONDITION_FAILED,
+                PERMISSION_CONDITION_REQUIRED, HttpStatus.PRECONDITION_REQUIRED,
                 PRECONDITION_FAILED, HttpStatus.PRECONDITION_FAILED,
                 OAUTH_CLIENT_VERSION_CONFLICT, HttpStatus.PRECONDITION_FAILED,
                 BFF_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE,

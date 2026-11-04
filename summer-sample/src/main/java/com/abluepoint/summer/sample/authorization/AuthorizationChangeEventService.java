@@ -31,6 +31,15 @@ public class AuthorizationChangeEventService {
                         long version, String requestId) {
         if (enterpriseId == null || enterpriseId.isBlank()) throw new IllegalArgumentException("enterpriseId is required");
         versions.advance(enterpriseId);
+        persistEvent(enterpriseId, resourceType, resourceId, eventType, version, requestId);
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void enqueue(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain, String resourceType, String resourceId, String eventType, long version, String requestId) {
+        versions.advance(domain);
+        persistEvent(domain.key(), resourceType, resourceId, eventType, version, requestId);
+    }
+    private void persistEvent(String enterpriseId, String resourceType, String resourceId, String eventType, long version, String requestId) {
         Instant now = Instant.now();
         String eventId = UUID.randomUUID().toString();
         AuthorizationChangeEventBody body = new AuthorizationChangeEventBody(eventId, enterpriseId, resourceType,

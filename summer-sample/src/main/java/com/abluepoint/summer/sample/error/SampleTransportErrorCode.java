@@ -7,6 +7,8 @@ import com.abluepoint.summer.common.error.ErrorCode;
  * Existing SUMMER_ names are compatibility debt; new application codes use an application namespace.
  */
 public enum SampleTransportErrorCode implements ErrorCode {
+    PERMISSION_STALE("SAMPLE_PERMISSION_STALE", "The permission resource has changed", ErrorCategory.CONFLICT),
+    PERMISSION_CONDITION_REQUIRED("SAMPLE_PERMISSION_CONDITION_REQUIRED", "If-Match is required", ErrorCategory.INVALID_ARGUMENT),
     PRECONDITION_FAILED("SUMMER_PRECONDITION_FAILED", "The resource has changed", ErrorCategory.CONFLICT),
     OAUTH_CLIENT_VERSION_CONFLICT("SUMMER_OAUTH_CLIENT_VERSION_CONFLICT", "Client version has changed; reload before retrying", ErrorCategory.CONFLICT),
     BFF_UNAVAILABLE("BFF_SUMMER_UNAVAILABLE", "Summer MCP adapter is not configured", ErrorCategory.INTERNAL_ERROR),

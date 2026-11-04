@@ -20,7 +20,10 @@ public class AuthorizationDomainVersions {
     /** Joins the business/outbox transaction: rollback cannot publish a newer revision. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void advance(String enterpriseId) {
-        Domain domain = "platform".equals(enterpriseId) ? Domain.platform() : Domain.enterprise(enterpriseId);
+        advance("platform".equals(enterpriseId) ? Domain.platform() : Domain.enterprise(enterpriseId));
+    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void advance(Domain domain) {
         jdbc.update("insert into summer_authorization_domain(domain_key, engine_mode, revision) values (?, 'LEGACY', 1) "
                 + "on duplicate key update revision = revision + 1", domain.key());
     }
