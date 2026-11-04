@@ -164,7 +164,7 @@ export type EffectiveDictionary = {
   publicReadable: boolean;
   enabled: boolean;
   items: DictionaryOption[];
-  groups: unknown[];
+  groups: DictionarySnapshotGroup[];
   effectiveRevision: number;
 };
 export const getDictionaryDraftList = (enterpriseId: string) =>
@@ -182,6 +182,21 @@ export type DictionaryDraftItem = DictionaryOption & {
   id: string;
   everPublished: boolean;
 };
+export type DictionaryDraftGroup = {
+  id: string;
+  code: string;
+  name: string;
+  enabled: boolean;
+  everPublished: boolean;
+  memberIds: string[];
+};
+export type DictionarySnapshotGroup = {
+  id: string;
+  code: string;
+  name: string;
+  enabled: boolean;
+  memberValues: string[];
+};
 export type DictionaryDraft = {
   code: string;
   name: string;
@@ -192,6 +207,7 @@ export type DictionaryDraft = {
   effectiveRevision: number;
   items: DictionaryDraftItem[];
   itemOrder: string[];
+  groups: DictionaryDraftGroup[];
 };
 const draftPath = (enterpriseId: string, code: string) =>
   `/api/v1/enterprises/${encodeURIComponent(
@@ -217,6 +233,14 @@ export async function saveDictionaryDraft(
         enabled,
       })),
       itemOrder: draft.itemOrder,
+      groups: draft.groups.map(({ id, code, name, enabled, memberIds }) => ({
+        id,
+        code,
+        name,
+        enabled,
+        memberIds,
+        memberOrder: memberIds,
+      })),
     });
     return readEnvelope(response.data, response.status) as DictionaryDraft;
   } catch (error) {

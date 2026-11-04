@@ -20,6 +20,7 @@ class DictionaryVersionService {
     private final DictionaryTypeRepository types;
     private final EffectiveDictionaryReader effective;
     private final DictionaryItemRepository items;
+    private final DictionaryGroups groups;
     private final DictionaryVersionRepository versions;
     private final DictionaryOutboxRepository outbox;
     private final DictionaryAuditService audit;
@@ -36,7 +37,8 @@ class DictionaryVersionService {
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              DataScopeService dataScopes, ObjectMapper objectMapper,
-                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective) {
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective, DictionaryGroups groups) {
+        this.groups = groups;
         this.effective = effective;
         this.types = types;
         this.items = items;
@@ -70,6 +72,7 @@ class DictionaryVersionService {
         requireFullItems(type, authentication);
         String snapshot = snapshot(type, code);
         items.markPublished(type.tenantId(), code);
+        groups.markPublished(type);
         DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), resolve(authentication),
                 code, next, "PUBLISHED", snapshot, principal(authentication), requestId);
         type.publish(next);
@@ -182,7 +185,7 @@ class DictionaryVersionService {
         return new EffectiveDictionaryView(code, snapshot == null ? null : snapshot.name(), base.publishedVersion(),
                 snapshot == null ? "UNPUBLISHED" : "PUBLISHED", snapshot == null ? false : snapshot.publicReadable(),
                 snapshot == null ? false : snapshot.enabled(), snapshot == null ? List.of() : snapshot.items().stream()
-                .filter(i -> base.visibleValues().contains(i.value())).toList(), snapshot == null ? List.of() : snapshot.groups(), base.effectiveRevision(), base.draftRevision());
+                .filter(i -> base.visibleValues().contains(i.value())).toList(), snapshot == null ? List.of() : snapshot.groups().stream().map(g -> new DictionarySnapshotGroup(g.id(), g.code(), g.name(), g.enabled(), g.memberValues().stream().filter(base.visibleValues()::contains).toList())).toList(), base.effectiveRevision(), base.draftRevision());
     }
 
     @Transactional
@@ -234,7 +237,7 @@ class DictionaryVersionService {
         try {
             String json = DictionarySnapshot.encode(objectMapper, new DictionarySnapshot(type.name(), type.publicReadable(),
                     type.enabled(), currentItems(type).stream()
-                            .map(item -> new DictionaryItemView(item.value(), item.label(), item.sortOrder(), item.enabled(), item.description())).toList()));
+                            .map(item -> new DictionaryItemView(item.value(), item.label(), item.sortOrder(), item.enabled(), item.description())).toList(), 2, groups.snapshot(type, currentItems(type))));
             return json;
         } catch (JacksonException exception) {
             throw new IllegalStateException("Dictionary snapshot cannot be serialized", exception);
@@ -324,7 +327,7 @@ class DictionaryVersionService {
 }
 
 record DictionarySnapshot(String name, boolean publicReadable, boolean enabled, List<DictionaryItemView> items,
-                          Integer formatVersion, List<Object> groups) {
+                          Integer formatVersion, List<DictionarySnapshotGroup> groups) {
     static final int MAX_BYTES = 512 * 1024;
     static String encode(ObjectMapper mapper, DictionarySnapshot snapshot) {
         String json = mapper.writeValueAsString(snapshot);
@@ -341,7 +344,7 @@ record DictionarySnapshot(String name, boolean publicReadable, boolean enabled, 
     }
 }
 record EffectiveDictionaryView(String code, String name, long publishedVersion, String status,
-                               boolean publicReadable, boolean enabled, List<DictionaryItemView> items, List<Object> groups, long effectiveRevision, long draftRevision) {}
+                               boolean publicReadable, boolean enabled, List<DictionaryItemView> items, List<DictionarySnapshotGroup> groups, long effectiveRevision, long draftRevision) {}
 record DictionaryEvent(String eventId, String tenantId, String dictionaryCode, String eventType,
                        long version, String requestId) {}
 

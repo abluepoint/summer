@@ -21,6 +21,8 @@ import {
   getDictionaryHistoryDetail,
   changeDictionaryVersion,
   DictionaryDraftItem,
+  DictionaryDraftGroup,
+  DictionarySnapshotGroup,
   EffectiveDictionary,
   getDictionaryDraft,
   getDictionaryDraftList,
@@ -85,6 +87,7 @@ function Content({
   const alive = useRef(true);
   const writing = useRef(false);
   const dragged = useRef('');
+  const draggedMember = useRef({ group: '', item: '' });
   useEffect(
     () => () => {
       alive.current = false;
@@ -212,7 +215,10 @@ function Content({
       if (alive.current) setSaving(false);
     }
   };
-  const readOnlyItems = (items: EffectiveDictionary['items']) => (
+  const readOnlyItems = (
+    items: EffectiveDictionary['items'],
+    orderTitle = '默认顺序'
+  ) => (
     <Table
       rowKey="value"
       pagination={false}
@@ -221,7 +227,7 @@ function Content({
         { title: '值', dataIndex: 'value' },
         { title: '显示名称', dataIndex: 'label' },
         { title: '说明', dataIndex: 'description' },
-        { title: '默认顺序', dataIndex: 'sortOrder' },
+        { title: orderTitle, dataIndex: 'sortOrder' },
         {
           title: '状态',
           render: (_, item) => (item.enabled ? '启用' : '停用'),
@@ -229,6 +235,44 @@ function Content({
       ]}
     />
   );
+  const readOnlyGroups = (
+    groups: DictionarySnapshotGroup[],
+    items: EffectiveDictionary['items']
+  ) => (
+    <Space direction="vertical" style={{ width: '100%' }}>
+      {!groups.length && <p>暂无分组</p>}
+      {groups.map((group) => (
+        <Card
+          key={group.id}
+          title={`${group.name} (${group.code}) · ${
+            group.enabled ? '启用' : '停用'
+          }`}
+        >
+          {readOnlyItems(
+            group.memberValues.map((member, index) => ({
+              ...items.find((i) => i.value === member),
+              sortOrder: index,
+            })),
+            '组内顺序'
+          )}
+        </Card>
+      ))}
+    </Space>
+  );
+  const editGroup = (id: string, patch: Partial<DictionaryDraftGroup>) =>
+    edit({
+      groups: draft.groups.map((g) => (g.id === id ? { ...g, ...patch } : g)),
+    });
+  const draftSnapshotGroups = () =>
+    draft.groups.map((g) => ({
+      id: g.id,
+      code: g.code,
+      name: g.name,
+      enabled: g.enabled,
+      memberValues: g.memberIds.map(
+        (id) => draft.items.find((i) => i.id === id).value
+      ),
+    }));
   const proceed = () => !dirty || window.confirm('有未保存修改，是否放弃？');
   const edit = (patch: Partial<DictionaryDraft>) => {
     setDraft((old) => ({ ...old, ...patch }));
@@ -247,6 +291,13 @@ function Content({
   const save = async () => {
     if (!draft || loading || writing.current) return;
     const invalid =
+      draft.groups.some(
+        (g) =>
+          !/^[a-z][a-z0-9-]{1,78}[a-z0-9]$/.test(g.code) ||
+          !g.name.trim() ||
+          g.name.length > 200
+      ) ||
+      new Set(draft.groups.map((g) => g.code)).size !== draft.groups.length ||
       !draft.name.trim() ||
       draft.name.length > 200 ||
       draft.items.some(
@@ -258,7 +309,7 @@ function Content({
       );
     if (invalid) {
       setError(
-        '请检查名称、项值和说明长度；值为1–80个安全字符，说明最多2000字。'
+        '请检查名称、项值、说明和组编码；组编码为3–80位小写字母、数字、连字符且以字母开头，编码不可重复。'
       );
       return;
     }
@@ -349,6 +400,7 @@ function Content({
                   },
                 ]}
               />
+              {readOnlyGroups(value.groups, value.items)}
             </>
           )}
         </Tabs.TabPane>
@@ -385,10 +437,12 @@ function Content({
                 return (
                   <Card
                     key={id}
+                    aria-label={`默认项 ${index + 1}`}
                     size="small"
                     draggable={!saving && !loading}
                     onDragStart={() => {
                       dragged.current = id;
+                      draggedMember.current = { group: '', item: '' };
                     }}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
@@ -423,6 +477,12 @@ function Content({
                         onClick={() =>
                           edit({
                             items: draft.items.filter((i) => i.id !== id),
+                            groups: draft.groups.map((g) => ({
+                              ...g,
+                              memberIds: g.memberIds.filter(
+                                (key) => key !== id
+                              ),
+                            })),
                             itemOrder: draft.itemOrder.filter(
                               (key) => key !== id
                             ),
@@ -443,6 +503,128 @@ function Content({
                   </Card>
                 );
               })}
+              <h3>字典组 · 拖拽成员调整组内顺序</h3>
+              <Alert content="新组首次保存按默认顺序初始化；保存后可独立拖拽调整，后续新增成员追加到组尾。" />
+              {draft.groups.map((group, groupIndex) => (
+                <Card key={group.id} title={`组 ${groupIndex + 1}`}>
+                  <Space wrap>
+                    <Input
+                      aria-label={`组编码 ${groupIndex + 1}`}
+                      value={group.code}
+                      maxLength={80}
+                      disabled={saving || loading || group.everPublished}
+                      onChange={(groupCode) =>
+                        editGroup(group.id, { code: groupCode })
+                      }
+                    />
+                    <Input
+                      aria-label={`组名称 ${groupIndex + 1}`}
+                      value={group.name}
+                      maxLength={200}
+                      disabled={saving || loading}
+                      onChange={(name) => editGroup(group.id, { name })}
+                    />
+                    <Switch
+                      aria-label={`启用组 ${groupIndex + 1}`}
+                      checked={group.enabled}
+                      disabled={saving || loading}
+                      onChange={(enabled) => editGroup(group.id, { enabled })}
+                    />
+                    <Button
+                      disabled={saving || loading || group.everPublished}
+                      onClick={() =>
+                        edit({
+                          groups: draft.groups.filter((g) => g.id !== group.id),
+                        })
+                      }
+                    >
+                      删除组
+                    </Button>
+                    {group.everPublished && <Tag>曾发布，编码不可改删</Tag>}
+                  </Space>
+                  <Select
+                    mode="multiple"
+                    aria-label={`组成员 ${groupIndex + 1}`}
+                    value={group.memberIds}
+                    disabled={saving || loading}
+                    style={{ width: '100%', margin: '12px 0' }}
+                    options={draft.itemOrder.map((id) => ({
+                      value: id,
+                      label: `${draft.items.find((i) => i.id === id).label} (${
+                        draft.items.find((i) => i.id === id).value
+                      })`,
+                    }))}
+                    onChange={(ids: string[]) =>
+                      editGroup(group.id, {
+                        memberIds: [
+                          ...group.memberIds.filter((id) => ids.includes(id)),
+                          ...ids.filter((id) => !group.memberIds.includes(id)),
+                        ],
+                      })
+                    }
+                  />
+                  {group.memberIds.map((id, index) => {
+                    const item = draft.items.find((i) => i.id === id);
+                    return (
+                      <Card
+                        key={id}
+                        size="small"
+                        aria-label={`组 ${groupIndex + 1} 成员 ${index + 1}`}
+                        draggable={
+                          !saving && !loading && !group.id.startsWith('new:')
+                        }
+                        onDragStart={() => {
+                          draggedMember.current = { group: group.id, item: id };
+                        }}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const from = draggedMember.current;
+                          if (
+                            saving ||
+                            loading ||
+                            from.group !== group.id ||
+                            from.item === id
+                          )
+                            return;
+                          const ids = group.memberIds.filter(
+                            (key) => key !== from.item
+                          );
+                          ids.splice(ids.indexOf(id), 0, from.item);
+                          editGroup(group.id, { memberIds: ids });
+                        }}
+                      >
+                        ↕ {index + 1} · {item.value} · {item.label} ·{' '}
+                        {item.description || ''} ·{' '}
+                        {item.enabled ? '启用' : '停用'}
+                      </Card>
+                    );
+                  })}
+                </Card>
+              ))}
+              <Button
+                disabled={saving || loading}
+                onClick={() =>
+                  edit({
+                    groups: [
+                      ...draft.groups,
+                      {
+                        id: `new:${Array.from(
+                          window.crypto.getRandomValues(new Uint8Array(16)),
+                          (byte) => byte.toString(16).padStart(2, '0')
+                        ).join('')}`,
+                        code: '',
+                        name: '',
+                        enabled: true,
+                        everPublished: false,
+                        memberIds: [],
+                      },
+                    ],
+                  })
+                }
+              >
+                新增组
+              </Button>
               <Space>
                 <Button
                   disabled={saving || loading}
@@ -517,6 +699,10 @@ function Content({
                 ；启用字典：{historical.snapshot.enabled ? '是' : '否'}
               </p>
               {readOnlyItems(historical.snapshot.items)}
+              {readOnlyGroups(
+                historical.snapshot.groups,
+                historical.snapshot.items
+              )}
               <Button
                 disabled={
                   saving ||
@@ -575,6 +761,7 @@ function Content({
                 sortOrder: index,
               }))
             )}
+            {readOnlyGroups(draftSnapshotGroups(), draft.items)}
           </>
         )}
       </Modal>

@@ -19,6 +19,7 @@ class DictionaryService {
     private final tools.jackson.databind.ObjectMapper objectMapper;
     private final DictionaryTypeRepository types;
     private final DictionaryItemRepository items;
+    private final DictionaryGroups groups;
     private final DictionaryAuditService audit;
     private final VersionedTwoLevelCache cache;
     private final DataScopeService dataScopes;
@@ -26,7 +27,8 @@ class DictionaryService {
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
 
     DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
-                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, tools.jackson.databind.ObjectMapper objectMapper) {
+                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, tools.jackson.databind.ObjectMapper objectMapper, DictionaryGroups groups) {
+        this.groups = groups;
         this.objectMapper = objectMapper;
         this.types = types;
         this.actions = actions;
@@ -201,7 +203,7 @@ class DictionaryService {
         var published = currentIdentity ? java.util.Set.copyOf(items.publishedIds(type.tenantId(), type.code())) : java.util.Set.<String>of();
         var values = items.findScoped(type.code(), dataScopes.filter(resolve(auth), "dictionaries", auth));
         return new DictionaryDraftView(type.code(), type.name(), type.publicReadable(), type.enabled(), currentIdentity ? control.getDraftRevision() : type.draftRevision(),
-                currentIdentity ? control.getPublishedVersion() : type.publishedVersion() == null ? 0 : type.publishedVersion(), currentIdentity ? control.getEffectiveRevision() : type.effectiveRevision(), values.stream().map(i -> new DictionaryDraftItem(i.id(), i.value(), i.label(), i.description(), i.enabled(), currentIdentity ? published.contains(i.id()) : i.everPublished())).toList(), values.stream().map(DictionaryItemEntity::id).toList());
+                currentIdentity ? control.getPublishedVersion() : type.publishedVersion() == null ? 0 : type.publishedVersion(), currentIdentity ? control.getEffectiveRevision() : type.effectiveRevision(), values.stream().map(i -> new DictionaryDraftItem(i.id(), i.value(), i.label(), i.description(), i.enabled(), currentIdentity ? published.contains(i.id()) : i.everPublished())).toList(), values.stream().map(DictionaryItemEntity::id).toList(), groups.read(type, values.stream().map(DictionaryItemEntity::id).collect(java.util.stream.Collectors.toSet()), currentIdentity));
     }
 
     @Transactional
@@ -219,6 +221,8 @@ class DictionaryService {
             if (!existing.containsKey(i.id()) && !i.id().startsWith("new:")) throw invalid("items");
         }
         if (request.itemOrder().stream().anyMatch(java.util.Objects::isNull) || request.itemOrder().size() != ids.size() || !new java.util.HashSet<>(request.itemOrder()).equals(ids)) throw invalid("itemOrder");
+        var desiredGroups = groups.prepare(type, request.groups(), request.itemOrder(), auth);
+        var oldGroups = groups.read(type, all.stream().map(DictionaryItemEntity::id).collect(java.util.stream.Collectors.toSet()), true);
         boolean orderChanged = !request.itemOrder().equals(all.stream().map(DictionaryItemEntity::id).toList());
         // Permission follows the relative order of retained identities, not storage renumbering.
         boolean reorderedExisting = !request.itemOrder().stream().filter(existing::containsKey).toList().equals(
@@ -228,6 +232,7 @@ class DictionaryService {
             var old = existing.get(i.id());
             if (old == null || !old.value().equals(i.value()) || !old.label().equals(i.label()) || !old.description().equals(i.description() == null ? "" : i.description()) || old.enabled() != i.enabled() || orderChanged) { unchanged = false; break; }
         }
+        unchanged = unchanged && oldGroups.equals(desiredGroups);
         if (unchanged) { ensureCapacity(type); return draftView(type, auth, true); }
         if (!type.name().equals(request.name())) actions.require("dictionaries", "update", auth);
         if (type.publicReadable() != request.publicReadable()) actions.require("dictionaries", "publish", auth);
@@ -235,10 +240,12 @@ class DictionaryService {
         for (var old : all) if (!ids.contains(old.id())) {
             actions.require("dictionaries", "update", auth);
             if (items.publishedIdentity(old.id()) == 1) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
+            groups.removeItem(type.tenantId(), code, old.id());
             items.delete(old);
         }
         // Flush deletions before reusing a never-published value; transaction rollback covers failures.
         items.flush();
+        var savedIds = new java.util.HashMap<String,String>();
         for (var i : request.items()) {
             var old = existing.get(i.id()); String value = (String) i.value(); int order = !orderChanged && old != null ? old.sortOrder() : request.itemOrder().indexOf(i.id());
             String description = i.description() == null ? "" : i.description();
@@ -251,12 +258,13 @@ class DictionaryService {
                 if (!old.value().equals(value) || !old.label().equals(i.label()) || !old.description().equals(description) || reorderedExisting) actions.require("dictionaries", "update", auth);
                 if (old.enabled() != i.enabled()) actions.require("dictionaries", i.enabled() ? "publish" : "disable", auth);
             }
-            old.edit(value, description); old.change(i.label(), order, i.enabled()); items.save(old);
+            old.edit(value, description); old.change(i.label(), order, i.enabled()); items.save(old); savedIds.put(i.id(), old.id());
         }
         advance(type, request.expectedDraftRevision());
         type.change(request.name(), type.published(), request.publicReadable(), request.enabled());
         try { items.flush(); types.flush(); }
         catch (DataIntegrityViolationException exception) { throw new SummerException(DictionaryErrorCode.CONFLICT, exception); }
+        groups.save(type, desiredGroups, savedIds);
         ensureCapacity(type);
         audit.recordSuccess(code, "DICTIONARY_DRAFT_SAVED", requestId, auth);
         return draftView(type, auth, true);
@@ -264,7 +272,8 @@ class DictionaryService {
 
     private void ensureCapacity(DictionaryTypeEntity type) {
         DictionarySnapshot.encode(objectMapper, new DictionarySnapshot(type.name(), type.publicReadable(), type.enabled(),
-                items.lockAll(type.tenantId(), type.code()).stream().map(DictionaryService::view).toList()));
+                items.lockAll(type.tenantId(), type.code()).stream().map(DictionaryService::view).toList(), 2,
+                groups.snapshot(type, items.lockAll(type.tenantId(), type.code()))));
     }
 
     private static SummerException invalid(String field) {
