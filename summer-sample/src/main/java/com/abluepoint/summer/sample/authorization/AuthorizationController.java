@@ -46,19 +46,6 @@ class AuthorizationController {
     ResponseEntity<ApiResponse<CapabilityView>> updateCapability(@PathVariable String enterpriseId, @PathVariable String id, @RequestBody CapabilityStatusRequest body, @RequestHeader("If-Match") String etag, @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication a) { return status(enterpriseId, id, body == null ? null : body.status(), etag, key, a); }
     private ResponseEntity<ApiResponse<CapabilityView>> status(String e, String id, String status, String etag, String key, Authentication a) {  CapabilityView v = preserveAccessDenied(() -> service.setCapabilityStatus(e, id, status, etag, key, rid(), a)); return write(HttpStatus.OK, v, v.version());  }
 
-    @ResourcePermission("enterprise.roles.read")
-    @GetMapping("/api/v1/enterprises/{enterpriseId}/roles") @RawResponse ResponseEntity<ApiResponse<List<RoleView>>> roles(@PathVariable String enterpriseId, Authentication a) {  return write(HttpStatus.OK, preserveAccessDenied(() -> service.roles(enterpriseId, a)), null);  }
-    @ResourcePermission("enterprise.roles.read")
-    @GetMapping("/api/v1/enterprises/{enterpriseId}/roles/{id}") @RawResponse ResponseEntity<ApiResponse<RoleView>> role(@PathVariable String enterpriseId, @PathVariable String id, Authentication a) {  RoleView v = preserveAccessDenied(() -> service.role(enterpriseId, id, a)); return write(HttpStatus.OK, v, v.version());  }
-    @ResourcePermission("enterprise.roles.write")
-    @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/roles", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<RoleView>> createRole(@PathVariable String enterpriseId, @RequestBody RoleCreateRequest body, @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication a) {  RoleView v = preserveAccessDenied(() -> service.createRole(enterpriseId, body, key, rid(), a)); return write(HttpStatus.CREATED, v, v.version());  }
-    @ResourcePermission("enterprise.roles.write")
-    @PatchMapping(value = "/api/v1/enterprises/{enterpriseId}/roles/{id}", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<RoleView>> updateRole(@PathVariable String enterpriseId, @PathVariable String id, @RequestBody RoleUpdateRequest body, @RequestHeader("If-Match") String etag, @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication a) {  RoleView v = preserveAccessDenied(() -> service.updateRole(enterpriseId, id, body, etag, key, rid(), a)); return write(HttpStatus.OK, v, v.version());  }
-    @ResourcePermission("enterprise.roles.write")
-    @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/roles/{id}/capabilities", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<RoleView>> roleCapabilities(@PathVariable String enterpriseId, @PathVariable String id, @RequestBody RoleCapabilitiesRequest body, @RequestHeader("If-Match") String etag, @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication a) {  RoleView v = preserveAccessDenied(() -> service.setRoleCapabilities(enterpriseId, id, body, etag, key, rid(), a)); return write(HttpStatus.OK, v, v.version());  }
-    @ResourcePermission("enterprise.roles.read")
-    @GetMapping("/api/v1/enterprises/{enterpriseId}/roles/{id}/capabilities") @RawResponse ResponseEntity<ApiResponse<List<String>>> roleCapabilityIds(@PathVariable String enterpriseId, @PathVariable String id, Authentication a) {  return write(HttpStatus.OK, preserveAccessDenied(() -> service.role(enterpriseId, id, a)).capabilityIds(), null);  }
-
     @ResourcePermission("enterprise.bundles.read")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/capability-bundles") @RawResponse ResponseEntity<ApiResponse<List<BundleView>>> bundles(@PathVariable String enterpriseId, Authentication a) {  return write(HttpStatus.OK, preserveAccessDenied(() -> service.bundles(enterpriseId, a)), null);  }
     @ResourcePermission("enterprise.bundles.read")
@@ -73,27 +60,6 @@ class AuthorizationController {
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/capability-bundles/{id}/capabilities", consumes = MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<BundleView>> updateBundleCapabilities(@PathVariable String enterpriseId, @PathVariable String id, @RequestBody BundleUpdateRequest body, @RequestHeader("If-Match") String etag, @RequestHeader(value = "Idempotency-Key", required = false) String key, Authentication a) {  BundleView v = preserveAccessDenied(() -> service.updateBundle(enterpriseId, id, body, etag, key, rid(), a)); return write(HttpStatus.OK, v, v.version());  }
     @ResourcePermission("enterprise.roles.read")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/authorization-audit/{id}") @RawResponse ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> audit(@PathVariable String enterpriseId, @PathVariable String id, Authentication a) {  return write(HttpStatus.OK, preserveAccessDenied(() -> service.audit(enterpriseId, id, a)), null);  }
-
-    @ResourcePermission("enterprise.roles.write")
-    @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/users/{username}/roles", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @RawResponse
-    ResponseEntity<ApiResponse<UserRoleAssignmentView>> assignUserRoles(
-            @PathVariable String enterpriseId,
-            @PathVariable String username,
-            @RequestBody UserRoleAssignmentRequest body,
-            @RequestHeader(value = "If-Match", required = false) String etag,
-            @RequestHeader(value = "Idempotency-Key", required = false) String key,
-            Authentication authentication) {
-        UserRoleAssignmentView view = preserveAccessDenied(() -> service.assignUserRoles(enterpriseId, username, body, etag, key, rid(), authentication));
-        return write(HttpStatus.OK, view, view.version());
-
-    }
-
-    @ResourcePermission("enterprise.roles.read")
-    @GetMapping("/api/v1/enterprises/{enterpriseId}/users/{username}/roles") @RawResponse
-    ResponseEntity<ApiResponse<UserRoleAssignmentView>> userRoles(@PathVariable String enterpriseId, @PathVariable String username, Authentication authentication) {
-         UserRoleAssignmentView view = preserveAccessDenied(() -> service.userAssignment(enterpriseId, username, authentication)); return write(HttpStatus.OK, view, view.version());
-    }
 
     private String rid() { return requestId.currentRequestId(); }
     private <T> ResponseEntity<ApiResponse<T>> read(T body, HttpServletRequest req) { String etag = "\"" + (body instanceof CapabilityCatalogView c ? c.version() : body.hashCode()) + "\""; if (etag.equals(req.getHeader(HttpHeaders.IF_NONE_MATCH))) return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).header("X-Request-Id", rid()).build(); return write(HttpStatus.OK, body, Long.parseLong(etag.substring(1, etag.length() - 1))); }

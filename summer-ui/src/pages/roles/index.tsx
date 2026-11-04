@@ -1,144 +1,467 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Card, Checkbox, Input, Message, Select, Space, Table, Typography } from '@arco-design/web-react';
-import useLocale from '@/utils/useLocale';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Input,
+  Message,
+  Select,
+  Space,
+  Table,
+  Typography,
+} from '@arco-design/web-react';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
-import { assignUserRoles, AuthorizationApiError, AuthorizationResource, AuthorizationRole, createRole, getUserRoleAssignment, listAuthorizationResources, listRoles } from './api';
+import { Group, Permission } from '../permissions/api';
+import {
+  assignUserRoles,
+  AuthorizationApiError,
+  AuthorizationRole,
+  createRole,
+  getUserRoleAssignment,
+  listPermissionChoices,
+  listPermissionGroups,
+  listRoles,
+  saveRolePermissions,
+  UserRoleAssignment,
+} from './api';
 
 export default function RolesPage() {
   const tenant = useActiveEnterprise();
-  return <><Select aria-label="活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240, marginBottom: 16 }} />
-    {tenant.enterpriseId ? <RolesContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} onDirtyChange={tenant.setDirty} onBusyChange={tenant.setBusy} /> : tenant.ready && <Alert type="info" content="请选择一个活动成员租户；没有可用租户时不会读取角色。" />}</>;
+  const [platform, setPlatform] = useState(false);
+  useEffect(() => {
+    if (tenant.ready && !tenant.enterpriseId) setPlatform(true);
+  }, [tenant.ready, tenant.enterpriseId]);
+  return (
+    <>
+      <Space style={{ marginBottom: 16 }}>
+        <Select
+          aria-label="授权域"
+          value={platform ? 'platform' : 'enterprise'}
+          disabled={tenant.busy}
+          options={[
+            { label: '企业域', value: 'enterprise' },
+            { label: '平台域', value: 'platform' },
+          ]}
+          onChange={(v) => {
+            if (tenant.dirty && !window.confirm('有未保存的授权，确定切换域？'))
+              return;
+            setPlatform(v === 'platform');
+          }}
+        />
+        {!platform && (
+          <Select
+            aria-label="活动租户"
+            placeholder="选择活动租户"
+            value={tenant.enterpriseId || undefined}
+            options={tenant.options}
+            onChange={tenant.change}
+            disabled={tenant.busy}
+            style={{ width: 240 }}
+          />
+        )}
+      </Space>
+      {platform || tenant.enterpriseId ? (
+        <RolesContent
+          key={
+            platform ? 'PLATFORM:platform' : `ENTERPRISE:${tenant.enterpriseId}`
+          }
+          base={
+            platform
+              ? '/api/v1/platform'
+              : `/api/v1/enterprises/${encodeURIComponent(tenant.enterpriseId)}`
+          }
+          domainLabel={platform ? '平台域' : `企业域：${tenant.enterpriseId}`}
+          onDirtyChange={tenant.setDirty}
+          onBusyChange={tenant.setBusy}
+        />
+      ) : (
+        tenant.ready && <Alert type="info" content="请选择一个活动成员租户。" />
+      )}
+    </>
+  );
 }
-
-function RolesContent({ enterpriseId, onDirtyChange, onBusyChange }: { enterpriseId: string; onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }) {
-  const t = useLocale();
+function RolesContent({
+  base,
+  domainLabel,
+  onDirtyChange,
+  onBusyChange,
+}: {
+  base: string;
+  domainLabel: string;
+  onDirtyChange: (v: boolean) => void;
+  onBusyChange: (v: boolean) => void;
+}) {
   const [roles, setRoles] = useState<AuthorizationRole[]>([]);
-  const [resources, setResources] = useState<AuthorizationResource[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [editing, setEditing] = useState<AuthorizationRole>();
+  const [permissionIds, setPermissionIds] = useState<string[]>([]);
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [username, setUsername] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>();
-  const [denied, setDenied] = useState<string[]>([]);
-  const [roleName, setRoleName] = useState('');
-  const [roleCode, setRoleCode] = useState('');
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [assignment, setAssignment] = useState<UserRoleAssignment>();
+  const [roleIds, setRoleIds] = useState<string[]>([]);
+  const [dirty, setDirty] = useState(false);
   const [bindingDirty, setBindingDirty] = useState(false);
-  const [error, setError] = useState<AuthorizationApiError | null>(null);
+  const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [assignmentVersion, setAssignmentVersion] = useState<number | null>(null);
-  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [error, setError] = useState<AuthorizationApiError>();
   const alive = useRef(true);
-  const writing = useRef(false);
   const epoch = useRef(0);
-  const listRequest = useRef(0);
-  const assignmentRequest = useRef(0);
-  useEffect(() => () => { alive.current = false; onDirtyChange(false); onBusyChange(false); }, [onDirtyChange, onBusyChange]);
-  const dirty = !!(roleName || roleCode || selectedPermissions.length || bindingDirty);
-  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
-
-  // A denial invalidates every outstanding read, including the other read channel.
-  const fail = useCallback((failure: AuthorizationApiError) => {
-    if (!alive.current) return;
-    if (failure.status === 401 || failure.status === 403) {
+  const userRead = useRef(0);
+  const writing = useRef(false);
+  useEffect(
+    () => () => {
+      alive.current = false;
       epoch.current++;
-      setReady(false); setRoles([]); setResources([]); setUsername('');
-      setSelectedRole(undefined); setDenied([]); setAssignmentVersion(null);
-      setRoleName(''); setRoleCode(''); setSelectedPermissions([]); setBindingDirty(false);
-      setAssignmentLoading(false); setLoading(false);
+      onDirtyChange(false);
+      onBusyChange(false);
+    },
+    [onDirtyChange, onBusyChange]
+  );
+  useEffect(
+    () => onDirtyChange(dirty || bindingDirty),
+    [dirty, bindingDirty, onDirtyChange]
+  );
+  const fail = useCallback((e: AuthorizationApiError) => {
+    if (!alive.current) return;
+    if (e.status === 401 || e.status === 403) {
+      epoch.current++;
+      userRead.current++;
+      setReady(false);
+      setRoles([]);
+      setPermissions([]);
+      setGroups([]);
+      setEditing(undefined);
+      setPermissionIds([]);
+      setName('');
+      setCode('');
+      setUsername('');
+      setAssignment(undefined);
+      setRoleIds([]);
+      setDirty(false);
+      setBindingDirty(false);
     }
-    setError(failure);
+    setError(e);
   }, []);
   const load = useCallback(async () => {
     if (writing.current) return;
-    const request = ++listRequest.current;
-    const generation = epoch.current;
-    setLoading(true);
+    const generation = ++epoch.current;
+    setBusy(true);
     try {
-      const [roleItems, catalog] = await Promise.all([listRoles(enterpriseId), listAuthorizationResources()]);
-      if (!alive.current || request !== listRequest.current || generation !== epoch.current) return;
-      setRoles(roleItems); setResources(catalog.items); setReady(true); setError(null);
-    } catch (failure) {
-      if (alive.current && request === listRequest.current && generation === epoch.current) fail(failure as AuthorizationApiError);
-    } finally {
-      if (alive.current && request === listRequest.current && generation === epoch.current) setLoading(false);
-    }
-  }, [enterpriseId, fail]);
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const request = ++assignmentRequest.current;
-    const generation = epoch.current;
-    setAssignmentVersion(null);
-    if (!ready || !username.trim()) { setAssignmentLoading(false); return; }
-    setAssignmentLoading(true);
-    const current = () => alive.current && request === assignmentRequest.current && generation === epoch.current;
-    getUserRoleAssignment(enterpriseId, username.trim()).then((binding) => {
-      if (!current()) return;
-      setAssignmentVersion(binding?.version ?? 1);
-      setSelectedRole(binding?.roleIds[0]); setDenied(binding?.deniedCapabilityCodes ?? []);
-      setBindingDirty(false); setError(null);
-    }).catch((failure) => { if (current()) fail(failure); })
-      .finally(() => { if (current()) setAssignmentLoading(false); });
-    return () => { assignmentRequest.current++; };
-  }, [enterpriseId, username, ready, fail]);
-  const configurable = useMemo(() => resources.filter((resource) => resource.configurable && resource.resourceType === 'BUSINESS'), [resources]);
-  const beginWrite = () => {
-    writing.current = true; setSaving(true); onBusyChange(true);
-    // Reads begun before a write must not replace its result or a subsequent denial.
-    epoch.current++; setLoading(false); setAssignmentLoading(false);
-    return epoch.current;
-  };
-  const finishWrite = () => {
-    writing.current = false;
-    if (alive.current) { setSaving(false); onBusyChange(false); }
-  };
-  const create = async () => {
-    if (!ready || writing.current || assignmentLoading || !roleName || !roleCode || !selectedPermissions.length) return;
-    const generation = beginWrite();
-    try {
-      const role = await createRole(enterpriseId, roleName, roleCode, selectedPermissions);
+      const [r, p, g] = await Promise.all([
+        listRoles(base),
+        listPermissionChoices(base),
+        listPermissionGroups(base),
+      ]);
       if (!alive.current || generation !== epoch.current) return;
-      setRoles((items) => [...items, role]); setSelectedRole(role.roleId); setBindingDirty(!!username.trim());
-      setRoleName(''); setRoleCode(''); setSelectedPermissions([]); setError(null);
-      Message.success(t['roles.created']);
-    } catch (failure) { if (alive.current && generation === epoch.current) fail(failure as AuthorizationApiError); }
-    finally { finishWrite(); }
+      setRoles(r);
+      setPermissions(p);
+      setGroups(g);
+      setReady(true);
+      setError(undefined);
+    } catch (e) {
+      if (generation === epoch.current) fail(e as AuthorizationApiError);
+    } finally {
+      if (alive.current) setBusy(false);
+    }
+  }, [base, fail]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  useEffect(() => {
+    const ticket = ++userRead.current;
+    const generation = epoch.current;
+    setAssignment(undefined);
+    setRoleIds([]);
+    setBindingDirty(false);
+    if (!ready || !username.trim()) return;
+    getUserRoleAssignment(base, username.trim())
+      .then((v) => {
+        if (
+          !alive.current ||
+          ticket !== userRead.current ||
+          generation !== epoch.current
+        )
+          return;
+        setAssignment(v);
+        setRoleIds(v.roleIds);
+        setError(undefined);
+      })
+      .catch((e) => {
+        if (ticket === userRead.current && generation === epoch.current)
+          fail(e);
+      });
+  }, [base, username, ready, fail]);
+  const select = (ids: string[], checked: boolean) => {
+    setPermissionIds((old) =>
+      checked
+        ? Array.from(new Set([...old, ...ids]))
+        : old.filter((id) => !ids.includes(id))
+    );
+    setDirty(true);
   };
-  const saveAssignment = async () => {
-    if (!ready || writing.current || !username.trim() || !selectedRole || assignmentVersion === null || assignmentLoading) return;
-    const generation = beginWrite();
-    const current = () => alive.current && generation === epoch.current;
+  const groupIds = (root: string) => {
+    const descendants = new Set([root]);
+    for (let changed = true; changed; ) {
+      changed = false;
+      groups.forEach((g) => {
+        if (
+          g.parentGroupId &&
+          descendants.has(g.parentGroupId) &&
+          !descendants.has(g.groupId)
+        ) {
+          descendants.add(g.groupId);
+          changed = true;
+        }
+      });
+    }
+    return permissions
+      .filter((p) => descendants.has(p.groupId))
+      .map((p) => p.permissionId);
+  };
+  const write = async (action: () => Promise<void>) => {
+    if (writing.current || !ready) return;
+    writing.current = true;
+    epoch.current++;
+    userRead.current++;
+    setBusy(true);
+    onBusyChange(true);
     try {
-      const binding = await assignUserRoles(enterpriseId, username.trim(), [selectedRole], denied, assignmentVersion);
-      if (!current()) return;
-      setAssignmentVersion(binding.version); setBindingDirty(false); setError(null);
-      Message.success(t['roles.assigned']);
-    } catch (failure) {
-      if (!current()) return;
-      const apiError = failure as AuthorizationApiError;
-      if (apiError.status === 412) {
-        setAssignmentVersion(null);
-        try {
-          const binding = await getUserRoleAssignment(enterpriseId, username.trim());
-          if (!current()) return;
-          setAssignmentVersion(binding?.version ?? 1);
-          setError({ ...apiError, message: '授权已被其他操作修改。已更新版本并保留当前输入，请核对后再次保存。' });
-        } catch (refreshError) { if (current()) fail(refreshError as AuthorizationApiError); }
-      } else fail(apiError);
-    } finally { finishWrite(); }
+      await action();
+      if (alive.current) setError(undefined);
+    } catch (e) {
+      fail(e as AuthorizationApiError);
+    } finally {
+      writing.current = false;
+      if (alive.current) {
+        setBusy(false);
+        onBusyChange(false);
+      }
+    }
   };
-  return <Card title={t['roles.title']} extra={<Button loading={loading} disabled={saving} onClick={load}>{t['roles.refresh']}</Button>}>
-    <Typography.Paragraph>当前租户：{enterpriseId}</Typography.Paragraph>
-    {error && <Alert type="error" content={`${error.message || t['roles.error']}${error.requestId ? ` (${error.requestId})` : ''}`} style={{ marginBottom: 16 }} />}
-    <Typography.Title heading={6}>{t['roles.createTitle']}</Typography.Title>
-    <Space wrap><Input disabled={saving} value={roleName} onChange={setRoleName} placeholder={t['roles.name']} /><Input disabled={saving} value={roleCode} onChange={setRoleCode} placeholder={t['roles.code']} /><Button type="primary" loading={saving} disabled={!ready || assignmentLoading || !roleName || !roleCode || !selectedPermissions.length} onClick={create}>{t['roles.create']}</Button></Space>
-    <Table<AuthorizationResource> rowKey={(resource) => JSON.stringify([resource.httpMethod, resource.normalizedPath])} style={{ marginTop: 16 }} data={configurable} pagination={{ pageSize: 8 }} columns={[{ title: t['roles.permission'], dataIndex: 'permissionCode' }, { title: t['roles.path'], dataIndex: 'normalizedPath' }, { title: t['roles.method'], dataIndex: 'httpMethod' }, { title: t['roles.bind'], render: (_, item) => <Checkbox disabled={saving} checked={selectedPermissions.includes(item.permissionCode)} onChange={(checked) => setSelectedPermissions((values) => checked ? [...values, item.permissionCode] : values.filter((value) => value !== item.permissionCode))} /> }]} />
-    <Typography.Title heading={6} style={{ marginTop: 24 }}>{t['roles.assignTitle']}</Typography.Title>
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Input value={username} disabled={saving} onChange={(value) => { setUsername(value); setAssignmentVersion(null); setSelectedRole(undefined); setDenied([]); setBindingDirty(false); }} placeholder={t['roles.username']} />
-      <Select placeholder={t['roles.chooseRole']} value={selectedRole} disabled={!ready || assignmentLoading || saving} onChange={(value) => { setSelectedRole(value); setBindingDirty(true); }} options={roles.map((role) => ({ label: `${role.name} (${role.code})`, value: role.roleId }))} />
-      <Typography.Text>{t['roles.denyLabel']}</Typography.Text>
-      <Checkbox.Group value={denied} disabled={!ready || assignmentLoading || saving} onChange={(value) => { setDenied(value); setBindingDirty(true); }}>{configurable.map((resource) => <Checkbox key={JSON.stringify([resource.httpMethod, resource.normalizedPath])} value={resource.permissionCode}>{resource.permissionCode}</Checkbox>)}</Checkbox.Group>
-      <Button type="primary" loading={saving} disabled={!ready || !username.trim() || !selectedRole || assignmentVersion === null || assignmentLoading} onClick={saveAssignment}>{t['roles.assign']}</Button>
-    </Space>
-  </Card>;
+  const save = () =>
+    write(async () => {
+      const r = editing
+        ? await saveRolePermissions(base, editing, permissionIds)
+        : await createRole(base, name, code, permissionIds);
+      if (!alive.current) return;
+      setRoles((items) => [...items.filter((x) => x.roleId !== r.roleId), r]);
+      setEditing(r);
+      setPermissionIds(r.permissionIds);
+      setDirty(false);
+      if (username.trim() && assignment) {
+        const current = await getUserRoleAssignment(base, username.trim());
+        if (!alive.current) return;
+        setAssignment((previous) =>
+          previous ? { ...previous, sources: current.sources } : previous
+        );
+      }
+      Message.success('角色权限已保存');
+    });
+  const saveAssignment = () =>
+    write(async () => {
+      if (!assignment) return;
+      const v = await assignUserRoles(
+        base,
+        username.trim(),
+        roleIds,
+        assignment.version
+      );
+      if (!alive.current) return;
+      setAssignment(v);
+      setBindingDirty(false);
+      Message.success('用户角色已保存');
+    });
+  return (
+    <Card
+      title="角色与权限"
+      extra={
+        <Button
+          onClick={() => {
+            if (
+              (dirty || bindingDirty) &&
+              !window.confirm('放弃当前未保存的授权并刷新？')
+            )
+              return;
+            setEditing(undefined);
+            setPermissionIds([]);
+            setName('');
+            setCode('');
+            setUsername('');
+            setAssignment(undefined);
+            setRoleIds([]);
+            setDirty(false);
+            setBindingDirty(false);
+            load();
+          }}
+          disabled={busy}
+        >
+          刷新
+        </Button>
+      }
+    >
+      <Typography.Paragraph>
+        当前授权域：{domainLabel}
+        。按组勾选保存当前具体权限，后续移动或新增权限不会改变此授权。
+      </Typography.Paragraph>
+      {error && (
+        <Alert
+          type="error"
+          content={`${error.message}${
+            error.status === 412 ? ' 请刷新后重新核对授权。' : ''
+          }${error.requestId ? ` (${error.requestId})` : ''}`}
+        />
+      )}
+      <Space wrap>
+        <Select
+          aria-label="编辑角色"
+          placeholder="新建角色"
+          allowClear
+          value={editing?.roleId}
+          disabled={busy || dirty}
+          options={roles.map((r) => ({
+            label: `${r.name} (${r.status === 'ACTIVE' ? '启用' : '停用'})`,
+            value: r.roleId,
+          }))}
+          onChange={(id) => {
+            const r = roles.find((x) => x.roleId === id);
+            setEditing(r);
+            if (!r) {
+              setName('');
+              setCode('');
+            }
+            setPermissionIds(r?.permissionIds || []);
+            setDirty(false);
+          }}
+        />
+        {!editing && (
+          <>
+            <Input
+              aria-label="角色名称"
+              placeholder="角色名称"
+              value={name}
+              disabled={busy}
+              onChange={(v) => {
+                setName(v);
+                setDirty(true);
+              }}
+            />
+            <Input
+              aria-label="角色编码"
+              placeholder="角色编码"
+              value={code}
+              disabled={busy}
+              onChange={(v) => {
+                setCode(v);
+                setDirty(true);
+              }}
+            />
+          </>
+        )}
+        <Button
+          type="primary"
+          onClick={save}
+          disabled={!ready || busy || (!editing && (!name || !code))}
+        >
+          {editing ? '保存角色权限' : '创建角色'}
+        </Button>
+      </Space>
+      <Space wrap style={{ marginTop: 16 }}>
+        {groups.map((g) => {
+          const ids = groupIds(g.groupId);
+          return (
+            <Checkbox
+              key={g.groupId}
+              disabled={busy || !ready || !ids.length}
+              checked={
+                ids.length > 0 && ids.every((id) => permissionIds.includes(id))
+              }
+              indeterminate={
+                ids.some((id) => permissionIds.includes(id)) &&
+                !ids.every((id) => permissionIds.includes(id))
+              }
+              onChange={(checked) => select(ids, checked)}
+            >
+              组：{g.name}
+            </Checkbox>
+          );
+        })}
+      </Space>
+      <Table<Permission>
+        rowKey="permissionId"
+        data={permissions}
+        pagination={{ pageSize: 10 }}
+        style={{ marginTop: 16 }}
+        columns={[
+          { title: '权限', dataIndex: 'name' },
+          { title: '编码', dataIndex: 'code' },
+          {
+            title: '类型',
+            render: (_, p) =>
+              ({ INTERFACE: '接口', MENU: '菜单', DATA: '数据' }[p.type] ||
+              p.type),
+          },
+          {
+            title: '状态',
+            render: (_, p) => (p.status === 'ACTIVE' ? '启用' : '停用'),
+          },
+          {
+            title: '授予',
+            render: (_, p) => (
+              <Checkbox
+                aria-label={`授予 ${p.name}`}
+                disabled={busy || !ready}
+                checked={permissionIds.includes(p.permissionId)}
+                onChange={(checked) => select([p.permissionId], checked)}
+              />
+            ),
+          },
+        ]}
+      />
+      <Typography.Title heading={6}>用户角色</Typography.Title>
+      <Space direction="vertical" style={{ width: '100%' }}>
+        <Input
+          aria-label="用户名"
+          placeholder="用户名"
+          value={username}
+          disabled={busy}
+          onChange={setUsername}
+        />
+        <Select
+          aria-label="用户角色"
+          mode="multiple"
+          value={roleIds}
+          disabled={!ready || busy || !assignment}
+          options={roles.map((r) => ({
+            label: r.name,
+            value: r.roleId,
+            disabled: r.status !== 'ACTIVE' && !roleIds.includes(r.roleId),
+          }))}
+          onChange={(v) => {
+            setRoleIds(v);
+            setBindingDirty(true);
+          }}
+        />
+        <Button
+          type="primary"
+          disabled={!ready || busy || !assignment || !bindingDirty}
+          onClick={saveAssignment}
+        >
+          保存用户角色
+        </Button>
+        <Typography.Text>有效权限来源（多个活动角色取并集）</Typography.Text>
+        <Table
+          rowKey={(s) => `${s.permissionId}:${s.roleId}`}
+          data={assignment?.sources || []}
+          pagination={false}
+          columns={[
+            { title: '权限', dataIndex: 'permissionName' },
+            { title: '来源角色', dataIndex: 'roleName' },
+          ]}
+        />
+      </Space>
+    </Card>
+  );
 }

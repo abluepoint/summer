@@ -1,0 +1,428 @@
+package com.abluepoint.summer.sample.authorization.api.permission;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.authorization.application.permission.PermissionResourceAssociations;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.ObjectMapper;
+
+/** Fast real MVC/JDBC contract checks; TCP MySQL/Redis/Chrome evidence is kept separately. */
+@SpringBootTest(
+    properties = "summer.sample.authorization.managed-bootstrap-domains=PLATFORM:platform")
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+class RolePermissionHttpTest {
+  @Autowired MockMvc mvc;
+  @Autowired JdbcTemplate db;
+  @Autowired ObjectMapper json;
+  @Autowired PermissionResourceAssociations associations;
+  @Autowired PlatformTransactionManager transactions;
+  @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+  static final String BASE = "/api/v1/platform";
+
+  @TestConfiguration
+  static class Schema {
+    @Bean
+    ApplicationRunner permissionSchema(JdbcTemplate db) {
+      return args -> {
+        for (String name :
+            List.of(
+                "V60__permission_management.sql",
+                "V70__role_permission_and_resource_associations.sql")) {
+          String sql =
+              new String(
+                  new ClassPathResource("db/migration/mysql/" + name).getContentAsByteArray(),
+                  StandardCharsets.UTF_8);
+          if (name.startsWith("V60")) sql = sql.substring(0, sql.indexOf("ALTER TABLE"));
+          for (String statement : sql.replaceAll("(?m)--[^\\n]*", "").split(";"))
+            if (!statement.isBlank())
+              db.execute(
+                  statement.replace(
+                      "CREATE TABLE summer_permission_role",
+                      "CREATE TABLE IF NOT EXISTS summer_permission_role"));
+        }
+      };
+    }
+  }
+
+  @Test
+  void unassignedSessionCannotReadPlatformRoles() throws Exception {
+    mvc.perform(get(BASE + "/roles").with(user("unassigned"))).andExpect(status().isForbidden());
+  }
+
+  @Test
+  void rawDelegatedScopeCannotBeReplacedByLegacyAuthorities() throws Exception {
+    mvc.perform(
+            get(BASE + "/authorization/status")
+                .with(
+                    jwt()
+                        .jwt(j -> j.subject("summer-user").claim("scope", List.of("customer.read")))
+                        .authorities(
+                            new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void sessionManagementRejectsLegacyFieldsAndReturnsVersion() throws Exception {
+    mvc.perform(
+            post(BASE + "/roles")
+                .with(user("summer-user"))
+                .with(csrf())
+                .contentType("application/json")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .content("{\"name\":\"Legacy\",\"code\":\"legacy\",\"capabilityIds\":[]}"))
+        .andExpect(status().isBadRequest());
+    var created =
+        mvc.perform(
+                post(BASE + "/roles")
+                    .with(user("summer-user"))
+                    .with(csrf())
+                    .contentType("application/json")
+                    .header("Idempotency-Key", UUID.randomUUID().toString())
+                    .content("{\"name\":\"Explicit\",\"code\":\"explicit\",\"permissionIds\":[]}"))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String id =
+        json.readTree(created.getResponse().getContentAsString())
+            .path("data")
+            .path("roleId")
+            .asText();
+    assertEquals(
+        "\"1\"",
+        mvc.perform(get(BASE + "/roles/" + id).with(user("summer-user")))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getHeader("ETag"));
+  }
+
+  @Test
+  void associationChecksIncludeDisabledPermissionsAndRollbackModeConflict() throws Exception {
+    var p =
+        db.queryForList(
+                "select * from summer_permission where domain_key='PLATFORM:platform' and"
+                    + " code='PUBLIC'")
+            .getFirst();
+    String group = p.get("group_id").toString();
+    var response =
+        mvc.perform(
+                post(BASE + "/permissions")
+                    .with(user("summer-user"))
+                    .with(csrf())
+                    .contentType("application/json")
+                    .header("Idempotency-Key", UUID.randomUUID().toString())
+                    .content(
+                        json.writeValueAsString(
+                            Map.of(
+                                "name",
+                                "Disabled public",
+                                "code",
+                                "disabled-public",
+                                "type",
+                                "INTERFACE",
+                                "accessMode",
+                                "PUBLIC",
+                                "status",
+                                "DISABLED",
+                                "groupId",
+                                group))))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String id =
+        json.readTree(response.getResponse().getContentAsString())
+            .path("data")
+            .path("permissionId")
+            .asText();
+    String resource =
+        db.queryForObject(
+            "select resource_id from summer_permission_resource where"
+                + " domain_key='PLATFORM:platform' and permission_id=?",
+            String.class,
+            p.get("permission_id"));
+    var tx = new TransactionTemplate(transactions);
+    tx.executeWithoutResult(
+        s ->
+            associations.bind(
+                ResourceAuthorization.Domain.platform(),
+                id,
+                new ResourceAuthorization.Resource(resource, "INTERFACE", "MVC")));
+    long before =
+        db.queryForObject(
+            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
+            Long.class);
+    mvc.perform(
+            patch(BASE + "/permissions/" + id)
+                .with(user("summer-user"))
+                .with(csrf())
+                .contentType("application/json")
+                .header("If-Match", "\"1\"")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .content("{\"accessMode\":\"AUTHENTICATED\"}"))
+        .andExpect(status().isConflict());
+    assertEquals(
+        before,
+        db.queryForObject(
+            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
+            Long.class));
+    assertEquals(
+        "PUBLIC",
+        db.queryForObject(
+            "select access_mode from summer_permission where domain_key='PLATFORM:platform' and"
+                + " permission_id=?",
+            String.class,
+            id));
+    assertThrows(
+        SummerException.class,
+        () ->
+            tx.executeWithoutResult(
+                s ->
+                    associations.bind(
+                        ResourceAuthorization.Domain.platform(),
+                        id,
+                        new ResourceAuthorization.Resource("wrong-type", "MENU", "test"))));
+  }
+
+  @Test
+  void membershipStatusSharesTheAuthorizationRevisionTransaction() {
+    db.update(
+        "insert into summer_authorization_domain(domain_key,engine_mode,revision) values"
+            + " ('ENTERPRISE:ent-acme','MANAGED',0)");
+    var alice = members.forSubject("ent-acme", "alice").orElseThrow();
+    members.changeStatus("ent-acme", alice.memberId(), "DISABLED");
+    assertEquals(
+        1L,
+        db.queryForObject(
+            "select revision from summer_authorization_domain where"
+                + " domain_key='ENTERPRISE:ent-acme'",
+            Long.class));
+    assertEquals(
+        1,
+        db.queryForObject(
+            "select count(*) from summer_authorization_change_outbox where"
+                + " enterprise_id='ENTERPRISE:ent-acme' and event_type='MEMBERSHIP_CHANGED'",
+            Integer.class));
+    assertEquals(
+        1,
+        db.queryForObject(
+            "select count(*) from summer_authorization_audit where"
+                + " enterprise_id='ENTERPRISE:ent-acme' and action='MEMBERSHIP_CHANGED'",
+            Integer.class));
+  }
+
+  @Test
+  void interfacePermissionDoesNotGrantManagementMenuNavigation() throws Exception {
+    var result =
+        mvc.perform(get(BASE + "/authorization/navigation").with(user("unassigned")))
+            .andExpect(status().isOk())
+            .andReturn();
+    assertEquals(
+        0,
+        json.readTree(result.getResponse().getContentAsString()).path("data").path("items").size());
+    result =
+        mvc.perform(get(BASE + "/authorization/navigation").with(user("summer-user")))
+            .andExpect(status().isOk())
+            .andReturn();
+    assertEquals(
+        2,
+        json.readTree(result.getResponse().getContentAsString()).path("data").path("items").size());
+  }
+
+  @Test
+  void roleCollectionIsBoundedStableAndRejectsMalformedPaging() throws Exception {
+    for (String code : List.of("paging-a", "paging-b"))
+      mvc.perform(
+              post(BASE + "/roles")
+                  .with(user("summer-user"))
+                  .with(csrf())
+                  .contentType("application/json")
+                  .header("Idempotency-Key", code)
+                  .content(
+                      json.writeValueAsString(
+                          Map.of("name", code, "code", code, "permissionIds", List.of()))))
+          .andExpect(status().isCreated());
+    var one =
+        mvc.perform(get(BASE + "/roles?page=1&size=1").with(user("summer-user")))
+            .andExpect(status().isOk())
+            .andReturn();
+    var two =
+        mvc.perform(get(BASE + "/roles?page=2&size=1").with(user("summer-user")))
+            .andExpect(status().isOk())
+            .andReturn();
+    String first =
+        json.readTree(one.getResponse().getContentAsString())
+            .path("data")
+            .path("items")
+            .get(0)
+            .path("roleId")
+            .asText();
+    String second =
+        json.readTree(two.getResponse().getContentAsString())
+            .path("data")
+            .path("items")
+            .get(0)
+            .path("roleId")
+            .asText();
+    assertTrue(first.compareTo(second) < 0);
+    for (String query :
+        List.of("page=0", "size=201", "size=abc", "page=2147483648", "page=1&page=2"))
+      mvc.perform(get(BASE + "/roles?" + query).with(user("summer-user")))
+          .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void legacyEnterpriseCannotReadWriteOrBindForeignManagedRoles() throws Exception {
+    String own = "mixed-own", actor = "summer-user";
+    db.update(
+        "insert into"
+            + " summer_enterprise(enterprise_id,name,code,status,version,created_at,updated_at)"
+            + " values"
+            + " ('platform','Mixed','mixed','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+    db.update(
+        "insert into"
+            + " summer_enterprise_member(enterprise_id,member_id,subject,display_name,email,status,version,created_at,updated_at)"
+            + " values"
+            + " ('platform','mixed-member',?,'Mixed','mixed@example.test','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+        actor);
+    db.update(
+        "insert into"
+            + " summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at)"
+            + " values (?,'platform','Own legacy"
+            + " role','own-legacy',false,'ACTIVE','','',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+        own);
+    for (String action : List.of("read", "write"))
+      db.update(
+          "insert into"
+              + " summer_authorization_capability(capability_id,enterprise_id,scope,code,resource,action,risk_level,status,version,created_at,updated_at)"
+              + " values"
+              + " (?,'platform','ENTERPRISE',?,?,?,'LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+          "mixed-" + action,
+          "enterprise.roles." + action,
+          "enterprise.roles." + action,
+          action);
+    db.update(
+        "update summer_authorization_role set capability_ids=? where role_id=?",
+        "mixed-read\nmixed-write",
+        own);
+    db.update(
+        "insert into"
+            + " summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at)"
+            + " values ('mixed-bind','platform',?,?,'[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+        actor,
+        json.writeValueAsString(List.of(own)));
+    // Same-domain ownership during expand migration must remain compatible; no code-prefix guess.
+    db.update("insert into summer_permission_role values ('ENTERPRISE:platform',?)", own);
+    String foreign =
+        db.queryForObject(
+            "select role_id from summer_permission_role where domain_key='PLATFORM:platform' order"
+                + " by role_id limit 1",
+            String.class);
+    var auth =
+        jwt()
+            .jwt(
+                j ->
+                    j.subject(actor)
+                        .claim(
+                            "enterprise_memberships",
+                            List.of(Map.of("enterpriseId", "platform", "status", "ACTIVE")))
+                        .claim(
+                            "enterprise_capabilities",
+                            Map.of(
+                                "platform",
+                                List.of("enterprise.roles.read", "enterprise.roles.write"))))
+            .authorities(
+                new SimpleGrantedAuthority("SCOPE_enterprise.roles.read"),
+                new SimpleGrantedAuthority("SCOPE_enterprise.roles.write"));
+    String url = "/api/v1/enterprises/platform";
+    var before =
+        db.queryForMap(
+            "select name,code,status,version from summer_authorization_role where role_id=?",
+            foreign);
+    long revision =
+        db.queryForObject(
+            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
+            Long.class);
+    int audit =
+        db.queryForObject(
+            "select count(*) from summer_authorization_audit where resource_id=?",
+            Integer.class,
+            foreign);
+    mvc.perform(get(url + "/roles/" + foreign).with(auth)).andExpect(status().isConflict());
+    mvc.perform(get(url + "/roles/" + foreign + "/capabilities").with(auth))
+        .andExpect(status().isConflict());
+    mvc.perform(
+            patch(url + "/roles/" + foreign)
+                .with(auth)
+                .with(csrf())
+                .contentType("application/json")
+                .header("If-Match", "\"" + before.get("version") + "\"")
+                .header("Idempotency-Key", "mixed-patch")
+                .content("{\"status\":\"DISABLED\"}"))
+        .andExpect(status().isConflict());
+    mvc.perform(
+            put(url + "/roles/" + foreign + "/capabilities")
+                .with(auth)
+                .with(csrf())
+                .contentType("application/json")
+                .header("If-Match", "\"" + before.get("version") + "\"")
+                .header("Idempotency-Key", "mixed-capabilities")
+                .content("{\"capabilityIds\":[]}"))
+        .andExpect(status().isConflict());
+    mvc.perform(
+            put(url + "/users/" + actor + "/roles")
+                .with(auth)
+                .with(csrf())
+                .contentType("application/json")
+                .header("If-Match", "\"1\"")
+                .header("Idempotency-Key", "mixed-binding")
+                .content(json.writeValueAsString(Map.of("roleIds", List.of(foreign)))))
+        .andExpect(status().isConflict());
+    assertEquals(
+        before,
+        db.queryForMap(
+            "select name,code,status,version from summer_authorization_role where role_id=?",
+            foreign));
+    assertEquals(
+        revision,
+        db.queryForObject(
+            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
+            Long.class));
+    assertEquals(
+        audit,
+        db.queryForObject(
+            "select count(*) from summer_authorization_audit where resource_id=?",
+            Integer.class,
+            foreign));
+    mvc.perform(get(url + "/roles/" + own).with(auth)).andExpect(status().isOk());
+    mvc.perform(
+            patch(url + "/roles/" + own)
+                .with(auth)
+                .with(csrf())
+                .contentType("application/json")
+                .header("If-Match", "\"1\"")
+                .header("Idempotency-Key", "mixed-own-patch")
+                .content("{\"name\":\"Still compatible\"}"))
+        .andExpect(status().isOk());
+    assertEquals(
+        revision,
+        db.queryForObject(
+            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
+            Long.class));
+  }
+}

@@ -34,6 +34,14 @@ public class AuthorizationChangeEventService {
         persistEvent(enterpriseId, resourceType, resourceId, eventType, version, requestId);
     }
 
+    /** Legacy enterprise events retain their payload key while selecting an unambiguous revision domain. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void enqueueEnterprise(String enterpriseId, String resourceType, String resourceId, String eventType,
+                                  long version, String requestId) {
+        versions.advance(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId));
+        persistEvent(enterpriseId, resourceType, resourceId, eventType, version, requestId);
+    }
+
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public void enqueue(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain, String resourceType, String resourceId, String eventType, long version, String requestId) {
         versions.advance(domain);

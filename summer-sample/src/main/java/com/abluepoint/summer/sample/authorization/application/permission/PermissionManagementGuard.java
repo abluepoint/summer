@@ -18,13 +18,20 @@ import java.util.*;
 public class PermissionManagementGuard {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
+    private final ManagedPermissionAccess managed;
 
-    public PermissionManagementGuard(JdbcTemplate jdbc, ObjectMapper json) {
+    public PermissionManagementGuard(
+            JdbcTemplate jdbc, ObjectMapper json, ManagedPermissionAccess managed) {
         this.jdbc = jdbc;
         this.json = json;
+        this.managed = managed;
     }
 
     public void require(Domain domain, Authentication auth, boolean write) {
+        if (managed.managed(domain)) {
+            managed.requireManagement(domain, auth, write);
+            return;
+        }
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken)
             throw new AccessDeniedException("Authentication required");
         String code =

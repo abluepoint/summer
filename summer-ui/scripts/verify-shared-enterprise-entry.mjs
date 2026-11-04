@@ -83,6 +83,7 @@ function shellFixture(identity) {
     store: redux, menuManifest: { manifestVersion: 1, items: [] },
     loadMenuPermissions: permissionExports.loadMenuPermissions,
     syncMenuManifest: async () => {},
+    getManagedMenuManifest: async () => ({manifestVersion: 0,items: []}),
     getVisibleMenuManifest: (enterpriseId) => new Promise((resolve, reject) => reads.push({ enterpriseId, resolve, reject })),
     PageLayout: RoutedPage, MenuAccessContext: menuContext,
     Spin: 'spinner', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },

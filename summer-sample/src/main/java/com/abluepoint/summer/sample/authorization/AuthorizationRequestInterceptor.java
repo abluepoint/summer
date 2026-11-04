@@ -49,6 +49,9 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         this(authorizationService, requestId, unified, resources, null);
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.abluepoint.summer.sample.authorization.api.security.ManagedRequestAuthorization managedRequests;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(this).addPathPatterns("/api/**");
@@ -58,6 +61,7 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod method) || "OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (managedRequests != null && managedRequests.finalHandler(request,method,authentication)) return true;
         if (com.abluepoint.summer.sample.authorization.api.permission.PermissionController.class.equals(method.getBeanType())) {
             if (permissionManagement == null) throw new AccessDeniedException("Permission management adapter unavailable");
             permissionManagement.require(com.abluepoint.summer.sample.authorization.api.permission.PermissionController.domain(request), authentication,

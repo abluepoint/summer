@@ -22,7 +22,7 @@ import {
 } from './auth/oidc';
 import { authText, configureBusinessApiAuth } from './auth/requests';
 import { menuManifest } from './routes';
-import { getVisibleMenuManifest, syncMenuManifest } from './menu/api';
+import { getVisibleMenuManifest, syncMenuManifest, getManagedMenuManifest } from './menu/api';
 import { loadMenuPermissions } from './menu/permissions';
 import { MenuAccessContext } from './menu/access';
 import { VisibleMenuItem } from './menu/api';
@@ -77,6 +77,16 @@ function AuthenticatedLayout() {
         }
         const profile = user.profile;
         if (!tenant.enterpriseId) {
+          const navigation = await getManagedMenuManifest();
+          if (!isCurrent()) return;
+          setMenuItems(navigation.items);
+          const refreshNavigation = () => {
+            if (document.visibilityState === 'hidden') return;
+            getManagedMenuManifest().then((next) => { if (isCurrent()) setMenuItems(next.items); }).catch(() => { if (isCurrent()) setMenuItems([]); });
+          };
+          window.addEventListener('focus', refreshNavigation);
+          document.addEventListener('visibilitychange', refreshNavigation);
+          stopPermissionRefresh = () => { window.removeEventListener('focus', refreshNavigation); document.removeEventListener('visibilitychange', refreshNavigation); };
           store.dispatch({ type: 'update-userInfo', payload: {
             userInfo: { name: String(profile.name || profile.preferred_username || profile.sub), permissions: {} }, userLoading: false,
           } });
@@ -181,7 +191,7 @@ function AuthenticatedLayout() {
     return <Alert type="error" content={t['auth.startFailed']} />;
   if (status === 'limited')
     return <Alert type="error" content={t['auth.restartLimit']} />;
-  if (!tenant.enterpriseId)
+  if (!tenant.enterpriseId && !menuItems.length)
     return <Card title="选择活动租户">
       <Select aria-label="活动租户" placeholder="选择活动租户" options={tenant.options} value={undefined} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240 }} />
       <Alert type="info" content={tenant.options.length ? '请选择一个活动成员租户以加载可用菜单。' : '当前身份没有可用的活动成员租户。'} />

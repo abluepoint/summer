@@ -43,7 +43,8 @@ export const oidcSettings: UserManagerSettings = {
     `${window.location.origin}/login?logout`
   ),
   response_type: 'code',
-  scope: 'openid profile customer.read customer.write',
+  scope:
+    'openid profile customer.read customer.write enterprise.roles.read enterprise.roles.write platform.capabilities.read platform.capabilities.write',
   userStore: new WebStorageStateStore({ store: new InMemoryWebStorage() }),
   stateStore: new WebStorageStateStore({ store: storage }),
   automaticSilentRenew: false,

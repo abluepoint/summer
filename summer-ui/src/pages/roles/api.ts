@@ -1,44 +1,86 @@
-import axios from 'axios';
-import { readEnvelope, readFailure } from '../customer/contract.mjs';
-
+import { call, Group, Page, Permission } from '../permissions/api';
+export type AuthorizationApiError = {
+  status: number;
+  message: string;
+  requestId?: string;
+};
 export type AuthorizationRole = {
   roleId: string;
-  enterpriseId: string;
   name: string;
   code: string;
   status: string;
-  capabilityIds: string[];
+  permissionIds: string[];
   version: number;
-};
-export type AuthorizationResource = {
-  httpMethod: string;
-  normalizedPath: string;
-  permissionCode: string;
-  resourceType: string;
-  configurable: boolean;
 };
 export type UserRoleAssignment = {
   username: string;
-  enterpriseId: string;
   roleIds: string[];
-  deniedCapabilityCodes: string[];
+  sources: {
+    permissionId: string;
+    permissionName: string;
+    roleId: string;
+    roleName: string;
+  }[];
   version: number;
 };
-export type AuthorizationApiError = { status: number; code: string; message: string; requestId: string };
-
-async function request<T>(call: () => Promise<{ data: unknown; status: number }>): Promise<T> {
-  try { return readEnvelope((await call()).data, 200) as T; }
-  catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    throw readFailure(error.response?.data, error.response?.status || 0, String(error.response?.headers?.['x-request-id'] || '')) as AuthorizationApiError;
+const key = () =>
+  `ui-roles-${Array.from(crypto.getRandomValues(new Uint32Array(4)))
+    .map((n) => n.toString(16))
+    .join('')}`;
+export const listRoles = (d: string) => pages<AuthorizationRole>(d, '/roles');
+export const createRole = (
+  d: string,
+  name: string,
+  code: string,
+  permissionIds: string[]
+) =>
+  call<AuthorizationRole>(
+    d,
+    '/roles',
+    'POST',
+    { name, code, permissionIds },
+    undefined,
+    key()
+  );
+export const saveRolePermissions = (
+  d: string,
+  role: AuthorizationRole,
+  permissionIds: string[]
+) =>
+  call<AuthorizationRole>(
+    d,
+    `/roles/${encodeURIComponent(role.roleId)}/permissions`,
+    'PUT',
+    { permissionIds },
+    role.version,
+    key()
+  );
+export const getUserRoleAssignment = (d: string, name: string) =>
+  call<UserRoleAssignment>(d, `/users/${encodeURIComponent(name)}/roles`);
+export const assignUserRoles = (
+  d: string,
+  name: string,
+  roleIds: string[],
+  version: number
+) =>
+  call<UserRoleAssignment>(
+    d,
+    `/users/${encodeURIComponent(name)}/roles`,
+    'PUT',
+    { roleIds },
+    version,
+    key()
+  );
+async function pages<T>(d: string, path: string): Promise<T[]> {
+  const items: T[] = [];
+  for (let page = 1; ; page++) {
+    const result = await call<Page<T>>(d, `${path}?page=${page}&size=200`);
+    items.push(...result.items);
+    if (items.length >= result.total) return items;
+    if (!result.items.length) throw new Error('权限目录发生变化，请刷新后重试');
   }
 }
-
-export const listRoles = (enterpriseId: string) => request<AuthorizationRole[]>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/roles`));
-export const listAuthorizationResources = () => request<{ items: AuthorizationResource[] }>(() => axios.get('/api/v1/platform/interface-resources'));
-export const createRole = (enterpriseId: string, name: string, code: string, capabilityIds: string[]) => request<AuthorizationRole>(() => axios.post(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/roles`, { name, code, capabilityIds }, { headers: { 'Idempotency-Key': `ui-role-${Date.now()}` } }));
-export const getUserRoleAssignment = (enterpriseId: string, username: string) => request<UserRoleAssignment>(() => axios.get(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/users/${encodeURIComponent(username)}/roles`)).catch((error: AuthorizationApiError) => {
-  if (error.status === 409 && error.code === 'SUMMER_AUTHORIZATION_CONFLICT') return null;
-  throw error;
-});
-export const assignUserRoles = (enterpriseId: string, username: string, roleIds: string[], deniedCapabilityCodes: string[], version: number) => request<UserRoleAssignment>(() => axios.put(`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/users/${encodeURIComponent(username)}/roles`, { roleIds, deniedCapabilityCodes }, { headers: { 'If-Match': `"${version}"`, 'Idempotency-Key': `ui-assignment-${Date.now()}` } }));
+export const listPermissionChoices = (d: string) =>
+  pages<Permission>(d, '/permissions');
+export const listPermissionGroups = (d: string) =>
+  pages<Group>(d, '/permission-groups');

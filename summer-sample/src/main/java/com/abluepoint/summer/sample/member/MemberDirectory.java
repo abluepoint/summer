@@ -9,9 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 /** Persisted membership data. Provisioning callers must establish the authenticated subject explicitly. */
 @Service
 public class MemberDirectory {
+    private final org.springframework.context.ApplicationEventPublisher publisher;
     private final EnterpriseMemberRepository repository;
     private final EnterpriseRegistry enterprises;
-    public MemberDirectory(EnterpriseMemberRepository repository, EnterpriseRegistry enterprises, @org.springframework.beans.factory.annotation.Value("${summer.security.authorization-server.user.username:}") String bootstrapUsername) {
+    public MemberDirectory(org.springframework.context.ApplicationEventPublisher publisher, EnterpriseMemberRepository repository, EnterpriseRegistry enterprises, @org.springframework.beans.factory.annotation.Value("${summer.security.authorization-server.user.username:}") String bootstrapUsername) {
+        this.publisher = publisher;
         this.repository = repository; this.enterprises = enterprises;
         seed("member-alice", "alice", "Alice Zhang", "alice@example.test", "ACTIVE");
         seed("member-bob", "bob", "Bob Li", "bob@example.test", "DISABLED");
@@ -50,7 +52,8 @@ public class MemberDirectory {
         return view(repository.saveAndFlush(new EnterpriseMemberEntity(enterpriseId, memberId, subject, displayName, email, "ACTIVE")));
     }
     @Transactional
-    void changeStatus(String enterpriseId, String memberId, String status) {
+    public void changeStatus(String enterpriseId, String memberId, String status) {
+        publisher.publishEvent(new MembershipStatusChanging(enterpriseId,memberId));
         var member = repository.findByEnterpriseIdAndMemberId(enterpriseId, memberId).orElseThrow();
         member.status = status;
         repository.saveAndFlush(member);
@@ -62,5 +65,6 @@ public class MemberDirectory {
     private static Member view(EnterpriseMemberEntity entity) {
         return new Member(entity.enterpriseId, entity.memberId, entity.subject, entity.displayName, entity.email, entity.status, entity.version);
     }
+    public record MembershipStatusChanging(String enterpriseId,String memberId) {}
     public record Member(String enterpriseId, String memberId, String subject, String displayName, String email, String status, long version) {}
 }

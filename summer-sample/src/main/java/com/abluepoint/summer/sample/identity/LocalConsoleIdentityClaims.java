@@ -58,6 +58,16 @@ class LocalConsoleIdentityClaims {
                 claims.put("platform_capabilities", List.of());
             }
         }
+        // New-mode memberships come from current membership facts, independently of legacy grants.
+        var managedDomains=jdbc.queryForList("select domain_key from summer_authorization_domain where engine_mode='MANAGED' and domain_key like 'ENTERPRISE:%'",String.class);
+        List<Map<String,Object>> visibleMemberships=new ArrayList<>();
+        if(claims.get("enterprise_memberships") instanceof Collection<?> values)for(Object value:values) {
+            if(value instanceof Map<?,?> member && !managedDomains.contains("ENTERPRISE:"+member.get("enterpriseId"))) {
+                Map<String,Object> copy=new LinkedHashMap<>();member.forEach((k,v)->copy.put(k.toString(),v));visibleMemberships.add(copy);
+            }
+        }
+        for(var row:jdbc.queryForList("select m.enterprise_id from summer_enterprise_member m join summer_enterprise e on e.enterprise_id=m.enterprise_id join summer_authorization_domain d on d.domain_key=concat('ENTERPRISE:',m.enterprise_id) where m.subject=? and m.status='ACTIVE' and e.status='ACTIVE' and d.engine_mode='MANAGED'",username))visibleMemberships.add(Map.of("enterpriseId",row.get("enterprise_id"),"status","ACTIVE"));
+        claims.put("enterprise_memberships",visibleMemberships);
         claims.remove("organization_id");
         claims.remove("organization_context");
         claims.remove("active_enterprise_id");

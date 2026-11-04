@@ -124,6 +124,10 @@ summer:
             - profile
             - customer.read
             - customer.write
+            - enterprise.roles.read
+            - enterprise.roles.write
+            - platform.capabilities.read
+            - platform.capabilities.write
     resource-server:
       enabled: true
       protected-paths:

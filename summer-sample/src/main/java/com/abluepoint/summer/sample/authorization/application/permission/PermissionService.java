@@ -452,6 +452,22 @@ public class PermissionService {
                         400,
                         "Enabled DATA requires validated data details; not available in this"
                             + " phase");
+            if (!create
+                    && db.queryForObject(
+                                    "select count(*) from summer_permission_resource mine join"
+                                            + " summer_permission_resource other on other.domain_key=mine.domain_key and"
+                                            + " other.resource_type=mine.resource_type and"
+                                            + " other.resource_id=mine.resource_id join summer_permission p on"
+                                            + " p.domain_key=other.domain_key and p.permission_id=other.permission_id"
+                                            + " where mine.domain_key=? and mine.permission_id=? and p.permission_id<>?"
+                                            + " and p.access_mode<>?",
+                                    Integer.class,
+                                    d.key(),
+                                    id,
+                                    id,
+                                    mode)
+                            > 0)
+                throw fail(409, "All permissions of a resource must retain the same access mode");
             if (create) {
                 if (db.queryForObject(
                                 "select count(*) from summer_permission_identity where domain_key=?"

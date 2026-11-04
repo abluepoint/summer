@@ -156,14 +156,14 @@ public class AuthorizationService {
         capabilityRepository.findById(c.id).ifPresent(entity -> { entity.updateStatus(status, c.version); capabilityRepository.save(entity); }); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_" + status, rid, a); changeEvents.enqueue(e, "CAPABILITY", id, "CAPABILITY_" + status, c.version, rid); return out;
     }
 
-    synchronized List<RoleView> roles(String e, Authentication a) { require(e, a, "enterprise.roles.read"); return roles.values().stream().filter(x -> e.equals(x.enterpriseId)).map(this::roleView).toList(); }
+    synchronized List<RoleView> roles(String e, Authentication a) { require(e, a, "enterprise.roles.read"); return roles.values().stream().filter(x -> e.equals(x.enterpriseId) && legacyRoleOwner(e, x.id)).map(this::roleView).toList(); }
     synchronized RoleView role(String e, String id, Authentication a) { require(e, a, "enterprise.roles.read"); return roleView(role(e, id)); }
     @Transactional
     synchronized RoleView createRole(String e, RoleCreateRequest req, String key, String rid, Authentication a) {
         require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
         validateRole(req == null ? null : req.name(), req == null ? null : req.code()); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role is required"); List<String> ids = resolveCapabilities(e, req.capabilityIds(), req.bundleId());
         if (roles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role code already exists");
-        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); changeEvents.enqueue(e, "ROLE", r.id, "ROLE_CREATED", r.version, rid); return out;
+        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); changeEvents.enqueueEnterprise(e, "ROLE", r.id, "ROLE_CREATED", r.version, rid); return out;
     }
 
     @Transactional
@@ -174,12 +174,12 @@ public class AuthorizationService {
         if (req != null && req.code() != null) { if (blank(req.code())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code is required"); r.code = req.code().trim(); }
         if (req != null && req.status() != null) r.status = req.status(); if (req != null && (req.capabilityIds() != null || req.bundleId() != null)) r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), req.bundleId()); if (req != null && req.bundleId() != null) r.bundleId = req.bundleId();
         persistRole(r); committed(() -> roles.put(r.id, r));
-        RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_UPDATED", rid, a); changeEvents.enqueue(e, "ROLE", id, "ROLE_UPDATED", r.version, rid); return out;
+        RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_UPDATED", rid, a); changeEvents.enqueueEnterprise(e, "ROLE", id, "ROLE_UPDATED", r.version, rid); return out;
     }
 
     @Transactional
     synchronized RoleView setRoleCapabilities(String e, String id, RoleCapabilitiesRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = claimRoleVersion(e, id, ifm); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); changeEvents.enqueue(e, "ROLE", id, "ROLE_CAPABILITIES_UPDATED", r.version, rid); return out;
+        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = claimRoleVersion(e, id, ifm); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); changeEvents.enqueueEnterprise(e, "ROLE", id, "ROLE_CAPABILITIES_UPDATED", r.version, rid); return out;
     }
 
     synchronized List<BundleView> bundles(String e, Authentication a) { require(e, a, "enterprise.bundles.read"); return bundles.values().stream().filter(x -> e.equals(x.enterpriseId)).map(this::bundleView).toList(); }
@@ -241,7 +241,7 @@ public class AuthorizationService {
             receipts.put("user-assignment:" + assignmentKey + ":" + key, new Receipt(fingerprint, view));
         });
         record(enterpriseId, "user:" + username, "USER_ROLES_UPDATED", requestId, authentication);
-        changeEvents.enqueue(enterpriseId, "USER_BINDING", username, "USER_ROLES_UPDATED", updated.version, requestId);
+        changeEvents.enqueueEnterprise(enterpriseId, "USER_BINDING", username, "USER_ROLES_UPDATED", updated.version, requestId);
         return view;
     }
 
@@ -249,6 +249,7 @@ public class AuthorizationService {
         require(enterpriseId, authentication, "enterprise.roles.read");
         UserAssignmentRecord record = userAssignments.get(enterpriseId + ":" + username);
         if (record == null) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "User assignment not found");
+        record.roleIds.forEach(roleId -> requireLegacyRoleOwner(enterpriseId, roleId));
         return userAssignmentView(record);
     }
 
@@ -398,7 +399,17 @@ public class AuthorizationService {
         if (c == null || (c.enterpriseId != null && !e.equals(c.enterpriseId))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability not found");
         return c;
     }
-    private RoleRecord role(String e, String id) { RoleRecord r = roles.get(id); if (r == null || !e.equals(r.enterpriseId)) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found"); return r; }
+    // The old enterprise_id string cannot distinguish PLATFORM:platform from ENTERPRISE:platform.
+    // Unbridged legacy roles and same-enterprise expand roles remain compatible.
+    private boolean legacyRoleOwner(String enterpriseId, String roleId) {
+        return membershipJdbc.queryForList("select domain_key from summer_permission_role where role_id=?", String.class, roleId)
+                .stream().allMatch(("ENTERPRISE:" + enterpriseId)::equals);
+    }
+    private void requireLegacyRoleOwner(String enterpriseId, String roleId) {
+        if (!legacyRoleOwner(enterpriseId, roleId))
+            throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found");
+    }
+    private RoleRecord role(String e, String id) { RoleRecord r = roles.get(id); if (r == null || !e.equals(r.enterpriseId) || !legacyRoleOwner(e, id)) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found"); return r; }
     private BundleRecord bundle(String e, String id) { BundleRecord b = bundles.get(id); if (b == null || !e.equals(b.enterpriseId)) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Bundle not found"); return b; }
     private void validateRole(String n, String c) { validateNameCode(n, c); }
     private void validateNameCode(String n, String c) { if (blank(n) || blank(c)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name and code are required"); }
@@ -462,6 +473,7 @@ public class AuthorizationService {
     }
 
     private RoleRecord claimRoleVersion(String enterpriseId, String id, String ifMatch) {
+        requireLegacyRoleOwner(enterpriseId, id);
         AuthorizationRoleEntity current = roleRepository.findById(id)
                 .filter(entity -> enterpriseId.equals(entity.enterpriseId()))
                 .orElseThrow(() -> SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found"));
@@ -471,6 +483,7 @@ public class AuthorizationService {
         // The database chooses the winner before any audit, outbox or local projection is changed.
         if (roleRepository.claimVersion(id, enterpriseId, current.version()) != 1)
             throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
+        requireLegacyRoleOwner(enterpriseId, id);
         return updated;
     }
 
@@ -485,6 +498,31 @@ public class AuthorizationService {
                         synchronized (AuthorizationService.this) { update.run(); }
                     }
                 });
+    }
+
+    /** Compatibility dispatcher; new-mode callers never enter this legacy writer. */
+    public Long legacyRoleVersion(Object result) {
+        if(result instanceof RoleView r)return r.version();
+        if(result instanceof UserRoleAssignmentView u)return u.version();
+        return null;
+    }
+    @org.springframework.transaction.annotation.Transactional
+    public Object legacyRoleRequest(String e, Authentication auth, String method, String target, String id,
+                                    Map<String,Object> body, String condition, String key, String rid) {
+        var json = new tools.jackson.databind.ObjectMapper();
+        if (!method.equals("GET")) membershipJdbc.queryForList(
+                "select revision from summer_authorization_domain where domain_key=? for update", "ENTERPRISE:" + e);
+        if (id != null && !target.equals("user")) requireLegacyRoleOwner(e, id);
+        if (target.equals("user") && body.get("roleIds") instanceof Collection<?> ids)
+            ids.stream().filter(String.class::isInstance).map(String.class::cast)
+                    .forEach(roleId -> requireLegacyRoleOwner(e, roleId));
+        if (target.equals("user")) return method.equals("GET") ? userAssignment(e,id,auth)
+                : assignUserRoles(e,id,json.convertValue(body,UserRoleAssignmentRequest.class),condition,key,rid,auth);
+        if (target.equals("capabilities")) return method.equals("GET") ? role(e,id,auth).capabilityIds()
+                : setRoleCapabilities(e,id,json.convertValue(body,RoleCapabilitiesRequest.class),condition,key,rid,auth);
+        if (method.equals("GET")) return id==null ? roles(e,auth) : role(e,id,auth);
+        if (method.equals("POST")) return createRole(e,json.convertValue(body,RoleCreateRequest.class),key,rid,auth);
+        return updateRole(e,id,json.convertValue(body,RoleUpdateRequest.class),condition,key,rid,auth);
     }
 
     private static long revision(List<?> x) { return x.hashCode() & 0x7fffffffL; }

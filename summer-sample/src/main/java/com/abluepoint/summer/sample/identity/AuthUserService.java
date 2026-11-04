@@ -31,6 +31,7 @@ class AuthUserService implements SummerIdentityStore {
         this.bootstrapPassword = bootstrapPassword;
     }
 
+    @org.springframework.core.annotation.Order(0)
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     void bootstrapFirstAdmin() {

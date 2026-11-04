@@ -69,7 +69,7 @@ export default function PermissionsPage() {
       </Space>
       {(platform || tenant.enterpriseId) && (
         <Content
-          key={platform ? 'platform' : tenant.enterpriseId}
+          key={platform ? 'PLATFORM:platform' : `ENTERPRISE:${tenant.enterpriseId}`}
           base={
             platform
               ? '/api/v1/platform'
