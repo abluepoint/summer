@@ -20,15 +20,17 @@ public class AuthorizationChangeEventService {
     private final AuthorizationChangeEventOutboxRepository repository;
     private final ObjectMapper objectMapper;
     private final AuthorizationChangeEventReceiptRepository receipts;
+    private final AuthorizationDomainVersions versions;
 
-    AuthorizationChangeEventService(AuthorizationChangeEventOutboxRepository repository, ObjectMapper objectMapper, AuthorizationChangeEventReceiptRepository receipts) {
-        this.repository = repository; this.objectMapper = objectMapper; this.receipts = receipts;
+    AuthorizationChangeEventService(AuthorizationChangeEventOutboxRepository repository, ObjectMapper objectMapper, AuthorizationChangeEventReceiptRepository receipts, AuthorizationDomainVersions versions) {
+        this.repository = repository; this.objectMapper = objectMapper; this.receipts = receipts; this.versions = versions;
     }
 
     @Transactional
     public void enqueue(String enterpriseId, String resourceType, String resourceId, String eventType,
                         long version, String requestId) {
         if (enterpriseId == null || enterpriseId.isBlank()) throw new IllegalArgumentException("enterpriseId is required");
+        versions.advance(enterpriseId);
         Instant now = Instant.now();
         String eventId = UUID.randomUUID().toString();
         AuthorizationChangeEventBody body = new AuthorizationChangeEventBody(eventId, enterpriseId, resourceType,

@@ -30,7 +30,7 @@ class AuthorizationChangeEventTerminalTest {
         when(outbox.findById("event")).thenReturn(Optional.of(row));
         when(outbox.saveAndFlush(row)).thenReturn(row);
         when(receipts.findById("event")).thenReturn(Optional.of(receipt));
-        new AuthorizationChangeEventService(outbox, new ObjectMapper(), receipts).retry("ent-acme", "event");
+        new AuthorizationChangeEventService(outbox, new ObjectMapper(), receipts, mock(AuthorizationDomainVersions.class)).retry("ent-acme", "event");
         verify(receipts).delete(receipt);
         assertThat(row.status()).isEqualTo(AuthorizationChangeEventStatus.PENDING);
     }

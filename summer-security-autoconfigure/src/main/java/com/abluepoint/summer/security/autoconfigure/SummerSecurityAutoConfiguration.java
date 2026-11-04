@@ -303,7 +303,8 @@ public class SummerSecurityAutoConfiguration {
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler,
             ObjectProvider<SecurityContextRepository> sessionStores,
-            ObjectProvider<org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter> jwtConverters
+            ObjectProvider<org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter> jwtConverters,
+            ObjectProvider<com.abluepoint.summer.security.authorization.ResourceRequestAuthorization> resourceAuthorization
     ) throws Exception {
         var bearerConverter = new org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationConverter();
         // The default WebAuthenticationDetails(request) reads HttpSession even for
@@ -314,13 +315,24 @@ public class SummerSecurityAutoConfiguration {
         if (protectedPaths.length == 0) {
             throw new IllegalStateException("At least one summer.security.resource-server.protected-paths entry is required");
         }
+        org.springframework.security.authorization.AuthorizationManager<org.springframework.security.web.access.intercept.RequestAuthorizationContext>
+                selectedAuthorization = resourceAuthorization.getIfAvailable();
+        if (selectedAuthorization == null) {
+            selectedAuthorization = org.springframework.security.authorization.AuthenticatedAuthorizationManager.authenticated();
+        }
+        final var selected = selectedAuthorization;
+        org.springframework.security.authorization.AuthorizationManager<org.springframework.security.web.access.intercept.RequestAuthorizationContext>
+                failClosedAuthorization = (authentication, context) -> {
+                    var result = selected.authorize(authentication, context);
+                    return result == null ? new org.springframework.security.authorization.AuthorizationDecision(false) : result;
+                };
         http.securityMatcher(protectedPaths)
                 .addFilterBefore(new com.abluepoint.summer.security.autoconfigure.storage.BearerSessionIsolationFilter(),
                         org.springframework.security.web.context.SecurityContextHolderFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         // Logout remains idempotent when a Product Session has expired.
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/session").permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().access(failClosedAuthorization))
                 // Keep the resource server bearer-token path compatible with the
                 // local form-login session used by the sample console. A bearer
                 // token remains supported, while a successful /login can also

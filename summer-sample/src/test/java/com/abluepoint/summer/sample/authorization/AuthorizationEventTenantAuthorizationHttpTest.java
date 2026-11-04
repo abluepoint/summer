@@ -140,7 +140,7 @@ class AuthorizationEventTenantAuthorizationHttpTest {
 
     @Test void anotherGlobalControllerIgnoresEnterpriseQueryAndKeepsSampleBoundary() throws Exception {
         var service = org.mockito.Mockito.mock(AuthorizationService.class);
-        var interceptor = new AuthorizationRequestInterceptor(service, () -> "global-event-control");
+        var interceptor = LegacyInterceptorFixture.create(service, () -> "global-event-control");
         var auth = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(
                 org.springframework.security.oauth2.jwt.Jwt.withTokenValue("synthetic").header("alg", "none").subject(subject).build());
         org.mockito.Mockito.when(service.decision(auth, A, READ, "global-event-control"))

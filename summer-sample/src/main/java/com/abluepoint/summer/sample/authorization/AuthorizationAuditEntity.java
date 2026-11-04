@@ -27,7 +27,12 @@ class AuthorizationAuditEntity {
     @Column(name = "request_id", length = 120) private String requestId;
     @Column(name = "occurred_at", nullable = false) private Instant occurredAt;
 
+    @Column(name = "authorization_resource_id", length = 96) private String authorizationResourceId;
+    @Column(name = "authorization_revision") private Long authorizationRevision;
     protected AuthorizationAuditEntity() {}
+    void evidence(String resourceId, long revision) {
+        this.authorizationResourceId = resourceId; this.authorizationRevision = revision;
+    }
 
     AuthorizationAuditEntity(String enterpriseId, String resourceId, String action, String principal,
                              String requestId, String permissionCode, String decision, String reasonCode) {
@@ -52,6 +57,8 @@ class AuthorizationAuditEntity {
         if (!permissionCode.isEmpty()) result.put("permissionCode", permissionCode);
         if (!decision.isEmpty()) result.put("decision", decision);
         if (!reasonCode.isEmpty()) result.put("reasonCode", reasonCode);
+        if (authorizationResourceId != null) result.put("resourceId", authorizationResourceId);
+        if (authorizationRevision != null) result.put("authorizationRevision", authorizationRevision);
         return Map.copyOf(result);
     }
 

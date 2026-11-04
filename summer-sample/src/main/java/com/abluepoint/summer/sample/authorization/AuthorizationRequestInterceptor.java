@@ -33,10 +33,13 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
             "POST:/api/v1/invitations/{token}:reject", "enterprise.invitation.accept");
     private final AuthorizationService authorizationService;
     private final RequestIdAccessor requestId;
+    private final UnifiedAuthorizationService unified;
+    private final LegacyResourceAdapter resources;
 
-    AuthorizationRequestInterceptor(AuthorizationService authorizationService, RequestIdAccessor requestId) {
+    AuthorizationRequestInterceptor(AuthorizationService authorizationService, RequestIdAccessor requestId, UnifiedAuthorizationService unified, LegacyResourceAdapter resources) {
         this.authorizationService = authorizationService;
         this.requestId = requestId;
+        this.unified = unified; this.resources = resources;
     }
 
     @Override
@@ -77,9 +80,10 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
                 || controllerClass.startsWith("com.abluepoint.summer.sample.dictionary."))) {
             enterpriseId = EnterpriseRequestContext.resolve(authentication);
         }
-        AuthorizationService.Decision decision = authorizationService.decision(authentication, enterpriseId, permissionCode,
-                requestId.currentRequestId());
-        if (!decision.allowed()) throw new AccessDeniedException("Authorization denied: " + decision.reasonCode());
+        var decision = unified.decide(new com.abluepoint.summer.security.authorization.ResourceAuthorization.Request(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
+                authentication, resources.resolve(request, method), requestId.currentRequestId()));
+        if (!decision.allowed()) throw new AccessDeniedException("Authorization denied: " + decision.reason());
         return true;
     }
 
