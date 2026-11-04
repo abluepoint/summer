@@ -42,6 +42,8 @@
 | [0037](0037-publish-dictionary-items-and-groups-as-one-version.md) | 字典项和全部字典组共用字典发布版本 | 补充字典快照ADR0027；草稿隔离，整体发布及回滚，分组无独立版本；详情随当前生效版本，新增分组及通用组件尚未实现 |
 | [0038](0038-evolve-existing-dictionaries-through-effective-snapshots.md) | 演进既有业务字典并统一生效读取边界 | 部分替代ADR0027的无快照编辑行读取例外；保留旧公开选项和组织覆盖，写入接入修订保护，迁移及验收见业务字典技术规格，尚未实现 |
 
+| [0039](0039-manage-permissions-independently-of-resources.md) | 权限独立管理，菜单权限与接口权限分别授权 | 多级混合分组、权限单组归属；只通过角色授予，菜单与接口各自多对多关联并采用OR；访问方式属于权限，数据范围采用五种预设，保存即对后续请求生效；部分替代0026/0030并补充0028/0032；已定稿，技术方案见 [Issue #199](https://github.com/abluepoint/summer/issues/199)，尚未实现 |
+
 ## 来源与适用范围
 
 2026-09-22 整理时，本工作树只有 ADR 0001–0013。通过 `git worktree list` 找到 `core` 工作树中的未提交 ADR 0014–0016，并与 2026-09-08 的 [Issue #69](https://github.com/abluepoint/summer/issues/69) 核对；本次将三份 ADR 原文同步到 `summer4`，同时补入其新增领域词汇。未修改来源工作树，也未把未提交文件描述为远端提交。
