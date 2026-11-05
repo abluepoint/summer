@@ -38,7 +38,7 @@ public class ManagedPermissionAccess {
     var users =
         db.queryForList(
             "select active from summer_auth_user where username=?", Boolean.class, a.getName());
-    if (!users.isEmpty() && !users.getFirst()) return false;
+    if (users.size() != 1 || !Boolean.TRUE.equals(users.getFirst())) return false;
     return !d.kind().equals("ENTERPRISE")
         || db.queryForObject(
                 "select count(*) from summer_enterprise_member m join summer_enterprise e on"
