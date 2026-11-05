@@ -132,6 +132,15 @@ public class ApplicationQueryService {
     }
 
     public Object preview(Domain domain, String resource, Map<String, Object> body) {
+        return previewCurrent(domain, resource, body, null);
+    }
+
+    public Object previewPermission(Domain domain, String resource, Map<String, Object> body, String permissionId) {
+        if (permissionId == null || permissionId.isBlank()) throw invalid("A current permission identity is required");
+        return previewCurrent(domain, resource, body, permissionId);
+    }
+
+    private Object previewCurrent(Domain domain, String resource, Map<String, Object> body, String permissionId) {
         requireAdapter(resource);
         if (!body.keySet().equals(Set.of("subject", "recordId", "action"))
                 || !(body.get("subject") instanceof String subject)
@@ -141,12 +150,7 @@ public class ApplicationQueryService {
             throw invalid("Preview requires only a persisted subject, recordId and action");
         }
         var target = UsernamePasswordAuthenticationToken.authenticated(subject, "", List.of());
-        return reads.read(
-                domain,
-                resource,
-                action,
-                target,
-                scope -> {
+        java.util.function.Function<DataReadService.Scope, Object> query = scope -> {
                     // Platform subjects must exist locally; enterprise subjects can be persisted
                     // external members.
                     boolean persisted =
@@ -175,7 +179,9 @@ public class ApplicationQueryService {
                                     > 0,
                             "revision",
                             scope.revision());
-                });
+                };
+        return permissionId == null ? reads.read(domain, resource, action, target, query)
+                : reads.readPermission(domain, resource, action, target, permissionId, query);
     }
 
     public Object batchRead(

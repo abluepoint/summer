@@ -102,7 +102,7 @@ public class DataScopeService {
         auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterpriseId, resource,
                 entity.version(), checksum, "DATA_SCOPE_POLICY_UPDATED", principal(auth), requestId));
         audit.recordTenantResourceSuccess(enterpriseId, "data-scope:" + enterpriseId + ":" + resource, "DATA_SCOPE_POLICY_UPDATED", requestId, auth);
-        changeEvents.enqueue(enterpriseId, "DATA_SCOPE", resource, "DATA_SCOPE_POLICY_UPDATED", entity.version(), requestId);
+        changeEvents.enqueueEnterprise(enterpriseId, "DATA_SCOPE", resource, "DATA_SCOPE_POLICY_UPDATED", entity.version(), requestId);
         return view(entity);
     }
 
@@ -199,7 +199,7 @@ public class DataScopeService {
         auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterprise, resource,
                 entity.version, entity.checksum, "DATA_SCOPE_BINDING_UPDATED", principal(auth), requestId));
         audit.recordTenantResourceSuccess(enterprise, "data-scope:" + enterprise + ":" + resource, "DATA_SCOPE_BINDING_UPDATED", requestId, auth);
-        changeEvents.enqueue(enterprise, "DATA_SCOPE", entity.id, "DATA_SCOPE_BINDING_UPDATED", entity.version, requestId);
+        changeEvents.enqueueEnterprise(enterprise, "DATA_SCOPE", entity.id, "DATA_SCOPE_BINDING_UPDATED", entity.version, requestId);
         return bindingView(entity);
     }
 

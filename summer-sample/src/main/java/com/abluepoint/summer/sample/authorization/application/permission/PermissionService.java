@@ -340,13 +340,13 @@ public class PermissionService {
         if (key == null || !key.matches("[A-Za-z0-9._:-]{1,128}"))
             throw fail(400, "Idempotency-Key is required (1-128 safe characters)");
         // This shared lock protocol is also the serialization point for later association writers.
-        db.update(
-                "insert into summer_authorization_domain(domain_key,engine_mode,revision) values"
-                    + " (?,'LEGACY',0) on duplicate key update domain_key=domain_key",
+        var state = db.queryForList(
+                "select engine_mode,revision from summer_authorization_domain where domain_key=? for update",
                 d.key());
-        db.queryForList(
-                "select revision from summer_authorization_domain where domain_key=? for update",
-                d.key());
+        if (state.size() != 1 || !(state.getFirst().get("revision") instanceof Number revision)
+                || revision.longValue() < 0
+                || !Set.of("LEGACY", "MANAGED").contains(state.getFirst().get("engine_mode")))
+            throw new org.springframework.security.access.AccessDeniedException("Unconfirmed authorization domain state");
         String operation =
                 (group ? "groups" : "permissions")
                         + ":"

@@ -24,7 +24,7 @@ class AuthorizationAuditEntity {
     @Column(name = "permission_code", nullable = false, length = 200) private String permissionCode;
     @Column(name = "decision", nullable = false, length = 16) private String decision;
     @Column(name = "reason_code", nullable = false, length = 64) private String reasonCode;
-    @Column(name = "request_id", length = 120) private String requestId;
+    @Column(name = "request_id", length = 128) private String requestId;
     @Column(name = "occurred_at", nullable = false) private Instant occurredAt;
 
     @Column(name = "authorization_resource_id", length = 96) private String authorizationResourceId;
@@ -54,6 +54,9 @@ class AuthorizationAuditEntity {
         result.put("requestId", safe(requestId));
         result.put("principal", principal);
         result.put("at", occurredAt.toString());
+        boolean fullDomain = enterpriseId.startsWith("ENTERPRISE:") || enterpriseId.equals("PLATFORM:platform");
+        result.put("domainProvenance", fullDomain ? "FULL_DOMAIN_KEY" : "LEGACY_UNRESOLVED");
+        if (fullDomain) result.put("domainKey", enterpriseId);
         if (!permissionCode.isEmpty()) result.put("permissionCode", permissionCode);
         if (!decision.isEmpty()) result.put("decision", decision);
         if (!reasonCode.isEmpty()) result.put("reasonCode", reasonCode);

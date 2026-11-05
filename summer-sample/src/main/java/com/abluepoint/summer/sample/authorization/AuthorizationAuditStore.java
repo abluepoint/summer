@@ -29,13 +29,19 @@ public class AuthorizationAuditStore {
     public void decision(String enterpriseId, String resourceId, String action, String requestId, String principal,
                          Map<String, Object> details) {
         // Decisions are facts independent of the business outcome. Do not read or lock mutation entities here.
-        var row = new AuthorizationAuditEntity(enterpriseId, resourceId, action, principal, requestId,
-                value(details, "permissionCode"), value(details, "decision"), value(details, "reasonCode"));
         ResourceEvidence evidence = resourceEvidence.get();
-        boolean sameDecision = evidence != null && Objects.equals(enterpriseId, evidence.request.domain().id())
+        boolean sameDecision = evidence != null
+                && ("PLATFORM".equals(evidence.request.domain().kind())
+                    || Objects.equals(enterpriseId, evidence.request.domain().id())
+                    || Objects.equals(enterpriseId, evidence.request.domain().key()))
                 && Objects.equals(principal, evidence.principal()) && Objects.equals(requestId, evidence.request.requestId())
                 && Objects.equals(resourceId, "user:" + principal)
                 && ("AUTHORIZATION_ALLOWED".equals(action) || "AUTHORIZATION_DENIED".equals(action));
+        // The bound policy request supplies the trusted kind; a legacy platform role can belong to
+        // an enterprise, so its bare audit argument cannot identify the decision's domain.
+        var row = new AuthorizationAuditEntity(sameDecision ? evidence.request.domain().key() : enterpriseId,
+                resourceId, action, principal, requestId, value(details, "permissionCode"),
+                value(details, "decision"), value(details, "reasonCode"));
         if (sameDecision) row.evidence(evidence.request.resource().id(), evidence.revision);
         repository.saveAndFlush(row);
         if (sameDecision) evidence.recorded = true;
@@ -70,13 +76,19 @@ public class AuthorizationAuditStore {
     public void resourceDecision(com.abluepoint.summer.security.authorization.ResourceAuthorization.Request request,
                                  com.abluepoint.summer.security.authorization.ResourceAuthorization.Decision decision) {
         String principal = request.principal() == null ? "" : request.principal().getName();
-        var row = new AuthorizationAuditEntity(request.domain().id(), "user:" + principal,
+        var row = new AuthorizationAuditEntity(request.domain().key(), "user:" + principal,
                 decision.allowed() ? "RESOURCE_AUTHORIZATION_ALLOWED" : "RESOURCE_AUTHORIZATION_DENIED",
                 principal, request.requestId(), "", decision.allowed() ? "ALLOW" : "DENY", decision.reason());
         row.evidence(request.resource().id(), decision.revision());
         repository.saveAndFlush(row);
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> read(ResourceAuthorization.Domain domain, String resourceId) {
+        return read(domain.key(), resourceId);
+    }
+
+    /** Exact stored key only. Bare historic rows remain unresolved, never unioned with a full key. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> read(String enterpriseId, String resourceId) {
         return repository.findByEnterpriseIdAndResourceIdInOrderByAuditIdAsc(enterpriseId, List.of(resourceId, "user:" + resourceId))

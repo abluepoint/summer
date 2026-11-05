@@ -64,6 +64,25 @@ public class ManagedAuthorizationBootstrap {
       if (parts.length != 2)
         throw new IllegalArgumentException("Explicit managed domain key required");
       Domain d = new Domain(parts[0], parts[1]);
+      tx.executeWithoutResult(status -> {
+        var state = db.queryForList(
+            "select engine_mode,revision from summer_authorization_domain where domain_key=? for update",
+            d.key());
+        if (state.size() != 1 || !"MANAGED".equals(state.getFirst().get("engine_mode"))
+            || !(state.getFirst().get("revision") instanceof Number revision) || revision.longValue() < 0
+            || db.queryForObject("select count(*) from summer_permission_bootstrap where domain_key=?",
+                Integer.class, d.key()) != 1)
+          throw new org.springframework.security.access.AccessDeniedException(
+              "Managed domain requires controlled initialization or recovery");
+      });
+    }
+  }
+
+  /**
+   * Preserved seed algorithm for the controlled installation gate. Ordinary startup never calls
+   * this method. It is not itself a new-installation or disaster-recovery authorization boundary.
+   */
+  private void seedNewDomain(Domain d) {
       tx.executeWithoutResult(
           status -> {
             db.update(
@@ -215,6 +234,5 @@ public class ManagedAuthorizationBootstrap {
             db.update(
                 "insert into summer_permission_bootstrap values (?,CURRENT_TIMESTAMP(6))", d.key());
           });
-    }
   }
 }

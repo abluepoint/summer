@@ -19,7 +19,7 @@ class AuthorizationChangeEventOutboxEntity {
     @Column(name = "resource_id", nullable = false, updatable = false, length = 200) private String resourceId;
     @Column(name = "event_type", nullable = false, updatable = false, length = 80) private String eventType;
     @Column(name = "resource_version", nullable = false, updatable = false) private long resourceVersion;
-    @Column(name = "request_id", updatable = false, length = 120) private String requestId;
+    @Column(name = "request_id", updatable = false, length = 128) private String requestId;
     @Lob @Column(name = "payload_json", nullable = false, updatable = false) private String payloadJson;
     @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false, length = 20) private AuthorizationChangeEventStatus status = AuthorizationChangeEventStatus.PENDING;
     @Column(name = "attempts", nullable = false) private int attempts;

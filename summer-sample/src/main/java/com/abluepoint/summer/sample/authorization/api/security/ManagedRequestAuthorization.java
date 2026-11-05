@@ -108,7 +108,7 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
           var resource = resources.registered(match.get().mapping());
           r.setAttribute(MATCH_ATTRIBUTE, resource.id());
           var decision=unified.decide(new ResourceAuthorization.Request(
-              match.get().domain(), a, resource, r.getHeader("X-Request-Id")));
+              match.get().domain(), a, resource, com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(r)));
           return new AuthorizationDecision(decision.allowed());
         }
         // Unknown business extension mappings require explicit runtime adapters.
@@ -176,6 +176,7 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
   }
 
   public void finalExtension(HttpServletRequest request, Object handler, Authentication actor) {
+    try {
     if (handler instanceof HandlerMethod) return;
     var matched = resources.extension(request, handler);
     if (matched.isEmpty()) {
@@ -188,16 +189,27 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
     var resource = resources.registered(match.mapping());
     if (!resource.id().equals(request.getAttribute(MATCH_ATTRIBUTE))
         || !unified.decide(new ResourceAuthorization.Request(match.domain(), actor, resource,
-            request.getHeader("X-Request-Id"))).allowed())
+            com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(request))).allowed())
       throw new org.springframework.security.access.AccessDeniedException("Current extension permission required");
+    } catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException e) {
+      throw com.abluepoint.summer.common.error.SummerException.withMessage(
+          com.abluepoint.summer.sample.error.SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE,
+          "The authoritative authorization store is unavailable");
+    }
   }
 
   public boolean finalResource(HttpServletRequest request,Object handler,Authentication actor) {
+    try {
     if (handler instanceof HandlerMethod method) return finalHandler(request,method,actor);
     var match=resources.extension(request,handler);
     if(match.isEmpty() || !access.managed(match.get().domain())) return false;
     finalExtension(request,handler,actor);
     return true;
+    } catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException e) {
+      throw com.abluepoint.summer.common.error.SummerException.withMessage(
+          com.abluepoint.summer.sample.error.SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE,
+          "The authoritative authorization store is unavailable");
+    }
   }
 
   private boolean declaredDelegation(HandlerMethod handler, Authentication actor) {
@@ -252,7 +264,8 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
         && !declaredDelegation(handler, a)) return false;
     boolean allowed =
         unified
-            .decide(new ResourceAuthorization.Request(d, a, resource, r.getHeader("X-Request-Id")))
+            .decide(new ResourceAuthorization.Request(d, a, resource,
+                com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(r)))
             .allowed();
     if (allowed && management && !handler.getBeanType().equals(PermissionAccessController.class))
       access.requireManagement(

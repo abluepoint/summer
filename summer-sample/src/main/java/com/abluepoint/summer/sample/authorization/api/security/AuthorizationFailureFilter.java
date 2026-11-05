@@ -35,6 +35,12 @@ public class AuthorizationFailureFilter extends OncePerRequestFilter {
       if (response.isCommitted()
           || resolver == null
           || resolver.resolveException(request, response, null, failure) == null) throw failure;
+    } catch (ServletException wrapper) {
+      if (response.isCommitted() || !(wrapper.getCause() instanceof SummerException failure))
+        throw wrapper;
+      var resolver = resolvers.getIfAvailable();
+      if (resolver == null
+          || resolver.resolveException(request, response, null, failure) == null) throw wrapper;
     }
   }
 }

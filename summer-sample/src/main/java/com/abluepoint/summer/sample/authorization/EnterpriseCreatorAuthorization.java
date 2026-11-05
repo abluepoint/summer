@@ -39,7 +39,7 @@ class EnterpriseCreatorAuthorization {
                 "ACTIVE", String.join("\n", ids), String.join("\n", CODES), null, 1));
         String jsonRoles = new tools.jackson.databind.ObjectMapper().writeValueAsString(List.of(role));
         bindings.saveAndFlush(new AuthorizationUserBindingEntity("binding-" + UUID.randomUUID(), event.enterpriseId(), event.creatorSubject(), jsonRoles, "[]", 1));
-        audit.mutation(event.enterpriseId(), role, "TENANT_ADMINISTRATOR_CREATED", event.requestId(), event.creatorSubject());
+        audit.mutation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(event.enterpriseId()).key(), role, "TENANT_ADMINISTRATOR_CREATED", event.requestId(), event.creatorSubject());
         changes.enqueue(event.enterpriseId(), "ROLE", role, "TENANT_ADMINISTRATOR_CREATED", 1, event.requestId());
     }
 }

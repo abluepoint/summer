@@ -43,9 +43,12 @@ public class ManagedConsumerAccess
     fresh.setReadOnly(true);
   }
 
-  /** False selects the preserved legacy adapter. A managed denial always throws. */
+  /** False selects only a confirmed explicit LEGACY adapter. Unconfirmed state always throws. */
   public boolean require(Domain domain, Authentication actor, String... scopes) {
-    return Boolean.TRUE.equals(fresh.execute(status -> current(domain, actor, scopes)));
+    try { return Boolean.TRUE.equals(fresh.execute(status -> current(domain, actor, scopes))); }
+    catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException e) {
+      throw unavailable();
+    }
   }
 
   private boolean current(Domain domain, Authentication actor, String... scopes) {
@@ -63,7 +66,7 @@ public class ManagedConsumerAccess
             .getObject()
             .decide(
                 new ResourceAuthorization.Request(
-                    domain, actor, resource, request.getHeader("X-Request-Id")))
+                    domain, actor, resource, com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(request)))
             .allowed()
         || !access.roleAllows(domain, actor, resource.id())) throw denied();
     return true;
@@ -74,15 +77,25 @@ public class ManagedConsumerAccess
   }
 
   public boolean organizationWriteAllowed(Domain domain, Authentication actor) {
-    return Boolean.TRUE.equals(fresh.execute(status -> {
+    try { return Boolean.TRUE.equals(fresh.execute(status -> {
       if (!domain.kind().equals("ENTERPRISE") || !access.managed(domain) || !access.authenticated(actor)
           || !actor.equals(SecurityContextHolder.getContext().getAuthentication())
           || !(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes context))
         return false;
       return operations.getObject().qualify(domain, actor,
           java.util.List.of("organization.create", "organization.update", "organization.delete", "organization.assign"),
-          context.getRequest().getHeader("X-Request-Id")).values().stream().anyMatch(Boolean.TRUE::equals);
-    }));
+          com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(context.getRequest()))
+          .values().stream().anyMatch(Boolean.TRUE::equals);
+    })); }
+    catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException e) {
+      throw unavailable();
+    }
+  }
+
+  private static com.abluepoint.summer.common.error.SummerException unavailable() {
+    return com.abluepoint.summer.common.error.SummerException.withMessage(
+        com.abluepoint.summer.sample.error.SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE,
+        "Current consumer authorization unavailable");
   }
 
   public static boolean delegated(Authentication actor, String... scopes) {

@@ -101,6 +101,19 @@ public class DataReadService {
 
   public <T> T read(
       Domain d, String resource, String action, Authentication a, Function<Scope, T> query) {
+    return readCurrent(d, resource, action, a, null, query);
+  }
+
+  /** A diagnostic can narrow the existing grant set, never supply its own range. */
+  public <T> T readPermission(Domain d, String resource, String action, Authentication a,
+      String permissionId, Function<Scope, T> query) {
+    if (permissionId == null || permissionId.isBlank())
+      throw new AccessDeniedException("A current permission identity is required");
+    return readCurrent(d, resource, action, a, permissionId, query);
+  }
+
+  private <T> T readCurrent(Domain d, String resource, String action, Authentication a,
+      String permissionId, Function<Scope, T> query) {
     var registration = registry.require(resource, action);
     try {
       for (int attempt = 0; attempt < 2; attempt++) {
@@ -130,10 +143,10 @@ public class DataReadService {
                               + " s.domain_key=p.domain_key and"
                               + " s.permission_id=p.permission_id where"
                               + " p.domain_key=? and p.type='DATA' and"
-                              + " s.data_resource_key=? and s.action=?",
-                          d.key(),
-                          resource,
-                          action)) {
+                              + " s.data_resource_key=? and s.action=?"
+                              + (permissionId == null ? "" : " and p.permission_id=?"),
+                          permissionId == null ? new Object[]{d.key(), resource, action}
+                              : new Object[]{d.key(), resource, action, permissionId})) {
                     if (!access.applies(d, a, p)) continue;
                     if ("TENANT_ALL".equals(p.get("scope_preset"))) all = true;
                     else if ("SELF".equals(p.get("scope_preset")) && access.active(d, a))
@@ -215,7 +228,9 @@ public class DataReadService {
         db.queryForList(
             "select engine_mode,revision from summer_authorization_domain where" + " domain_key=?",
             d.key());
-    if (rows.isEmpty()) throw new AccessDeniedException("Unknown authorization domain");
+    if (rows.size() != 1 || !(rows.getFirst().get("revision") instanceof Number revision)
+        || revision.longValue() < 0)
+      throw new AccessDeniedException("Unconfirmed authorization domain state");
     return rows.getFirst();
   }
 }

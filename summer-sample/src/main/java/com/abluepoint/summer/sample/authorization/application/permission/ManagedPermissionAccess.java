@@ -14,19 +14,16 @@ import org.springframework.stereotype.Service;
 public class ManagedPermissionAccess {
   public static final String RESOURCE_ATTRIBUTE = "summer.managed.resource";
   private final JdbcTemplate db;
+  private final com.abluepoint.summer.sample.authorization.AuthorizationDomainVersions versions;
 
-  public ManagedPermissionAccess(JdbcTemplate db) {
+  public ManagedPermissionAccess(JdbcTemplate db,
+      com.abluepoint.summer.sample.authorization.AuthorizationDomainVersions versions) {
     this.db = db;
+    this.versions = versions;
   }
 
   public boolean managed(Domain d) {
-    return db
-        .queryForList(
-            "select engine_mode from summer_authorization_domain where domain_key=?",
-            String.class,
-            d.key())
-        .stream()
-        .anyMatch("MANAGED"::equals);
+    return versions.managed(d);
   }
 
   public boolean authenticated(Authentication a) {

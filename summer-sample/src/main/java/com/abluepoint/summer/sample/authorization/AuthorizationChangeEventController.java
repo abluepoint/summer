@@ -42,7 +42,8 @@ class AuthorizationChangeEventController {
                                                             @RequestParam(required = false) String resourceType,
                                                             Authentication authentication) {
         requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.read");
-        AuthorizationChangeEventPage page = service.list(enterpriseId, resourceType);
+        AuthorizationChangeEventPage page = service.list(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), resourceType);
         return body(HttpStatus.OK, Map.of("items", page.items(), "totalElements", page.totalElements()));
 
     }
@@ -54,7 +55,8 @@ class AuthorizationChangeEventController {
                                                                       @RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                                       Authentication authentication) {
         requireEnterpriseMenu(enterpriseId, authentication, "enterprise.roles.write");
-        return body(HttpStatus.OK, service.retry(enterpriseId, eventId));
+        return body(HttpStatus.OK, service.retry(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), eventId));
 
     }
 

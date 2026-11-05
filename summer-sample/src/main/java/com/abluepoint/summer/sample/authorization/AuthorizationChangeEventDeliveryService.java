@@ -19,10 +19,11 @@ class AuthorizationChangeEventDeliveryService {
     private final AuthorizationChangeEventOutboxRepository repository;
     private final StringRedisTemplate redis;
     private final VersionedTwoLevelCache cache;
+    private final tools.jackson.databind.ObjectMapper json;
 
     AuthorizationChangeEventDeliveryService(AuthorizationChangeEventOutboxRepository repository, StringRedisTemplate redis,
-                                             VersionedTwoLevelCache cache) {
-        this.repository = repository; this.redis = redis; this.cache = cache;
+                                             VersionedTwoLevelCache cache, tools.jackson.databind.ObjectMapper json) {
+        this.repository = repository; this.redis = redis; this.cache = cache; this.json = json;
     }
 
     @Transactional
@@ -37,13 +38,28 @@ class AuthorizationChangeEventDeliveryService {
     @Transactional
     void publishOne(AuthorizationChangeEventOutboxEntity event, Instant now) {
         try {
+            var payload = json.readValue(event.payloadJson(), Map.class);
+            var owner = AuthorizationChangeEventService.storedDomain(event.enterpriseId());
+            if (!(payload.get("enterpriseId") instanceof String compatibilityKey)
+                    || compatibilityKey.isBlank()
+                    || (owner == null ? !compatibilityKey.equals(event.enterpriseId())
+                        : !(compatibilityKey.equals(owner.key())
+                            || "ENTERPRISE".equals(owner.kind()) && compatibilityKey.equals(owner.id())))
+                    || payload.get("domainKey") != null
+                        && !payload.get("domainKey").equals(owner == null ? "" : owner.key()))
+                throw com.abluepoint.summer.common.error.SummerException.withMessage(
+                        com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
+                        "Invalid authorization event attribution");
             Map<String, String> values = new LinkedHashMap<>();
-            values.put("eventId", event.eventId()); values.put("enterpriseId", event.enterpriseId());
+            values.put("eventId", event.eventId()); values.put("enterpriseId", compatibilityKey);
+            if (owner != null) values.put("domainKey", owner.key());
             values.put("resourceType", event.resourceType()); values.put("resourceId", event.resourceId());
             values.put("eventType", event.eventType()); values.put("version", Long.toString(event.resourceVersion()));
             values.put("requestId", event.requestId() == null ? "" : event.requestId());
             redis.opsForStream().add(StreamRecords.newRecord().ofMap(values).withStreamKey(AuthorizationChangeEventService.STREAM));
-            cache.invalidate(event.enterpriseId(), "authorization");
+            cache.invalidate(compatibilityKey, "authorization");
+            if (owner != null && !owner.key().equals(compatibilityKey))
+                cache.invalidate(owner.key(), "authorization");
             event.markPublished(now);
         } catch (RuntimeException exception) {
             if (event.attempts() + 1 >= MAX_ATTEMPTS) event.markDeadLetter("redis_delivery_failed");

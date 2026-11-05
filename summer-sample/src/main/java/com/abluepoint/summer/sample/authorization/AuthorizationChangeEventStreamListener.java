@@ -58,6 +58,9 @@ class AuthorizationChangeEventStreamListener {
                 // Every node evicts its own tier even when the shared receipt says another node
                 // already applied the event. This is what makes a shared receipt safe with node groups.
                 cache.evictLocal(event.enterpriseId(), "authorization");
+                if (event.domainKey() != null && !event.domainKey().isBlank()
+                        && !event.domainKey().equals(event.enterpriseId()))
+                    cache.evictLocal(event.domainKey(), "authorization");
                 AuthorizationChangeEventConsumeResult result = consumer.consume(event, ignored -> authorizationService.reloadPersistentState());
                 if (result == AuthorizationChangeEventConsumeResult.DUPLICATE) authorizationService.reloadPersistentState();
                 if (result == AuthorizationChangeEventConsumeResult.PROCESSED
@@ -82,7 +85,8 @@ class AuthorizationChangeEventStreamListener {
         Map<?, ?> value = record.getValue();
         return new AuthorizationChangeEventBody(string(value.get("eventId")), string(value.get("enterpriseId")),
                 string(value.get("resourceType")), string(value.get("resourceId")), string(value.get("eventType")),
-                Long.parseLong(string(value.get("version")) == null ? "0" : string(value.get("version"))), string(value.get("requestId")));
+                Long.parseLong(string(value.get("version")) == null ? "0" : string(value.get("version"))),
+                string(value.get("requestId")), string(value.get("domainKey")));
     }
     private static String string(Object value) { return value == null ? null : value.toString(); }
     private static String safeName(String value) { return value == null || value.isBlank() ? "summer-sample" : value.replaceAll("[^A-Za-z0-9_-]", "-"); }

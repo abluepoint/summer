@@ -28,6 +28,15 @@ public class PermissionManagementGuard {
     }
 
     public void require(Domain domain, Authentication auth, boolean write) {
+        try { requireCurrent(domain, auth, write); }
+        catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException e) {
+            throw com.abluepoint.summer.common.error.SummerException.withMessage(
+                    com.abluepoint.summer.sample.error.SampleTransportErrorCode.DEPENDENCY_UNAVAILABLE,
+                    "Current management authorization unavailable");
+        }
+    }
+
+    private void requireCurrent(Domain domain, Authentication auth, boolean write) {
         if (managed.managed(domain)) {
             managed.requireManagement(domain, auth, write);
             return;

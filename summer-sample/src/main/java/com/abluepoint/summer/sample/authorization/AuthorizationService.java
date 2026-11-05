@@ -143,7 +143,7 @@ public class AuthorizationService {
         String id = "cap-" + UUID.randomUUID().toString().substring(0, 8);
         CapabilityRecord c = new CapabilityRecord(id, "PLATFORM".equals(scope) ? null : e, scope, req.code().trim(), req.resource().trim(), req.action().trim(), req.riskLevel() == null ? "LOW" : req.riskLevel().toUpperCase(Locale.ROOT), "ACTIVE", 1);
         if (capabilities.values().stream().anyMatch(x -> sameCapabilityOwner(x, c) && x.code.equals(c.code))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability code already exists");
-        capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_CREATED", rid, a); changeEvents.enqueue(e, "CAPABILITY", id, "CAPABILITY_CREATED", c.version, rid); return out;
+        capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_CREATED", rid, a); changeEvents.enqueueEnterprise(e, "CAPABILITY", id, "CAPABILITY_CREATED", c.version, rid); return out;
     }
 
     @Transactional
@@ -155,14 +155,14 @@ public class AuthorizationService {
         requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op("platform", key)); if (prior != null) return replay(prior, fp);
         if (req == null || blank(req.code()) || blank(req.resource()) || blank(req.action())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code, resource and action are required");
         String id = "cap-" + UUID.randomUUID().toString().substring(0, 8); CapabilityRecord c = new CapabilityRecord(id, null, "PLATFORM", req.code().trim(), req.resource().trim(), req.action().trim(), req.riskLevel() == null ? "LOW" : req.riskLevel().toUpperCase(Locale.ROOT), "ACTIVE", 1);
-        if (capabilities.values().stream().anyMatch(x -> sameCapabilityOwner(x, c) && x.code.equals(c.code))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability code already exists"); capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember("platform", key, fp, out); record("platform", id, "CAPABILITY_CREATED", rid, a); changeEvents.enqueue("platform", "CAPABILITY", id, "CAPABILITY_CREATED", c.version, rid); return out;
+        if (capabilities.values().stream().anyMatch(x -> sameCapabilityOwner(x, c) && x.code.equals(c.code))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability code already exists"); capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember("platform", key, fp, out); record(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), id, "CAPABILITY_CREATED", rid, a); changeEvents.enqueue(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "CAPABILITY", id, "CAPABILITY_CREATED", c.version, rid); return out;
     }
 
     @Transactional
     synchronized CapabilityView setCapabilityStatus(String e, String id, String status, String ifm, String key, String rid, Authentication a) {
         require(e, a, "enterprise.capabilities.write"); requireKey(key); String fp = fingerprint(id, status, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
         CapabilityRecord c = capability(e, id); etag(c.version, ifm); if (status == null || !Set.of("ACTIVE", "DISABLED").contains(status)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Invalid capability status"); c.status = status; c.version++;
-        capabilityRepository.findById(c.id).ifPresent(entity -> { entity.updateStatus(status, c.version); capabilityRepository.save(entity); }); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_" + status, rid, a); changeEvents.enqueue(e, "CAPABILITY", id, "CAPABILITY_" + status, c.version, rid); return out;
+        capabilityRepository.findById(c.id).ifPresent(entity -> { entity.updateStatus(status, c.version); capabilityRepository.save(entity); }); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_" + status, rid, a); changeEvents.enqueueEnterprise(e, "CAPABILITY", id, "CAPABILITY_" + status, c.version, rid); return out;
     }
 
     synchronized List<RoleView> roles(String e, Authentication a) { require(e, a, "enterprise.roles.read"); return roles.values().stream().filter(x -> e.equals(x.enterpriseId) && legacyRoleOwner(e, x.id)).map(this::roleView).toList(); }
@@ -196,18 +196,18 @@ public class AuthorizationService {
     @Transactional
     synchronized BundleView createBundle(String e, BundleCreateRequest req, String key, String rid, Authentication a) {
         require(e, a, "enterprise.bundles.write"); requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); validateNameCode(req == null ? null : req.name(), req == null ? null : req.code()); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Bundle is required"); List<String> ids = resolveCapabilities(e, req.capabilityIds(), null);
-        if (bundles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Bundle code already exists"); BundleRecord b = new BundleRecord("bundle-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), "ACTIVE", ids, 1, req.changeSummary() == null ? "initial" : req.changeSummary()); bundles.put(b.id, b); b.history.add(new BundleVersionView(b.id, 1, ids, b.changeSummary)); BundleView out = bundleView(b); remember(e, key, fp, out); record(e, b.id, "BUNDLE_CREATED", rid, a); changeEvents.enqueue(e, "BUNDLE", b.id, "BUNDLE_CREATED", b.version, rid); return out;
+        if (bundles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Bundle code already exists"); BundleRecord b = new BundleRecord("bundle-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), "ACTIVE", ids, 1, req.changeSummary() == null ? "initial" : req.changeSummary()); bundles.put(b.id, b); b.history.add(new BundleVersionView(b.id, 1, ids, b.changeSummary)); BundleView out = bundleView(b); remember(e, key, fp, out); record(e, b.id, "BUNDLE_CREATED", rid, a); changeEvents.enqueueEnterprise(e, "BUNDLE", b.id, "BUNDLE_CREATED", b.version, rid); return out;
     }
 
     @Transactional
     synchronized BundleView updateBundle(String e, String id, BundleUpdateRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.bundles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); BundleRecord b = bundle(e, id); etag(b.version, ifm); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Bundle update is required"); if (req.name() != null) { if (blank(req.name())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name is required"); b.name = req.name().trim(); } if (req.code() != null) { if (blank(req.code())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code is required"); b.code = req.code().trim(); } if (req.status() != null) b.status = req.status(); if (req.capabilityIds() != null) b.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); b.changeSummary = req.changeSummary() == null ? "updated" : req.changeSummary(); b.version++; b.history.add(new BundleVersionView(b.id, b.version, b.capabilityIds, b.changeSummary)); BundleView out = bundleView(b); remember(e, key, fp, out); record(e, id, "BUNDLE_UPDATED", rid, a); changeEvents.enqueue(e, "BUNDLE", id, "BUNDLE_UPDATED", b.version, rid); return out;
+        require(e, a, "enterprise.bundles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); BundleRecord b = bundle(e, id); etag(b.version, ifm); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Bundle update is required"); if (req.name() != null) { if (blank(req.name())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name is required"); b.name = req.name().trim(); } if (req.code() != null) { if (blank(req.code())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code is required"); b.code = req.code().trim(); } if (req.status() != null) b.status = req.status(); if (req.capabilityIds() != null) b.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); b.changeSummary = req.changeSummary() == null ? "updated" : req.changeSummary(); b.version++; b.history.add(new BundleVersionView(b.id, b.version, b.capabilityIds, b.changeSummary)); BundleView out = bundleView(b); remember(e, key, fp, out); record(e, id, "BUNDLE_UPDATED", rid, a); changeEvents.enqueueEnterprise(e, "BUNDLE", id, "BUNDLE_UPDATED", b.version, rid); return out;
     }
 
     synchronized List<BundleVersionView> bundleVersions(String e, String id, Authentication a) { require(e, a, "enterprise.bundles.read"); return List.copyOf(bundle(e, id).history); }
     synchronized List<Map<String, Object>> audit(String e, String id, Authentication a) {
         require(e, a, "enterprise.roles.read");
-        return auditStore.read(e, id);
+        return auditStore.read(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e), id);
     }
 
     @Transactional
@@ -298,7 +298,7 @@ public class AuthorizationService {
     /** Evaluates the union of persisted PLATFORM grants across the subject's active memberships. */
     public synchronized Decision platformDecision(Authentication authentication, String permissionCode, String requestId) {
         if (!(authentication instanceof JwtAuthenticationToken jwt) || permissionCode == null) {
-            return auditedDecision(authentication, null, permissionCode, requestId, false, "DEFAULT_DENY");
+            return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, false, "DEFAULT_DENY");
         }
         reloadPersistentState();
         List<UserAssignmentRecord> bindings = userAssignments.values().stream()
@@ -309,10 +309,10 @@ public class AuthorizationService {
             if (local && !managed && jwt.getName().equals(bootstrapUsername) && active(jwt, ENTERPRISE)
                     && has(jwt, ENTERPRISE, "enterprise.roles.write")
                     && hasPlatform(jwt, "platform.capabilities.write") && BOOTSTRAP_PERMISSIONS.contains(permissionCode)) {
-                return auditedDecision(authentication, ENTERPRISE, permissionCode, requestId, true, "BOOTSTRAP_ADMIN");
+                return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, true, "BOOTSTRAP_ADMIN");
             }
             if (legacyScopeCompatibility && !local && !managed) {
-                return auditedDecision(authentication, null, permissionCode, requestId, true, "LEGACY_SCOPE");
+                return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, true, "LEGACY_SCOPE");
             }
         }
         boolean explicitlyDenied = false;
@@ -328,17 +328,25 @@ public class AuthorizationService {
                     .anyMatch(capability -> "ACTIVE".equals(capability.status) && "PLATFORM".equals(capability.scope)
                             && capability.enterpriseId == null && permissionCode.equals(capability.code));
             if (allowed) {
-                return auditedDecision(authentication, binding.enterpriseId, permissionCode, requestId, true, "ROLE_ALLOW");
+                return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, true, "ROLE_ALLOW");
             }
         }
-        return auditedDecision(authentication, null, permissionCode, requestId, false,
+        return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, false,
                 explicitlyDenied ? "USER_EXPLICIT_DENY" : "DEFAULT_DENY");
     }
 
     private Decision auditedDecision(Authentication authentication, String enterpriseId, String permissionCode,
                                       String requestId, boolean allowed, String reason) {
+        return auditedDomainDecision(authentication, enterpriseId == null ? null
+                : com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
+                permissionCode, requestId, allowed, reason);
+    }
+
+    private Decision auditedDomainDecision(Authentication authentication,
+            com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain,
+            String permissionCode, String requestId, boolean allowed, String reason) {
         String principal = authentication == null ? "" : authentication.getName();
-        record(enterpriseId, "user:" + principal, allowed ? "AUTHORIZATION_ALLOWED" : "AUTHORIZATION_DENIED", requestId, authentication,
+        record(domain == null ? "" : domain.key(), "user:" + principal, allowed ? "AUTHORIZATION_ALLOWED" : "AUTHORIZATION_DENIED", requestId, authentication,
                 Map.of("permissionCode", permissionCode == null ? "" : permissionCode,
                         "decision", allowed ? "ALLOW" : "DENY", "reasonCode", reason));
         return new Decision(allowed, reason);
@@ -478,7 +486,13 @@ public class AuthorizationService {
     private static String fingerprint(Object... v) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Arrays.deepToString(v).getBytes(StandardCharsets.UTF_8))); } catch (Exception x) { throw new IllegalStateException(x); } }
     @SuppressWarnings("unchecked") private <T> T replay(Receipt p, String fp) { if (!p.fingerprint.equals(fp)) throw SummerException.withMessage(AuthorizationErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency key reused"); return (T) p.result; }
     private void remember(String e, String k, String fp, Object result) { committed(() -> receipts.put(op(e, k), new Receipt(fp, result))); }
-    private void record(String e, String id, String action, String rid, Authentication a) { auditStore.mutation(e, id, action, rid, a == null ? "" : a.getName()); }
+    private void record(String e, String id, String action, String rid, Authentication a) {
+        record(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e), id, action, rid, a);
+    }
+    private void record(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain,
+            String id, String action, String rid, Authentication a) {
+        auditStore.mutation(domain.key(), id, action, rid, a == null ? "" : a.getName());
+    }
     private void record(String e, String id, String action, String rid, Authentication a, Map<String, Object> details) { auditStore.decision(e, id, action, rid, a == null ? "" : a.getName(), details); }
     private void seed(String id, String code, String resource, String action, String risk) { seed(id, code, resource, action, risk, "ENTERPRISE"); }
     private void seed(String id, String code, String resource, String action, String risk, String scope) { capabilities.put(id, new CapabilityRecord(id, null, scope, code, resource, action, risk, "ACTIVE", 1)); }
