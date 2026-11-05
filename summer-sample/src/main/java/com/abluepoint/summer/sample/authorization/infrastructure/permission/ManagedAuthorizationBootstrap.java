@@ -24,7 +24,7 @@ public class ManagedAuthorizationBootstrap {
   private final AuthorizationChangeEventService events;
   private final JdbcTemplate db;
   private final TransactionTemplate tx;
-  private final LegacyResourceAdapter resources;
+  private final ManagedInterfaceResources managedResources;
   private final ObjectProvider<RequestMappingHandlerMapping> mappings;
   private final String domains;
   private final String username;
@@ -37,7 +37,7 @@ public class ManagedAuthorizationBootstrap {
       AuthorizationChangeEventService events,
       JdbcTemplate db,
       PlatformTransactionManager tm,
-      LegacyResourceAdapter resources,
+      ManagedInterfaceResources managedResources,
       ObjectProvider<RequestMappingHandlerMapping> mappings,
       @Value("${summer.sample.authorization.managed-bootstrap-domains:}") String domains,
       @Value("${summer.security.authorization-server.user.username:}") String username) {
@@ -46,20 +46,10 @@ public class ManagedAuthorizationBootstrap {
     this.events = events;
     this.db = db;
     this.tx = new TransactionTemplate(tm);
-    this.resources = resources;
+    this.managedResources = managedResources;
     this.mappings = mappings;
     this.domains = domains;
     this.username = username;
-  }
-
-  private static String legacyCode(
-      org.springframework.web.method.HandlerMethod handler, String method, String path) {
-    var explicit =
-        org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation(
-            handler.getMethod(), com.abluepoint.summer.sample.resource.ResourcePermission.class);
-    return explicit == null || explicit.value().isBlank()
-        ? method + ":" + path
-        : explicit.value().trim();
   }
 
   private static String id(String key) {
@@ -181,36 +171,9 @@ public class ManagedAuthorizationBootstrap {
                             role,
                             permission);
                     }
-                    Map<String, List<String>> conditions = new TreeMap<>();
-                    conditions.put(
-                        "params",
-                        info.getParamsCondition().getExpressions().stream()
-                            .map(Object::toString)
-                            .toList());
-                    conditions.put(
-                        "headers",
-                        info.getHeadersCondition().getExpressions().stream()
-                            .map(Object::toString)
-                            .toList());
-                    conditions.put(
-                        "consumes",
-                        info.getConsumesCondition().getExpressions().stream()
-                            .map(Object::toString)
-                            .toList());
-                    conditions.put(
-                        "produces",
-                        info.getProducesCondition().getExpressions().stream()
-                            .map(Object::toString)
-                            .toList());
-                    conditions.put("version", List.of(info.getVersionCondition().toString()));
                     var resource =
-                        resources.register(
-                            "application",
-                            "MVC",
-                            method.name(),
-                            path,
-                            conditions,
-                            legacyCode(entry.getValue(), method.name(), path));
+                        managedResources.registered(ManagedInterfaceResources.mvc(
+                            method.name(), path, entry.getValue(), info));
                     // All writes take the domain lock; later interface/menu writers use this same
                     // table.
                     associations.bind(d, permission, resource);

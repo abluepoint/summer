@@ -17,13 +17,19 @@ import org.springframework.web.util.pattern.PathPattern;
 @Component
 final class InterfaceResourceBindingGuard implements HandlerInterceptor {
     private final InterfaceResourceHistory history;
+    private org.springframework.beans.factory.ObjectProvider<ManagedInterfaceRequestGuard> managedGuards;
     InterfaceResourceBindingGuard(InterfaceResourceHistory history) { this.history = history; }
+    @org.springframework.beans.factory.annotation.Autowired
+    InterfaceResourceBindingGuard(InterfaceResourceHistory history, org.springframework.beans.factory.ObjectProvider<ManagedInterfaceRequestGuard> managedGuards) {
+        this.history=history;this.managedGuards=managedGuards;
+    }
 
     @Bean MappedInterceptor resourceBindingMappedInterceptor() {
         return new MappedInterceptor(new String[]{"/api/**"}, this);
     }
 
     @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (managedGuards != null && managedGuards.orderedStream().anyMatch(guard -> guard.verify(request,handler))) return true;
         if (!(handler instanceof HandlerMethod method)) {
             if (handler instanceof org.springframework.web.servlet.resource.ResourceHttpRequestHandler
                     || handler instanceof org.springframework.web.socket.server.support.WebSocketHttpRequestHandler) return true;

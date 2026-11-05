@@ -201,12 +201,6 @@ export default function InterfaceResourcesPage() {
           width: 100,
         },
         {
-          title: t['interfaceResources.permission'],
-          dataIndex: 'permissionCode',
-          width: 240,
-          ellipsis: true,
-        },
-        {
           title: t['interfaceResources.sensitivity'],
           dataIndex: 'sensitiveLevel',
           width: 110,

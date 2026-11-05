@@ -8,7 +8,6 @@ export type InterfaceResource = {
   module: string;
   resourceType: 'BUSINESS' | 'PROTOCOL' | 'INFRASTRUCTURE' | 'STATIC';
   sensitiveLevel: 'NORMAL' | 'SENSITIVE' | 'CRITICAL';
-  permissionCode: string;
   configurable: boolean;
   contextId: string;
   source: string;

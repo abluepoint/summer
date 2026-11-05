@@ -30,7 +30,7 @@ export default {
     'catalog.MANAGED_ADAPTER_REQUIRED': '尚未接入角色权限',
     'catalog.REPLACED_REQUIRES_EXPLICIT_PERMISSION': '需显式迁移权限',
     'catalog.replacementNote':
-      '已移除资源保留历史记录。替换处理器不能继承旧的自动权限，需显式迁移权限码。',
+      '已移除资源保留历史记录。替换处理器不能继承旧关联，请在权限管理中显式重新关联。',
   },
   'en-US': {
     'catalog.current': 'Current revision',
@@ -64,6 +64,6 @@ export default {
     'catalog.REPLACED_REQUIRES_EXPLICIT_PERMISSION':
       'Explicit permission migration required',
     'catalog.replacementNote':
-      'Removed resources remain in history. Replacement handlers cannot inherit an old automatic permission; migrate their permission explicitly.',
+      'Removed resources remain in history. Replacement handlers cannot inherit old bindings; explicitly bind the new resource in permission management.',
   },
 };

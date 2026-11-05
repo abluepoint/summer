@@ -45,7 +45,10 @@ class RolePermissionHttpTest {
         for (String name :
             List.of(
                 "V60__permission_management.sql",
-                "V70__role_permission_and_resource_associations.sql")) {
+                "V70__role_permission_and_resource_associations.sql",
+                "V80__permission_resource_controls.sql",
+                "V81__managed_interface_lifecycle.sql",
+                "V92__support_full_length_menu_resource_ids.sql")) {
           String sql =
               new String(
                   new ClassPathResource("db/migration/mysql/" + name).getContentAsByteArray(),
@@ -58,6 +61,7 @@ class RolePermissionHttpTest {
                       "CREATE TABLE summer_permission_role",
                       "CREATE TABLE IF NOT EXISTS summer_permission_role"));
         }
+        db.update("insert into summer_menu_publication(publication_id,published,manifest_version) values ('global',false,0) on duplicate key update publication_id=publication_id");
       };
     }
   }
@@ -228,8 +232,21 @@ class RolePermissionHttpTest {
 
   @Test
   void interfacePermissionDoesNotGrantManagementMenuNavigation() throws Exception {
+    String subject="interface-only-navigation";
+    db.update("insert into summer_auth_user(username,password_hash,role,active,created_at,updated_at) select ?,password_hash,role,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP from summer_auth_user where username='summer-user'",subject);
+    String readPermission=db.queryForObject("select permission_id from summer_permission where domain_key='PLATFORM:platform' and code='management-read'",String.class);
+    var created=mvc.perform(post(BASE+"/roles").with(user("summer-user")).with(csrf())
+        .header("Idempotency-Key","interface-only-navigation-role").contentType("application/json")
+        .content(json.writeValueAsString(Map.of("name","Interface only","code","interface-only-navigation","permissionIds",List.of(readPermission)))))
+        .andExpect(status().isCreated()).andReturn();
+    String roleId=json.readTree(created.getResponse().getContentAsString()).path("data").path("roleId").asText();
+    mvc.perform(put(BASE+"/users/"+subject+"/roles").with(user("summer-user")).with(csrf())
+        .header("If-Match","\"0\"").header("Idempotency-Key","interface-only-navigation-user").contentType("application/json")
+        .content(json.writeValueAsString(Map.of("roleIds",List.of(roleId)))))
+        .andExpect(status().isOk());
+    mvc.perform(get(BASE+"/roles").with(user(subject))).andExpect(status().isOk());
     var result =
-        mvc.perform(get(BASE + "/authorization/navigation").with(user("unassigned")))
+        mvc.perform(get(BASE + "/authorization/navigation").with(user(subject)))
             .andExpect(status().isOk())
             .andReturn();
     assertEquals(
