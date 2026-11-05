@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.resilience.ResilientReadService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ class DictionaryVersionService {
     private final DictionaryOutboxRepository outbox;
     private final DictionaryAuditService audit;
     private final VersionedTwoLevelCache cache;
-    private final DataScopeService dataScopes;
+    private final BusinessDataScopes reads;
     private final ObjectMapper objectMapper;
     private final ResilientReadService resilientReads;
     private final com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard;
@@ -36,8 +36,9 @@ class DictionaryVersionService {
     DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
-                             DataScopeService dataScopes, ObjectMapper objectMapper,
-                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective, DictionaryGroups groups) {
+                             ObjectMapper objectMapper,
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective, DictionaryGroups groups, BusinessDataScopes reads) {
+        this.reads = reads;
         this.groups = groups;
         this.effective = effective;
         this.types = types;
@@ -46,7 +47,6 @@ class DictionaryVersionService {
         this.outbox = outbox;
         this.audit = audit;
         this.cache = cache;
-        this.dataScopes = dataScopes;
         this.objectMapper = objectMapper;
         this.resilientReads = resilientReads;
         this.fallbackGuard = fallbackGuard;
@@ -60,27 +60,33 @@ class DictionaryVersionService {
                                       Authentication authentication) {
         actions.require("dictionaries", "publish", authentication);
         validateRequest(request);
+        return reads.write(resolve(authentication),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
+        var scope = ranges.get("update");
         revision(request.expectedDraftRevision());
-        DictionaryTypeEntity type = lockedType(code, authentication);
-        DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_PUBLISHED", authentication);
+        DictionaryTypeEntity type = lockedType(code, authentication, scope);
+        DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_PUBLISHED", authentication, scope);
         if (replay != null) return replay;
         requireExpected(request, type);
         if (request.expectedDraftRevision() == null || revision(request.expectedDraftRevision()) != type.draftRevision()) throw new SummerException(DictionaryErrorCode.VERSION_CONFLICT);
-        claimEffective(type, request, true);
+
         long next = versions.findTopByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code)
                 .map(value -> value.version() + 1).orElse(1L);
-        requireFullItems(type, authentication);
+        requireFullItems(type, scope);
         String snapshot = snapshot(type, code);
-        items.markPublished(type.tenantId(), code);
-        groups.markPublished(type);
+        for (var item : currentItems(type)) {
+            reads.replace(scope, DictionaryItemEntity.class,item,item.id(),java.util.Map.of("everPublished",true));
+        }
+        groups.markPublished(type,scope);
         DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), resolve(authentication),
                 code, next, "PUBLISHED", snapshot, principal(authentication), requestId);
+        entityManager.detach(type);
         type.publish(next);
 
-        versions.saveAndFlush(version);
-        types.saveAndFlush(type);
+        version = persistVersion(type,version,scope);
+        type = claimEffective(type, request, true,scope);
         evidence(code, next, "DICTIONARY_PUBLISHED", requestId, request, type, authentication);
         return view(type, version);
+        });
     }
 
     @Transactional
@@ -88,20 +94,24 @@ class DictionaryVersionService {
                                       Authentication authentication) {
         actions.require("dictionaries", "disable", authentication);
         validateRequest(request);
-        DictionaryTypeEntity type = lockedType(code, authentication);
-        DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_DISABLED", authentication);
+        return reads.write(resolve(authentication),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
+        var scope = ranges.get("update");
+        DictionaryTypeEntity type = lockedType(code, authentication, scope);
+        DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_DISABLED", authentication, scope);
         if (replay != null) return replay;
         long current = currentVersion(type);
         requireExpected(request, type);
         if (type.publishedVersion() == null || !type.published()) {
             throw invalidState("Dictionary is not published");
         }
-        claimEffective(type, request, false);
+
+        entityManager.detach(type);
         type.disable();
 
-        types.saveAndFlush(type);
+        type = claimEffective(type, request, false,scope);
         evidence(code, current, "DICTIONARY_DISABLED", requestId, request, type, authentication);
         return view(type, versions.findByTenantIdAndDictionaryCodeAndVersion(resolve(authentication), code, current).orElse(null));
+        });
     }
 
     @Transactional
@@ -109,8 +119,10 @@ class DictionaryVersionService {
                                        Authentication authentication) {
         actions.require("dictionaries", "rollback", authentication);
         validateRequest(request);
-        DictionaryTypeEntity type = lockedType(code, authentication);
-        DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_ROLLED_BACK", authentication);
+        return reads.write(resolve(authentication),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
+        var scope = ranges.get("update");
+        DictionaryTypeEntity type = lockedType(code, authentication, scope);
+        DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_ROLLED_BACK", authentication, scope);
         if (replay != null) return replay;
         long current = currentVersion(type);
         requireExpected(request, type);
@@ -121,32 +133,38 @@ class DictionaryVersionService {
         DictionaryVersionEntity target = versions.findByTenantIdAndDictionaryCodeAndVersion(
                         resolve(authentication), code, revision(request.targetVersion()))
                 .orElseThrow(() -> invalidState("Rollback target does not exist"));
-        requireSnapshotVisible(type, target, authentication);
-        claimEffective(type, request, false);
+        requireSnapshotVisible(type, target, scope);
+
+        entityManager.detach(type);
         type.publish(target.version());
 
-        types.saveAndFlush(type);
+        type = claimEffective(type, request, false,scope);
         evidence(code, target.version(), "DICTIONARY_ROLLED_BACK", requestId, request, type, authentication);
         return view(type, target);
+        });
     }
 
     @Transactional(readOnly = true)
     List<DictionaryVersionView> list(String code, Authentication authentication) {
-        scopedType(code, authentication);
+        return reads.read(resolve(authentication),"dictionaries","read",authentication,scope -> {
+        scopedType(code, authentication, scope);
         return versions.findAllByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code).stream()
                 .map(value -> new DictionaryVersionView(value.version(), value.status(), value.createdAt(), value.createdBy()))
                 .toList();
+        });
     }
 
     @Transactional(readOnly = true)
     DictionaryHistoryView history(String code, long version, Authentication authentication) {
+        return reads.read(resolve(authentication),"dictionaries","read",authentication,scope -> {
         actions.require("dictionaries", "read", authentication);
-        var type = scopedType(code, authentication);
+        var type = scopedType(code, authentication, scope);
         var stored = versions.findByTenantIdAndDictionaryCodeAndVersion(type.tenantId(), code, version)
                 .orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
-        requireSnapshotVisible(type, stored, authentication);
+        requireSnapshotVisible(type, stored, scope);
         return new DictionaryHistoryView(stored.version(), stored.status(), stored.createdAt(), stored.createdBy(),
                 objectMapper.readValue(stored.snapshotJson(), DictionarySnapshot.class), type.draftRevision(), currentVersion(type), type.effectiveRevision());
+        });
     }
 
     @Transactional(readOnly = true)
@@ -157,8 +175,9 @@ class DictionaryVersionService {
 
     @Transactional(readOnly = true)
     PublicDictionaryView publicRead(String tenant, String code, Authentication authentication) {
+        return reads.read(tenant,"dictionaries","read",authentication,scope -> {
         actions.requirePublic(tenant, "dictionaries", authentication);
-        var base = effective.read(tenant, code, authentication, true);
+        var base = effective.read(tenant, code, true, scope);
         var snapshot = base.snapshot();
         var allowedValues = base.visibleValues();
         var override = overrides.resolve(tenant, "dictionaries", code, authentication);
@@ -176,6 +195,7 @@ class DictionaryVersionService {
                         .filter(i -> allowedValues.contains(i.value())).toList(), base.publishedVersion(), base.publishedVersion(), null,
                         "base", token(tenant, code, base.publishedVersion(), "base", base), base.effectiveRevision())),
                 () -> fallbackGuard.dictionary(tenant, code, base.publishedVersion(), base.effectiveRevision(), base.scopeFingerprint(), allowedValues, authentication));
+            });
     }
 
     @Transactional(readOnly = true)
@@ -194,24 +214,41 @@ class DictionaryVersionService {
         return overrides.save("dictionaries", code, organization, request, auth, requestId);
     }
 
-    private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
+    private DictionaryTypeEntity scopedType(String code, Authentication authentication, BusinessDataScopes.Filter scope) {
         return types.findScoped(code, scope).orElseThrow(() -> new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND));
     }
 
-    private DictionaryTypeEntity lockedType(String code, Authentication auth) {
-        scopedType(code, auth);
+    private DictionaryTypeEntity lockedType(String code, Authentication auth, BusinessDataScopes.Filter scope) {
+        scopedType(code, auth, scope);
         var type = types.lock(resolve(auth), code).orElseThrow();
         entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-        dataScopes.assertWrite(resolve(auth), "dictionaries", auth, type.organizationId());
+        if (types.findScoped(code,scope).isEmpty()) throw new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
         return type;
     }
 
-    private void claimEffective(DictionaryTypeEntity type, DictionaryVersionRequest request, boolean publish) {
-        if (types.claimEffective(type.tenantId(), type.code(), revision(request.expectedEffectiveRevision()),
-                revision(request.expectedVersion()), publish ? revision(request.expectedDraftRevision()) : null) != 1)
-            throw new SummerException(DictionaryErrorCode.VERSION_CONFLICT);
-        entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+    private DictionaryTypeEntity claimEffective(DictionaryTypeEntity type, DictionaryVersionRequest request,
+            boolean publish, BusinessDataScopes.Filter scope) {
+        var expected = new java.util.HashMap<String,Object>();
+        expected.put("effectiveRevision",revision(request.expectedEffectiveRevision()));
+        expected.put("publishedVersion",revision(request.expectedVersion()) == 0 ? null : revision(request.expectedVersion()));
+        if (publish) expected.put("draftRevision",revision(request.expectedDraftRevision()));
+        var updated = reads.replaceChecked(scope,DictionaryTypeEntity.class,type,id(type),expected,
+                java.util.Map.of("effectiveRevision",revision(request.expectedEffectiveRevision())+1,
+                    "published",type.published(),"publishedVersion",type.publishedVersion()));
+        if (updated == null) throw new SummerException(DictionaryErrorCode.VERSION_CONFLICT);
+        return updated;
+    }
+
+    private String id(DictionaryTypeEntity type) {
+        return (String) entityManager.getEntityManagerFactory().getPersistenceUnitUtil().getIdentifier(type);
+    }
+    private DictionaryVersionEntity persistVersion(DictionaryTypeEntity type, DictionaryVersionEntity version, BusinessDataScopes.Filter scope) {
+        var values = new java.util.HashMap<String,Object>();
+        values.put("version_id",version.id());values.put("tenant_id",version.tenantId());values.put("dictionary_code",version.dictionaryCode());
+        values.put("version_number",version.version());values.put("status",version.status());values.put("snapshot_json",version.snapshotJson());
+        values.put("created_by",version.createdBy());values.put("request_id",version.requestId());values.put("created_at",version.createdAt());
+        reads.insertDictionaryVersion(scope,id(type),values);
+        return versions.findById(version.id()).orElseThrow();
     }
 
     private List<DictionaryItemEntity> currentItems(DictionaryTypeEntity type) {
@@ -220,14 +257,14 @@ class DictionaryVersionService {
         return current;
     }
 
-    private void requireFullItems(DictionaryTypeEntity type, Authentication auth) {
+    private void requireFullItems(DictionaryTypeEntity type, BusinessDataScopes.Filter scope) {
         var all = currentItems(type);
-        var visible = items.findScoped(type.code(), dataScopes.filter(type.tenantId(), "dictionaries", auth));
+        var visible = items.findScoped(type.code(), scope);
         if (all.size() != visible.size()) throw new org.springframework.security.access.AccessDeniedException("Full dictionary maintenance required");
     }
 
-    private void requireSnapshotVisible(DictionaryTypeEntity type, DictionaryVersionEntity version, Authentication auth) {
-        var allowed = items.findScoped(type.code(), dataScopes.filter(type.tenantId(), "dictionaries", auth)).stream()
+    private void requireSnapshotVisible(DictionaryTypeEntity type, DictionaryVersionEntity version, BusinessDataScopes.Filter scope) {
+        var allowed = items.findScoped(type.code(), scope).stream()
                 .map(DictionaryItemEntity::value).collect(java.util.stream.Collectors.toSet());
         if (objectMapper.readValue(version.snapshotJson(), DictionarySnapshot.class).items().stream().anyMatch(i -> !allowed.contains(i.value())))
             throw new org.springframework.security.access.AccessDeniedException("Dictionary history unavailable");
@@ -267,7 +304,7 @@ class DictionaryVersionService {
         catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
     }
 
-    private DictionaryTypeVersionView replay(String code, DictionaryVersionRequest request, DictionaryTypeEntity type, String eventType, Authentication auth) {
+    private DictionaryTypeVersionView replay(String code, DictionaryVersionRequest request, DictionaryTypeEntity type, String eventType, Authentication auth, BusinessDataScopes.Filter scope) {
         String key = request == null ? null : request.idempotencyKey();
         if (key == null || key.isBlank()) return null;
         if (key.length() > 255) throw invalidState("Invalid idempotency key");
@@ -276,7 +313,7 @@ class DictionaryVersionService {
         if (!eventType.equals(event.eventType()) || !fingerprint(code, eventType, request, auth).equals(event.requestFingerprint()) || event.resultJson() == null)
             throw new SummerException(DictionaryErrorCode.CONFLICT);
         var version = versions.current(type.tenantId(), code, event.version()).orElseThrow();
-        requireSnapshotVisible(type, version, auth);
+        requireSnapshotVisible(type, version, scope);
         return objectMapper.readValue(event.resultJson(), DictionaryTypeVersionView.class);
     }
 

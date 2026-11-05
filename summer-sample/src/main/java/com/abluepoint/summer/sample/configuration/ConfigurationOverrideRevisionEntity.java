@@ -13,7 +13,7 @@ class ConfigurationOverrideRevisionEntity {
     @Column(name="public_readable",nullable=false) boolean publicReadable;
     @Column(nullable=false) boolean enabled;
     @Column(nullable=false,length=128) String principal;
-    @Column(name="request_id",length=120) String requestId;
+    @Column(name="request_id",length=128) String requestId;
     @Column(name="created_at",nullable=false) Instant createdAt;
     protected ConfigurationOverrideRevisionEntity() {}
 }

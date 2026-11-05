@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import({ExplicitLegacyBusinessDomains.AcmeAndOther.class,ExplicitLegacyBusinessDomains.Platform.class})
 class NativeDenialCompatibilityHttpTest {
     @Autowired MockMvc mvc;
 

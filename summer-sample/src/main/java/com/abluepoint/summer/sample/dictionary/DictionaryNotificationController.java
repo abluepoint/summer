@@ -29,7 +29,7 @@ class DictionaryNotificationController {
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("platform.dictionary.read")
-    @PreAuthorize("hasAuthority('SCOPE_platform.dictionary.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'platform.dictionary.read') or (hasAuthority('SCOPE_platform.dictionary.read'))")
     ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String code,
                                 @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
                                 Authentication authentication) {

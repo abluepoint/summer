@@ -24,6 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties="summer.sample.parameter-events.scheduling-enabled=false")
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndOther.class,
+        com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.Platform.class})
+@org.springframework.test.annotation.DirtiesContext
 class SystemParameterFailureHttpTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -184,7 +187,7 @@ class SystemParameterFailureHttpTest {
         create("contract.reader-private", false);
         create("contract.reader-public", true);
         var token = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("reader-contract")
-                .header("alg", "RS256").subject("operator")
+                .header("alg", "RS256").subject("operator").claim("scope", "system.parameter.read")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).build();
         var auth = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(token,
                 List.of(new SimpleGrantedAuthority("SCOPE_system.parameter.read")));
@@ -274,7 +277,7 @@ class SystemParameterFailureHttpTest {
     private static RequestPostProcessor writer() { return actor("ent-acme", "SCOPE_system.parameter.write", "SCOPE_system.parameter.read"); }
     private static RequestPostProcessor reader() { return actor("ent-acme", "SCOPE_system.parameter.read"); }
     private static RequestPostProcessor actor(String tenant, String... scopes) {
-        return jwt().jwt(token -> token.subject("operator").claim("enterprise_memberships",
+        return jwt().jwt(token -> token.subject("operator").claim("scope", java.util.Arrays.stream(scopes).map(s -> s.replaceFirst("^SCOPE_", "")).collect(java.util.stream.Collectors.joining(" "))).claim("enterprise_memberships",
                 List.of(Map.of("enterpriseId", tenant, "status", "ACTIVE"))))
                 .authorities(java.util.Arrays.stream(scopes).map(SimpleGrantedAuthority::new).toArray(SimpleGrantedAuthority[]::new));
     }

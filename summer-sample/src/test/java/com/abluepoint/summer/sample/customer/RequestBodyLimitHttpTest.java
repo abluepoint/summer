@@ -42,7 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.mvc.request-body.max-bytes=256", "summer.security.storage.keys=memory",
         "summer.mvc.request-logging.body.enabled=true"})
 @AutoConfigureMockMvc
-@Import(RequestBodyLimitHttpTest.Logging.class)
+@Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, RequestBodyLimitHttpTest.Logging.class})
+@org.springframework.test.annotation.DirtiesContext
 class RequestBodyLimitHttpTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
@@ -55,13 +56,13 @@ class RequestBodyLimitHttpTest {
             String username = username();
             String body = body(username, size);
             try {
-                mvc.perform(post("/api/customers").with(jwt().authorities(authority("write")))
+                mvc.perform(post("/api/customers").with(jwt().jwt(j -> j.claim("scope", "customer.write")).authorities(authority("write")))
                                 .contentType(MediaType.APPLICATION_JSON).content(body))
                         .andExpect(status().isOk()).andExpect(jsonPath("$.data.username").value(username));
-                mvc.perform(get("/api/customers/" + username).with(jwt().authorities(authority("read"))))
+                mvc.perform(get("/api/customers/" + username).with(jwt().jwt(j -> j.claim("scope", "customer.read")).authorities(authority("read"))))
                         .andExpect(status().isOk());
             } finally {
-                mvc.perform(delete("/api/customers/" + username).with(jwt().authorities(authority("write"))));
+                mvc.perform(delete("/api/customers/" + username).with(jwt().jwt(j -> j.claim("scope", "customer.write")).authorities(authority("write"))));
             }
         }
     }
@@ -80,8 +81,8 @@ class RequestBodyLimitHttpTest {
                 request.setRequestURI("/api/customers");
                 request.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 request.setContent(body.getBytes(StandardCharsets.UTF_8));
-                return jwt().authorities(authority("write")).postProcessRequest(request);
-            }).andReturn().getResponse() : mvc.perform(builder.with(jwt().authorities(authority("write")))
+                return jwt().jwt(j -> j.claim("scope", "customer.write")).authorities(authority("write")).postProcessRequest(request);
+            }).andReturn().getResponse() : mvc.perform(builder.with(jwt().jwt(j -> j.claim("scope", "customer.write")).authorities(authority("write")))
                     .header("X-Request-Id", "body-limit-known")).andReturn().getResponse();
             assertLimit(response.getStatus(), response.getContentAsString(), response.getHeader("X-Request-Id"), response.getContentType());
             if (!unknownLength) assertThat(response.getHeader("X-Request-Id")).isEqualTo("body-limit-known");
@@ -105,7 +106,7 @@ class RequestBodyLimitHttpTest {
                     assertThat(success.statusCode()).isEqualTo(200);
                     assertThat(mapper.readTree(success.body()).path("data").path("username").asString()).isEqualTo(accepted);
                 } finally {
-                    mvc.perform(delete("/api/customers/" + accepted).with(jwt().authorities(authority("write"))));
+                    mvc.perform(delete("/api/customers/" + accepted).with(jwt().jwt(j -> j.claim("scope", "customer.write")).authorities(authority("write"))));
                 }
                 String rejected = username();
                 var failure = send(client, token, rejected, 257, chunked);
@@ -150,7 +151,7 @@ class RequestBodyLimitHttpTest {
     }
 
     private void assertMissing(String username) throws Exception {
-        mvc.perform(get("/api/customers/" + username).with(jwt().authorities(authority("read"))))
+        mvc.perform(get("/api/customers/" + username).with(jwt().jwt(j -> j.claim("scope", "customer.read")).authorities(authority("read"))))
                 .andExpect(status().isNotFound());
     }
 

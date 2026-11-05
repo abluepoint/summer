@@ -27,7 +27,7 @@ class DictionaryVersionEntity {
     private String snapshotJson;
     @Column(name = "created_by", length = 128, updatable = false)
     private String createdBy;
-    @Column(name = "request_id", length = 120, updatable = false)
+    @Column(name = "request_id", length = 128, updatable = false)
     private String requestId;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

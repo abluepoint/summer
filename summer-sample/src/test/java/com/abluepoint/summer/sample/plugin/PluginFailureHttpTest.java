@@ -29,7 +29,7 @@ class PluginFailureHttpTest {
 
     @Test
     void failuresKeepEveryBusinessMappingAndCannotMutateTheIncompatibleRegistration() throws Exception {
-        var enterprise = jwt().jwt(token -> token.subject("plugin-reader")
+        var enterprise = jwt().jwt(token -> token.claim("scope", "enterprise.plugins.customer-insights.read customer.read").subject("plugin-reader")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.plugins.customer-insights.read", "customer.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.plugins.customer-insights.read"), new SimpleGrantedAuthority("SCOPE_customer.read"));
@@ -39,6 +39,10 @@ class PluginFailureHttpTest {
         failure(register("{\"pluginId\":\"customer-insights\",\"version\":\"1.0.0\",\"artifactDigest\":\"untrusted\"}"),
                 platform(), 409, "SAMPLE_PLUGIN_UNTRUSTED", "Plugin artifact is not in the trusted catalog");
         failure(register("{}"), jwt().authorities(new SimpleGrantedAuthority("SCOPE_platform.plugins.write")),
+                403, "SUMMER_FORBIDDEN", "Platform plugin capability denied");
+        failure(register("{}"), jwt().jwt(token -> token.claim("scope", "platform.plugins.read")
+                        .claim("platform_capabilities", List.of("platform.plugins.write")))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_platform.plugins.write")),
                 403, "SUMMER_FORBIDDEN", "Platform plugin capability denied");
         var created = mvc.perform(register("{\"pluginId\":\"customer-insights\",\"version\":\"9.0.0\",\"artifactDigest\":\"sha256:customer-insights-v1\"}").with(platform()))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.data.status").value("INCOMPATIBLE"))
@@ -66,7 +70,7 @@ class PluginFailureHttpTest {
     }
 
     private RequestPostProcessor platform() {
-        return jwt().jwt(token -> token.subject("plugin-admin").claim("platform_capabilities", List.of("platform.plugins.read", "platform.plugins.write")))
+        return jwt().jwt(token -> token.claim("scope", "platform.plugins.read platform.plugins.write").subject("plugin-admin").claim("platform_capabilities", List.of("platform.plugins.read", "platform.plugins.write")))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.plugins.read"), new SimpleGrantedAuthority("SCOPE_platform.plugins.write"));
     }
 }

@@ -32,7 +32,7 @@ class ApplicationErrorOverrideHttpTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}")
                         .header("Idempotency-Key", "application-policy")
                         .header("X-Request-Id", "application-policy")
-                        .with(jwt().jwt(token -> token.subject("admin")
+                        .with(jwt().jwt(token -> token.claim("scope", "enterprise.application.write").subject("admin")
                                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.application.write"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.application.write"))))

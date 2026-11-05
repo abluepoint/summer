@@ -3,7 +3,7 @@ package com.abluepoint.summer.sample.systemparameter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -13,9 +13,9 @@ import java.util.List;
 class SystemParameterQueryService {
     private final SystemParameterQuery query;
     private final ObjectMapper objectMapper;
-    private final DataScopeService dataScopes;
+    private final BusinessDataScopes dataScopes;
 
-    SystemParameterQueryService(SystemParameterQuery query, ObjectMapper objectMapper, DataScopeService dataScopes) {
+    SystemParameterQueryService(SystemParameterQuery query, ObjectMapper objectMapper, BusinessDataScopes dataScopes) {
         this.query = query;
         this.objectMapper = objectMapper;
         this.dataScopes = dataScopes;
@@ -23,7 +23,8 @@ class SystemParameterQueryService {
 
     @Transactional(readOnly = true)
     SystemParameterQueryPage list(SystemParameterListQuery request, Authentication authentication) {
-        final SystemParameterListQuery scopedRequest = scoped(request, authentication);
+        return dataScopes.read(request.tenantId(), "system-parameters", "read", authentication, scope -> {
+        final SystemParameterListQuery scopedRequest = request.withScope(scope);
         long total = query.count(scopedRequest);
         List<?> items = query.list(scopedRequest).stream()
                 .map(value -> scopedRequest.projection() == SystemParameterListQuery.Projection.SUMMARY
@@ -33,17 +34,15 @@ class SystemParameterQueryService {
         int totalPages = total == 0 ? 0 : (int) ((total - 1) / request.size()) + 1;
         return new SystemParameterQueryPage(items, scopedRequest.page(), scopedRequest.size(), total, totalPages,
                 scopedRequest.projection().name().toLowerCase(java.util.Locale.ROOT));
+        });
     }
 
     SystemParameterQueryPage list(SystemParameterListQuery request) { return list(request, null); }
 
     @Transactional(readOnly = true)
     SystemParameterQueryCount count(SystemParameterListQuery request, Authentication authentication) {
-        return new SystemParameterQueryCount(query.count(scoped(request, authentication)));
-    }
-
-    private SystemParameterListQuery scoped(SystemParameterListQuery request, Authentication authentication) {
-        return request.withScope(dataScopes.filter(request.tenantId(), "system-parameters", authentication));
+        return dataScopes.read(request.tenantId(), "system-parameters", "read", authentication,
+                scope -> new SystemParameterQueryCount(query.count(request.withScope(scope))));
     }
 
     private SystemParameterView detail(SystemParameterDetailRow row) {

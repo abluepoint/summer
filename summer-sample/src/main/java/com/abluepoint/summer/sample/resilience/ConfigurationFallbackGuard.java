@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.resilience;
 
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.configuration.ConfigurationActionAccess;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -17,10 +17,10 @@ import java.util.Set;
 @Service
 public class ConfigurationFallbackGuard {
     private final NamedParameterJdbcTemplate jdbc;
-    private final DataScopeService scopes;
+    private final BusinessDataScopes scopes;
     private final ConfigurationActionAccess actions;
 
-    ConfigurationFallbackGuard(NamedParameterJdbcTemplate jdbc, DataScopeService scopes, ConfigurationActionAccess actions) {
+    ConfigurationFallbackGuard(NamedParameterJdbcTemplate jdbc, BusinessDataScopes scopes, ConfigurationActionAccess actions) {
         this.jdbc = jdbc;
         this.scopes = scopes;
         this.actions = actions;
@@ -29,7 +29,7 @@ public class ConfigurationFallbackGuard {
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public boolean parameter(String tenant, String id, long version, boolean publicValue, String fingerprint, Authentication auth) {
         actions.requirePublic(tenant, "system-parameters", auth);
-        var scope = scopes.filter(tenant, "system-parameters", auth);
+        return scopes.read(tenant, "system-parameters", "read", auth, scope -> {
         if (!scope.fingerprint().equals(fingerprint)) return false;
         var bindings = new HashMap<String, Object>(scope.sqlBindings());
         bindings.put("expectedId", id);
@@ -38,12 +38,13 @@ public class ConfigurationFallbackGuard {
         return jdbc.queryForObject("select count(*) from summer_system_parameter where id=:expectedId "
                 + "and version=:expectedVersion and status='ACTIVE' and public_flag=:expectedPublic and ("
                 + scope.sqlPredicate() + ")", bindings, Long.class) == 1;
+        });
     }
 
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public boolean dictionary(String tenant, String code, long version, long effectiveRevision, String fingerprint, Set<String> allowedValues, Authentication auth) {
         actions.requirePublic(tenant, "dictionaries", auth);
-        var scope = scopes.filter(tenant, "dictionaries", auth);
+        return scopes.read(tenant, "dictionaries", "read", auth, scope -> {
         if (!scope.fingerprint().equals(fingerprint)) return false;
         var bindings = new HashMap<String, Object>(scope.sqlBindings());
         bindings.put("expectedCode", code);
@@ -61,5 +62,6 @@ public class ConfigurationFallbackGuard {
         // Any newly applicable override invalidates the cached base value, including a hidden override.
         return jdbc.queryForObject("select count(*) from summer_configuration_override where tenant_id=:expectedTenant "
                 + "and published_revision is not null and resource='dictionaries' and config_key=:expectedCode and scope_id in (:candidates)", bindings, Long.class) == 0;
+        });
     }
 }

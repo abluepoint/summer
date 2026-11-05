@@ -109,7 +109,7 @@ class ConnectionServiceControllerTest {
                          int status, String code, String message) throws Exception {
         List<String> caps = List.of("platform.connection-services.read", "platform.connection-services.write",
                 "enterprise.connection.write", "enterprise.mcp-connections.read");
-        mockMvc.perform(request.with(jwt().jwt(t -> t.subject("operator").claim("platform_capabilities", caps)
+        mockMvc.perform(request.with(jwt().jwt(t -> t.claim("scope", caps.stream().map(value -> value.replaceFirst("^SCOPE_", "")).collect(java.util.stream.Collectors.joining(" "))).subject("operator").claim("platform_capabilities", caps)
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                 .claim("enterprise_capabilities", Map.of("ent-acme", caps)))
                         .authorities(caps.stream().map(c -> new SimpleGrantedAuthority("SCOPE_" + c)).toArray(SimpleGrantedAuthority[]::new)))
@@ -142,7 +142,7 @@ class ConnectionServiceControllerTest {
         String serviceId = JsonPath.read(created.getResponse().getContentAsString(), "$.data.serviceId");
         mockMvc.perform(get("/api/v1/platform/connection-services").with(platform("platform.connection-services.read")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].serviceId").value(serviceId));
-        mockMvc.perform(get("/api/v1/platform/connection-services").with(jwt().jwt(t -> t.subject("alice"))
+        mockMvc.perform(get("/api/v1/platform/connection-services").with(jwt().jwt(t -> t.claim("scope", "platform.connection-services.read").subject("alice"))
                         .authorities(new SimpleGrantedAuthority("SCOPE_platform.connection-services.read"))))
                 .andExpect(status().isForbidden());
     }
@@ -249,17 +249,17 @@ class ConnectionServiceControllerTest {
         return JsonPath.read(result.getResponse().getContentAsString(), "$.data.serviceId");
     }
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platform(String capability) {
-        return jwt().jwt(t -> t.subject("platform-operator").claim("platform_capabilities", List.of(capability)))
+        return jwt().jwt(t -> t.claim("scope", capability).subject("platform-operator").claim("platform_capabilities", List.of(capability)))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
     private static org.springframework.test.web.servlet.request.RequestPostProcessor service(String serviceId, boolean trusted) {
-        return jwt().jwt(t -> t.subject("connection-service")
+        return jwt().jwt(t -> t.claim("scope", "internal.connection.catalog.write").subject("connection-service")
                         .claim("connection_service_id", serviceId).claim("connection_service_code", "trusted")
                         .claim("service_trust_verified", trusted).claim("aud", "urn:aict:service"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_internal.connection.catalog.write"));
     }
     private static org.springframework.test.web.servlet.request.RequestPostProcessor enterprise(String capability) {
-        return jwt().jwt(t -> t.subject("alice")
+        return jwt().jwt(t -> t.claim("scope", capability).subject("alice")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));

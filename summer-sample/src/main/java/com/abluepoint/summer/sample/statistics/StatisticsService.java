@@ -1,7 +1,7 @@
 package com.abluepoint.summer.sample.statistics;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.resource.ResourcePermission;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -26,24 +26,38 @@ import java.util.Set;
 class StatisticsService {
     private static final Duration DEFAULT_WINDOW = Duration.ofDays(30);
     private static final Duration MAX_WINDOW = Duration.ofDays(366);
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
     private final JdbcTemplate jdbc;
     private final AuthorizationService authorization;
-    private final DataScopeService dataScopes;
+    private final BusinessDataScopes dataScopes;
     private final RequestMappingHandlerMapping mappings;
     private final com.abluepoint.summer.mvc.request.RequestIdAccessor requestId;
 
-    StatisticsService(JdbcTemplate jdbc, AuthorizationService authorization, DataScopeService dataScopes,
+    StatisticsService(JdbcTemplate jdbc, AuthorizationService authorization, BusinessDataScopes dataScopes,
                       @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mappings,
-                      com.abluepoint.summer.mvc.request.RequestIdAccessor requestId) {
+                      com.abluepoint.summer.mvc.request.RequestIdAccessor requestId, com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
+        this.business = business;
         this.jdbc = jdbc; this.authorization = authorization; this.dataScopes = dataScopes; this.mappings = mappings; this.requestId = requestId;
     }
 
     @Transactional(readOnly = true)
     StatisticsView read(String enterpriseId, Instant from, Instant to, String requestedOrganizationId, Authentication authentication) {
+        boolean managed = business.requirePreservingDenial(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
+                authentication, "Statistics access denied", "enterprise.statistics.read");
+        if (managed) return business.readManagedHttp(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
+                authentication, "GET", "/api/v1/enterprises/{enterpriseId}/statistics",
+                () -> aggregate(enterpriseId, from, to, requestedOrganizationId, authentication, true),
+                "enterprise.statistics.read");
         authorization.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.statistics.read");
+        return aggregate(enterpriseId, from, to, requestedOrganizationId, authentication, false);
+    }
+
+    private StatisticsView aggregate(String enterpriseId, Instant from, Instant to, String requestedOrganizationId,
+                                    Authentication authentication, boolean managed) {
         Map<String, Boolean> permissions = new HashMap<>();
         java.util.function.Predicate<String> allowed = code -> permissions.computeIfAbsent(code,
-                key -> authorization.decision(authentication, enterpriseId, key, requestId.currentRequestId()).allowed());
+                key -> managed ? sourceAllowed(enterpriseId, authentication, key) : authorization.decision(authentication, enterpriseId, key, requestId.currentRequestId()).allowed());
         if (!allowed.test("enterprise.statistics.read")) throw new AccessDeniedException("Statistics access denied");
         Instant asOf = Instant.now();
         if (to == null) to = asOf;
@@ -65,12 +79,14 @@ class StatisticsService {
                 ? count("select count(*) from summer_authorization_role where enterprise_id=?", enterpriseId) : null;
         Long dictionaries = null;
         if (allowed.test("platform.dictionary.read")) {
-            var scope = dataScopes.filter(enterpriseId, "dictionaries", authentication);
+            final String selectedOrganization = organizationId;
+            dictionaries = dataScopes.read(enterpriseId, "dictionaries", "read", authentication, scope -> {
             var bindings = new HashMap<String, Object>(scope.sqlBindings());
             bindings.put("statisticsTenant", enterpriseId);
             String sql = "select count(*) from summer_dictionary_type where tenant_id=:statisticsTenant and (" + scope.sqlPredicate() + ")";
-            if (organizationId != null) { sql += " and organization_id=:statisticsOrganization"; bindings.put("statisticsOrganization", organizationId); }
-            dictionaries = new NamedParameterJdbcTemplate(jdbc).queryForObject(sql, bindings, Long.class);
+            if (selectedOrganization != null) { sql += " and organization_id=:statisticsOrganization"; bindings.put("statisticsOrganization", selectedOrganization); }
+            return new NamedParameterJdbcTemplate(jdbc).queryForObject(sql, bindings, Long.class);
+            });
         }
         // Task definitions have tenant ownership only; never imply an organization filter exists.
         boolean tasksAllowed = allowed.test("enterprise.tasks.read") && allowed.test("GET:/api/v1/enterprises/{enterpriseId}/tasks");
@@ -89,9 +105,46 @@ class StatisticsService {
             audits = organizationId == null ? count(sql, enterpriseId, from, to)
                     : count(sql + " and organization_id=?", enterpriseId, from, to, organizationId);
         }
-        long interfaces = authorizedInterfaces(enterpriseId, allowed);
+        long interfaces = managed ? authorizedManagedInterfaces(enterpriseId, authentication) : authorizedInterfaces(enterpriseId, allowed);
         return new StatisticsView(new StatisticsWindow(from, to), new StatisticsScope(enterpriseId, organizationId, authentication.getName()),
                 users, roles, interfaces, interfaces, dictionaries, tasks, executions, successful, failed, successRate, audits, asOf);
+    }
+
+    private boolean sourceAllowed(String enterprise, Authentication actor, String source) {
+        String path = switch (source) {
+            case "enterprise.statistics.read" -> "/statistics";
+            case "enterprise.members.read" -> "/members";
+            case "enterprise.roles.read" -> "/roles";
+            case "platform.dictionary.read" -> "/dictionaries";
+            case "enterprise.tasks.read", "GET:/api/v1/enterprises/{enterpriseId}/tasks" -> "/tasks";
+            case "enterprise.audit.read" -> "/audit-events";
+            default -> null;
+        };
+        if (path == null) return false;
+        String delegation = source.startsWith("GET:") ? "enterprise.tasks.read" : source;
+        return installedAllowed(enterprise, actor, "GET", "/api/v1/enterprises/{enterpriseId}" + path, delegation);
+    }
+
+    private boolean installedAllowed(String enterprise, Authentication actor, String method, String path, String... scopes) {
+        try {
+            return business.requireHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterprise),
+                    actor, method, path, scopes);
+        } catch (AccessDeniedException denied) { return false; }
+    }
+
+    private long authorizedManagedInterfaces(String enterprise, Authentication actor) {
+        Set<String> allowed = new HashSet<>();
+        mappings.getHandlerMethods().forEach((mapping, handler) -> {
+            var annotation = AnnotatedElementUtils.findMergedAnnotation(handler.getMethod(), ResourcePermission.class);
+            if (annotation == null) annotation = AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(), ResourcePermission.class);
+            String[] scopes = annotation == null || annotation.value().isBlank() ? new String[0] : new String[]{annotation.value()};
+            for (String path : mapping.getPatternValues()) {
+                if (!path.startsWith("/api/v1/enterprises/{enterpriseId}/") || path.contains("/statistics")) continue;
+                for (var method : mapping.getMethodsCondition().getMethods())
+                    if (installedAllowed(enterprise, actor, method.name(), path, scopes)) allowed.add(method.name() + ":" + path);
+            }
+        });
+        return allowed.size();
     }
 
     private String currentOrganization(String enterpriseId, Authentication authentication) {

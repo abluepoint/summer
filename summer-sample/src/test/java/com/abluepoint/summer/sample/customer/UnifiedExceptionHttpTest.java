@@ -18,7 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "summer.security.storage.keys=memory")
 @AutoConfigureMockMvc
-@Import({UnifiedExceptionHttpTest.Endpoint.class, UnifiedExceptionHttpTest.Messages.class})
+@Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, UnifiedExceptionHttpTest.Endpoint.class, UnifiedExceptionHttpTest.Messages.class})
+@org.springframework.test.annotation.DirtiesContext
 class UnifiedExceptionHttpTest {
     @Autowired MockMvc mvc;
     @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
@@ -84,7 +85,7 @@ class UnifiedExceptionHttpTest {
     }
 
     @Test void missingAuditEventKeepsItsOriginalCodeStatusAndMessage() throws Exception {
-        mvc.perform(get("/api/audit-events/absent-pilot-event").with(jwt().authorities(
+        mvc.perform(get("/api/audit-events/absent-pilot-event").with(jwt().jwt(token -> token.claim("scope", "customer.read")).authorities(
                         new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_customer.read")))
                         .header("X-Request-Id", "pilot-audit"))
                 .andExpect(status().isNotFound())

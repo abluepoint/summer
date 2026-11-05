@@ -121,17 +121,17 @@ class SystemParameterHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor reader() {
-        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("reader"))
+        return jwt().jwt(token -> token.claim("scope", "system.parameter.read").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("reader"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.read"));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor writer() {
-        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
+        return jwt().jwt(token -> token.claim("scope", "system.parameter.write").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor auditReader() {
-        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("auditor"))
+        return jwt().jwt(token -> token.claim("scope", "enterprise.audit.read customer.read").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("auditor"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"),
                         new SimpleGrantedAuthority("SCOPE_customer.read"));
     }

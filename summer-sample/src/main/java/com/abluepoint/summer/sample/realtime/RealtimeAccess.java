@@ -12,19 +12,52 @@ import java.util.Map;
 
 /** Checks current membership and persisted grants as well as the signed token. */
 @Component
-final class RealtimeAccess {
+final class RealtimeAccess implements com.abluepoint.summer.sample.resource.RuntimeBusinessResources {
     private final AuthorizationService authorization;
 
-    RealtimeAccess(AuthorizationService authorization) { this.authorization = authorization; }
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
+
+    RealtimeAccess(AuthorizationService authorization,
+                   com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
+        this.authorization = authorization;
+        this.business = business;
+    }
+
+    @Override public java.util.List<Operation> operations() {
+        return java.util.List.of(
+            new Operation("read", "WS", "/ws/v1/messages", "ENTERPRISE", Map.of("frame", java.util.List.of("read", "ping"))),
+            new Operation("send", "WS", "/ws/v1/messages", "ENTERPRISE", Map.of("frame", java.util.List.of("send", "ack"))));
+    }
 
     void require(String enterpriseId, Authentication authentication, String capability) {
+        if (!java.util.Set.of(RealtimeMessageService.READ, RealtimeMessageService.WRITE).contains(capability))
+            throw new AccessDeniedException("Unregistered message operation");
         if (!(authentication instanceof JwtAuthenticationToken jwt)
                 || enterpriseId == null || enterpriseId.isBlank()
                 || jwt.getToken().getExpiresAt() == null
                 || !jwt.getToken().getExpiresAt().isAfter(Instant.now())
-                || !claimedMember(jwt, enterpriseId) || !claimedCapability(jwt, enterpriseId, capability)
-                || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))) {
+                || !claimedMember(jwt, enterpriseId)) {
             throw new AccessDeniedException("Message capability denied or expired");
+        }
+        var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId);
+        boolean managed;
+        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes context
+                && context.getRequest().getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE)
+                    instanceof org.springframework.web.method.HandlerMethod) {
+            managed = business.require(domain, authentication, capability);
+        } else {
+            managed = business.requireRuntime(domain, authentication, this,
+                    RealtimeMessageService.READ.equals(capability) ? "read" : "send", capability);
+        }
+        if (managed) {
+            authorization.requireEnterpriseMembership(enterpriseId, authentication);
+            return;
+        }
+        if (!claimedCapability(jwt, enterpriseId, capability)
+                || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))
+) {
+            throw new AccessDeniedException("Message capability denied");
         }
         authorization.requireEnterpriseMembership(enterpriseId, authentication);
         if (!authorization.decision(authentication, enterpriseId, capability, null).allowed()) {

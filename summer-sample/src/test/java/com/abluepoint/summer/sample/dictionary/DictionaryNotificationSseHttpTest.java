@@ -103,7 +103,7 @@ class DictionaryNotificationSseHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor writer() {
-        return jwt().jwt(token -> token.subject("writer")
+        return jwt().jwt(token -> token.claim("scope", "platform.dictionary.write").subject("writer")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("platform.dictionary.write", "platform.dictionary.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
@@ -114,7 +114,7 @@ class DictionaryNotificationSseHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor readerFor(String enterpriseId) {
-        return jwt().jwt(token -> token.subject("reader")
+        return jwt().jwt(token -> token.claim("scope", "platform.dictionary.read").subject("reader")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterpriseId, "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of(enterpriseId, List.of("platform.dictionary.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"));

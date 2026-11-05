@@ -28,7 +28,7 @@ class TaskProgressController {
     @GetMapping(value = "/api/v1/enterprises/{enterpriseId}/tasks/{taskId}/events",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.read') or (hasAuthority('SCOPE_enterprise.tasks.read'))")
     ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String taskId,
                                 @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
                                 Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {

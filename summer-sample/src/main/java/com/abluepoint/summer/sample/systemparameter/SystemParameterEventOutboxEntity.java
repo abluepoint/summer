@@ -24,7 +24,7 @@ class SystemParameterEventOutboxEntity {
     private String eventType;
     @Column(name = "parameter_version", nullable = false, updatable = false)
     private long parameterVersion;
-    @Column(name = "request_id", updatable = false, length = 120)
+    @Column(name = "request_id", updatable = false, length = 128)
     private String requestId;
     @Lob
     @Column(name = "payload_json", nullable = false, updatable = false)

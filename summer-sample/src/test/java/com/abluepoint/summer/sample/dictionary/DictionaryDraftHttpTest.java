@@ -15,7 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 class DictionaryDraftHttpTest {
     @Autowired MockMvc http;
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
-        return jwt().jwt(j -> j.subject("operator").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
+        return jwt().jwt(j -> j.claim("scope", "platform.dictionary.read platform.dictionary.write").subject("operator").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
             .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"), new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
     }
     @Test void savesStringsAndDescriptionButRejectsStaleAndUnconditionalWrites() throws Exception {
@@ -49,7 +49,7 @@ class DictionaryDraftHttpTest {
             {"expectedDraftRevision":2,"name":"Sparse","publicReadable":false,"enabled":true,
              "items":[{"id":"%s","value":"a","label":"A","enabled":true},{"id":"%s","value":"b","label":"B","enabled":true},{"id":"new:c","value":"c","label":"C","enabled":true}],"itemOrder":["%s","%s","new:c"]}
             """.formatted(a,b,a,b);
-        http.perform(put(path + "/draft").with(jwt().jwt(j -> j.subject("creator").claim("enterprise_memberships",java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
+        http.perform(put(path + "/draft").with(jwt().jwt(j -> j.claim("scope", "platform.dictionary.read platform.dictionary.create").subject("creator").claim("enterprise_memberships",java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
             .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"), new SimpleGrantedAuthority("SCOPE_platform.dictionary.create")))
             .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[2].value").value("c"));
     }

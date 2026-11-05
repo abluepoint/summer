@@ -9,6 +9,7 @@ final class TaskAuthenticationFixture {
         var token = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("task-session-fixture")
                         .header("alg", "none").issuedAt(java.time.Instant.now().minusSeconds(30))
                         .expiresAt(java.time.Instant.now().plusSeconds(300)).subject("task-admin")
+                        .claim("scope", capability)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))).build();
         var authentication = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(

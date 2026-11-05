@@ -117,13 +117,13 @@ class AgentControllerTest {
     @Test
     void requiresActiveMembershipCapabilityAndOauthScope() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/agents")
-                        .with(jwt().jwt(token -> token.subject("alice")
+                        .with(jwt().jwt(token -> token.claim("scope", "enterprise.agents.other").subject("alice")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.agents.read"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.agents.other"))))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/agents")
-                        .with(jwt().jwt(token -> token.subject("disabled")
+                        .with(jwt().jwt(token -> token.claim("scope", "enterprise.agents.read").subject("disabled")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "DISABLED")))
                                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.agents.read"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.agents.read"))))
@@ -208,14 +208,14 @@ class AgentControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(token -> token.subject("enterprise-admin")
+        return jwt().jwt(token -> token.claim("scope", capability).subject("enterprise-admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor runtime(String agentId, String runtimeId, boolean verified) {
-        return jwt().jwt(token -> token.subject("runtime-" + runtimeId)
+        return jwt().jwt(token -> token.claim("scope", "internal.agent_instances.write").subject("runtime-" + runtimeId)
                         .claim("agent_id", agentId)
                         .claim("runtime_id", runtimeId)
                         .claim("workload_identity", "verified://" + agentId)
@@ -225,7 +225,7 @@ class AgentControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor runtimeInstance(String instanceId, String agentId, String runtimeId) {
-        return jwt().jwt(token -> token.subject("runtime-" + runtimeId)
+        return jwt().jwt(token -> token.claim("scope", "internal.agent_instances.write").subject("runtime-" + runtimeId)
                         .claim("agent_id", agentId)
                         .claim("agent_instance_id", instanceId)
                         .claim("runtime_id", runtimeId)

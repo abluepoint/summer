@@ -28,34 +28,34 @@ class PluginController {
 
     @GetMapping("/v1/platform/plugins")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_platform.plugins.read')")
+    @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.read') or (hasAuthority('SCOPE_platform.plugins.read'))")
     ResponseEntity<ApiResponse<PluginPage>> list(Authentication authentication) { return ok(service.platformList(authentication)); }
 
     @PostMapping(value = "/v1/platform/plugins", consumes = "application/json")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
+    @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> register(@RequestBody PluginRegisterRequest body, Authentication authentication) {
         return body(HttpStatus.CREATED, nativeBoundary(() -> service.register(body, authentication)));
     }
 
     @PostMapping("/v1/platform/plugins/{pluginId}:enable")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
+    @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> enable(@PathVariable String pluginId, Authentication authentication) { return lifecycle(() -> service.enable(pluginId, authentication)); }
 
     @PostMapping("/v1/platform/plugins/{pluginId}:disable")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
+    @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> disable(@PathVariable String pluginId, Authentication authentication) { return lifecycle(() -> service.disable(pluginId, authentication)); }
 
     @PostMapping(value = "/v1/platform/plugins/{pluginId}:upgrade", consumes = "application/json")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_platform.plugins.write')")
+    @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> upgrade(@PathVariable String pluginId, @RequestBody PluginUpgradeRequest body, Authentication authentication) { return lifecycle(() -> service.upgrade(pluginId, body, authentication)); }
 
     @GetMapping("/v1/platform/plugins/{pluginId}/diagnostic")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_platform.plugins.read')")
+    @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.read') or (hasAuthority('SCOPE_platform.plugins.read'))")
     ResponseEntity<ApiResponse<PluginDiagnosticView>> diagnostic(@PathVariable String pluginId, Authentication authentication) { return lifecycle(() -> service.diagnostic(pluginId, authentication)); }
 
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins")

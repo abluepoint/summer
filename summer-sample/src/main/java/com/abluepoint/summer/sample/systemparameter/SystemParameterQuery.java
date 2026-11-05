@@ -83,7 +83,7 @@ record SystemParameterListQuery(
         SortDirection direction,
         Projection projection,
         String tenantId,
-        com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope
+        com.abluepoint.summer.sample.authorization.BusinessDataScopes.Filter scope
 ) {
     static final int DEFAULT_PAGE = 0;
     static final int DEFAULT_SIZE = 20;
@@ -95,7 +95,7 @@ record SystemParameterListQuery(
         if (tenantId == null || tenantId.isBlank()) throw new IllegalArgumentException("tenantId is required");
     }
 
-    SystemParameterListQuery withScope(com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope) {
+    SystemParameterListQuery withScope(com.abluepoint.summer.sample.authorization.BusinessDataScopes.Filter scope) {
         return new SystemParameterListQuery(page, size, key, type, status, publicValue, sort, direction, projection, tenantId, scope);
     }
 

@@ -9,11 +9,16 @@ import org.springframework.security.access.AccessDeniedException;
 @Component
 public class ConfigurationActionAccess {
     private final AuthorizationService authorization;
-    ConfigurationActionAccess(AuthorizationService authorization) { this.authorization=authorization; }
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
+    ConfigurationActionAccess(AuthorizationService authorization, com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
+        this.authorization=authorization; this.business=business;
+    }
     public void requirePublic(String resource, Authentication auth) {
         requirePublic(resolve(auth), resource, auth);
     }
     public void requirePublic(String tenant, String resource, Authentication auth) {
+        String scope = "dictionaries".equals(resource) ? "platform.dictionary.read" : "system.parameter.read";
+        if (business.requirePublicConfigurationRead(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant), auth, resource, scope)) return;
         if (!(auth instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken)) return;
         String permission = "dictionaries".equals(resource) ? "platform.dictionary.read" : "system.parameter.read";
         if (!authorization.decision(auth, tenant, permission, null).allowed())
@@ -22,6 +27,12 @@ public class ConfigurationActionAccess {
     public void require(String resource,String action,Authentication auth) {
         String prefix="dictionaries".equals(resource)?"platform.dictionary":"system.parameter";
         String permission=prefix+"."+action;
+        var delegated = "read".equals(action)
+                ? ("system-parameters".equals(resource) ? new String[]{permission, "platform.parameter.read"} : new String[]{permission})
+                : ("system-parameters".equals(resource)
+                    ? new String[]{permission, prefix+".write", "platform.parameter."+action, "platform.parameter.write"}
+                    : new String[]{permission, prefix+".write"});
+        if (business.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(resolve(auth)), auth, delegated)) return;
         boolean allowed=auth!=null && auth.getAuthorities().stream().anyMatch(a ->
                 a.getAuthority().equals("SCOPE_"+permission) || (!"read".equals(action) && a.getAuthority().equals("SCOPE_"+prefix+".write"))
                 || ("system-parameters".equals(resource) && (a.getAuthority().equals("SCOPE_platform.parameter."+action) || (!"read".equals(action) && a.getAuthority().equals("SCOPE_platform.parameter.write")))));

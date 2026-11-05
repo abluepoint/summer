@@ -24,7 +24,7 @@ class DictionaryOutboxEntity {
     private String eventType;
     @Column(name = "version_number", nullable = false, updatable = false)
     private long version;
-    @Column(name = "request_id", length = 120, updatable = false)
+    @Column(name = "request_id", length = 128, updatable = false)
     private String requestId;
     @Column(name = "idempotency_key", length = 255, updatable = false)
     private String idempotencyKey;

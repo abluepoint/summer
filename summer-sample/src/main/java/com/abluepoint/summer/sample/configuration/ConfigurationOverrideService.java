@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.configuration;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
@@ -17,7 +17,7 @@ import java.util.*;
 public class ConfigurationOverrideService {
     private final ConfigurationOverrideRepository repository;
     private final ConfigurationOverrideRevisionRepository revisions;
-    private final DataScopeService scopes;
+    private final com.abluepoint.summer.sample.authorization.BusinessDataScopes reads;
     private final CustomerAuditService audit;
     private final ObjectMapper mapper;
     private final JdbcTemplate jdbc;
@@ -27,11 +27,11 @@ public class ConfigurationOverrideService {
     private final VersionedTwoLevelCache cache;
     private final org.springframework.context.ApplicationEventPublisher publications;
     ConfigurationOverrideService(ConfigurationOverrideRepository repository, ConfigurationOverrideRevisionRepository revisions,
-            DataScopeService scopes, CustomerAuditService audit, ObjectMapper mapper, JdbcTemplate jdbc,
+            BusinessDataScopes reads, CustomerAuditService audit, ObjectMapper mapper, JdbcTemplate jdbc,
             ConfigurationActionAccess actions, List<ConfigurationValueValidator> validators,
             AuthorizationChangeEventService events, VersionedTwoLevelCache cache,
             org.springframework.context.ApplicationEventPublisher publications) {
-        this.repository=repository; this.revisions=revisions; this.scopes=scopes; this.audit=audit; this.mapper=mapper;
+        this.repository=repository; this.revisions=revisions; this.reads=reads; this.audit=audit; this.mapper=mapper;
         this.jdbc=jdbc; this.actions=actions; this.validators=validators; this.events=events; this.cache=cache;
         this.publications=publications;
     }
@@ -42,8 +42,8 @@ public class ConfigurationOverrideService {
 
     @Transactional(readOnly=true)
     public Optional<Value> resolve(String tenant,String resource,String key,Authentication auth) {
-        var scope=scopes.filter(tenant,resource,auth);
-        String organization=scopes.organization(tenant,auth);
+        return reads.read(tenant,resource,"read",auth,scope -> {
+        String organization=reads.organization(tenant,auth);
         List<String> candidates=organization==null ? List.of("_tenant") : List.of(organization,"_tenant");
         for (String candidate:candidates) {
             // Draft-only overrides do not participate in precedence. A hidden published override blocks fallback.
@@ -54,6 +54,7 @@ public class ConfigurationOverrideService {
             return Optional.of(new Value(row.valueJson,row.version,row.publishedRevision,row.id));
         }
         return Optional.empty();
+        });
     }
 
     @Transactional
@@ -70,17 +71,21 @@ public class ConfigurationOverrideService {
         String tenant=ConfigurationTenantContext.resolve(auth);
         ConfigurationTenantContext.requireMembership(tenant,auth);
         if(request==null||request.value()==null||organization==null||!organization.matches("[a-zA-Z0-9_-]{1,64}")) throw invalid();
-        validator(resource).validate(tenant,key,request.value(),auth);
+        return reads.writeResolved(tenant, resource,
+                () -> Set.of(repository.existsByTenantIdAndResourceAndKeyAndScopeId(tenant,resource,key,organization) ? "update" : "create"),
+                auth, ranges -> {
+        boolean existing = ranges.containsKey("update");
+        var scope = ranges.get(existing ? "update" : "create");
+        validator(resource).validate(tenant,key,request.value(),auth,scope);
         String org="_tenant".equals(organization)?null:organization;
-        scopes.assertOrganization(tenant,org);
-        boolean existing=repository.existsByTenantIdAndResourceAndKeyAndScopeId(tenant,resource,key,organization);
+        reads.assertOrganization(tenant,org);
         actions.require(resource,existing?"update":"create",auth);
         if(!draft) actions.require(resource,Boolean.FALSE.equals(request.enabled())?"disable":"publish",auth);
         ConfigurationOverrideEntity row;
-        if(existing) { row=current(tenant,resource,key,organization,auth); expected(row,request.expectedVersion()); }
+        if(existing) { row=current(tenant,resource,key,organization,auth,scope); expected(row,request.expectedVersion()); }
         else {
             if(request.expectedVersion()!=null) throw conflict();
-            scopes.assertWrite(tenant,resource,auth,org);
+
             row=new ConfigurationOverrideEntity();row.id=UUID.randomUUID().toString();row.tenantId=tenant;
             row.resource=resource;row.key=key;row.scopeId=organization;row.organizationId=org;row.createdBy=auth.getName();row.ownerId=auth.getName();
             row.valueJson="null";
@@ -90,24 +95,29 @@ public class ConfigurationOverrideService {
         String state=draft?"DRAFT":enabled?"PUBLISHED":"DISABLED";
         var revision=append(row,state,json,publicReadable,enabled,auth,requestId);
         if(!draft) { row.valueJson=json;row.publicReadable=publicReadable;row.enabled=enabled;row.publishedRevision=row.latestRevision; }
-        persist(row,revision);
+        row = persist(row,revision,scope,existing);
         evidence(row,state,requestId,auth);
         return view(row,state);
+        });
     }
 
     @Transactional(readOnly=true)
     public List<ConfigurationOverrideRevisionView> history(String resource,String key,String organization,Authentication auth) {
         String tenant=ConfigurationTenantContext.resolve(auth);actions.require(resource,"read",auth);
-        var row=current(tenant,resource,key,organization,auth);
+        return reads.read(tenant,resource,"read",auth,scope -> {
+        var row=current(tenant,resource,key,organization,auth,scope);
         return revisions.findByTenantIdAndOverrideIdOrderByRevisionDesc(tenant,row.id).stream().map(r->
                 new ConfigurationOverrideRevisionView(r.revision,r.state,mapper.readValue(r.valueJson,Object.class),r.publicReadable,r.enabled,r.principal,r.createdAt)).toList();
+            });
     }
 
     @Transactional
     public ConfigurationOverrideView transition(String resource,String key,String organization,String action,ConfigurationOverrideCommand command,Authentication auth,String requestId) {
         if(!Set.of("publish","disable","rollback").contains(action)) throw invalid();
         String tenant=ConfigurationTenantContext.resolve(auth);actions.require(resource,action,auth);
-        var row=current(tenant,resource,key,organization,auth);
+        return reads.write(tenant,resource,Set.of("update"),auth,ranges -> {
+        var scope = ranges.get("update");
+        var row=current(tenant,resource,key,organization,auth,scope);
         expected(row,command==null?null:command.expectedVersion());
         String json=row.valueJson;boolean publicReadable=row.publicReadable,enabled=row.enabled;
         if("disable".equals(action)) {
@@ -119,17 +129,18 @@ public class ConfigurationOverrideService {
             if("publish".equals(action) ? !"DRAFT".equals(target.state) : "DRAFT".equals(target.state)) throw conflict();
             json=target.valueJson;publicReadable=target.publicReadable;enabled=target.enabled;
             if("publish".equals(action)&&!enabled) throw invalid();
-            validator(resource).validate(tenant,key,mapper.readValue(json,Object.class),auth);
+            validator(resource).validate(tenant,key,mapper.readValue(json,Object.class),auth,scope);
         }
         String state=switch(action){case "publish"->"PUBLISHED";case "disable"->"DISABLED";default->"ROLLED_BACK";};
         var revision=append(row,state,json,publicReadable,enabled,auth,requestId);
         row.valueJson=json;row.publicReadable=publicReadable;row.enabled=enabled;row.publishedRevision=row.latestRevision;
-        persist(row,revision);evidence(row,state,requestId,auth);return view(row,state);
+        row=persist(row,revision,scope,true);evidence(row,state,requestId,auth);return view(row,state);
+            });
     }
 
-    private ConfigurationOverrideEntity current(String tenant,String resource,String key,String organization,Authentication auth) {
-        validator(resource).requireBase(tenant,key,auth);
-        return repository.findOne(scopes.filter(tenant,resource,auth).<ConfigurationOverrideEntity>specification().and((r,q,b)->b.and(
+    private ConfigurationOverrideEntity current(String tenant,String resource,String key,String organization,Authentication auth,BusinessDataScopes.Filter scope) {
+        validator(resource).requireBase(tenant,key,auth,scope);
+        return repository.findOne(scope.<ConfigurationOverrideEntity>specification().and((r,q,b)->b.and(
                 b.equal(r.get("resource"),resource),b.equal(r.get("key"),key),b.equal(r.get("scopeId"),organization)))).orElseThrow(ConfigurationOverrideService::hidden);
     }
     private ConfigurationOverrideRevisionEntity append(ConfigurationOverrideEntity row,String state,String json,boolean pub,boolean enabled,Authentication auth,String requestId) {
@@ -139,9 +150,31 @@ public class ConfigurationOverrideService {
         revision.publicReadable=pub;revision.enabled=enabled;revision.principal=auth.getName();revision.requestId=requestId;revision.createdAt=row.updatedAt;
         return revision;
     }
-    private void persist(ConfigurationOverrideEntity row, ConfigurationOverrideRevisionEntity revision) {
-        try { repository.saveAndFlush(row);revisions.saveAndFlush(revision); }
-        catch(org.springframework.dao.OptimisticLockingFailureException | org.springframework.dao.DataIntegrityViolationException conflict) { throw conflict(); }
+    private ConfigurationOverrideEntity persist(ConfigurationOverrideEntity row, ConfigurationOverrideRevisionEntity revision,
+                                                BusinessDataScopes.Filter scope, boolean existing) {
+        try {
+            ConfigurationOverrideEntity saved;
+            if (existing) {
+                Map<String,Object> values = new LinkedHashMap<>();
+                values.put("valueJson",row.valueJson); values.put("publicReadable",row.publicReadable); values.put("enabled",row.enabled);
+                values.put("latestRevision",row.latestRevision); values.put("publishedRevision",row.publishedRevision); values.put("updatedAt",row.updatedAt);
+                saved = reads.update(scope,ConfigurationOverrideEntity.class,row,row.id,"version",row.version,values);
+            } else {
+                Map<String,Object> values = new LinkedHashMap<>();
+                values.put("id",row.id);values.put("tenant_id",row.tenantId);values.put("resource",row.resource);values.put("config_key",row.key);
+                values.put("scope_id",row.scopeId);values.put("organization_id",row.organizationId);values.put("created_by",row.createdBy);values.put("owner_id",row.ownerId);
+                values.put("value_json",row.valueJson);values.put("public_readable",row.publicReadable);values.put("enabled",row.enabled);values.put("version",row.version);
+                values.put("latest_revision",row.latestRevision);values.put("published_revision",row.publishedRevision);values.put("updated_at",java.sql.Timestamp.from(row.updatedAt));
+                reads.insert(scope,BusinessDataScopes.Table.OVERRIDES,values);
+                saved = repository.findById(row.id).orElseThrow();
+            }
+            Map<String,Object> values = new LinkedHashMap<>();
+            values.put("id",revision.id);values.put("override_id",revision.overrideId);values.put("tenant_id",revision.tenantId);values.put("revision",revision.revision);
+            values.put("state",revision.state);values.put("value_json",revision.valueJson);values.put("public_readable",revision.publicReadable);values.put("enabled",revision.enabled);
+            values.put("principal",revision.principal);values.put("request_id",revision.requestId);values.put("created_at",java.sql.Timestamp.from(revision.createdAt));
+            reads.insertOverrideRevision(scope,saved.id,values);
+            return saved;
+        } catch(org.springframework.dao.OptimisticLockingFailureException | org.springframework.dao.DataIntegrityViolationException conflict) { throw new SummerException(CommonErrorCode.CONFLICT, conflict); }
     }
     private void evidence(ConfigurationOverrideEntity row,String state,String requestId,Authentication auth) {
         String action="CONFIGURATION_OVERRIDE_"+state;

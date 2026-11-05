@@ -4,7 +4,7 @@ import static com.abluepoint.summer.sample.configuration.ConfigurationTenantCont
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.mvc.validate.FieldValidationException;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,12 +30,12 @@ class SystemParameterReleaseService {
     private final SystemParameterEventService events;
     private final VersionedTwoLevelCache cache;
     private final CustomerAuditService audit;
-    private final DataScopeService dataScopes;
+    private final BusinessDataScopes dataScopes;
 
     SystemParameterReleaseService(SystemParameterRepository parameters, SystemParameterVersionRepository versions,
                                   ObjectMapper objectMapper, SystemParameterEventService events,
                                   VersionedTwoLevelCache cache, CustomerAuditService audit,
-                                  DataScopeService dataScopes) {
+                                  BusinessDataScopes dataScopes) {
         this.parameters = parameters;
         this.versions = versions;
         this.objectMapper = objectMapper;
@@ -46,10 +46,10 @@ class SystemParameterReleaseService {
     }
 
     @Transactional
-    void recordInitial(SystemParameterEntity parameter, Authentication authentication) {
+    void recordInitial(SystemParameterEntity parameter, Authentication authentication, BusinessDataScopes.Filter scope) {
         if (versions.findByTenantIdAndParameterKeyAndRevision(parameter.tenantId(), parameter.key(), 0).isPresent()) return;
         try {
-            versions.saveAndFlush(new SystemParameterVersionEntity(parameter.tenantId(), parameter.key(), 0,
+            persistVersion(parameter, scope, new SystemParameterVersionEntity(parameter.tenantId(), parameter.key(), 0,
                     SystemParameterReleaseState.PUBLISHED, serialize(snapshot(parameter)), parameter.version(),
                     "initial:" + parameter.id(), principal(authentication)));
         } catch (DataIntegrityViolationException ignored) {
@@ -60,7 +60,9 @@ class SystemParameterReleaseService {
     @Transactional
     SystemParameterReleaseResult draft(String key, SystemParameterDraftRequest request, String requestId,
                                        Authentication authentication) {
-        SystemParameterEntity parameter = current(key, authentication);
+        return dataScopes.write(resolve(authentication), "system-parameters", java.util.Set.of("update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        SystemParameterEntity parameter = current(key, scope);
         String idempotency = idempotency(request == null ? null : request.idempotencyKey());
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
@@ -69,18 +71,21 @@ class SystemParameterReleaseService {
         }
         SystemParameterSnapshot snapshot = merge(parameter, request);
         validate(snapshot);
-        recordInitial(parameter, authentication);
-        SystemParameterVersionEntity saved = versions.saveAndFlush(new SystemParameterVersionEntity(parameter.tenantId(), key,
+        recordInitial(parameter, authentication, scope);
+        SystemParameterVersionEntity saved = persistVersion(parameter, scope, new SystemParameterVersionEntity(parameter.tenantId(), key,
                 nextRevision(parameter.tenantId(), key), SystemParameterReleaseState.DRAFT, serialize(snapshot), parameter.version(),
                 idempotency, principal(authentication)));
         audit.recordTenantResourceSuccess(resolve(authentication), "system-parameter:" + key, "SYSTEM_PARAMETER_DRAFT_SAVED", requestId, authentication);
         return result(parameter, saved);
+            });
     }
 
     @Transactional
     SystemParameterReleaseResult publish(String key, SystemParameterReleaseCommand command, String requestId,
                                          Authentication authentication) {
-        SystemParameterEntity parameter = current(key, authentication);
+        return dataScopes.write(resolve(authentication), "system-parameters", java.util.Set.of("update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        SystemParameterEntity parameter = current(key, scope);
         String idempotency = idempotency(command == null ? null : command.idempotencyKey());
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
@@ -90,13 +95,16 @@ class SystemParameterReleaseService {
         SystemParameterSnapshot snapshot = readSnapshot(draft.snapshotJson());
         validate(snapshot);
         return apply(parameter, snapshot, SystemParameterReleaseState.PUBLISHED, "SYSTEM_PARAMETER_PUBLISHED",
-                requestId, authentication, idempotency);
+                requestId, authentication, idempotency, scope);
+            });
     }
 
     @Transactional
     SystemParameterReleaseResult rollback(String key, SystemParameterReleaseCommand command, String requestId,
                                           Authentication authentication) {
-        SystemParameterEntity parameter = current(key, authentication);
+        return dataScopes.write(resolve(authentication), "system-parameters", java.util.Set.of("update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        SystemParameterEntity parameter = current(key, scope);
         String idempotency = idempotency(command == null ? null : command.idempotencyKey());
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
@@ -106,13 +114,16 @@ class SystemParameterReleaseService {
         SystemParameterSnapshot snapshot = readSnapshot(target.snapshotJson());
         validate(snapshot);
         return apply(parameter, snapshot, SystemParameterReleaseState.ROLLED_BACK, "SYSTEM_PARAMETER_ROLLED_BACK",
-                requestId, authentication, idempotency);
+                requestId, authentication, idempotency, scope);
+            });
     }
 
     @Transactional
     SystemParameterReleaseResult deactivate(String key, SystemParameterReleaseCommand command, String requestId,
                                             Authentication authentication) {
-        SystemParameterEntity parameter = current(key, authentication);
+        return dataScopes.write(resolve(authentication), "system-parameters", java.util.Set.of("update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        SystemParameterEntity parameter = current(key, scope);
         String idempotency = idempotency(command == null ? null : command.idempotencyKey());
         var existing = versions.findByTenantIdAndParameterKeyAndIdempotencyKey(parameter.tenantId(), key, idempotency);
         if (existing.isPresent()) return result(parameter, existing.get());
@@ -122,28 +133,32 @@ class SystemParameterReleaseService {
                 current.min(), current.max(), current.pattern(), current.publicValue(), current.description(),
                 SystemParameterStatus.INACTIVE);
         return apply(parameter, inactive, SystemParameterReleaseState.INACTIVE, "SYSTEM_PARAMETER_DISABLED",
-                requestId, authentication, idempotency);
+                requestId, authentication, idempotency, scope);
+            });
     }
 
     @Transactional(readOnly = true)
     SystemParameterVersionPage versions(String key, Authentication authentication) {
-        SystemParameterEntity parameter = current(key, authentication);
+        return dataScopes.read(resolve(authentication), "system-parameters", "read", authentication, scope -> {
+        SystemParameterEntity parameter = current(key, scope);
         List<SystemParameterVersionEntity> rows = versions.findAllByTenantIdAndParameterKeyOrderByRevisionAsc(parameter.tenantId(), key);
         SystemParameterReleaseState currentState = parameter.status() == SystemParameterStatus.INACTIVE
                 ? SystemParameterReleaseState.INACTIVE : SystemParameterReleaseState.PUBLISHED;
         return new SystemParameterVersionPage(rows.stream().map(row -> view(row, parameter.version())).toList(),
                 parameter.version(), currentState);
+            });
     }
 
     private SystemParameterReleaseResult apply(SystemParameterEntity parameter, SystemParameterSnapshot snapshot,
                                                SystemParameterReleaseState state, String eventType, String requestId,
-                                               Authentication authentication, String idempotency) {
+                                               Authentication authentication, String idempotency, BusinessDataScopes.Filter scope) {
         parameter.update(serialize(snapshot.value()), snapshot.required(), snapshot.min(), snapshot.max(),
                 snapshot.pattern(), snapshot.publicValue(), snapshot.description(), snapshot.status());
         try {
-            SystemParameterEntity saved = parameters.saveAndFlush(parameter);
-            SystemParameterVersionEntity release = versions.saveAndFlush(new SystemParameterVersionEntity(
-                    parameter.tenantId(), parameter.key(), nextRevision(parameter.tenantId(), parameter.key()), state, serialize(snapshot), parameter.version(),
+            SystemParameterEntity saved = dataScopes.update(scope, SystemParameterEntity.class, parameter, parameter.id(),
+                    "version", parameter.version(), SystemParameterService.updateValues(parameter));
+            SystemParameterVersionEntity release = persistVersion(saved, scope, new SystemParameterVersionEntity(
+                    parameter.tenantId(), parameter.key(), nextRevision(parameter.tenantId(), parameter.key()), state, serialize(snapshot), saved.version(),
                     idempotency, principal(authentication)));
             events.enqueue(saved, eventType, requestId);
             cache.evictLocal(parameter.tenantId(), "system-parameter");
@@ -154,9 +169,20 @@ class SystemParameterReleaseService {
         }
     }
 
-    private SystemParameterEntity current(String key, Authentication authentication) {
-        return parameters.findScoped(key, dataScopes.filter(resolve(authentication), "system-parameters", authentication))
+    private SystemParameterEntity current(String key, BusinessDataScopes.Filter scope) {
+        return parameters.findScoped(key, scope)
                 .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter not found: " + key));
+    }
+
+    private SystemParameterVersionEntity persistVersion(SystemParameterEntity parent, BusinessDataScopes.Filter scope,
+                                                          SystemParameterVersionEntity row) {
+        java.util.Map<String,Object> values = new java.util.LinkedHashMap<>();
+        values.put("id", row.id()); values.put("tenant_id", row.tenantId()); values.put("parameter_key", row.parameterKey());
+        values.put("revision", row.revision()); values.put("state", row.state().name()); values.put("snapshot_json", row.snapshotJson());
+        values.put("base_version", row.baseVersion()); values.put("idempotency_key", row.idempotencyKey());
+        values.put("principal", row.principal()); values.put("created_at", java.sql.Timestamp.from(row.createdAt()));
+        dataScopes.insertParameterVersion(scope, parent.id(), values);
+        return versions.findById(row.id()).orElseThrow();
     }
 
     private SystemParameterVersionEntity version(String tenant, String key, Long revision) {

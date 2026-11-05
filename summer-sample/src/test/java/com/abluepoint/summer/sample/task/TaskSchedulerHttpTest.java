@@ -36,7 +36,7 @@ class TaskSchedulerHttpTest {
     void isolatesTaskDefinitionsAndAuditAcrossActiveEnterprises() throws Exception {
         String taskId = null;
         for (String enterprise : List.of("ent-acme", "ent-north")) {
-            var auth = jwt().jwt(token -> token.subject("task-admin")
+            var auth = jwt().jwt(token -> token.claim("scope", "enterprise.tasks.write enterprise.tasks.read").subject("task-admin")
                             .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
                             .claim("enterprise_capabilities", Map.of(enterprise, List.of("enterprise.tasks.write", "enterprise.tasks.read"))))
                     .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_enterprise.tasks.write"),
@@ -148,14 +148,14 @@ class TaskSchedulerHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(token -> token.subject("task-admin")
+        return jwt().jwt(token -> token.claim("scope", capability).subject("task-admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor auditReader() {
-        return jwt().jwt(token -> token.subject("auditor")
+        return jwt().jwt(token -> token.claim("scope", "enterprise.audit.read customer.read").subject("auditor")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_enterprise.audit.read"),
                         new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_customer.read"));

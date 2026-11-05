@@ -62,7 +62,7 @@ class CustomerAuditLedgerHttpTest {
         mockMvc.perform(post("/api/customers").contentType(MediaType.APPLICATION_JSON)
                         .header("X-Request-Id","audit-current-org")
                         .content("{\"username\":\"audit.org\",\"email\":\"audit.org@example.test\",\"displayName\":\"Context\"}")
-                        .with(jwt().jwt(token->token.subject("operator").claim("organization_id","org-stale"))
+                        .with(jwt().jwt(token->token.claim("scope", "customer.write").subject("operator").claim("organization_id","org-stale"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_customer.write"))))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/audit-events").queryParam("requestId","audit-current-org").with(auditReader()))
@@ -183,12 +183,12 @@ class CustomerAuditLedgerHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor customerWriter() {
-        return jwt().jwt(token -> token.subject("operator"))
+        return jwt().jwt(token -> token.claim("scope", "customer.write").subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_customer.write"));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor auditReader() {
-        return jwt().jwt(token -> token.subject("auditor"))
+        return jwt().jwt(token -> token.claim("scope", "enterprise.audit.read").subject("auditor"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));
     }
 }

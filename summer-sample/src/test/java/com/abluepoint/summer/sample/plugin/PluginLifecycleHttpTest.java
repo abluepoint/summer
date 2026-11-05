@@ -65,7 +65,8 @@ class PluginLifecycleHttpTest {
                 .andExpect(jsonPath("$.data.items[0].menus[0].capabilityCode").value("enterprise.plugins.customer-insights.read"));
 
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/plugins/customer-insights/summary")
-                        .with(enterprise("enterprise.plugins.customer-insights.read", "customer.read")))
+                        .with(enterpriseWithScopes("enterprise.plugins.customer-insights.read customer.read system.parameter.read platform.dictionary.read",
+                                "enterprise.plugins.customer-insights.read", "customer.read")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.pluginId").value("customer-insights"))
                 .andExpect(jsonPath("$.data.requestId").isString())
@@ -114,12 +115,16 @@ class PluginLifecycleHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platform(String capability) {
-        return jwt().jwt(token -> token.subject("platform-admin").claim("platform_capabilities", List.of(capability)))
+        return jwt().jwt(token -> token.claim("scope", capability).subject("platform-admin").claim("platform_capabilities", List.of(capability)))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor enterprise(String... capabilities) {
-        return jwt().jwt(token -> token.subject("enterprise-admin")
+        return enterpriseWithScopes(String.join(" ", capabilities), capabilities);
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor enterpriseWithScopes(String scopes, String... capabilities) {
+        return jwt().jwt(token -> token.claim("scope", scopes).subject("enterprise-admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capabilities))))
                 .authorities(java.util.Arrays.stream(capabilities)

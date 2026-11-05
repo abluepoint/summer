@@ -33,7 +33,7 @@ class DelegationErrorPolicyHttpTest {
 
     @Test void validationUsesTheApplicationResolverAndKeepsTheLiteralMessage() throws Exception {
         mvc.perform(post("/api/v1/enterprises/ent-acme/agents/agent-1/delegations")
-                        .with(jwt().jwt(token -> token.subject("admin")
+                        .with(jwt().jwt(token -> token.claim("scope", "enterprise.agents.delegations.write").subject("admin")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.agents.delegations.write"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.agents.delegations.write")))

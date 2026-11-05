@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.realtime;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.error.CommonErrorCode;
 
@@ -27,7 +28,7 @@ class RealtimeMessageController {
 
     @PostMapping
     @RawResponse
-    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.write') or (hasAuthority('SCOPE_enterprise.messages.write'))")
     ResponseEntity<ApiResponse<RealtimeMessageView>> send(@PathVariable String enterpriseId,
                                                             @RequestBody RealtimeMessageCreateRequest request,
                                                             Authentication authentication) {
@@ -40,7 +41,7 @@ class RealtimeMessageController {
 
     @GetMapping
     @RawResponse
-    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.read') or (hasAuthority('SCOPE_enterprise.messages.read'))")
     ResponseEntity<ApiResponse<RealtimeMessagePage>> list(@PathVariable String enterpriseId,
                                                             @RequestParam(required = false) String after,
                                                             Authentication authentication) {
@@ -50,7 +51,7 @@ class RealtimeMessageController {
 
     @GetMapping("/{messageId}")
     @RawResponse
-    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.read') or (hasAuthority('SCOPE_enterprise.messages.read'))")
     ResponseEntity<ApiResponse<RealtimeMessageView>> find(@PathVariable String enterpriseId, @PathVariable String messageId,
                                                            Authentication authentication) {
         try { return body(HttpStatus.OK, service.find(enterpriseId, messageId, authentication)); }
@@ -59,7 +60,7 @@ class RealtimeMessageController {
 
     @PostMapping("/{messageId}:ack")
     @RawResponse
-    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.write') or (hasAuthority('SCOPE_enterprise.messages.write'))")
     ResponseEntity<ApiResponse<RealtimeMessageView>> acknowledge(@PathVariable String enterpriseId, @PathVariable String messageId,
                                                                    Authentication authentication) {
         try {
@@ -72,7 +73,7 @@ class RealtimeMessageController {
 
     @GetMapping("/connections")
     @RawResponse
-    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('SCOPE_enterprise.messages.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.read') or (hasAuthority('SCOPE_enterprise.messages.read'))")
     ResponseEntity<ApiResponse<RealtimeConnectionView>> connections(@PathVariable String enterpriseId, Authentication authentication) {
         try { service.require(enterpriseId, authentication, RealtimeMessageService.READ); }
         catch (AccessDeniedException e) { throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Message capability denied", e); }

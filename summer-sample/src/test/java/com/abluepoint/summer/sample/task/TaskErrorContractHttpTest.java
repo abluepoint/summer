@@ -117,7 +117,7 @@ class TaskErrorContractHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
-        return jwt().jwt(token -> token.subject("task-admin")
+        return jwt().jwt(token -> token.claim("scope", "enterprise.tasks.write enterprise.tasks.read").subject("task-admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.tasks.write", "enterprise.tasks.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.tasks.write"), new SimpleGrantedAuthority("SCOPE_enterprise.tasks.read"));

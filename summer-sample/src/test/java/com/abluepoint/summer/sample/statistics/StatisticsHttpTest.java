@@ -108,7 +108,7 @@ class StatisticsHttpTest {
         return mockMvc.perform(get(URL).queryParam("from",START.toString()).queryParam("to",START.plusSeconds(60).toString()).with(admin()));
     }
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
-        return jwt().jwt(token -> token.subject("stats-admin").claim("summer_managed_grants",true)
+        return jwt().jwt(token -> token.claim("scope", CODES.stream().filter(value -> !value.contains(":")).collect(java.util.stream.Collectors.joining(" "))).subject("stats-admin").claim("summer_managed_grants",true)
             .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
             .claim("organization_context",Map.of("enterpriseId","ent-acme","organizationId","org-engineering"))
             .claim("enterprise_capabilities",Map.of("ent-acme",CODES)))

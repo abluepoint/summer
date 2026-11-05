@@ -13,4 +13,7 @@ interface SystemParameterRepository extends JpaRepository<SystemParameterEntity,
     default Optional<SystemParameterEntity> findScoped(String key, com.abluepoint.summer.sample.authorization.DataScopeService.ScopeFilter scope) {
         return findOne(scope.<SystemParameterEntity>specification().and((root, query, builder) -> builder.equal(root.get("key"), key)));
     }
+    default Optional<SystemParameterEntity> findScoped(String key, com.abluepoint.summer.sample.authorization.BusinessDataScopes.Filter scope) {
+        return findOne(scope.<SystemParameterEntity>specification().and((root, query, builder) -> builder.equal(root.get("key"), key)));
+    }
 }

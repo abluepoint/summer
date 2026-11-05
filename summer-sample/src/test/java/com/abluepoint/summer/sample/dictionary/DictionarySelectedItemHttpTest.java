@@ -117,7 +117,7 @@ class DictionarySelectedItemHttpTest {
         return identity("dictionary-operator", authority);
     }
     private static RequestPostProcessor identity(String subject, String authority) {
-        return jwt().jwt(token -> token.subject(subject)
+        return jwt().jwt(token -> token.claim("scope", authority.replaceFirst("^SCOPE_", "")).subject(subject)
                 .claim("summer_managed_grants", !"dictionary-operator".equals(subject))
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority(authority));

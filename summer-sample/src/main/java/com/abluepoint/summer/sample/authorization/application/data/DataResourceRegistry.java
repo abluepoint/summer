@@ -29,6 +29,8 @@ public class DataResourceRegistry {
 
     private final Map<String, Resource> resources =
             Map.of(
+                    "dictionaries", configuration("dictionaries", "业务字典"),
+                    "system-parameters", configuration("system-parameters", "系统参数"),
                     "applications",
                     new Resource(
                             "applications",
@@ -47,8 +49,37 @@ public class DataResourceRegistry {
                             "JPA Specification / bound SQL before pagination",
                             "Domain-locked bound SQL"));
 
+    private static Resource configuration(String key, String name) {
+        return new Resource(key, name, "tenantId", "tenant_id", "ownerId", "owner_id",
+                "持久所有者（创建人不自动取得本人归属）", "organizationId", "organization_id",
+                Set.of("read", "create", "update", "delete", "export"), "", "",
+                "各查询保留原状态、发布版本、公共读取及覆盖优先级上限",
+                "Registered ENTERPRISE-only SQL / JPA projection", "Domain-locked business transaction");
+    }
+
+    public RegisteredScopeProjection configurationProjection(DataReadService.Scope scope) {
+        if (!Set.of("dictionaries", "system-parameters").contains(scope.resource().key()))
+            throw SummerException.withMessage(PermissionErrorCode.INVALID, "Configuration projection required");
+        return new RegisteredScopeProjection(scope, new RegisteredScopeProjection.Columns(
+                "ENTERPRISE", null, null, "tenant_id", "tenantId", "owner_id", "ownerId",
+                "organization_id", "organizationId"));
+    }
+
     public Collection<Resource> list() {
         return resources.values();
+    }
+
+    public Collection<Resource> list(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain) {
+        return resources.values().stream().filter(resource -> "ENTERPRISE".equals(domain.kind())
+                || "applications".equals(resource.key())).toList();
+    }
+
+    public Resource require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain,
+            String key, String action) {
+        Resource resource = require(key, action);
+        if (!"applications".equals(key) && !"ENTERPRISE".equals(domain.kind()))
+            throw SummerException.withMessage(PermissionErrorCode.INVALID, "Data resource is ENTERPRISE-only");
+        return resource;
     }
 
     public Resource require(String key, String action) {

@@ -24,7 +24,7 @@ class DictionaryNotificationEventEntity {
     private String eventType;
     @Column(name = "version_number", nullable = false, updatable = false)
     private long version;
-    @Column(name = "request_id", updatable = false, length = 120)
+    @Column(name = "request_id", updatable = false, length = 128)
     private String requestId;
     @Column(name = "payload_json", nullable = false, updatable = false, columnDefinition = "text")
     private String payloadJson;

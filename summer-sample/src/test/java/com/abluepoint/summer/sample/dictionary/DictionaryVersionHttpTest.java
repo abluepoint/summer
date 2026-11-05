@@ -117,7 +117,7 @@ class DictionaryVersionHttpTest {
         http.perform(post("/api/dictionaries/versioned-segment/disable")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/versioned-segment/disable", "{\"expectedVersion\":1}"))
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
+                        .with(jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("scope", "customer.read")).authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }
@@ -169,7 +169,8 @@ class DictionaryVersionHttpTest {
                 .andExpect(status().isOk());
         http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Standard"));
-        http.perform(get("/api/dictionaries/versioned-segment/effective").with(jwt()
+        http.perform(get("/api/dictionaries/versioned-segment/effective").with(jwt().jwt(j -> j.claim("scope", "platform.dictionary.read")
+                .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.name").value("Versioned Segment"));
     }
@@ -213,7 +214,7 @@ class DictionaryVersionHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor writer() {
-        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
+        return jwt().jwt(token -> token.claim("scope", "platform.dictionary.write").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
     }
 }

@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
 class SystemParameterCountHttpTest {
     private static final String ROOT = "/api/v1/enterprises/ent-acme/system-parameters";
     private final String prefix = "count." + UUID.randomUUID().toString().replace("-", "");
@@ -148,7 +149,7 @@ class SystemParameterCountHttpTest {
 
     private static RequestPostProcessor auth(String scope) {
         return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                .jwt(jwt -> jwt.subject("count-fixture").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                .jwt(jwt -> jwt.claim("scope", scope).subject("count-fixture").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.data-scope.write"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + scope));
     }

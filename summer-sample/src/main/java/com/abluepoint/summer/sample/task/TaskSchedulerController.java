@@ -21,26 +21,26 @@ class TaskSchedulerController {
 
     @GetMapping
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.read') or (hasAuthority('SCOPE_enterprise.tasks.read'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> list(@PathVariable String enterpriseId) {
         return body(HttpStatus.OK, Map.of("items", service.list(enterpriseId)));
     }
 
     @GetMapping("/types")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.read') or (hasAuthority('SCOPE_enterprise.tasks.read'))")
     ResponseEntity<ApiResponse<List<TrustedTaskTypeView>>> types() { return body(HttpStatus.OK, service.types()); }
 
     @PostMapping
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.write') or (hasAuthority('SCOPE_enterprise.tasks.write'))")
     ResponseEntity<ApiResponse<TaskView>> create(@PathVariable String enterpriseId, @RequestBody TaskCreateRequest request, Authentication authentication) {
         TaskView result = service.create(enterpriseId, request, rid(), authentication); return body(HttpStatus.CREATED, result, result.version());
     }
 
     @PatchMapping("/{taskId}")
     @RawResponse
-    @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.write') or (hasAuthority('SCOPE_enterprise.tasks.write'))")
     ResponseEntity<ApiResponse<TaskView>> update(@PathVariable String enterpriseId, @PathVariable String taskId,
                                                    @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                                    @RequestBody TaskUpdateRequest request, Authentication authentication) {
@@ -48,21 +48,21 @@ class TaskSchedulerController {
     }
 
     @PostMapping("/{taskId}:pause")
-    @RawResponse @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
+    @RawResponse @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.write') or (hasAuthority('SCOPE_enterprise.tasks.write'))")
     ResponseEntity<ApiResponse<TaskView>> pause(@PathVariable String enterpriseId, @PathVariable String taskId,
                                                  @RequestHeader(value = "If-Match", required = false) String ifMatch, Authentication authentication) {
         return status(enterpriseId, taskId, TaskStatus.PAUSED, ifMatch, authentication);
     }
 
     @PostMapping("/{taskId}:resume")
-    @RawResponse @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
+    @RawResponse @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.write') or (hasAuthority('SCOPE_enterprise.tasks.write'))")
     ResponseEntity<ApiResponse<TaskView>> resume(@PathVariable String enterpriseId, @PathVariable String taskId,
                                                   @RequestHeader(value = "If-Match", required = false) String ifMatch, Authentication authentication) {
         return status(enterpriseId, taskId, TaskStatus.ACTIVE, ifMatch, authentication);
     }
 
     @PostMapping("/{taskId}:trigger")
-    @RawResponse @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.write')")
+    @RawResponse @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.write') or (hasAuthority('SCOPE_enterprise.tasks.write'))")
     ResponseEntity<ApiResponse<Map<String, String>>> trigger(@PathVariable String enterpriseId, @PathVariable String taskId,
                                                                @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                                                Authentication authentication) {
@@ -70,7 +70,7 @@ class TaskSchedulerController {
     }
 
     @GetMapping("/{taskId}/executions")
-    @RawResponse @PreAuthorize("hasAuthority('SCOPE_enterprise.tasks.read')")
+    @RawResponse @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.tasks.read') or (hasAuthority('SCOPE_enterprise.tasks.read'))")
     ResponseEntity<ApiResponse<TaskExecutionPage>> executions(@PathVariable String enterpriseId, @PathVariable String taskId) {
         return body(HttpStatus.OK, service.executions(enterpriseId, taskId));
     }

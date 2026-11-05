@@ -17,6 +17,7 @@ public final class AuditLedgerService {
     private final Map<String, String> idempotency = new HashMap<>();
     private final Map<String, McpInvocationView> invocations = new LinkedHashMap<>();
     private final AuditLedgerPersistenceAdapter persistence;
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
 
     /** Keeps direct construction and the sample's in-memory behavior compatible. */
     public AuditLedgerService() {
@@ -24,12 +25,17 @@ public final class AuditLedgerService {
     }
 
     public AuditLedgerService(AuditLedgerPersistenceAdapter persistence) {
+        this(persistence, null);
+    }
+
+    private AuditLedgerService(AuditLedgerPersistenceAdapter persistence, com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
         this.persistence = Objects.requireNonNull(persistence, "persistence");
+        this.business = business;
     }
 
     @Autowired
-    AuditLedgerService(ObjectProvider<AuditLedgerPersistenceAdapter> provider) {
-        this(provider.getIfAvailable(() -> (event, key, fingerprint) -> { }));
+    AuditLedgerService(ObjectProvider<AuditLedgerPersistenceAdapter> provider, com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
+        this(provider.getIfAvailable(() -> (event, key, fingerprint) -> { }), business);
     }
 
     public synchronized void recordExecution(ExecutionEvidence evidence, Authentication authentication) {
@@ -154,6 +160,6 @@ public final class AuditLedgerService {
         String text = String.valueOf(value);
         return '"' + text.replace("\"", "\"\"").replace("\r", " ").replace("\n", " ") + '"';
     }
-    private void requireAdmin(String e,Authentication a){if(!(a instanceof JwtAuthenticationToken j)||blank(e)||!active(j,e)||!cap(j,e,"enterprise.audit.read")||j.getAuthorities().stream().noneMatch(x->x.getAuthority().equals("SCOPE_enterprise.audit.read")))throw new AccessDeniedException("Audit capability denied");}
+    private void requireAdmin(String e,Authentication a){if(business!=null&&business.requirePreservingDenial(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e),a,"Audit capability denied","enterprise.audit.read"))return;if(!(a instanceof JwtAuthenticationToken j)||blank(e)||!active(j,e)||!cap(j,e,"enterprise.audit.read")||j.getAuthorities().stream().noneMatch(x->x.getAuthority().equals("SCOPE_enterprise.audit.read")))throw new AccessDeniedException("Audit capability denied");}
     private static boolean blank(String s){return s==null||s.isBlank();}private static void requireKey(String k){if(blank(k))throw SummerException.withMessage(AuditLedgerErrorCode.INVALID, "Idempotency-Key is required");}
 }

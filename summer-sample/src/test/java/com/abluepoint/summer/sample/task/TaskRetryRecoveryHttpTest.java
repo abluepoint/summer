@@ -85,7 +85,10 @@ class TaskRetryRecoveryHttpTest {
         for (int i = 0; i < 20; i++) {
             var result = mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/{id}/executions", taskId)
                             .with(admin("enterprise.tasks.read"))).andReturn();
-            if (result.getResponse().getContentAsString().contains("TASK_HANDLER_FAILED")) {
+            List<Map<String, Object>> executions = JsonPath.read(result.getResponse().getContentAsString(),
+                    "$.data.items[?(@.idempotencyKey == 'trigger-fail')]");
+            if (executions.size() == 1 && "FAILED".equals(executions.getFirst().get("status"))
+                    && "TASK_HANDLER_FAILED".equals(executions.getFirst().get("failureCode"))) {
                 org.hamcrest.MatcherAssert.assertThat(result.getResponse().getContentAsString(), org.hamcrest.Matchers.containsString("\"attempt\":3"));
                 org.hamcrest.MatcherAssert.assertThat(result.getResponse().getContentAsString(), org.hamcrest.Matchers.containsString("\"status\":\"FAILED\""));
                 org.hamcrest.MatcherAssert.assertThat(result.getResponse().getContentAsString(), org.hamcrest.Matchers.containsString("\"attempts\":["));
@@ -136,7 +139,7 @@ class TaskRetryRecoveryHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(token -> token.subject("task-admin")
+        return jwt().jwt(token -> token.claim("scope", capability).subject("task-admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));

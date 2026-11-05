@@ -30,7 +30,7 @@ class SystemParameterErrorPolicyHttpTest {
         mvc.perform(post("/api/system-parameters").header("X-Request-Id", "parameter-policy")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"key\":\"policy.limit\",\"type\":\"INTEGER\",\"value\":101,\"max\":100}")
-                        .with(jwt().jwt(token -> token.subject("operator").claim("enterprise_memberships",
+                        .with(jwt().jwt(token -> token.claim("scope", "system.parameter.write").subject("operator").claim("enterprise_memberships",
                                         List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"))))
                 .andExpect(status().is(422))

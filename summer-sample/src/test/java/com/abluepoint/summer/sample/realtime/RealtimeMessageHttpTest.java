@@ -97,7 +97,7 @@ class RealtimeMessageHttpTest extends RealtimeMessageTestSupport {
         mockMvc.perform(post("/api/v1/enterprises/ent-acme/messages/missing:ack").with(operator("enterprise.messages.write")))
                 .andExpect(status().isNotFound()).andExpect(unified("SUMMER_NOT_FOUND", "Message was not found"));
         // Authentication can expire after initial authentication but before the service guard.
-        mockMvc.perform(get("/api/v1/enterprises/ent-acme/messages").with(jwt().jwt(token -> token.subject("message-operator")
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/messages").with(jwt().jwt(token -> token.claim("scope", "enterprise.messages.read").subject("message-operator")
                         .issuedAt(java.time.Instant.now().minusSeconds(60)).expiresAt(java.time.Instant.now().minusSeconds(1))
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.messages.read"))))
@@ -144,7 +144,7 @@ abstract class RealtimeMessageTestSupport {
     protected org.springframework.test.web.servlet.MockMvc mockMvc;
 
     protected static org.springframework.test.web.servlet.request.RequestPostProcessor operator(String capability) {
-        return jwt().jwt(token -> token.subject("message-operator")
+        return jwt().jwt(token -> token.claim("scope", capability).subject("message-operator")
                         .issuedAt(java.time.Instant.now().minusSeconds(30))
                         .expiresAt(java.time.Instant.now().plusSeconds(300))
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))

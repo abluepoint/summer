@@ -1,0 +1,52 @@
+{
+  "manifestVersion": 8,
+  "items": [
+    {
+      "menuId": "system-parameters",
+      "path": "/system-parameters",
+      "titleKey": "menu.systemParameters",
+      "iconKey": "system-parameters",
+      "sortOrder": 88
+    },
+    {
+      "menuId": "auth-users",
+      "path": "/auth-users",
+      "titleKey": "menu.authUsers",
+      "iconKey": "auth-users",
+      "sortOrder": 99
+    },
+    {
+      "menuId": "messages",
+      "path": "/messages",
+      "titleKey": "menu.messages",
+      "iconKey": "messages",
+      "sortOrder": 154
+    },
+    {
+      "menuId": "dictionary",
+      "path": "/dictionary",
+      "titleKey": "menu.dictionary",
+      "iconKey": "dictionary",
+      "sortOrder": 187
+    },
+    {
+      "menuId": "dictionary/manage",
+      "parentMenuId": "dictionary",
+      "path": "/dictionary/manage",
+      "titleKey": "字典管理",
+      "iconKey": "dictionary/manage",
+      "sortOrder": 180
+    }
+  ],
+  "selectedPageIds": [
+    "system-parameters",
+    "dictionary/manage",
+    "messages",
+    "auth-users"
+  ],
+  "sourceSha256": {
+    "src/routes.ts": "43854986903aec45df281c0b45c67c6a0d02db2486fca515d7a53248d757ad44",
+    "src/menu/manifest.ts": "761c815421a37183121439bd752b0eaf6a44a871b0fcd455c2ad8d43528c34dd"
+  },
+  "extraction": "Actual TypeScript routes + createMenuManifest executed; React route hooks not invoked, no authorization result stubbed. Only existing managed metadata fields retained; selected actual pages include their actual ancestor."
+}

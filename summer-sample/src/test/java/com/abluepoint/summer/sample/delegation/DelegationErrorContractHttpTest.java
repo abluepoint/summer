@@ -97,7 +97,7 @@ class DelegationErrorContractHttpTest {
     private static RequestPostProcessor admin() {
         var capabilities = List.of("enterprise.agents.delegations.read", "enterprise.agents.delegations.write",
                 "enterprise.mcp.approvals.write", "enterprise.mcp.approvals.approve");
-        return jwt().jwt(token -> token.subject("admin")
+        return jwt().jwt(token -> token.claim("scope", String.join(" ", capabilities)).subject("admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", capabilities)))
                 .authorities(capabilities.stream().map(capability -> new SimpleGrantedAuthority("SCOPE_" + capability)).toArray(SimpleGrantedAuthority[]::new));

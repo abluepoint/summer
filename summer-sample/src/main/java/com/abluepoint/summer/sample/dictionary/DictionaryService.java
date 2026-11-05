@@ -4,7 +4,7 @@ import static com.abluepoint.summer.sample.configuration.ConfigurationTenantCont
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -22,12 +22,12 @@ class DictionaryService {
     private final DictionaryGroups groups;
     private final DictionaryAuditService audit;
     private final VersionedTwoLevelCache cache;
-    private final DataScopeService dataScopes;
+    private final BusinessDataScopes dataScopes;
 
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
 
     DictionaryService(DictionaryTypeRepository types, DictionaryItemRepository items, DictionaryAuditService audit,
-                      VersionedTwoLevelCache cache, DataScopeService dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, tools.jackson.databind.ObjectMapper objectMapper, DictionaryGroups groups) {
+                      VersionedTwoLevelCache cache, BusinessDataScopes dataScopes, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, tools.jackson.databind.ObjectMapper objectMapper, DictionaryGroups groups) {
         this.groups = groups;
         this.objectMapper = objectMapper;
         this.types = types;
@@ -40,19 +40,23 @@ class DictionaryService {
 
     @Transactional(readOnly = true)
     List<DictionaryTypeView> list(Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
+        return dataScopes.read(resolve(authentication), "dictionaries", "read", authentication, scope -> {
+
         return types.findScoped(scope).stream().map(type -> view(type, scope)).toList();
+            });
     }
     @Transactional(readOnly = true)
     List<DictionaryTypeView> list() { return list(null); }
 
     @Transactional
     DictionaryTypeView createType(DictionaryTypeRequest request, String requestId, Authentication authentication) {
-        dataScopes.assertWrite(resolve(authentication), "dictionaries", authentication, request == null ? null : request.organizationId());
+        return dataScopes.write(resolve(authentication), "dictionaries", java.util.Set.of("create"), authentication, ranges -> {
+        var scope = ranges.get("create");
+        dataScopes.assertOrganization(resolve(authentication), request == null ? null : request.organizationId());
         validateCode(request == null ? null : request.code());
         String code = request.code().trim();
         if (types.findByTenantIdAndCode(resolve(authentication), code).isPresent()) {
-            scopedType(code, authentication);
+            scopedType(code, scope);
             throw new SummerException(DictionaryErrorCode.CONFLICT);
         }
         if (bool(request.published())) {
@@ -63,18 +67,21 @@ class DictionaryService {
         DictionaryTypeEntity type = new DictionaryTypeEntity(resolve(authentication), UUID.randomUUID().toString(), code, request.name().trim(),
                 bool(request.published()), bool(request.publicReadable()), bool(request.enabled(), true), request.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName());
         try {
-            DictionaryTypeView result = view(types.saveAndFlush(type), dataScopes.filter(resolve(authentication), "dictionaries", authentication));
+            DictionaryTypeView result = view(insertType(type, scope), scope);
             cache.invalidate(resolve(authentication), "dictionary");
             audit.recordSuccess(code, "DICTIONARY_CREATED", requestId, authentication);
             return result;
         } catch (DataIntegrityViolationException exception) {
             throw new SummerException(DictionaryErrorCode.CONFLICT, exception);
         }
+            });
     }
 
     @Transactional
     DictionaryTypeView updateType(String code, DictionaryTypeRequest request, String requestId, Authentication authentication) {
-        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), authentication);
+        return dataScopes.write(resolve(authentication), "dictionaries", java.util.Set.of("update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), authentication, scope);
         if (request == null || blank(request.name())) throw invalid("name");
         if (request.organizationId() != null && !java.util.Objects.equals(request.organizationId(), type.organizationId())) throw invalid("organizationId");
         if (request.publicReadable() != null && request.publicReadable() != type.publicReadable()) actions.require("dictionaries", "publish", authentication);
@@ -82,21 +89,23 @@ class DictionaryService {
         if (request.enabled() != null && request.enabled() != type.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", authentication);
         actions.require("dictionaries", "update", authentication);
         if (request.name().length() > 200) throw invalid("name");
-        advance(type, request.expectedDraftRevision());
+        type = advance(type, request.expectedDraftRevision(), scope);
         type.change(request.name().trim(), bool(request.published(), type.published()),
                 bool(request.publicReadable(), type.publicReadable()), bool(request.enabled(), type.enabled()));
-        DictionaryTypeView result = view(types.saveAndFlush(type), dataScopes.filter(resolve(authentication), "dictionaries", authentication));
+        DictionaryTypeView result = view(saveType(type, scope), scope);
         ensureCapacity(type);
         cache.invalidate(resolve(authentication), "dictionary");
         audit.recordSuccess(code, "DICTIONARY_UPDATED", requestId, authentication);
         return result;
+            });
     }
 
     @Transactional
     DictionaryItemView createItem(String code, DictionaryItemRequest request, String requestId, Authentication authentication) {
-        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), authentication);
+        return dataScopes.write(resolve(authentication), "dictionaries", java.util.Set.of("create", "update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), authentication, scope);
         if (type.published() && type.publishedVersion() == null) actions.require("dictionaries", "publish", authentication);
-        dataScopes.assertWrite(resolve(authentication), "dictionaries", authentication, type.organizationId());
         actions.require("dictionaries", "create", authentication);
         validateItem(request);
         if (Boolean.FALSE.equals(request.enabled())) actions.require("dictionaries", "disable", authentication);
@@ -104,10 +113,10 @@ class DictionaryService {
         DictionaryItemEntity item = new DictionaryItemEntity(type.tenantId(), UUID.randomUUID().toString(), type.code(), (String) request.value(),
                 request.label().trim(), request.sortOrder(), bool(request.enabled(), true), type.organizationId(), authentication == null ? null : authentication.getName(), authentication == null ? null : authentication.getName());
         item.edit((String) request.value(), request.description());
-        advance(type, request.expectedDraftRevision());
+        type = advance(type, request.expectedDraftRevision(), scope);
         DictionaryItemView result;
         try {
-            result = view(items.saveAndFlush(item));
+            result = view(insertItem(item,ranges.get("create")));
         } catch (DataIntegrityViolationException exception) {
             throw new SummerException(DictionaryErrorCode.CONFLICT, exception);
         }
@@ -115,40 +124,43 @@ class DictionaryService {
         cache.invalidate(resolve(authentication), "dictionary");
         audit.recordSuccess(code, "DICTIONARY_ITEM_CREATED", requestId, authentication);
         return result;
+            });
     }
 
     @Transactional
     DictionaryItemView updateItem(String code, String value, DictionaryItemRequest request, String requestId, Authentication authentication) {
-        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), authentication);
+        return dataScopes.write(resolve(authentication), "dictionaries", java.util.Set.of("update"), authentication, ranges -> {
+        var scope = ranges.get("update");
+        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), authentication, scope);
         if (type.published() && type.publishedVersion() == null) actions.require("dictionaries", "publish", authentication);
         if (request == null || blank(request.label()) || request.label().length() > 200 || (request.description() != null && request.description().length() > 2000) || request.sortOrder() == null || request.sortOrder() < 0) {
             throw invalid("item");
         }
-        DictionaryItemEntity item = items.findScoped(code, value, dataScopes.filter(resolve(authentication), "dictionaries", authentication))
+        DictionaryItemEntity item = items.findScoped(code, value, scope)
                 .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
         if (request.enabled() != null && request.enabled() != item.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", authentication);
         actions.require("dictionaries", "update", authentication);
         String nextValue = request.value() == null ? value : validValue(request.value());
         if (!value.equals(nextValue) && items.publishedIdentity(item.id()) == 1) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
+        entityManager.detach(item);
         item.edit(nextValue, request.description() == null ? item.description() : request.description());
-        advance(type, request.expectedDraftRevision());
+        type = advance(type, request.expectedDraftRevision(), scope);
         item.change(request.label().trim(), request.sortOrder(), bool(request.enabled(), item.enabled()));
         DictionaryItemView result;
-        try { result = view(items.saveAndFlush(item)); }
+        try { result = view(saveItem(item,scope)); }
         catch (DataIntegrityViolationException exception) { throw new SummerException(DictionaryErrorCode.CONFLICT, exception); }
         ensureCapacity(type);
         cache.invalidate(resolve(authentication), "dictionary");
         audit.recordSuccess(code, "DICTIONARY_ITEM_UPDATED", requestId, authentication);
         return result;
+            });
     }
 
-    private DictionaryTypeEntity scopedType(String code, Authentication authentication) {
-        DataScopeService.ScopeFilter scope = dataScopes.filter(resolve(authentication), "dictionaries", authentication);
+    private DictionaryTypeEntity scopedType(String code, BusinessDataScopes.Filter scope) {
         return types.findScoped(code, scope).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
     }
 
-    private DictionaryTypeView view(DictionaryTypeEntity type) { return view(type, null); }
-    private DictionaryTypeView view(DictionaryTypeEntity type, DataScopeService.ScopeFilter scope) {
+    private DictionaryTypeView view(DictionaryTypeEntity type, BusinessDataScopes.Filter scope) {
         List<DictionaryItemEntity> values = scope == null ? items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(type.tenantId(), type.code()) : items.findScoped(type.code(), scope);
         long version = type.publishedVersion() == null ? 0 : type.publishedVersion();
         return new DictionaryTypeView(type.code(), type.name(), type.published(), type.publicReadable(), type.enabled(), values.stream().map(DictionaryService::view).toList(), version, type.publishedVersion(), type.tenantId(), type.organizationId(), type.draftRevision(), type.effectiveRevision());
@@ -173,8 +185,8 @@ class DictionaryService {
         return text;
     }
 
-    private DictionaryTypeEntity lockedType(String code, Object expected, Authentication auth) {
-        scopedType(code, auth);
+    private DictionaryTypeEntity lockedType(String code, Object expected, Authentication auth, BusinessDataScopes.Filter scope) {
+        scopedType(code, scope);
         DictionaryTypeEntity type = types.lock(resolve(auth), code).orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
         entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         items.lockAll(type.tenantId(), code).forEach(item -> entityManager.refresh(item, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE));
@@ -183,36 +195,38 @@ class DictionaryService {
         return type;
     }
 
-    private void advance(DictionaryTypeEntity type, Object expected) {
-        if (types.advance(type.tenantId(), type.code(), ((Number) expected).longValue()) != 1) throw new SummerException(DictionaryErrorCode.CONFLICT);
-        entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+    private DictionaryTypeEntity advance(DictionaryTypeEntity type, Object expected, BusinessDataScopes.Filter scope) {
+        return dataScopes.update(scope,DictionaryTypeEntity.class,type,id(type),"draftRevision",((Number)expected).longValue(),java.util.Map.of());
     }
 
     @Transactional(readOnly = true)
     DictionaryDraftView draft(String code, Authentication auth) {
-        DictionaryTypeEntity type = scopedType(code, auth);
-        return draftView(type, auth);
+        return dataScopes.read(resolve(auth), "dictionaries", "read", auth, scope -> {
+        DictionaryTypeEntity type = scopedType(code, scope);
+        return draftView(type, scope);
+            });
     }
 
-    private DictionaryDraftView draftView(DictionaryTypeEntity type, Authentication auth) {
-        return draftView(type, auth, false);
+    private DictionaryDraftView draftView(DictionaryTypeEntity type, BusinessDataScopes.Filter scope) {
+        return draftView(type, scope, false);
     }
 
-    private DictionaryDraftView draftView(DictionaryTypeEntity type, Authentication auth, boolean currentIdentity) {
+    private DictionaryDraftView draftView(DictionaryTypeEntity type, BusinessDataScopes.Filter scope, boolean currentIdentity) {
         var control = currentIdentity ? types.currentControl(type.tenantId(), type.code()) : null;
         var published = currentIdentity ? java.util.Set.copyOf(items.publishedIds(type.tenantId(), type.code())) : java.util.Set.<String>of();
-        var values = items.findScoped(type.code(), dataScopes.filter(resolve(auth), "dictionaries", auth));
+        var values = items.findScoped(type.code(), scope);
         return new DictionaryDraftView(type.code(), type.name(), type.publicReadable(), type.enabled(), currentIdentity ? control.getDraftRevision() : type.draftRevision(),
                 currentIdentity ? control.getPublishedVersion() : type.publishedVersion() == null ? 0 : type.publishedVersion(), currentIdentity ? control.getEffectiveRevision() : type.effectiveRevision(), values.stream().map(i -> new DictionaryDraftItem(i.id(), i.value(), i.label(), i.description(), i.enabled(), currentIdentity ? published.contains(i.id()) : i.everPublished())).toList(), values.stream().map(DictionaryItemEntity::id).toList(), groups.read(type, values.stream().map(DictionaryItemEntity::id).collect(java.util.stream.Collectors.toSet()), currentIdentity));
     }
 
     @Transactional
     DictionaryDraftView saveDraft(String code, DictionaryDraftRequest request, String requestId, Authentication auth) {
-        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), auth);
+        return dataScopes.writeResolved(resolve(auth), "dictionaries", () -> draftActions(code,request,auth), auth, ranges -> {
+        var scope = ranges.get("update");
+        DictionaryTypeEntity type = lockedType(code, request == null ? null : request.expectedDraftRevision(), auth, scope);
         var all = items.lockAll(type.tenantId(), code);
-        var visible = items.findScoped(code, dataScopes.filter(resolve(auth), "dictionaries", auth));
+        var visible = items.findScoped(code, scope);
         if (visible.size() != all.size()) throw new org.springframework.security.access.AccessDeniedException("Full dictionary maintenance required");
-        dataScopes.assertWrite(resolve(auth), "dictionaries", auth, type.organizationId());
         if (request.name() == null || request.name().isBlank() || request.name().length() > 200 || request.publicReadable() == null || request.enabled() == null || request.items() == null || request.itemOrder() == null) throw invalid("draft");
         var existing = all.stream().collect(java.util.stream.Collectors.toMap(DictionaryItemEntity::id, i -> i));
         var ids = new java.util.HashSet<String>(); var values = new java.util.HashSet<String>();
@@ -233,15 +247,15 @@ class DictionaryService {
             if (old == null || !old.value().equals(i.value()) || !old.label().equals(i.label()) || !old.description().equals(i.description() == null ? "" : i.description()) || old.enabled() != i.enabled() || orderChanged) { unchanged = false; break; }
         }
         unchanged = unchanged && oldGroups.equals(desiredGroups);
-        if (unchanged) { ensureCapacity(type); return draftView(type, auth, true); }
+        if (unchanged) { ensureCapacity(type); return draftView(type, scope, true); }
         if (!type.name().equals(request.name())) actions.require("dictionaries", "update", auth);
         if (type.publicReadable() != request.publicReadable()) actions.require("dictionaries", "publish", auth);
         if (type.enabled() != request.enabled()) actions.require("dictionaries", request.enabled() ? "publish" : "disable", auth);
         for (var old : all) if (!ids.contains(old.id())) {
             actions.require("dictionaries", "update", auth);
             if (items.publishedIdentity(old.id()) == 1) throw new SummerException(DictionaryErrorCode.INVALID_STATE);
-            groups.removeItem(type.tenantId(), code, old.id());
-            items.delete(old);
+            groups.removeItem(type, old.id(), ranges.get("delete"));
+            dataScopes.delete(ranges.get("delete"), DictionaryItemEntity.class, old, old.id());
         }
         // Flush deletions before reusing a never-published value; transaction rollback covers failures.
         items.flush();
@@ -258,16 +272,61 @@ class DictionaryService {
                 if (!old.value().equals(value) || !old.label().equals(i.label()) || !old.description().equals(description) || reorderedExisting) actions.require("dictionaries", "update", auth);
                 if (old.enabled() != i.enabled()) actions.require("dictionaries", i.enabled() ? "publish" : "disable", auth);
             }
-            old.edit(value, description); old.change(i.label(), order, i.enabled()); items.save(old); savedIds.put(i.id(), old.id());
+            entityManager.detach(old);
+            old.edit(value, description); old.change(i.label(), order, i.enabled());
+            if (existing.containsKey(i.id())) saveItem(old,scope); else insertItem(old,ranges.get("create"));
+            savedIds.put(i.id(),old.id());
         }
-        advance(type, request.expectedDraftRevision());
+        type = advance(type, request.expectedDraftRevision(), scope);
         type.change(request.name(), type.published(), request.publicReadable(), request.enabled());
+        type = saveType(type,scope);
         try { items.flush(); types.flush(); }
         catch (DataIntegrityViolationException exception) { throw new SummerException(DictionaryErrorCode.CONFLICT, exception); }
-        groups.save(type, desiredGroups, savedIds);
+        groups.save(type, desiredGroups, savedIds, ranges);
         ensureCapacity(type);
         audit.recordSuccess(code, "DICTIONARY_DRAFT_SAVED", requestId, auth);
-        return draftView(type, auth, true);
+        return draftView(type, scope, true);
+            });
+    }
+
+    private java.util.Set<String> draftActions(String code, DictionaryDraftRequest request, Authentication auth) {
+        var actions = new java.util.HashSet<String>(); actions.add("update");
+        if (request == null || request.items() == null) return actions;
+        var current = items.findAllByTenantIdAndDictionaryCodeOrderBySortOrderAscValueAsc(resolve(auth),code);
+        var ids = request.items().stream().filter(java.util.Objects::nonNull).map(DictionaryDraftItem::id).collect(java.util.stream.Collectors.toSet());
+        if (request.items().stream().filter(java.util.Objects::nonNull).anyMatch(i -> i.id() != null && i.id().startsWith("new:"))) actions.add("create");
+        if (current.stream().anyMatch(i -> !ids.contains(i.id()))) actions.add("delete");
+        types.findByTenantIdAndCode(resolve(auth),code).ifPresent(type -> actions.addAll(groups.mutationActions(type,request.groups())));
+        return actions;
+    }
+
+    private Object id(DictionaryTypeEntity type) { return entityManager.getEntityManagerFactory().getPersistenceUnitUtil().getIdentifier(type); }
+    private DictionaryTypeEntity insertType(DictionaryTypeEntity type, BusinessDataScopes.Filter scope) {
+        var values = new java.util.LinkedHashMap<String,Object>();
+        values.put("id",id(type)); values.put("tenant_id",type.tenantId()); values.put("organization_id",type.organizationId());
+        values.put("created_by",type.createdBy());values.put("owner_id",type.ownerId());values.put("code",type.code());values.put("name",type.name());
+        values.put("published",type.published());values.put("public_readable",type.publicReadable());values.put("enabled",type.enabled());
+        values.put("published_version",type.publishedVersion());values.put("draft_revision",type.draftRevision());values.put("effective_revision",type.effectiveRevision());
+        dataScopes.insert(scope,BusinessDataScopes.Table.DICTIONARY_TYPES,values);
+        return types.findById((String)id(type)).orElseThrow();
+    }
+    private DictionaryTypeEntity saveType(DictionaryTypeEntity type, BusinessDataScopes.Filter scope) {
+        var values = new java.util.LinkedHashMap<String,Object>();
+        values.put("name",type.name());values.put("published",type.published());values.put("publicReadable",type.publicReadable());values.put("enabled",type.enabled());
+        values.put("publishedVersion",type.publishedVersion());values.put("draftRevision",type.draftRevision());values.put("effectiveRevision",type.effectiveRevision());
+        return dataScopes.replace(scope,DictionaryTypeEntity.class,type,id(type),values);
+    }
+    private DictionaryItemEntity insertItem(DictionaryItemEntity item, BusinessDataScopes.Filter scope) {
+        var values = new java.util.LinkedHashMap<String,Object>();
+        values.put("id",item.id());values.put("tenant_id",item.tenantId());values.put("organization_id",item.organizationId());
+        values.put("created_by",item.createdBy());values.put("owner_id",item.ownerId());values.put("dictionary_code",item.dictionaryCode());
+        values.put("item_value",item.value());values.put("label",item.label());values.put("sort_order",item.sortOrder());values.put("enabled",item.enabled());
+        values.put("description",item.description());values.put("ever_published",item.everPublished());
+        dataScopes.insert(scope,BusinessDataScopes.Table.DICTIONARY_ITEMS,values);
+        return items.findById(item.id()).orElseThrow();
+    }
+    private DictionaryItemEntity saveItem(DictionaryItemEntity item, BusinessDataScopes.Filter scope) {
+        return dataScopes.replace(scope,DictionaryItemEntity.class,item,item.id(),java.util.Map.of("value",item.value(),"label",item.label(),"sortOrder",item.sortOrder(),"enabled",item.enabled(),"description",item.description()));
     }
 
     private void ensureCapacity(DictionaryTypeEntity type) {

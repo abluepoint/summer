@@ -27,7 +27,7 @@ class CustomerAuditEventEntity {
     private String action;
     @Column(name = "result", nullable = false, updatable = false, length = 40)
     private String result;
-    @Column(name = "request_id", updatable = false, length = 120)
+    @Column(name = "request_id", updatable = false, length = 128)
     private String requestId;
     @Column(name = "trace_id", updatable = false, length = 32)
     private String traceId;

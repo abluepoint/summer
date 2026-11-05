@@ -46,24 +46,87 @@ public class DataOperationExecutor {
             String action,
             Authentication actor,
             Function<DataReadService.Scope, T> mutation) {
-        if (!java.util.Set.of("create", "update", "delete").contains(action))
+        return write(domain, resource, java.util.Set.of(action), actor,
+                scopes -> mutation.apply(scopes.get(action)));
+    }
+
+    /**
+     * All actions share one domain lock and one writable transaction. Callers must apply each
+     * corresponding scope to its actual DML and throw if any target cannot be changed.
+     */
+    public <T> T write(
+            Domain domain,
+            String resource,
+            java.util.Set<String> actions,
+            Authentication actor,
+            Function<java.util.Map<String, DataReadService.Scope>, T> mutation) {
+        return write(domain, resource, actions, actor, mutation,
+                () -> { throw new AccessDeniedException("Managed data domain required"); });
+    }
+
+    /** Explicit expand adapter; the persisted mode is read under the same domain write lock. */
+    public <T> T write(
+            Domain domain,
+            String resource,
+            java.util.Set<String> actions,
+            Authentication actor,
+            Function<java.util.Map<String, DataReadService.Scope>, T> mutation,
+            java.util.function.Supplier<T> explicitLegacy) {
+        if (actions == null || actions.isEmpty()
+                || !java.util.Set.of("create", "update", "delete").containsAll(actions))
             throw SummerException.withMessage(
-                    PermissionErrorCode.INVALID, "Registered write action required");
+                    PermissionErrorCode.INVALID, "Registered write actions required");
+        var fixed = java.util.Set.copyOf(actions);
+        return writeResolved(domain, resource, () -> fixed, actor, mutation, ignored -> explicitLegacy.get());
+    }
+
+    /** Resolve actual insert/update/delete work only after serializing the business domain. */
+    public <T> T writeResolved(Domain domain, String resource,
+            java.util.function.Supplier<java.util.Set<String>> resolveActions, Authentication actor,
+            Function<java.util.Map<String, DataReadService.Scope>, T> mutation,
+            Function<java.util.Set<String>, T> explicitLegacy) {
+        java.util.Objects.requireNonNull(domain);
+        java.util.Objects.requireNonNull(resource);
+        java.util.Objects.requireNonNull(mutation);
         if (!access.authenticated(actor))
             throw new AccessDeniedException("Authenticated writer required");
         try {
             return writes.execute(
                     tx -> {
-                        if (db.queryForList(
-                                        "select revision from summer_authorization_domain where"
+                        var domainRows = db.queryForList(
+                                        "select engine_mode,revision from summer_authorization_domain where"
                                             + " domain_key=? for update",
-                                        domain.key())
-                                .isEmpty())
+                                        domain.key());
+                        if (domainRows.size() != 1)
                             throw new AccessDeniedException("Unknown authorization domain");
+                        var domainState = domainRows.getFirst();
+                        Object storedMode = domainState.get("engine_mode");
+                        if (!(domainState.get("revision") instanceof Number revisionValue)
+                                || revisionValue.longValue() < 0
+                                || !(storedMode instanceof String))
+                            throw new AccessDeniedException("Unconfirmed authorization domain state");
+                        String mode = (String) storedMode;
+                        if (!java.util.Set.of("LEGACY", "MANAGED").contains(mode))
+                            throw new AccessDeniedException("Unsupported authorization mode");
+                        var actions = resolveActions.get();
+                        if (actions == null || actions.isEmpty() || !java.util.Set.of("create", "update", "delete").containsAll(actions))
+                            throw SummerException.withMessage(PermissionErrorCode.INVALID, "Registered write actions required");
+                        var orderedActions = new java.util.TreeSet<>(actions);
+                        if ("LEGACY".equals(mode)) return explicitLegacy.apply(java.util.Set.copyOf(actions));
+                        if (!"MANAGED".equals(mode))
+                            throw new AccessDeniedException("Unsupported authorization mode");
                         // The scope is computed on its own read-only connection; mutation uses this
                         // writable transaction.
-                        var scope = reads.read(domain, resource, action, actor, current -> current);
-                        return mutation.apply(scope);
+                        var scopes = new java.util.LinkedHashMap<String, DataReadService.Scope>();
+                        Long revision = null;
+                        for (String action : orderedActions) {
+                            var scope = reads.read(domain, resource, action, actor, current -> current);
+                            if (revision != null && revision.longValue() != scope.revision())
+                                throw new AccessDeniedException("Data authorization changed during mutation");
+                            revision = scope.revision();
+                            scopes.put(action, scope);
+                        }
+                        return mutation.apply(java.util.Collections.unmodifiableMap(scopes));
                     });
         } catch (DataAccessException | TransactionException failure) {
             throw SummerException.withMessage(

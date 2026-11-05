@@ -4,6 +4,9 @@ import useLocale from '@/utils/useLocale';
 import useActiveEnterprise from '@/pages/data-scopes/useActiveEnterprise';
 import { getAuthenticatedUser, oidcManager } from '@/auth/oidc';
 import { hasEnterpriseCapability } from '@/auth/businessCapabilities';
+import { useOperationHints } from '@/auth/interfaceOperations';
+import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
+import type { User } from 'oidc-client-ts';
 import { acknowledgeMessage, connectRealtime, listMessages, RealtimeError, RealtimeMessage, RealtimeSocket } from './api';
 
 export default function MessagesPage() {
@@ -20,7 +23,12 @@ function MessagesBody({ enterpriseId, onDirtyChange }: { enterpriseId: string; o
   const [text, setText] = useState('');
   const [error, setError] = useState<RealtimeError | null>(null);
   const [state, setState] = useState<'CONNECTING' | 'OPEN' | 'RECONNECTING' | 'CLOSED'>('CONNECTING');
-  const [canWrite, setCanWrite] = useState(false);
+  const [legacyCanWrite, setLegacyCanWrite] = useState(false);
+  const [legacyCanRead, setLegacyCanRead] = useState(false);
+  const { engineMode } = useOperationHints();
+  const operations = useInterfaceOperations({ kind: 'ENTERPRISE', id: enterpriseId }, ['messages.send', 'messages.ack'], engineMode === 'MANAGED');
+  const canWrite = engineMode === 'LEGACY' ? legacyCanWrite && legacyCanRead : engineMode === 'MANAGED' && operations['messages.send'] === true;
+  const canAcknowledge = engineMode === 'LEGACY' ? legacyCanWrite : engineMode === 'MANAGED' && operations['messages.ack'] === true;
   const [sending, setSending] = useState(false);
   const pending = useRef<{ id: string; text: string }>();
   const socket = useRef<RealtimeSocket>();
@@ -31,7 +39,10 @@ function MessagesBody({ enterpriseId, onDirtyChange }: { enterpriseId: string; o
   useEffect(() => { onDirtyChange(Boolean(text)); }, [text, onDirtyChange]);
   useEffect(() => {
     let alive = true;
-    const update = (user) => { if (alive) setCanWrite(hasEnterpriseCapability(user, enterpriseId, 'enterprise.messages.write')); };
+    const update = (user: User | null) => { if (alive) {
+      setLegacyCanWrite(hasEnterpriseCapability(user, enterpriseId, 'enterprise.messages.write') && user?.scopes.includes('enterprise.messages.write') === true);
+      setLegacyCanRead(hasEnterpriseCapability(user, enterpriseId, 'enterprise.messages.read') && user?.scopes.includes('enterprise.messages.read') === true);
+    } };
     getAuthenticatedUser().then(update).catch(() => update(null));
     const unload = () => update(null);
     oidcManager.events.addUserLoaded(update); oidcManager.events.addUserUnloaded(unload);
@@ -80,7 +91,7 @@ function MessagesBody({ enterpriseId, onDirtyChange }: { enterpriseId: string; o
       { title: t['messages.sender'], dataIndex: 'sender' },
       { title: t['messages.payload'], render: (_, item) => String(item.payload?.text || '') },
       { title: t['messages.status'], dataIndex: 'status' },
-      { title: t['messages.actions'], render: (_, item) => item.status === 'ACKED' || !canWrite ? null : <Button size="small" onClick={() => acknowledgeMessage(enterpriseId, item.messageId).then((updated) => setItems((current) => current.map((entry) => entry.messageId === updated.messageId ? updated : entry))).catch(setError)}>{t['messages.ack']}</Button> },
+      { title: t['messages.actions'], render: (_, item) => item.status === 'ACKED' || !canAcknowledge ? null : <Button size="small" onClick={() => acknowledgeMessage(enterpriseId, item.messageId).then((updated) => setItems((current) => current.map((entry) => entry.messageId === updated.messageId ? updated : entry))).catch(setError)}>{t['messages.ack']}</Button> },
     ]} />
   </Card>;
 }

@@ -94,13 +94,13 @@ class DictionaryNameResolutionHttpTest {
     @Test
     void invisibleItemsHaveExactlyTheSameUnknownShapeAsAbsentValues() throws Exception {
         create();
-        var other = jwt().jwt(j -> j.subject("other-author").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
+        var other = jwt().jwt(j -> j.claim("scope", "platform.dictionary.write").subject("other-author").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
         http.perform(post("/api/dictionaries/name-resolution/items").with(other).contentType(MediaType.APPLICATION_JSON)
                 .content(DraftRevisionFixture.revised(http, "/api/dictionaries/name-resolution/items", "{\"value\":\"hidden\",\"label\":\"Secret name\",\"sortOrder\":1,\"enabled\":true}")))
                 .andExpect(status().isOk());
         publish(1);
-        var policyWriter = jwt().jwt(j -> j.subject("dictionary-operator")
+        var policyWriter = jwt().jwt(j -> j.claim("scope", "enterprise.data-scope.write").subject("dictionary-operator")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.data-scope.write"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.write"));
@@ -143,7 +143,7 @@ class DictionaryNameResolutionHttpTest {
         return identity("dictionary-operator", authority);
     }
     private static RequestPostProcessor identity(String subject, String authority) {
-        return jwt().jwt(token -> token.subject(subject)
+        return jwt().jwt(token -> token.claim("scope", authority.replaceFirst("^SCOPE_", "")).subject(subject)
                 .claim("summer_managed_grants", !"dictionary-operator".equals(subject))
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority(authority));

@@ -28,7 +28,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         "management.endpoints.web.exposure.include=health,info,metrics,prometheus",
         "summer.security.resource-server.protected-paths[0]=/api/**",
         "summer.security.resource-server.protected-paths[1]=/ws/**"})
-@Import({NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class, NativeBoundaryTcpIntegrationTest.NativeFilter.class})
+@Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class, NativeBoundaryTcpIntegrationTest.NativeFilter.class})
+@org.springframework.test.annotation.DirtiesContext
 class NativeBoundaryTcpIntegrationTest {
     @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
     @Autowired JWKSource<SecurityContext> keys;

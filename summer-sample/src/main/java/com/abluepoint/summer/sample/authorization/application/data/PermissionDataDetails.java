@@ -86,6 +86,7 @@ public class PermissionDataDetails {
   @org.springframework.transaction.annotation.Transactional(
       propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
   public void replace(Domain d, String id, Map<String, Object> r) {
+    registry.require(d, (String) r.get("dataResourceKey"), (String) r.get("action"));
     String preset = (String) r.get("scopePreset");
     if (!Set.of("SELF", "TENANT_ALL").contains(preset) && !d.kind().equals("ENTERPRISE"))
       throw invalid();

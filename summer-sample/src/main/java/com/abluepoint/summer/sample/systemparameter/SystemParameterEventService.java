@@ -15,8 +15,15 @@ import java.util.Map;
 class SystemParameterEventService {
     private final SystemParameterEventOutboxRepository repository;
     private final ObjectMapper objectMapper;
+    private final com.abluepoint.summer.sample.authorization.BusinessDataScopes scopes;
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
+    private final SystemParameterRepository parameters;
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entities;
 
-    SystemParameterEventService(SystemParameterEventOutboxRepository repository, ObjectMapper objectMapper) {
+    SystemParameterEventService(SystemParameterEventOutboxRepository repository, ObjectMapper objectMapper,
+        com.abluepoint.summer.sample.authorization.BusinessDataScopes scopes,
+        com.abluepoint.summer.sample.resource.BusinessResourceAccess business,SystemParameterRepository parameters) {
+        this.scopes=scopes;this.business=business;this.parameters=parameters;
         this.repository = repository;
         this.objectMapper = objectMapper;
     }
@@ -40,22 +47,44 @@ class SystemParameterEventService {
     }
 
     @Transactional(readOnly = true)
-    SystemParameterEventPage list(String tenant, String key) {
-        List<SystemParameterEventOutboxEntity> rows = key == null || key.isBlank()
-                ? repository.findAllByTenantIdOrderByCreatedAtDesc(tenant)
-                : repository.findAllByTenantIdAndParameterKeyOrderByCreatedAtDesc(tenant, key);
-        return new SystemParameterEventPage(rows.stream().map(this::view).toList(), rows.size());
+    SystemParameterEventPage list(String tenant, String key, org.springframework.security.core.Authentication actor) {
+        business.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant),actor,
+            "system.parameter.read","platform.parameter.read","customer.read");
+        return scopes.read(tenant,"system-parameters","read",actor,range -> {
+            var builder=entities.getCriteriaBuilder();var query=builder.createQuery(SystemParameterEventOutboxEntity.class);
+            var event=query.from(SystemParameterEventOutboxEntity.class);var parent=query.subquery(Integer.class);
+            var parameter=parent.from(SystemParameterEntity.class);
+            parent.select(builder.literal(1)).where(builder.and(
+                builder.equal(parameter.get("tenantId"),event.get("tenantId")),
+                builder.equal(parameter.get("key"),event.get("parameterKey")),
+                range.<SystemParameterEntity>specification().toPredicate(parameter,null,builder)));
+            var predicates=new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            predicates.add(builder.equal(event.get("tenantId"),tenant));predicates.add(builder.exists(parent));
+            if(key!=null && !key.isBlank()) predicates.add(builder.equal(event.get("parameterKey"),key));
+            query.select(event).where(builder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new)))
+                .orderBy(builder.desc(event.get("createdAt")));
+            var rows=entities.createQuery(query).getResultList();
+            return new SystemParameterEventPage(rows.stream().map(this::view).toList(),rows.size());
+        });
     }
 
     @Transactional
-    SystemParameterEventView retry(String tenant, String eventId) {
-        SystemParameterEventOutboxEntity entity = repository.findById(eventId)
-                .orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter event not found: " + eventId));
-        if (!tenant.equals(entity.tenantId())) {
-            throw SummerException.withMessage(CommonErrorCode.NOT_FOUND, "System parameter event not found: " + eventId);
-        }
-        entity.resetForRetry(Instant.now());
-        return view(repository.saveAndFlush(entity));
+    SystemParameterEventView retry(String tenant, String eventId, org.springframework.security.core.Authentication actor) {
+        business.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant),actor,
+            "system.parameter.update","platform.parameter.update","system.parameter.write","platform.parameter.write","customer.write");
+        var requested=repository.findById(eventId).orElseThrow(() -> missing(eventId));
+        if(!tenant.equals(requested.tenantId())) throw missing(eventId);
+        return scopes.write(tenant,"system-parameters",java.util.Set.of("update"),actor,ranges -> {
+            var range=ranges.get("update");
+            var entity=repository.findById(eventId).orElseThrow(() -> missing(eventId));
+            if(!tenant.equals(entity.tenantId()) || parameters.findScoped(entity.parameterKey(),range).isEmpty()) throw missing(eventId);
+            entities.detach(entity);entity.resetForRetry(Instant.now());
+            scopes.updateParameterEvent(range,eventId,tenant,entity.parameterKey(),entity.status().name(),entity.nextAttemptAt(),entity.updatedAt());
+            return view(repository.findById(eventId).orElseThrow(() -> missing(eventId)));
+        });
+    }
+    private static SummerException missing(String eventId) {
+        return SummerException.withMessage(CommonErrorCode.NOT_FOUND,"System parameter event not found: "+eventId);
     }
 
     SystemParameterEventView view(SystemParameterEventOutboxEntity entity) {

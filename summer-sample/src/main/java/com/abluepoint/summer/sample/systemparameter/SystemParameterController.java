@@ -34,7 +34,7 @@ class SystemParameterController {
     @GetMapping
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.read', 'platform.parameter.read', 'customer.read') or (hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read'))")
     @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "page", required = false, style = "systemParameterPageStyle")
     @Field(param = "size", required = false, style = "systemParameterPageSizeStyle")
@@ -59,7 +59,7 @@ class SystemParameterController {
     @GetMapping("/{key}")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.read', 'platform.parameter.read', 'customer.read') or (hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read'))")
     @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> find(
@@ -70,7 +70,7 @@ class SystemParameterController {
     @PostMapping
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.create")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.create','SCOPE_platform.parameter.create','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.create', 'platform.parameter.create', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.create','SCOPE_platform.parameter.create','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> create(
             @RequestBody CreateSystemParameterRequest request,
             Authentication authentication) {
@@ -80,7 +80,7 @@ class SystemParameterController {
     @PatchMapping("/{key}")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.update")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.update', 'platform.parameter.update', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> update(
             @PathVariable String key,
             @RequestBody UpdateSystemParameterRequest request,
@@ -91,7 +91,7 @@ class SystemParameterController {
     @PostMapping("/{key}/enable")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.publish")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_platform.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.publish', 'platform.parameter.publish', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_platform.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> enable(
@@ -103,7 +103,7 @@ class SystemParameterController {
     @PostMapping("/{key}/disable")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.disable")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.disable','SCOPE_platform.parameter.disable','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.disable', 'platform.parameter.disable', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.disable','SCOPE_platform.parameter.disable','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     @Field(param="enterpriseId", required=false, style="systemParameterTenantStyle")
     @Field(param = "key", style = "systemParameterKeyStyle")
     ResponseEntity<ApiResponse<Map<String, Object>>> disable(
@@ -115,7 +115,7 @@ class SystemParameterController {
     @PostMapping("/{key}/draft")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.update")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.update', 'platform.parameter.update', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> draft(@PathVariable String key,
                                                             @RequestBody SystemParameterDraftRequest request,
                                                             Authentication authentication) {
@@ -125,7 +125,7 @@ class SystemParameterController {
     @GetMapping("/{key}/versions")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.read', 'platform.parameter.read', 'customer.read') or (hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> versions(@PathVariable String key, Authentication authentication) {
         return body(HttpStatus.OK, versionPage(releases.versions(key, authentication)));
     }
@@ -133,7 +133,7 @@ class SystemParameterController {
     @PostMapping("/{key}/publish")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.publish")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_platform.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.publish', 'platform.parameter.publish', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_platform.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> publish(@PathVariable String key,
                                                                @RequestBody SystemParameterReleaseCommand command,
                                                                Authentication authentication) {
@@ -143,7 +143,7 @@ class SystemParameterController {
     @PostMapping("/{key}/rollback")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.rollback")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.rollback','SCOPE_platform.parameter.rollback','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.rollback', 'platform.parameter.rollback', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.rollback','SCOPE_platform.parameter.rollback','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> rollback(@PathVariable String key,
                                                                 @RequestBody SystemParameterReleaseCommand command,
                                                                 Authentication authentication) {
@@ -153,7 +153,7 @@ class SystemParameterController {
     @PostMapping("/{key}/deactivate")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.disable")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.disable','SCOPE_platform.parameter.disable','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.disable', 'platform.parameter.disable', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.disable','SCOPE_platform.parameter.disable','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> deactivate(@PathVariable String key,
                                                                   @RequestBody SystemParameterReleaseCommand command,
                                                                   Authentication authentication) {
@@ -168,7 +168,7 @@ class SystemParameterController {
     @PutMapping("/{key}/overrides/{organization}")
     @RawResponse
     @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.publish")
-    @PreAuthorize("hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write')")
+    @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.publish', 'system.parameter.write', 'platform.parameter.write') or (hasAnyAuthority('SCOPE_system.parameter.publish','SCOPE_system.parameter.write','SCOPE_platform.parameter.write'))")
     ResponseEntity<ApiResponse<com.abluepoint.summer.sample.configuration.ConfigurationOverrideView>> override(
             @PathVariable String key, @PathVariable String organization,
             @RequestBody com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth) {

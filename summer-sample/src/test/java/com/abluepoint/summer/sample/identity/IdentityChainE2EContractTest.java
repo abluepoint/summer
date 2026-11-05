@@ -234,7 +234,7 @@ class IdentityChainE2EContractTest {
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor service(
             String serviceId, String context, String actor, String instance, String effective, String initiator) {
-        return jwt().jwt(t -> t.subject("connection-service")
+        return jwt().jwt(t -> t.claim("scope", "internal.mcp.execution.decide internal.audit.write").subject("connection-service")
                         .claim("connection_service_id", serviceId)
                         .claim("service_trust_verified", true)
                         .claim("execution_context_id", context)
@@ -247,7 +247,7 @@ class IdentityChainE2EContractTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(t -> t.subject("enterprise-admin")
+        return jwt().jwt(t -> t.claim("scope", capability).subject("enterprise-admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
@@ -262,7 +262,7 @@ class IdentityChainE2EContractTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor auditorFor(String enterprise) {
-        return jwt().jwt(t -> t.subject("auditor")
+        return jwt().jwt(t -> t.claim("scope", "enterprise.audit.read").subject("auditor")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of(enterprise, List.of("enterprise.audit.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));

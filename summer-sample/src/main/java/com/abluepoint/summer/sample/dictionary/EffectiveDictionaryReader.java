@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -16,11 +16,11 @@ class EffectiveDictionaryReader {
     private final DictionaryTypeRepository types;
     private final DictionaryVersionRepository versions;
     private final DictionaryItemRepository items;
-    private final DataScopeService scopes;
+    private final BusinessDataScopes scopes;
     private final ObjectMapper mapper;
 
     EffectiveDictionaryReader(DictionaryTypeRepository types, DictionaryVersionRepository versions,
-                              DictionaryItemRepository items, DataScopeService scopes, ObjectMapper mapper) {
+                              DictionaryItemRepository items, BusinessDataScopes scopes, ObjectMapper mapper) {
         this.types = types;
         this.versions = versions;
         this.items = items;
@@ -29,7 +29,10 @@ class EffectiveDictionaryReader {
     }
 
     Effective read(String tenant, String code, Authentication auth, boolean publicRead) {
-        var scope = scopes.filter(tenant, "dictionaries", auth);
+        return scopes.read(tenant, "dictionaries", "read", auth, scope -> read(tenant, code, publicRead, scope));
+    }
+
+    Effective read(String tenant, String code, boolean publicRead, BusinessDataScopes.Filter scope) {
         var type = types.findScoped(code, scope).orElseThrow(EffectiveDictionaryReader::missing);
         if (!type.published() || type.publishedVersion() == null) {
             if (publicRead) throw missing();

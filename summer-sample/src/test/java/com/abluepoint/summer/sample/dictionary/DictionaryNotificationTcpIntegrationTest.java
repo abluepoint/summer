@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT, properties={
         "summer.security.storage.keys=memory", "spring.quartz.job-store-type=memory",
         "summer.sample.parameter-events.scheduling-enabled=false", "spring.datasource.hikari.maximum-pool-size=40"})
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
+@org.springframework.test.annotation.DirtiesContext
 class DictionaryNotificationTcpIntegrationTest {
     @Value("${local.server.port}") int port;
     @Autowired JWKSource<SecurityContext> keys;

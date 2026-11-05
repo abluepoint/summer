@@ -64,7 +64,7 @@ class PluginConfigurationHttpTest {
     }
     @Test void menusNeedTheMenuCapability() throws Exception {
         setup();
-        var reader=jwt().jwt(j->j.subject("bob").claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
+        var reader=jwt().jwt(j->j.claim("scope", "enterprise.plugins.read").subject("bob").claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.plugins.read"));
         mvc.perform(get("/api/v1/enterprises/ent-acme/plugins").with(reader)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].menus").isEmpty());
@@ -100,7 +100,7 @@ class PluginConfigurationHttpTest {
         } finally { jdbc.execute("alter table unavailable_plugin_policy rename to summer_data_scope_policy"); }
     }
     private void setup() throws Exception {
-        var platform=jwt().jwt(j->j.subject("admin").claim("platform_capabilities",List.of("platform.plugins.write")))
+        var platform=jwt().jwt(j->j.claim("scope", "platform.plugins.write").subject("admin").claim("platform_capabilities",List.of("platform.plugins.write")))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.plugins.write"));
         mvc.perform(post("/api/v1/platform/plugins").with(platform).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"pluginId\":\"customer-insights\",\"version\":\"1.0.0\",\"artifactDigest\":\"sha256:customer-insights-v1\"}")) .andExpect(status().isCreated());
@@ -127,7 +127,7 @@ class PluginConfigurationHttpTest {
     }
     private static RequestPostProcessor actor(String subject,String org) {
         var caps=List.of("system.parameter.read","system.parameter.write","platform.dictionary.read","platform.dictionary.write","enterprise.data-scope.read","enterprise.data-scope.write","enterprise.plugins.read","enterprise.plugins.customer-insights.read","customer.read");
-        return jwt().jwt(j->j.subject(subject).claim("organization_id",org)
+        return jwt().jwt(j->j.claim("scope", caps.stream().map(value -> value.replaceFirst("^SCOPE_", "")).collect(java.util.stream.Collectors.joining(" "))).subject(subject).claim("organization_id",org)
                 .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
                 .claim("enterprise_capabilities",Map.of("ent-acme",caps)))
                 .authorities(caps.stream().map(v->new SimpleGrantedAuthority("SCOPE_"+v)).toArray(SimpleGrantedAuthority[]::new));

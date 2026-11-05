@@ -103,7 +103,7 @@ class DictionaryHttpTest {
                         .content("""
                                 {"code":"forbidden","name":"Forbidden","published":false,"publicReadable":true,"enabled":true}
                                 """)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
+                        .with(jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("scope", "customer.read")).authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
@@ -131,7 +131,7 @@ class DictionaryHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor dictionaryWriter() {
-        return jwt().jwt(token -> token.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
+        return jwt().jwt(token -> token.claim("scope", "platform.dictionary.write").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.write"));
     }
 }

@@ -25,7 +25,7 @@ class ParameterEventHttpTest {
     @Test
     void committedParameterChangeHasQueryableValueFreeDelivery() throws Exception {
         http.perform(post("/api/system-parameters")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write")))
+                        .with(jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("scope", "system.parameter.write")).authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write")))
                         .header("X-Request-Id", "event-create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -34,7 +34,7 @@ class ParameterEventHttpTest {
                 .andExpect(status().isCreated());
         var events = http.perform(get("/api/system-parameter-events")
                         .param("key", "events.page-size")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.read"))))
+                        .with(jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("scope", "system.parameter.read")).authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.read"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("PENDING"))
@@ -47,13 +47,13 @@ class ParameterEventHttpTest {
         String eventId = JsonPath.read(events.getResponse().getContentAsString(), "$.data.items[0].eventId");
 
         http.perform(post("/api/system-parameter-events/{eventId}/retry", eventId)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"))))
+                        .with(jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("scope", "system.parameter.write")).authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.eventId").value(eventId))
                 .andExpect(jsonPath("$.data.status").value("PENDING"));
 
         http.perform(get("/api/system-parameter-events")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_unknown"))))
+                        .with(jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("scope", "unknown")).authorities(new SimpleGrantedAuthority("SCOPE_unknown"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }

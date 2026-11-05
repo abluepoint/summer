@@ -13,6 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 final class AgentService {
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
+    AgentService(com.abluepoint.summer.sample.resource.BusinessResourceAccess business) { this.business=business; }
+
     private static final String ENTERPRISE = "ent-acme";
     private static final String REGISTER_SCOPE = "internal.agent_instances.write";
     private final Map<String, AgentRecord> agents = new LinkedHashMap<>();
@@ -187,6 +190,7 @@ final class AgentService {
     }
 
     private void requireAdmin(String enterpriseId, Authentication auth, String... capabilities) {
+        if (business.requirePreservingDenial(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, "Agent capability denied", capabilities)) return;
         if (!(auth instanceof JwtAuthenticationToken jwt) || !activeMembership(jwt, enterpriseId)
                 || !hasCapability(jwt, enterpriseId, capabilities)
                 || Arrays.stream(capabilities).noneMatch(c -> jwt.getAuthorities().stream().anyMatch(a -> ("SCOPE_" + c).equals(a.getAuthority())))) {

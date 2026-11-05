@@ -20,7 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/audit-events")
-@PreAuthorize("hasAnyAuthority('SCOPE_enterprise.audit.read', 'SCOPE_customer.read')")
+@PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.audit.read', 'customer.read') or (hasAnyAuthority('SCOPE_enterprise.audit.read', 'SCOPE_customer.read'))")
 class CustomerAuditController {
     private final CustomerAuditService service;
     private final RequestIdAccessor requestId;

@@ -4,7 +4,7 @@ import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 
-import com.abluepoint.summer.sample.authorization.DataScopeService;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -36,7 +36,8 @@ class DictionaryNotificationService {
 
     private final DictionaryNotificationRepository repository;
     private final DictionaryTypeRepository types;
-    private final DataScopeService dataScopes;
+    private final BusinessDataScopes dataScopes;
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher events;
@@ -49,8 +50,10 @@ class DictionaryNotificationService {
     private final Object subscriptionLock = new Object();
 
     DictionaryNotificationService(DictionaryNotificationRepository repository, DictionaryTypeRepository types,
-                                   DataScopeService dataScopes, ObjectMapper objectMapper,
-                                   ApplicationEventPublisher events, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions) {
+                                   BusinessDataScopes dataScopes, ObjectMapper objectMapper,
+                                   ApplicationEventPublisher events, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions,
+                                   com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
+        this.business = business;
         this.repository = repository;
         this.types = types;
         this.dataScopes = dataScopes;
@@ -124,9 +127,11 @@ class DictionaryNotificationService {
 
     private void requireReadable(String enterpriseId, String dictionaryCode, Authentication authentication) {
         com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(enterpriseId, authentication);
-        actions.requirePublic(enterpriseId, "dictionaries", authentication);
-        DataScopeService.ScopeFilter scope = dataScopes.filter(enterpriseId, "dictionaries", authentication);
-        boolean visible = types.findScoped(dictionaryCode, scope).isPresent();
+        boolean managed = business.requireHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
+                authentication, "GET", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events", "platform.dictionary.read");
+        if (!managed) actions.requirePublic(enterpriseId, "dictionaries", authentication);
+        boolean visible = dataScopes.read(enterpriseId,"dictionaries","read",authentication,
+                scope -> types.findScoped(dictionaryCode,scope).isPresent());
         if (!visible) throw SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Dictionary was not found");
     }
 

@@ -4,19 +4,30 @@ import { User } from 'oidc-client-ts';
 import { useHistory } from 'react-router-dom';
 import { getAuthenticatedUser, isAuthRedirecting, oidcManager } from '@/auth/oidc';
 import { hasEnterpriseCapability } from '@/auth/businessCapabilities';
+import { useOperationHints } from '@/auth/interfaceOperations';
+import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
 import { AuthUser, CreateUser, UserFailure, createUser, listUsers, setUserActive } from './api';
+const userActions = ['identity.users.create', 'identity.users.write'];
+const platformDomain = { kind: 'PLATFORM' as const };
 const empty: CreateUser = { username: '', password: '', role: 'USER' };
 export default function AuthUsersPage() {
   const router = useHistory();
   const alive = useRef(true); const read = useRef(0); const writing = useRef(false);
   const [rows, setRows] = useState<AuthUser[]>([]); const [query, setQuery] = useState(''); const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [canWrite, setCanWrite] = useState(false);
+  const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [legacyCanWrite, setLegacyCanWrite] = useState(false);
+  const { engineMode } = useOperationHints();
+  const qualification = useInterfaceOperations(platformDomain, userActions, engineMode === 'MANAGED');
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => setBlocked(false), [qualification]);
+  const canWrite = !blocked && (engineMode === 'LEGACY' ? legacyCanWrite : engineMode === 'MANAGED' && qualification['identity.users.write'] === true);
+  const canCreate = !blocked && (engineMode === 'LEGACY' ? legacyCanWrite : engineMode === 'MANAGED' && qualification['identity.users.create'] === true);
   const [visible, setVisible] = useState(false); const [form, setForm] = useState<CreateUser>(empty);
   const [error, setError] = useState<UserFailure | null>(null); const [validation, setValidation] = useState('');
   const dirty = visible && Boolean(form.username || form.password || form.role !== 'USER');
   useEffect(() => {
-    // /api/users is a global Sample resource bound to ent-acme by the backend interceptor.
-    const update = (user: User | null) => { if (alive.current) setCanWrite(hasEnterpriseCapability(user, 'ent-acme', 'enterprise.members.write')); };
+    // Legacy identity hints remain isolated to an explicitly reported LEGACY mode.
+    alive.current = true;
+    const update = (user: User | null) => { if (alive.current) setLegacyCanWrite(hasEnterpriseCapability(user, 'ent-acme', 'enterprise.members.write') && user?.scopes.includes('enterprise.members.write') === true); };
     getAuthenticatedUser().then(update).catch(() => update(null));
     const unload = () => update(null);
     oidcManager.events.addUserLoaded(update); oidcManager.events.addUserUnloaded(unload);
@@ -38,26 +49,26 @@ export default function AuthUsersPage() {
   }, [dirty, saving, router]);
   function discard(action: () => void) { if (writing.current) return; if (!dirty) action(); else Modal.confirm({ title: '放弃未保存的用户？', okText: '放弃修改', cancelText: '继续编辑', onOk: action }); }
   function close() { discard(() => { setForm(empty); setVisible(false); setValidation(''); }); }
-  function write(call: () => Promise<AuthUser>, done: () => void | Promise<void>) {
-    if (writing.current || !canWrite) return;
+  function write(call: () => Promise<AuthUser>, done: () => void | Promise<void>, allowed = canWrite) {
+    if (writing.current || !allowed) return;
     writing.current = true; setSaving(true); setError(null); setValidation('');
-    call().then(() => { if (alive.current) return done(); }).catch((failure: UserFailure) => { if (alive.current) { setError(failure); if ([401, 403].includes(failure.status)) setCanWrite(false); } })
+    call().then(() => { if (alive.current) return done(); }).catch((failure: UserFailure) => { if (alive.current) { setError(failure); if ([401, 403].includes(failure.status)) { setLegacyCanWrite(false); setBlocked(true); } } })
       .finally(() => { writing.current = false; if (alive.current) setSaving(false); });
   }
   function create() {
     if (!form.username.trim() || form.username.length > 128) { setValidation('请输入不超过 128 个字符的用户名'); return; }
     if (form.password.length < 12 || form.password.length > 200) { setValidation('密码需要 12–200 个字符'); return; }
-    write(() => createUser(form), () => { setForm(empty); setVisible(false); return load(); });
+    write(() => createUser(form), () => { setForm(empty); setVisible(false); return load(); }, canCreate);
   }
   const failure = error && `${error.status === 403 ? '无权管理认证用户' : error.status === 401 ? '登录状态已失效' : [409, 412].includes(error.status) ? '用户已存在或数据发生冲突，请保留表单并核对后重试' : error.status === 400 ? '用户信息不符合要求，请检查用户名、角色与密码长度' : '用户操作失败，请稍后重试'}${error.requestId ? ` (${error.requestId})` : ''}`;
-  return <Card title="认证用户管理" extra={<Space><Button disabled={saving} loading={loading} onClick={() => discard(() => { setForm(empty); setVisible(false); load(); })}>刷新</Button>{canWrite && <Button type="primary" disabled={saving || loading} onClick={() => { setForm(empty); setVisible(true); setError(null); setValidation(''); }}>新建用户</Button>}</Space>}>
+  return <Card title="认证用户管理" extra={<Space><Button disabled={saving} loading={loading} onClick={() => discard(() => { setForm(empty); setVisible(false); load(); })}>刷新</Button>{canCreate && <Button type="primary" disabled={saving || loading} onClick={() => { setForm(empty); setVisible(true); setError(null); setValidation(''); }}>新建用户</Button>}</Space>}>
     {failure && <Alert type="error" content={failure} style={{ marginBottom: 16 }} />}
     <Space style={{ marginBottom: 16 }}><Input aria-label="搜索用户名" placeholder="搜索用户名" value={query} onChange={setQuery} allowClear /><Select aria-label="登录状态筛选" value={status} onChange={setStatus} options={[{ value: '', label: '全部状态' }, { value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }]} style={{ width: 140 }} /></Space>
     <Table<AuthUser> rowKey="username" loading={loading} data={rows.filter((row) => row.username.toLowerCase().includes(query.toLowerCase()) && (!status || row.active === (status === 'active')))} columns={[
       { title: '用户名', dataIndex: 'username' }, { title: '身份角色', dataIndex: 'role' }, { title: '登录状态', render: (_, row) => <Tag color={row.active ? 'green' : 'gray'}>{row.active ? '启用' : '停用'}</Tag> },
       { title: '操作', render: (_, row) => canWrite ? <Button disabled={saving || visible} onClick={() => write(() => setUserActive(row.username, !row.active), load)}>{row.active ? '停用' : '恢复'}</Button> : '只读' },
     ]} />
-    {visible && <Drawer visible title="新建认证用户" okText="创建" cancelText="取消" onOk={create} onCancel={close} okButtonProps={{ loading: saving, disabled: saving || !canWrite }} cancelButtonProps={{ disabled: saving }} width={480}>
+    {visible && <Drawer visible title="新建认证用户" okText="创建" cancelText="取消" onOk={create} onCancel={close} okButtonProps={{ loading: saving, disabled: saving || !canCreate }} cancelButtonProps={{ disabled: saving }} width={480}>
       {failure && <Alert type="error" content={failure} style={{ marginBottom: 16 }} />}{validation && <Alert type="error" content={validation} style={{ marginBottom: 16 }} />}
       <Form layout="vertical"><Form.Item label="用户名"><Input aria-label="用户名" value={form.username} disabled={saving} maxLength={128} autoComplete="off" onChange={(username) => setForm({ ...form, username })} /></Form.Item>
         <Form.Item label="初始密码" extra="12–200 个字符；创建后不再显示。"><Input.Password aria-label="初始密码" value={form.password} disabled={saving} maxLength={200} autoComplete="new-password" onChange={(password) => setForm({ ...form, password })} /></Form.Item>

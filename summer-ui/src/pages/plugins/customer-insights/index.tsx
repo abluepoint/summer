@@ -33,8 +33,7 @@ export default function CustomerInsightsPage() {
       if (request !== currentRequest.current) return;
       const allowed = manifest.items.some((plugin) =>
         plugin.pluginId === 'customer-insights' && plugin.trusted && plugin.status === 'ENABLED' &&
-        plugin.menus.some((menu) => menu.menuId === 'customer-insights' && menu.path === pluginPath &&
-          menu.capabilityCode === 'enterprise.plugins.customer-insights.read')
+        plugin.menus.some((menu) => menu.menuId === 'customer-insights' && menu.path === pluginPath)
       );
       if (!allowed) {
         setUnavailable(true);

@@ -18,6 +18,10 @@ import java.util.*;
 
 @Service
 public class PluginService {
+    private final com.abluepoint.summer.sample.resource.BusinessResourceAccess business;
+
+    private final com.abluepoint.summer.sample.resource.ManagedMenuOperations menus;
+
     private static final String FRAMEWORK_MAJOR = "4";
     private final PluginRepository repository;
     private final PluginCatalog catalog;
@@ -30,7 +34,7 @@ public class PluginService {
 
     PluginService(PluginRepository repository, PluginCatalog catalog, AuthorizationService authorization,
                   PublishedParameterReader parameters, PublishedDictionaryReader dictionaries, CustomerAuditService audit, JdbcTemplate jdbc,
-                  RequestIdAccessor requestId) {
+                  RequestIdAccessor requestId, com.abluepoint.summer.sample.resource.BusinessResourceAccess business, com.abluepoint.summer.sample.resource.ManagedMenuOperations menus) { this.business=business; this.menus=menus;
         this.repository = repository; this.catalog = catalog; this.authorization = authorization;
         this.parameters = parameters; this.dictionaries = dictionaries; this.audit = audit; this.jdbc = jdbc; this.requestId = requestId;
     }
@@ -122,11 +126,15 @@ public class PluginService {
 
     // Each controlled read owns its transaction; an absent optional value must not roll back the audit.
     PluginInsightsView customerInsights(String enterpriseId, Authentication authentication) {
-        requireEnterprise(enterpriseId, authentication, "enterprise.plugins.customer-insights.read");
+        boolean managed = requireEnterprise(enterpriseId, authentication, "enterprise.plugins.customer-insights.read");
         requireEnterprise(enterpriseId, authentication, "customer.read");
         PluginEntity entity = repository.findById("customer-insights").orElseThrow(() -> SummerException.withMessage(CommonErrorCode.NOT_FOUND, "Plugin is not registered"));
         if (entity.status() != PluginStatus.ENABLED) throw SummerException.withMessage(PluginErrorCode.INCOMPATIBLE, "Plugin is not enabled");
-        long activeCustomers = Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_customer where active = true", Long.class)).orElse(0L);
+        java.util.function.Supplier<Long> customerCount = () -> Optional.ofNullable(jdbc.queryForObject("select count(*) from summer_customer where active = true", Long.class)).orElse(0L);
+        long activeCustomers = managed
+                ? business.readManagedHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),
+                    authentication,"GET","/api/customers",customerCount,"customer.read")
+                : customerCount.get();
         List<Map<String, Object>> configuration = readConfiguration(enterpriseId, entity, authentication);
         PluginDictionaryView dictionary = new PluginDictionaryView("customer-segment", dictionaries.read(enterpriseId, "customer-segment", authentication));
         String rid = requestId.currentRequestId();
@@ -156,8 +164,21 @@ public class PluginService {
 
     private PluginView enterpriseView(PluginEntity entity, String enterpriseId, Authentication authentication) {
         PluginView base = view(entity);
+        boolean managed = business.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), authentication, "enterprise.plugins.read");
+        java.util.Set<String> visibleIds = new java.util.HashSet<>();
+        if (managed) {
+            try {
+                Object values = menus.visible(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), authentication).get("items");
+                if (values instanceof java.util.Collection<?> items)
+                    for (Object value : items)
+                        if (value instanceof java.util.Map<?,?> item && Boolean.TRUE.equals(item.get("pageEligible")))
+                            visibleIds.add(String.valueOf(item.get("menuId")));
+            } catch (AccessDeniedException denied) {
+                // No qualified navigation is an empty menu list; it does not change the interface decision.
+            }
+        }
         List<PluginMenu> visibleMenus = base.menus().stream()
-                .filter(menu -> menuAllowed(enterpriseId, menu.capabilityCode(), authentication))
+                .filter(menu -> managed ? visibleIds.contains(menu.menuId()) : menuAllowed(enterpriseId, menu.capabilityCode(), authentication))
                 .toList();
         return new PluginView(base.pluginId(), base.displayName(), base.version(), base.artifactDigest(), base.status(),
                 base.trusted(), base.diagnostic(), base.revision(), base.capabilities(), visibleMenus,
@@ -181,8 +202,8 @@ public class PluginService {
     private static boolean compatible(PluginDescriptor descriptor, String version) { return descriptor != null && descriptor.version().equals(version) && descriptor.requiredFrameworkVersion().startsWith(FRAMEWORK_MAJOR); }
     private static String incompatibleMessage(PluginDescriptor descriptor, String version) { return descriptor == null ? "Plugin is not registered in the trusted catalog" : "Plugin version " + version + " is incompatible with the supported contract " + descriptor.version(); }
     private static void validate(PluginRegisterRequest request) { if (request == null || blank(request.pluginId()) || !request.pluginId().matches("[a-z][a-z0-9-]{2,119}") || blank(request.version()) || blank(request.artifactDigest())) throw SummerException.withMessage(PluginErrorCode.INVALID, "pluginId, version and artifactDigest are required"); }
-    private static void requirePlatform(Authentication authentication, String capability) { if (!(authentication instanceof JwtAuthenticationToken jwt) || !hasClaim(jwt, capability) || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))) throw new AccessDeniedException("Platform plugin capability denied"); }
-    private void requireEnterprise(String enterpriseId, Authentication authentication, String capability) { authorization.requireEnterpriseMembership(enterpriseId, authentication); AuthorizationService.Decision decision = authorization.decision(authentication, enterpriseId, capability, requestId.currentRequestId()); if (!decision.allowed() || ("LEGACY_SCOPE".equals(decision.reasonCode()) && authentication.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority())))) throw new AccessDeniedException("Plugin capability denied"); }
+    private void requirePlatform(Authentication authentication, String capability) { if (business.requirePreservingDenial(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), authentication, "Platform plugin capability denied", capability)) return; if (!(authentication instanceof JwtAuthenticationToken jwt) || !hasClaim(jwt, capability) || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))) throw new AccessDeniedException("Platform plugin capability denied"); }
+    private boolean requireEnterprise(String enterpriseId, Authentication authentication, String capability) { if (business.requirePreservingDenial(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), authentication, "Plugin capability denied", capability)) return true; authorization.requireEnterpriseMembership(enterpriseId, authentication); AuthorizationService.Decision decision = authorization.decision(authentication, enterpriseId, capability, requestId.currentRequestId()); if (!decision.allowed() || ("LEGACY_SCOPE".equals(decision.reasonCode()) && authentication.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority())))) throw new AccessDeniedException("Plugin capability denied"); return false; }
     private static boolean hasClaim(JwtAuthenticationToken jwt, String capability) { Object values = jwt.getToken().getClaims().get("platform_capabilities"); return values instanceof Collection<?> c && c.stream().map(String::valueOf).anyMatch(capability::equals); }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
 }

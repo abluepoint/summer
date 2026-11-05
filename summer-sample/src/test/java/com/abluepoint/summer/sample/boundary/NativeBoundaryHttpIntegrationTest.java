@@ -15,7 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Exercises native MVC resource handling through the assembled application. */
 @SpringBootTest(properties = "summer.security.storage.keys=memory")
 @AutoConfigureMockMvc
-@org.springframework.context.annotation.Import(NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class)
+@org.springframework.context.annotation.Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class})
+@org.springframework.test.annotation.DirtiesContext
 class NativeBoundaryHttpIntegrationTest {
     @Autowired MockMvc mvc;
 
