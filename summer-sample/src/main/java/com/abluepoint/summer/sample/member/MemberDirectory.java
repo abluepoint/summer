@@ -41,6 +41,7 @@ public class MemberDirectory {
                 || displayName == null || displayName.isBlank() || displayName.length() > 200 || email == null || email.isBlank() || email.length() > 254) {
             throw new IllegalArgumentException("Valid memberId, subject, displayName and email are required");
         }
+        lockForAuthorization(enterpriseId);
         enterprises.lock(enterpriseId);
         var existing = repository.findByEnterpriseIdAndMemberId(enterpriseId, memberId);
         if (existing.isPresent()) {
@@ -49,8 +50,16 @@ public class MemberDirectory {
             return view(member);
         }
         if (repository.findByEnterpriseIdAndSubject(enterpriseId, subject).isPresent()) throw new IllegalStateException("Subject already has a membership in this enterprise");
-        return view(repository.saveAndFlush(new EnterpriseMemberEntity(enterpriseId, memberId, subject, displayName, email, "ACTIVE")));
+        var created = repository.saveAndFlush(new EnterpriseMemberEntity(enterpriseId, memberId, subject, displayName, email, "ACTIVE"));
+        publisher.publishEvent(new AuthorizationChanging(enterpriseId, memberId, false));
+        return view(created);
     }
+    /** Synchronous transaction seam; consumers lock their authority before enterprise facts. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void lockForAuthorization(String enterpriseId) {
+        publisher.publishEvent(new AuthorizationChanging(enterpriseId, enterpriseId, true));
+    }
+    public record AuthorizationChanging(String enterpriseId, String memberId, boolean lockOnly) {}
     @Transactional
     public void changeStatus(String enterpriseId, String memberId, String status) {
         publisher.publishEvent(new MembershipStatusChanging(enterpriseId,memberId));

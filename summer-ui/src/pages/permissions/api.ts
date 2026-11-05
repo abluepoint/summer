@@ -63,7 +63,13 @@ export type PermissionAssociationProps = {
 export type DataScopeDetail = {
   dataResourceKey: string;
   action: string;
-  scopePreset: 'SELF' | 'TENANT_ALL';
+  scopePreset:
+    | 'SELF'
+    | 'TENANT_ALL'
+    | 'DEPARTMENT'
+    | 'DEPARTMENT_AND_DESCENDANTS'
+    | 'SPECIFIED_DEPARTMENTS';
+  departmentIds?: string[];
 };
 export type DataResource = {
   key: string;

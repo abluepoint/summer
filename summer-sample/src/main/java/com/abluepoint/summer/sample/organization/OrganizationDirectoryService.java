@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.sample.authorization.domain.data.OrganizationAuthorizationChange;
+
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.enterprise.DirectoryErrorCode;
 import static com.abluepoint.summer.sample.error.SampleTransportErrorCode.PRECONDITION_FAILED;
@@ -27,6 +29,9 @@ class OrganizationDirectoryService {
     private static final String ORGANIZATION_WRITE = "enterprise.organization.write";
     private static final String ORGANIZATIONS_WRITE = "enterprise.organizations.write";
     private static final int MAX_DEPTH = 8;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationEventPublisher publisher;
 
     private final Map<String, UnitRecord> units = new LinkedHashMap<>();
     private final Map<String, Assignment> assignments = new LinkedHashMap<>();
@@ -255,6 +260,7 @@ class OrganizationDirectoryService {
     @Transactional
     synchronized CurrentOrganizationContext selectContext(String enterpriseId, String organizationId, Authentication authentication) {
         requireEnterpriseRead(enterpriseId, authentication);
+        publisher.publishEvent(new OrganizationAuthorizationChange(enterpriseId, enterpriseId, "", null, true));
         enterprises.lock(enterpriseId);
         refresh();
         if (organizationId != null) {
@@ -291,6 +297,7 @@ class OrganizationDirectoryService {
 
     private void requireEnterpriseWrite(String enterpriseId, Authentication authentication) {
         requireCapability(requireJwtMember(enterpriseId, authentication), enterpriseId, ORGANIZATION_WRITE, ORGANIZATIONS_WRITE);
+        publisher.publishEvent(new OrganizationAuthorizationChange(enterpriseId, enterpriseId, "", null, true));
         enterprises.lock(enterpriseId);
         refresh();
     }
@@ -408,6 +415,7 @@ class OrganizationDirectoryService {
 
     private void record(String enterpriseId, String resourceId, String action, String before, String after, String requestId, Authentication authentication) {
         journal.audit(enterpriseId, "organization.audit", resourceId, new OrganizationAuditEvent(authentication.getName(), enterpriseId, resourceId, action, before, after, requestId));
+        if (!"ORGANIZATION_CONTEXT_SELECTED".equals(action)) publisher.publishEvent(new OrganizationAuthorizationChange(enterpriseId, resourceId, action, requestId, false));
     }
 
     private String enterpriseRevision(String enterpriseId) { return revision(enterpriseId, "enterprise", unitsFor(enterpriseId).stream().sorted(Comparator.comparing(UnitRecord::id)).toList().toString() + assignments.values().stream().filter(a -> enterpriseId.equals(a.enterpriseId())).sorted(Comparator.comparing(Assignment::memberId).thenComparing(Assignment::organizationId)).toList() + memberDirectory.list(enterpriseId)); }

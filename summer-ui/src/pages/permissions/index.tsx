@@ -15,6 +15,7 @@ import {
 import { Prompt } from 'react-router-dom';
 import MenuPermissionBindings from './components/MenuPermissionBindings';
 import InterfaceAssociationsEditor from './components/InterfaceAssociationsEditor';
+import { getOrganizationTree, OrganizationUnit } from '../organization/api';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 import {
   call,
@@ -156,6 +157,35 @@ function Content({
   const [dataType, setDataType] = useState('INTERFACE');
   const [resources, setResources] = useState<DataResource[]>([]);
   const [resourcesError, setResourcesError] = useState('');
+  const [departments, setDepartments] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [departmentsError, setDepartmentsError] = useState('');
+  useEffect(() => {
+    let active = true;
+    setDepartments([]);
+    setDepartmentsError('');
+    if (domain.kind === 'ENTERPRISE' && editor && !editor.group)
+      getOrganizationTree(domain.id)
+        .then((tree) => {
+          const items: { label: string; value: string }[] = [];
+          const visit = (nodes: OrganizationUnit[], parent: string) =>
+            nodes.forEach((node) => {
+              const label = parent ? `${parent} / ${node.name}` : node.name;
+              if (node.status === 'ACTIVE')
+                items.push({ label, value: node.id });
+              visit(node.children || [], label);
+            });
+          visit(tree.items, '');
+          if (active) setDepartments(items);
+        })
+        .catch((e) => {
+          if (active) setDepartmentsError(e.message || '部门目录读取失败');
+        });
+    return () => {
+      active = false;
+    };
+  }, [domain.kind, domain.id, editor]);
   useEffect(() => {
     let active = true;
     call<DataResource[]>(base, '/data-resources')
@@ -265,7 +295,6 @@ function Content({
       !group && row ? (row as Permission).permissionId : undefined;
     pending.current = undefined;
     setEditor({ group, row });
-    setChanged(false);
     form.resetFields();
     setDataType(row && !group ? (row as Permission).type : 'INTERFACE');
     form.setFieldsValue(
@@ -279,6 +308,8 @@ function Content({
               status: 'ACTIVE',
             })
     );
+    // Arco emits onValuesChange during reset/set; initialization is not a user edit.
+    setChanged(false);
   };
   const save = async (remove = false, target = editor) => {
     if (!target || requestBusy || bindingDirty) return;
@@ -301,6 +332,14 @@ function Content({
       delete values.type;
     }
     if (!target.group && dataType !== 'DATA') delete values.dataScope;
+    if (dataType === 'DATA' && values.dataScope) {
+      const detail = values.dataScope as {
+        scopePreset: string;
+        departmentIds?: string[];
+      };
+      if (detail.scopePreset !== 'SPECIFIED_DEPARTMENTS')
+        delete detail.departmentIds;
+    }
     if (target.group) values.parentGroupId = values.parentGroupId || null;
     else if (
       typeof values.description === 'string' &&
@@ -693,8 +732,73 @@ function Content({
                         options={[
                           { label: '本人', value: 'SELF' },
                           { label: '当前租户全部', value: 'TENANT_ALL' },
+                          ...(domain.kind === 'ENTERPRISE'
+                            ? [
+                                {
+                                  label: '本部门（全部有效任职）',
+                                  value: 'DEPARTMENT',
+                                },
+                                {
+                                  label: '本部门及下级部门',
+                                  value: 'DEPARTMENT_AND_DESCENDANTS',
+                                },
+                                {
+                                  label: '指定部门（仅选中节点）',
+                                  value: 'SPECIFIED_DEPARTMENTS',
+                                },
+                              ]
+                            : []),
                         ]}
                       />
+                    </Form.Item>
+                    <Form.Item noStyle shouldUpdate>
+                      {() =>
+                        form.getFieldValue('dataScope.scopePreset') ===
+                          'SPECIFIED_DEPARTMENTS' && (
+                          <>
+                            {departmentsError && (
+                              <Alert type="error" content={departmentsError} />
+                            )}
+                            <Form.Item
+                              label="指定部门"
+                              field="dataScope.departmentIds"
+                              rules={[
+                                {
+                                  required: true,
+                                  type: 'array',
+                                  minLength: 1,
+                                  message: '至少选择一个有效部门',
+                                },
+                                {
+                                  validator: (ids, callback) => {
+                                    if (
+                                      !Array.isArray(ids) ||
+                                      ids.some(
+                                        (id) =>
+                                          !departments.some(
+                                            (d) => d.value === id
+                                          )
+                                      )
+                                    )
+                                      callback(
+                                        '请移除失效或其他租户的部门并重新选择'
+                                      );
+                                    else callback();
+                                  },
+                                },
+                              ]}
+                            >
+                              <Select
+                                mode="multiple"
+                                options={departments}
+                                disabled={requestBusy || !!departmentsError}
+                                allowClear
+                                placeholder="仅授权选中节点，不自动包含下级"
+                              />
+                            </Form.Item>
+                          </>
+                        )
+                      }
                     </Form.Item>
                     <Form.Item noStyle shouldUpdate>
                       {() => (

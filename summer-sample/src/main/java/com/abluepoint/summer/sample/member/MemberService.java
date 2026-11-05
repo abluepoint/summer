@@ -30,6 +30,7 @@ class MemberService {
     MemberDetail create(String enterpriseId, MemberCreateRequest request, String key, String requestId, Authentication auth) {
         requireMembership(enterpriseId, auth);
         if (key == null || key.isBlank() || key.length() > 120) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required");
+        directory.lockForAuthorization(enterpriseId);
         enterprises.lock(enterpriseId);
         String fingerprint = request.toString();
         var prior = journal.find(enterpriseId, "member.create", key).orElse(null);
@@ -75,6 +76,7 @@ class MemberService {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 120) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required");
         String operationKey = enterpriseId + ":" + memberId + ":" + idempotencyKey;
         String fingerprint = status + "|" + ifMatch;
+        directory.lockForAuthorization(enterpriseId);
         enterprises.lock(enterpriseId);
         var previous = journal.find(enterpriseId, "member.mutation", operationKey).orElse(null);
         if (previous != null) {
