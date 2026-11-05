@@ -40,12 +40,12 @@ public class DataResourceRegistry {
                             "申请人（代录人不取得本人归属）",
                             "departmentId",
                             "department_id",
-                            Set.of("read"),
+                            Set.of("read", "create", "update", "delete", "export"),
                             "businessVisible",
                             "business_visible",
                             "业务安全上限：可读取标记必须有效",
                             "JPA Specification / bound SQL before pagination",
-                            "NONE"));
+                            "Domain-locked bound SQL"));
 
     public Collection<Resource> list() {
         return resources.values();

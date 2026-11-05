@@ -208,7 +208,7 @@ class PermissionDataHttpTest {
                                                                 "dataResourceKey",
                                                                 "applications",
                                                                 "action",
-                                                                "update",
+                                                                "unregistered-action",
                                                                 "scopePreset",
                                                                 "TENANT_ALL")))))
                 .andExpect(status().isBadRequest());
@@ -260,7 +260,7 @@ class PermissionDataHttpTest {
                                 .with(csrf())
                                 .contentType("application/json")
                                 .content(
-                                        "{\"subject\":\"summer-user\",\"recordId\":\"mine\",\"action\":\"update\"}"))
+                                        "{\"subject\":\"summer-user\",\"recordId\":\"mine\",\"action\":\"unregistered-action\"}"))
                 .andExpect(status().isBadRequest());
     }
 
