@@ -4,11 +4,14 @@ import { MenuManifestItem } from './manifest';
 
 export type VisibleMenuItem = MenuManifestItem & {
   enabled: boolean;
+  navOnly?: boolean;
+  pageEligible?: boolean;
   actions: string[];
   version: number;
 };
 export type MenuManifest = {
   manifestVersion: number;
+  engineMode?: 'LEGACY' | 'MANAGED';
   items: VisibleMenuItem[];
 };
 
@@ -33,6 +36,7 @@ export function syncMenuManifest(manifest: {
 }) {
   return request<MenuManifest>(() =>
     axios.put('/api/v1/platform/menu-manifest', manifest, {
+      expectedAccessProbe: true,
       headers: {
         'Idempotency-Key': `ui-menu-manifest-${manifest.manifestVersion}`,
       },
@@ -40,17 +44,18 @@ export function syncMenuManifest(manifest: {
   );
 }
 
-export function getVisibleMenuManifest(enterpriseId: string) {
-  // A stalled read must expire the previous UI grants and allow the next refresh.
+export async function getVisibleMenuManifest(enterpriseId: string) {
+  const base = `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}`;
+  const current = await request<MenuManifest>(() =>
+    axios.get(`${base}/authorization/navigation`, { timeout: 10000 })
+  );
+  if (current.engineMode === 'MANAGED') return current;
+  if (current.engineMode !== 'LEGACY')
+    throw new Error('Unknown navigation authorization mode');
+  // Only an explicit authoritative LEGACY response permits this bounded compatibility read.
   return request<MenuManifest>(() =>
-    axios.get(
-      `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/menu-manifest`,
-      { timeout: 10000 }
-    )
-  ).catch((failure) => {
-    if (failure.status !== 403 && failure.status !== 404) throw failure;
-    return getManagedMenuManifest(enterpriseId);
-  });
+    axios.get(`${base}/menu-manifest`, { timeout: 10000 })
+  );
 }
 
 export function updateMenuManifestOverride(
@@ -80,37 +85,16 @@ export function updateMenuManifestOverride(
   );
 }
 
-/** Only persisted MENU grants produce these two bootstrap management entries. */
+/** The platform shell has its own explicit domain, distinct from enterprise ID platform. */
 export async function getManagedMenuManifest(
   enterpriseId?: string
 ): Promise<MenuManifest> {
-  const domains = [
-    '/api/v1/platform',
-    ...(enterpriseId
-      ? [`/api/v1/enterprises/${encodeURIComponent(enterpriseId)}`]
-      : []),
-  ];
-  const parts = await Promise.all(
-    domains.map((base) =>
-      request<MenuManifest>(() =>
-        axios.get(`${base}/authorization/navigation`, { timeout: 10000 })
-      ).catch((failure) => {
-        if (
-          failure.status === 401 ||
-          failure.status === 403 ||
-          failure.status === 404
-        )
-          return { manifestVersion: 0, items: [] };
-        throw failure;
-      })
-    )
+  if (enterpriseId) return getVisibleMenuManifest(enterpriseId);
+  const current = await request<MenuManifest>(() =>
+    axios.get('/api/v1/platform/authorization/navigation', { timeout: 10000 })
   );
-  return {
-    manifestVersion: Math.max(...parts.map((p) => p.manifestVersion)),
-    items: Array.from(
-      new Map(
-        parts.flatMap((p) => p.items).map((item) => [item.menuId, item])
-      ).values()
-    ),
-  };
+  if (current.engineMode === 'LEGACY') return { ...current, items: [] };
+  if (current.engineMode !== 'MANAGED')
+    throw new Error('Unknown navigation authorization mode');
+  return current;
 }

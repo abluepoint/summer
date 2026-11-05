@@ -1,3 +1,11 @@
+import { activeEnterpriseSelection } from '@/pages/data-scopes/useActiveEnterprise';
+import { requestMenuRefresh } from '@/menu/refresh';
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    expectedAccessProbe?: boolean;
+    menuContextVersion?: number;
+  }
+}
 import axios from 'axios';
 import { Message } from '@arco-design/web-react';
 import locale from '@/locale';
@@ -30,6 +38,8 @@ export function configureBusinessApiAuth() {
 
   axios.interceptors.request.use(async (config) => {
     if (!isBusinessApi(config.url)) return config;
+    config.menuContextVersion =
+      activeEnterpriseSelection.getSnapshot().contextVersion;
     const token = await getAccessTokenFromMemory();
     if (!token) {
       const reason = await authenticationStatus();
@@ -55,6 +65,17 @@ export function configureBusinessApiAuth() {
       if (isBusinessApi(response.config.url) && !isAuthRedirecting()) {
         completeAuthenticatedRequest(sessionStorage);
       }
+      const method = (response.config.method || 'get').toUpperCase();
+      const path = (response.config.url || '').split('?')[0];
+      if (
+        ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) &&
+        /^\/api\/v1\/(platform|enterprises\/[^/]+)\/(permissions(?:\/|$)|permission-groups(?:\/|$)|roles(?:\/|$)|users\/[^/]+\/roles$|authorization\/menu-(manifest|layout)$)/.test(
+          path
+        ) &&
+        typeof response.config.menuContextVersion === 'number'
+      ) {
+        requestMenuRefresh(response.config.menuContextVersion);
+      }
       return response;
     },
     async (error) => {
@@ -73,8 +94,13 @@ export function configureBusinessApiAuth() {
         } catch {
           Message.error(authText('auth.startFailed'));
         }
-      } else if (failure === 'forbidden') {
+      } else if (
+        failure === 'forbidden' &&
+        !error.config?.expectedAccessProbe
+      ) {
         Message.error(authText('auth.forbidden'));
+        if (typeof error.config?.menuContextVersion === 'number')
+          requestMenuRefresh(error.config.menuContextVersion);
       } else if (failure === 'network') {
         Message.error(authText('auth.networkFailure'));
       }

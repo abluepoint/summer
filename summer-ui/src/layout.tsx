@@ -109,7 +109,7 @@ function getFlattenRoutes(routes) {
   const res = [];
   function travel(_routes) {
     _routes.forEach((route) => {
-      if (route.key && mod[`./pages/${route.key}/index.tsx`]) {
+      if (!route.navOnly && route.key && mod[`./pages/${route.key}/index.tsx`]) {
         try {
           route.component = lazyload(mod[`./pages/${route.key}/index.tsx`]);
           res.push(route);
@@ -166,6 +166,7 @@ function PageLayout() {
 
   function onClickMenuItem(key) {
     const currentRoute = flattenRoutes.find((r) => r.key === key);
+    if (!currentRoute || currentRoute.navOnly) return;
     const component = currentRoute.component;
     const preload = component.preload();
     NProgress.start();
@@ -350,7 +351,7 @@ function PageLayout() {
                     );
                   })}
                   <Route exact path="/">
-                    <Redirect to="/dashboard/workplace" />
+                    <Redirect to={defaultRoute ? `/${defaultRoute}` : '/exception/403'} />
                   </Route>
                   <Route
                     path="*"

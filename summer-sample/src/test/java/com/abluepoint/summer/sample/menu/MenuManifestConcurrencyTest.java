@@ -17,15 +17,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @DirtiesContext
 class MenuManifestConcurrencyTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate menuDb;
+    @org.junit.jupiter.api.BeforeEach void publicationState() { menuDb.update("insert into summer_menu_publication(publication_id,published,manifest_version) values ('global',false,0) on duplicate key update publication_id=publication_id"); }
     @Autowired MenuManifestRepository manifests;
     @Autowired MenuManifestOverrideRepository overrides;
     @Autowired AuthorizationService authorization;
     @Autowired AuthorizationChangeEventService events;
     @Autowired AuthorizationAuditStore audit;
     @Autowired PlatformTransactionManager transactions;
+    @Autowired com.abluepoint.summer.sample.authorization.application.permission.MenuPublicationState publication;
 
     private MenuManifestService node(String requestId) {
-        return new MenuManifestService(manifests, overrides, authorization, events, () -> requestId, audit);
+        return new MenuManifestService(manifests, overrides, authorization, events, () -> requestId, audit, publication);
     }
     private JwtAuthenticationToken admin() {
         return new JwtAuthenticationToken(Jwt.withTokenValue("test-only").header("alg", "none").subject("menu-admin")
@@ -36,6 +39,7 @@ class MenuManifestConcurrencyTest {
     private String menu() {
         String id = "race-" + UUID.randomUUID();
         manifests.saveAndFlush(new MenuManifestEntity(new MenuManifestItemRequest(id, null, "/" + id, "menu.race", "race", 0, null), 1));
+        menuDb.update("update summer_menu_publication set published=true,manifest_version=1 where publication_id='global'");
         return id;
     }
     private MenuManifestItemView current(String id) {

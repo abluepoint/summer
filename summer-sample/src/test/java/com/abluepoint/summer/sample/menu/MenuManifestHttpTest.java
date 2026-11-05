@@ -20,6 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class MenuManifestHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate menuDb;
+    @org.junit.jupiter.api.BeforeEach void publicationState() { menuDb.update("insert into summer_menu_publication(publication_id,published,manifest_version) values ('global',false,0) on duplicate key update publication_id=publication_id"); }
 
     @Autowired
     MockMvc mockMvc;

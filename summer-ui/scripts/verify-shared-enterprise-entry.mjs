@@ -57,6 +57,7 @@ function shellFixture(identity) {
   let batch = (fn) => fn();
   let pageTenant;
   const f = fixture(identity, undefined, (fn) => batch(fn)), reads = [], focus = new Set(), commits = [];
+  const intervals = new Map();
   const menuContext = React.createContext([]);
   const redux = { state: { userInfo: { permissions: {} } }, dispatch(action) { this.state = { ...this.state, ...action.payload }; }, getState() { return this.state; } };
   const permissionsSource = readFileSync(new URL('../src/menu/permissions.ts', import.meta.url), 'utf8');
@@ -73,8 +74,12 @@ function shellFixture(identity) {
   const controller = ast.statements.find((statement) => ts.isFunctionDeclaration(statement) && statement.name?.text === 'AuthenticatedLayout');
   assert.ok(controller, 'Shell controller must be present');
   const compiled = ts.transpileModule(controller.getText(ast) + '\nexports.Component = AuthenticatedLayout;', { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.React } }).outputText;
+  const refreshExports = {};
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL('../src/menu/refresh.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: refreshExports });
+  const menuRefresh = new Set();
   const shellExports = {};
   vm.runInNewContext(compiled, {
+    MENU_REFRESH_EVENT: refreshExports.MENU_REFRESH_EVENT,
     exports: shellExports, React, useEffect: React.useEffect, useState: React.useState,
     useActiveEnterprise: f.useEnterprise, activeEnterpriseSelection: f.selection,
     getAuthenticatedUser: f.getUser, authenticationStatus: async () => 'missing',
@@ -87,7 +92,7 @@ function shellFixture(identity) {
     getVisibleMenuManifest: (enterpriseId) => new Promise((resolve, reject) => reads.push({ enterpriseId, resolve, reject })),
     PageLayout: RoutedPage, MenuAccessContext: menuContext,
     Spin: 'spinner', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },
-    window: { setInterval: () => 1, clearInterval() {}, addEventListener: (type, fn) => { if (type === 'focus') focus.add(fn); }, removeEventListener: (type, fn) => { if (type === 'focus') focus.delete(fn); } },
+    window: { setInterval: (fn, delay) => { const id = Symbol(); intervals.set(id, { fn, delay }); return id; }, clearInterval: id => intervals.delete(id), addEventListener: (type, fn) => { if (type === 'focus') focus.add(fn); if (type === refreshExports.MENU_REFRESH_EVENT) menuRefresh.add(fn); }, removeEventListener: (type, fn) => { if (type === 'focus') focus.delete(fn); if (type === refreshExports.MENU_REFRESH_EVENT) menuRefresh.delete(fn); } },
     document: { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} },
   });
   const append = (parent, child) => { parent.children.push(child); };
@@ -110,7 +115,8 @@ function shellFixture(identity) {
   const find = (type, node = container) => node.type === type ? node : node.children.map((child) => find(type, child)).find(Boolean);
   batch = renderer.batchedUpdates;
   renderer.updateContainer(React.createElement(shellExports.Component), root, null, () => {});
-  return { ...f, reads, redux, find, commits, pageTenant: () => pageTenant, focus: () => focus.forEach((fn) => fn()),
+  return { ...f, reads, redux, find, commits, pageTenant: () => pageTenant, focus: () => focus.forEach((fn) => fn()), invalidate: (contextVersion) => menuRefresh.forEach(fn => fn({ detail: { contextVersion } })),
+    elapse: (ms) => { for (const { fn, delay } of intervals.values()) for (let elapsed = delay; elapsed <= ms; elapsed += delay) fn(); },
     flush: async () => { for (let i = 0; i < 4; i++) { renderer.flushPassiveEffects(); await tick(); } },
     close: () => { renderer.updateContainer(null, root, null, () => {}); renderer.flushPassiveEffects(); },
   };
@@ -253,4 +259,36 @@ test('unmounted hook consumers release only their own guard and ignore delayed s
     assert.equal(f.selection.getSnapshot().busy, false, 'Late callbacks cannot recreate an unmounted page guard');
     assert.equal(f.selection.getSnapshot().dirty, true);
   } finally { f.selection.releaseGuard(other); keep(); f.close(); }
+});
+
+
+test('an idle authenticated shell never polls the menu manifest, while focus still refreshes it', async () => {
+  const f = shellFixture(user(['company-a']));
+  try {
+    await f.flush();
+    assert.equal(f.reads.length, 1);
+    f.reads[0].resolve(manifest('messages')); await f.flush();
+    const page = f.find('routed-page');
+    f.elapse(60000); await f.flush();
+    assert.equal(f.reads.length, 1, 'Elapsed time alone must not request the menu manifest');
+    f.focus(); await f.flush();
+    assert.equal(f.reads.length, 2, 'Returning to the app must still refresh effective permissions');
+    f.reads[1].resolve(manifest('messages')); await f.flush();
+    assert.equal(f.find('routed-page'), page);
+    f.elapse(60000); await f.flush();
+    assert.equal(f.reads.length, 2, 'An event refresh must not start a polling loop');
+  } finally { f.close(); }
+});
+
+test('saved menu facts refresh only the matching current context and retain unchanged page identity', async () => {
+  const f = shellFixture(user(['company-a']));
+  try {
+    await f.flush();f.reads[0].resolve(manifest('messages'));await f.flush();
+    const page=f.find('routed-page'),version=f.selection.getSnapshot().contextVersion;
+    f.invalidate(version-1);await f.flush();assert.equal(f.reads.length,1);
+    f.invalidate(version);await f.flush();assert.equal(f.reads.length,2);
+    f.reads[1].resolve(manifest('messages'));await f.flush();assert.equal(f.find('routed-page'),page);
+    f.invalidate(version);await f.flush();f.reads[2].reject(new Error('503'));await f.flush();
+    assert.deepEqual(JSON.parse(JSON.stringify(f.find('routed-page').props.menu)),[],'failed current refresh clears old qualifications');
+  } finally { f.close(); }
 });

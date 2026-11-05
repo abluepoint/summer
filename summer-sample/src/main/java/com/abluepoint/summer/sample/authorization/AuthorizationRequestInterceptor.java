@@ -90,6 +90,10 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
                 && method.getBeanType().getName().equals("com.abluepoint.summer.sample.menu.MenuManifestController")) {
             return true;
         }
+        // This exact identity-only marker selects the existing LEGACY menu contract; it grants no menu or API access.
+        if ("GET".equals(request.getMethod())
+                && method.getBeanType().equals(com.abluepoint.summer.sample.authorization.api.permission.PermissionAccessController.class)
+                && "navigation".equals(method.getMethod().getName())) return true;
         // Global Sample business and platform resources share the Sample's fixed tenant boundary.
         String enterpriseId = requestedEnterprise == null ? SAMPLE_ENTERPRISE : requestedEnterprise;
         String controllerClass = method.getBeanType().getName();

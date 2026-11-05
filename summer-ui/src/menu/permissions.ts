@@ -17,6 +17,7 @@ export async function loadMenuPermissions(
     onVisible?.(visible.items);
     const permissions: UserPermission = {};
     visible.items.forEach((item) => {
+      if (item.navOnly || item.pageEligible === false) return;
       const actions = item.actions || [];
       if (!actions.length) return;
       permissions[item.menuId] = actions;

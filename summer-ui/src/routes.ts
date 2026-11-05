@@ -8,6 +8,7 @@ export type IRoute = AuthParams & {
   key: string;
   // Local group routes must not prefix-match disabled descendants.
   exact?: boolean;
+  navOnly?: boolean;
   iconKey?: string;
   capabilityCode?: string;
   // 当前页是否展示面包屑
@@ -173,7 +174,12 @@ const officialExampleRoutes: IRoute[] = [
  * links from the upstream baseline continue to work.
  */
 export const routes: IRoute[] = [
-  { name: 'menu.permissions', key: 'permissions', capabilityCode: 'enterprise.roles.read', requiredPermissions: [{ resource: 'enterprise.roles', actions: ['read'] }] },
+  {
+    name: 'menu.permissions',
+    key: 'permissions',
+    capabilityCode: 'enterprise.roles.read',
+    requiredPermissions: [{ resource: 'enterprise.roles', actions: ['read'] }],
+  },
   {
     name: 'menu.oauthClients',
     key: 'oauth-clients',
@@ -185,7 +191,9 @@ export const routes: IRoute[] = [
     key: 'plugins/customer-insights',
     exact: true,
     capabilityCode: 'enterprise.plugins.customer-insights.read',
-    requiredPermissions: [{ resource: 'enterprise.plugins.customer-insights', actions: ['read'] }],
+    requiredPermissions: [
+      { resource: 'enterprise.plugins.customer-insights', actions: ['read'] },
+    ],
   },
   {
     name: 'menu.plugins',
@@ -287,7 +295,9 @@ export const routes: IRoute[] = [
         name: '字典管理',
         key: 'dictionary/manage',
         capabilityCode: 'platform.dictionary.read',
-        requiredPermissions: [{ resource: 'platform.dictionary', actions: ['read'] }],
+        requiredPermissions: [
+          { resource: 'platform.dictionary', actions: ['read'] },
+        ],
       },
       {
         name: 'menu.dictionary.form',
@@ -406,12 +416,17 @@ const useRoute = (userPermission): [IRoute[], string] => {
   );
 
   const defaultRoute = useMemo(() => {
-    const first = permissionRoute[0];
-    if (first) {
-      const firstRoute = first?.children?.[0]?.key || first.key;
-      return firstRoute;
-    }
-    return '';
+    const firstPage = (items: IRoute[]): string => {
+      for (const item of items) {
+        if (item.children?.length) {
+          const child = firstPage(item.children);
+          if (child) return child;
+        }
+        if (!item.navOnly) return item.key;
+      }
+      return '';
+    };
+    return firstPage(permissionRoute);
   }, [permissionRoute]);
 
   return [permissionRoute, defaultRoute];

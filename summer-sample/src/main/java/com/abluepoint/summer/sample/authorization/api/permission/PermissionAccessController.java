@@ -15,15 +15,18 @@ import org.springframework.web.bind.annotation.*;
 })
 public class PermissionAccessController {
   private final ManagedRoleService roles;
+  private final com.abluepoint.summer.sample.authorization.application.permission.MenuNavigationService navigation;
   private final com.abluepoint.summer.sample.authorization.application.permission
           .ManagedPermissionAccess
       access;
 
   public PermissionAccessController(
       ManagedRoleService roles,
+      com.abluepoint.summer.sample.authorization.application.permission.MenuNavigationService navigation,
       com.abluepoint.summer.sample.authorization.application.permission.ManagedPermissionAccess
           access) {
     this.roles = roles;
+    this.navigation = navigation;
     this.access = access;
   }
 
@@ -46,35 +49,7 @@ public class PermissionAccessController {
 
   @GetMapping("/navigation")
   public Object navigation(HttpServletRequest r, Authentication a) {
-    var d = PermissionController.domain(r);
-    if (!access.managed(d))
-      throw new org.springframework.security.access.AccessDeniedException(
-          "Managed domain required");
-    requireIdentity(r, a);
-    var items =
-        java.util.List.of("roles", "permissions").stream()
-            .filter(menuId -> access.allows(d, a, "MENU", menuId))
-            .map(
-                id ->
-                    Map.<String, Object>of(
-                        "menuId",
-                        id,
-                        "path",
-                        "/" + id,
-                        "titleKey",
-                        id.equals("roles") ? "角色与权限" : "权限管理",
-                        "iconKey",
-                        id,
-                        "sortOrder",
-                        0,
-                        "enabled",
-                        true,
-                        "actions",
-                        java.util.List.of("read"),
-                        "version",
-                        1))
-            .toList();
-    return ApiResponse.success(Map.of("manifestVersion", 1, "items", items), null);
+    return ApiResponse.success(navigation.visible(PermissionController.domain(r), a), null);
   }
 
   private void requireIdentity(HttpServletRequest r, Authentication a) {

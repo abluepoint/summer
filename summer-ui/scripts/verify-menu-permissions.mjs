@@ -64,3 +64,36 @@ for (const [key, code] of Object.entries(bootstrapCodes)) {
   assert.equal(authentication.default(route, {}), false, `${key} must remain hidden without a grant`);
 }
 console.log('Menu permissions: 5 failure/action regressions and 8 navigation contracts passed');
+
+const directory = { menuId: 'roles', path: '/roles', enabled: true, navOnly: true, pageEligible: false, sortOrder: 1, actions: ['read'] };
+const child = { menuId: 'permissions', path: '/permissions', parentMenuId: 'roles', enabled: true, pageEligible: true, sortOrder: 2, actions: [] };
+const projected = access.resolveMenuRoutes([{ key: 'roles' }, { key: 'permissions' }, { key: 'sibling' }], [directory, child]);
+assert.equal(projected[0].navOnly, true);
+assert.deepEqual(plain(projected[0].children.map(x => x.key)), ['permissions']);
+assert.deepEqual(plain(await load(async () => {}, async () => manifest([directory]))), {}, 'directory actions cannot grant a page');
+assert.equal(access.customerRouteAllowed('/customer/page/arbitrary/path', [{ menuId: 'customer/page', enabled: true, actions: ['read'] }]), false);
+assert.equal(access.customerRouteAllowed('/customer/detail/alice', [{ menuId: 'customer/page', enabled: true, pageEligible: true, actions: [] }]), true);
+assert.equal(access.customerRouteAllowed('/customer/detail/alice', [{ menuId: 'customer/page', enabled: true, navOnly: true, actions: ['read'] }]), false);
+const contract = await import('../src/pages/customer/contract.mjs');
+let calls = [], modeResponse;
+const fakeAxios = { get: async url => { calls.push(url); if (modeResponse instanceof Error) throw modeResponse; return { status: 200, data: { success: true, data: calls.length === 1 ? modeResponse : { manifestVersion: 1, items: [] } } }; }, isAxiosError: () => false };
+const navigationApi = evaluateModule('../src/menu/api.ts', { axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
+modeResponse = { engineMode: 'LEGACY', items: [] };
+await navigationApi.getVisibleMenuManifest('ent-acme');
+assert.equal(calls.length, 2);assert.equal(calls[1], '/api/v1/enterprises/ent-acme/menu-manifest');
+calls = [];modeResponse = { engineMode: 'MANAGED', items: [] };
+await navigationApi.getVisibleMenuManifest('ent-acme');assert.equal(calls.length, 1);
+for (const failure of [new Error('403'), new Error('503'), { engineMode: 'UNKNOWN', items: [] }]) {
+  calls = [];modeResponse = failure;
+  await assert.rejects(() => navigationApi.getVisibleMenuManifest('ent-acme'));assert.equal(calls.length, 1, 'managed/unknown failures never fall back to legacy facts');
+}
+console.log('Menu navigation: directory, explicit-owner, engine-mode and fail-closed contracts passed');
+const managedEditorApi = evaluateModule('../src/pages/menu-manifest/api.ts', { axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
+calls = [];modeResponse = { engineMode: 'LEGACY', items: [] };
+await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'), error => error.code === 'DOMAIN_NOT_MANAGED');
+assert.equal(calls.length, 1, 'legacy mode disables the new editor without probing or writing old management APIs');
+calls = [];modeResponse = { engineMode: 'MANAGED', items: [] };
+await managedEditorApi.getManagedManifest('ent-acme');assert.equal(calls[1], '/api/v1/enterprises/ent-acme/authorization/menu-layout');
+calls = [];modeResponse = new Error('503');
+await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'));assert.equal(calls.length, 1);
+console.log('Managed menu editor rejects LEGACY explicitly and never falls back on dependency failure');

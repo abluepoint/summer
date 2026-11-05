@@ -27,11 +27,14 @@ class MenuManifestService {
     private final AuthorizationChangeEventService changeEvents;
     private final RequestIdAccessor requestId;
     private final AuthorizationAuditStore auditStore;
+    private final com.abluepoint.summer.sample.authorization.MenuPublication publication;
     private final Map<String, Receipt> receipts = new ConcurrentHashMap<>();
 
     MenuManifestService(MenuManifestRepository manifestRepository, MenuManifestOverrideRepository overrideRepository,
                         AuthorizationService authorizationService, AuthorizationChangeEventService changeEvents,
-                        RequestIdAccessor requestId, AuthorizationAuditStore auditStore) {
+                        RequestIdAccessor requestId, AuthorizationAuditStore auditStore,
+                        com.abluepoint.summer.sample.authorization.MenuPublication publication) {
+        this.publication = publication;
         this.manifestRepository = manifestRepository;
         this.overrideRepository = overrideRepository;
         this.authorizationService = authorizationService;
@@ -40,11 +43,17 @@ class MenuManifestService {
         this.auditStore = auditStore;
     }
 
+    private List<MenuManifestEntity> currentItems() {
+        long version = publication.read().manifestVersion();
+        return manifestRepository.findAllByOrderBySortOrderAscMenuIdAsc().stream()
+                .filter(item -> item.manifestVersion() == version).toList();
+    }
+
     @Transactional(readOnly = true)
     synchronized MenuManifestView current(Authentication authentication) {
         authorizationService.requirePlatformMenu(authentication);
-        List<MenuManifestEntity> items = manifestRepository.findAllByOrderBySortOrderAscMenuIdAsc();
-        long version = items.stream().mapToLong(MenuManifestEntity::manifestVersion).max().orElse(0);
+        List<MenuManifestEntity> items = currentItems();
+        long version = publication.read().manifestVersion();
         return view(version, items, Map.of(), null);
     }
 
@@ -52,6 +61,7 @@ class MenuManifestService {
     synchronized MenuManifestView sync(MenuManifestSyncRequest request, String key, Authentication authentication) {
         authorizationService.requirePlatformMenu(authentication);
         if (key == null || key.isBlank()) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Idempotency-Key is required");
+        publication.lock(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform());
         validate(request);
         String fingerprint = manifestFingerprint(request);
         Receipt previous = receipts.get(key);
@@ -59,10 +69,10 @@ class MenuManifestService {
             if (!previous.fingerprint.equals(fingerprint)) throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Idempotency key reused");
             return (MenuManifestView) previous.result;
         }
-        long current = manifestRepository.findAll().stream().mapToLong(MenuManifestEntity::manifestVersion).max().orElse(0);
+        long current = publication.read().manifestVersion();
         if (request.manifestVersion() < current) throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Manifest version must increase");
         if (request.manifestVersion() == current) {
-            List<MenuManifestEntity> existing = manifestRepository.findAllByOrderBySortOrderAscMenuIdAsc();
+            List<MenuManifestEntity> existing = currentItems();
             MenuManifestView replay = view(current, existing, Map.of(), null);
             if (manifestFingerprint(request).equals(manifestFingerprint(toRequest(replay)))) return replay;
             throw SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Manifest version already contains different metadata");
@@ -70,20 +80,21 @@ class MenuManifestService {
         manifestRepository.deleteAll();
         List<MenuManifestEntity> entities = request.items().stream().map(item -> new MenuManifestEntity(item, request.manifestVersion())).toList();
         manifestRepository.saveAll(entities);
+        publication.published(request.manifestVersion());
         MenuManifestView result = view(request.manifestVersion(), entities, Map.of(), null);
         rememberAfterCommit(key, new Receipt(fingerprint, result));
-        auditStore.mutation("ent-acme", "manifest", "MENU_MANIFEST_SYNCED", requestId.currentRequestId(), authentication.getName());
-        changeEvents.enqueue("ent-acme", "MENU_MANIFEST", "manifest", "MENU_MANIFEST_SYNCED", request.manifestVersion(), requestId.currentRequestId());
+        auditStore.mutation("PLATFORM:platform", "manifest", "MENU_MANIFEST_SYNCED", requestId.currentRequestId(), authentication.getName());
+        changeEvents.enqueue(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "MENU_MANIFEST", "manifest", "MENU_MANIFEST_SYNCED", request.manifestVersion(), requestId.currentRequestId());
         return result;
     }
 
     synchronized MenuManifestView visible(String enterpriseId, Authentication authentication) {
         authorizationService.requireEnterpriseMembership(enterpriseId, authentication);
-        List<MenuManifestEntity> items = manifestRepository.findAllByOrderBySortOrderAscMenuIdAsc();
+        List<MenuManifestEntity> items = currentItems();
         Map<String, MenuManifestOverrideEntity> overrides = new HashMap<>();
         overrideRepository.findAllByEnterpriseId(enterpriseId).forEach(item -> overrides.put(item.menuId(), item));
         List<MenuManifestItemView> visible = new ArrayList<>();
-        long version = items.stream().mapToLong(MenuManifestEntity::manifestVersion).max().orElse(0);
+        long version = publication.read().manifestVersion();
         for (MenuManifestEntity item : items) {
             MenuManifestOverrideEntity override = overrides.get(item.menuId());
             Effective effective = effective(item, override);
@@ -104,7 +115,7 @@ class MenuManifestService {
 
     synchronized MenuManifestView management(String enterpriseId, Authentication authentication) {
         authorizationService.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.menu.write");
-        List<MenuManifestEntity> items = manifestRepository.findAllByOrderBySortOrderAscMenuIdAsc();
+        List<MenuManifestEntity> items = currentItems();
         Map<String, MenuManifestOverrideEntity> overrides = new HashMap<>();
         overrideRepository.findAllByEnterpriseId(enterpriseId).forEach(item -> overrides.put(item.menuId(), item));
         List<MenuManifestItemView> managed = new ArrayList<>();
@@ -117,13 +128,14 @@ class MenuManifestService {
                     override == null ? 1 : override.version()));
         }
         managed.sort(Comparator.comparingInt(MenuManifestItemView::sortOrder).thenComparing(MenuManifestItemView::menuId));
-        return new MenuManifestView(items.stream().mapToLong(MenuManifestEntity::manifestVersion).max().orElse(0), List.copyOf(managed));
+        return new MenuManifestView(publication.read().manifestVersion(), List.copyOf(managed));
     }
 
     @Transactional
     synchronized MenuManifestItemView override(String enterpriseId, String menuId, MenuManifestOverrideRequest request,
                                                 String ifMatch, String key, Authentication authentication) {
         authorizationService.requireEnterpriseMenu(enterpriseId, authentication, "enterprise.menu.write");
+        publication.lock(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId));
         if (key == null || key.isBlank()) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Idempotency-Key is required");
         if (request == null) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Menu override is required");
         MenuManifestEntity item = manifestRepository.lockMenu(menuId).orElseThrow(() -> SummerException.withMessage(MenuManifestErrorCode.CONFLICT, "Menu item not found"));
@@ -159,7 +171,7 @@ class MenuManifestService {
                 effective.enabled ? actions(item.menuId(), effective.capabilityCode, authentication, enterpriseId) : List.of(), current.version());
         rememberAfterCommit("override:" + enterpriseId + ":" + menuId + ":" + key, new Receipt(fingerprint, result));
         auditStore.mutation(enterpriseId, menuId, "MENU_OVERRIDE_UPDATED", requestId.currentRequestId(), authentication.getName());
-        changeEvents.enqueue(enterpriseId, "MENU_MANIFEST", menuId, "MENU_OVERRIDE_UPDATED", current.version(), requestId.currentRequestId());
+        changeEvents.enqueueEnterprise(enterpriseId, "MENU_MANIFEST", menuId, "MENU_OVERRIDE_UPDATED", current.version(), requestId.currentRequestId());
         return result;
     }
 

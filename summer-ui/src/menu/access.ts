@@ -16,6 +16,8 @@ export function customerActions(
         .filter(
           (item) =>
             item.enabled &&
+            !item.navOnly &&
+            item.pageEligible !== false &&
             (item.menuId === menuId ||
               (menuId === 'customer/detail' &&
                 ['customer/drawer', 'customer/modal', 'customer/page'].includes(
@@ -67,7 +69,13 @@ export function resolveMenuRoutes(
     const source = known.get(item.menuId);
     nodes.set(item.menuId, {
       ...source,
-      exact: Boolean(source.children),
+      navOnly: Boolean(item.navOnly) || item.pageEligible === false,
+      exact: ![
+        'customer/drawer',
+        'customer/modal',
+        'customer/page',
+        'customer/detail',
+      ].includes(source.key),
       name: item.titleKey,
       iconKey: item.iconKey,
       children: source.children ? [] : undefined,
@@ -84,7 +92,17 @@ export function resolveMenuRoutes(
   }
   // Detail pages have no menu row; they inherit access from a visible customer screen.
   const detail = known.get('customer/detail');
-  if (detail && customerActions(items, 'customer/detail').includes('read'))
+  const detailOwners = ['customer/drawer', 'customer/modal', 'customer/page'];
+  if (
+    detail &&
+    items.some(
+      (item) =>
+        item.enabled &&
+        !item.navOnly &&
+        item.pageEligible !== false &&
+        detailOwners.includes(item.menuId)
+    )
+  )
     roots.push({ ...detail });
   return roots;
 }
@@ -92,10 +110,37 @@ export function customerRouteAllowed(
   path: string,
   items: VisibleMenuItem[]
 ): boolean {
-  const actions = customerActions(items, 'customer/page');
-  if (/^\/customer\/page\/create(?:\/|$)/.test(path))
-    return actions.includes('create');
-  if (/^\/customer\/page\/edit(?:\/|$)/.test(path))
-    return actions.includes('update');
-  return true;
+  // Each supported local pattern has explicit page ownership; arbitrary descendants never inherit access.
+  const qualified = (id: string) =>
+    items.some(
+      (item) =>
+        item.menuId === id &&
+        item.enabled &&
+        !item.navOnly &&
+        item.pageEligible !== false
+    );
+  if (/^\/customer\/page\/create\/?$/.test(path))
+    return (
+      qualified('customer/page') &&
+      customerActions(items, 'customer/page').includes('create')
+    );
+  if (/^\/customer\/page\/edit\/[^/]+\/?$/.test(path))
+    return (
+      qualified('customer/page') &&
+      customerActions(items, 'customer/page').includes('update')
+    );
+  if (/^\/customer\/detail\/[^/]+\/?$/.test(path))
+    return ['customer/drawer', 'customer/modal', 'customer/page'].some(
+      qualified
+    );
+  for (const owner of ['customer/drawer', 'customer/modal', 'customer/page']) {
+    if (path === '/' + owner || path === '/' + owner + '/')
+      return qualified(owner);
+    if (
+      owner !== 'customer/page' &&
+      new RegExp('^/' + owner + '/[^/]+/?$').test(path)
+    )
+      return qualified(owner);
+  }
+  return false;
 }

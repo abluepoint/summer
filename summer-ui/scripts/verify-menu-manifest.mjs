@@ -11,10 +11,11 @@ assert.match(manifest, /manifestVersion/);
 assert.match(manifest, /capabilityCode/);
 assert.doesNotMatch(manifest, /component|importPath|displayExpression/);
 assert.match(api, /platform\/menu-manifest/);
-assert.match(api, /enterprises.*menu-manifest/);
+assert.match(api, /\$\{base\}\/menu-manifest/);
+assert.match(api, /authorization\/navigation/);
 assert.match(api, /Idempotency-Key/);
 assert.match(routes, /key: 'menu-manifest'/);
-assert.match(page, /getVisibleMenuManifest/);
+assert.match(page, /getManagedManifest/);
 console.log('Menu manifest is generated from routes and uses real permission APIs');
 
 await import('./verify-menu-permissions.mjs');

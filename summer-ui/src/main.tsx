@@ -1,3 +1,4 @@
+import { MENU_REFRESH_EVENT } from './menu/refresh';
 import './style/global.less';
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
@@ -21,12 +22,13 @@ import {
   startLoginForUnavailable,
 } from './auth/oidc';
 import { authText, configureBusinessApiAuth } from './auth/requests';
-import { menuManifest } from './routes';
-import { getVisibleMenuManifest, syncMenuManifest, getManagedMenuManifest } from './menu/api';
+import { getVisibleMenuManifest, getManagedMenuManifest } from './menu/api';
 import { loadMenuPermissions } from './menu/permissions';
 import { MenuAccessContext } from './menu/access';
 import { VisibleMenuItem } from './menu/api';
-import useActiveEnterprise, { activeEnterpriseSelection } from './pages/data-scopes/useActiveEnterprise';
+import useActiveEnterprise, {
+  activeEnterpriseSelection,
+} from './pages/data-scopes/useActiveEnterprise';
 import useLocale from './utils/useLocale';
 import changeTheme from './utils/changeTheme';
 import useStorage from './utils/useStorage';
@@ -52,7 +54,10 @@ function AuthenticatedLayout() {
   useEffect(() => {
     if (!tenant.ready) return;
     let alive = true;
-    const isCurrent = () => alive && activeEnterpriseSelection.getSnapshot().contextVersion === tenant.contextVersion;
+    const isCurrent = () =>
+      alive &&
+      activeEnterpriseSelection.getSnapshot().contextVersion ===
+        tenant.contextVersion;
     let stopPermissionRefresh: (() => void) | undefined;
     let visibleSignature = '';
     setStatus('loading');
@@ -63,10 +68,12 @@ function AuthenticatedLayout() {
         if (!user) {
           return authenticationStatus()
             .then((reason) =>
-              isCurrent() ? startLoginForUnavailable(
-                reason === 'expired' ? 'expired' : 'missing',
-                { notify: false }
-              ) : false
+              isCurrent()
+                ? startLoginForUnavailable(
+                    reason === 'expired' ? 'expired' : 'missing',
+                    { notify: false }
+                  )
+                : false
             )
             .then((started) => {
               if (isCurrent() && !started && !isAuthRedirecting()) {
@@ -80,22 +87,67 @@ function AuthenticatedLayout() {
           const navigation = await getManagedMenuManifest();
           if (!isCurrent()) return;
           setMenuItems(navigation.items);
-          const refreshNavigation = () => {
-            if (document.visibilityState === 'hidden') return;
-            getManagedMenuManifest().then((next) => { if (isCurrent()) setMenuItems(next.items); }).catch(() => { if (isCurrent()) setMenuItems([]); });
+          let refreshingNavigation = false;
+          let navigationSignature = JSON.stringify(navigation.items);
+          const refreshNavigation = async () => {
+            if (
+              !isCurrent() ||
+              refreshingNavigation ||
+              document.visibilityState === 'hidden'
+            )
+              return;
+            refreshingNavigation = true;
+            try {
+              const next = await getManagedMenuManifest();
+              const signature = JSON.stringify(next.items);
+              if (isCurrent() && signature !== navigationSignature) {
+                navigationSignature = signature;
+                setMenuItems(next.items);
+              }
+            } catch {
+              if (isCurrent()) {
+                navigationSignature = '[]';
+                setMenuItems([]);
+              }
+            } finally {
+              refreshingNavigation = false;
+            }
           };
+          const invalidateNavigation = (
+            event: CustomEvent<{ contextVersion: number }>
+          ) => {
+            if (event.detail.contextVersion === tenant.contextVersion)
+              refreshNavigation();
+          };
+          window.addEventListener(MENU_REFRESH_EVENT, invalidateNavigation);
           window.addEventListener('focus', refreshNavigation);
           document.addEventListener('visibilitychange', refreshNavigation);
-          stopPermissionRefresh = () => { window.removeEventListener('focus', refreshNavigation); document.removeEventListener('visibilitychange', refreshNavigation); };
-          store.dispatch({ type: 'update-userInfo', payload: {
-            userInfo: { name: String(profile.name || profile.preferred_username || profile.sub), permissions: {} }, userLoading: false,
-          } });
+          stopPermissionRefresh = () => {
+            window.removeEventListener(
+              MENU_REFRESH_EVENT,
+              invalidateNavigation
+            );
+            window.removeEventListener('focus', refreshNavigation);
+            document.removeEventListener('visibilitychange', refreshNavigation);
+          };
+          store.dispatch({
+            type: 'update-userInfo',
+            payload: {
+              userInfo: {
+                name: String(
+                  profile.name || profile.preferred_username || profile.sub
+                ),
+                permissions: {},
+              },
+              userLoading: false,
+            },
+          });
           setStatus('ready');
           setSettledContext(tenant.contextVersion);
           return;
         }
         const permissions = await loadMenuPermissions(
-          () => syncMenuManifest(menuManifest),
+          () => Promise.resolve(),
           () =>
             tenant.enterpriseId
               ? getVisibleMenuManifest(tenant.enterpriseId)
@@ -122,11 +174,15 @@ function AuthenticatedLayout() {
         });
         setStatus('ready');
         setSettledContext(tenant.contextVersion);
-        // Notifications can be lost. Re-read the server's effective actions while
-        // this page is visible, including when returning from a background tab.
+        // Re-read effective actions on visibility/focus and saved-permission events.
+        // Elapsed time does not trigger menu-manifest polling.
         let refreshing = false;
         const refreshPermissions = async () => {
-          if (!isCurrent() || refreshing || document.visibilityState === 'hidden')
+          if (
+            !isCurrent() ||
+            refreshing ||
+            document.visibilityState === 'hidden'
+          )
             return;
           refreshing = true;
           try {
@@ -160,11 +216,17 @@ function AuthenticatedLayout() {
             refreshing = false;
           }
         };
-        const interval = window.setInterval(refreshPermissions, 10000);
+        const invalidatePermissions = (
+          event: CustomEvent<{ contextVersion: number }>
+        ) => {
+          if (event.detail.contextVersion === tenant.contextVersion)
+            refreshPermissions();
+        };
+        window.addEventListener(MENU_REFRESH_EVENT, invalidatePermissions);
         window.addEventListener('focus', refreshPermissions);
         document.addEventListener('visibilitychange', refreshPermissions);
         stopPermissionRefresh = () => {
-          window.clearInterval(interval);
+          window.removeEventListener(MENU_REFRESH_EVENT, invalidatePermissions);
           window.removeEventListener('focus', refreshPermissions);
           document.removeEventListener('visibilitychange', refreshPermissions);
         };
@@ -192,10 +254,27 @@ function AuthenticatedLayout() {
   if (status === 'limited')
     return <Alert type="error" content={t['auth.restartLimit']} />;
   if (!tenant.enterpriseId && !menuItems.length)
-    return <Card title="选择活动租户">
-      <Select aria-label="活动租户" placeholder="选择活动租户" options={tenant.options} value={undefined} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240 }} />
-      <Alert type="info" content={tenant.options.length ? '请选择一个活动成员租户以加载可用菜单。' : '当前身份没有可用的活动成员租户。'} />
-    </Card>;
+    return (
+      <Card title="选择活动租户">
+        <Select
+          aria-label="活动租户"
+          placeholder="选择活动租户"
+          options={tenant.options}
+          value={undefined}
+          onChange={tenant.change}
+          disabled={tenant.busy}
+          style={{ width: 240 }}
+        />
+        <Alert
+          type="info"
+          content={
+            tenant.options.length
+              ? '请选择一个活动成员租户以加载可用菜单。'
+              : '当前身份没有可用的活动成员租户。'
+          }
+        />
+      </Card>
+    );
   return status === 'ready' ? (
     <MenuAccessContext.Provider value={menuItems}>
       <PageLayout key={tenant.contextVersion} />

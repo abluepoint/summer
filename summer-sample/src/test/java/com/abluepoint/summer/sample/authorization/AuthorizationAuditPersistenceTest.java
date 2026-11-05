@@ -1,10 +1,12 @@
 package com.abluepoint.summer.sample.authorization;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -28,11 +30,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AuthorizationAuditPersistenceTest {
     private static final String ENTERPRISE = "ent-acme";
+    private static final String PLATFORM = "PLATFORM:platform";
     @Autowired AuthorizationService authorization;
     @Autowired AuthorizationChangeEventOutboxRepository outbox;
     @Autowired ApplicationContext context;
     @Autowired PlatformTransactionManager transactions;
     @Autowired MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;
+
+    @BeforeEach
+    void initializeUnpublishedMenuState() {
+        jdbc.update("insert into summer_menu_publication(publication_id,published,manifest_version) values ('global',false,0)");
+    }
 
     @Test
     void committedMutationAuditCanBeReadByAnIndependentServiceInstance() {
@@ -99,13 +108,27 @@ class AuthorizationAuditPersistenceTest {
                         .header("X-Request-Id", "menu-override-request").content("{\"enabled\":false}"))
                 .andExpect(status().isOk());
 
-        assertThat(freshService().audit(ENTERPRISE, "manifest", admin())).anySatisfy(row ->
+        assertThat(freshAuditStore().read(PLATFORM, "manifest")).anySatisfy(row ->
                 assertThat(row).containsEntry("action", "MENU_MANIFEST_SYNCED").containsEntry("principal", "audit-admin")
                         .containsEntry("requestId", "menu-sync-request"));
         assertThat(freshService().audit(ENTERPRISE, "audit-menu", admin())).anySatisfy(row ->
                 assertThat(row).containsEntry("action", "MENU_OVERRIDE_UPDATED").containsEntry("principal", "audit-admin")
                         .containsEntry("requestId", "menu-override-request"));
-        assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE, "MENU_MANIFEST")).hasSize(2);
+        assertThat(freshService().audit(ENTERPRISE, "manifest", admin())).isEmpty();
+        assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(PLATFORM, "MENU_MANIFEST"))
+                .singleElement().satisfies(event -> {
+                    assertThat(event.enterpriseId()).isEqualTo(PLATFORM);
+                    assertThat(event.resourceId()).isEqualTo("manifest");
+                    assertThat(event.eventType()).isEqualTo("MENU_MANIFEST_SYNCED");
+                    assertThat(event.requestId()).isEqualTo("menu-sync-request");
+                });
+        assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE, "MENU_MANIFEST"))
+                .singleElement().satisfies(event -> {
+                    assertThat(event.enterpriseId()).isEqualTo(ENTERPRISE);
+                    assertThat(event.resourceId()).isEqualTo("audit-menu");
+                    assertThat(event.eventType()).isEqualTo("MENU_OVERRIDE_UPDATED");
+                    assertThat(event.requestId()).isEqualTo("menu-override-request");
+                });
     }
 
     @Test
@@ -113,12 +136,16 @@ class AuthorizationAuditPersistenceTest {
         long originalEvents = outbox.count();
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
             try { syncMenu(); } catch (Exception failure) { throw new IllegalStateException(failure); }
-            assertThat(authorization.audit(ENTERPRISE, "manifest", admin())).hasSize(1);
+            assertThat(freshAuditStore().read(PLATFORM, "manifest")).hasSize(1);
+            assertThat(jdbc.queryForObject("select manifest_version from summer_menu_publication where publication_id='global'", Long.class))
+                    .isEqualTo(1L);
             assertThat(outbox.count()).isGreaterThan(originalEvents);
             transaction.setRollbackOnly();
         });
 
-        assertThat(freshService().audit(ENTERPRISE, "manifest", admin())).isEmpty();
+        assertThat(freshAuditStore().read(PLATFORM, "manifest")).isEmpty();
+        assertThat(jdbc.queryForObject("select manifest_version from summer_menu_publication where publication_id='global'", Long.class))
+                .isZero();
         assertThat(outbox.count()).isEqualTo(originalEvents);
     }
 
@@ -157,6 +184,10 @@ class AuthorizationAuditPersistenceTest {
                                 "capabilityCode":"enterprise.roles.read"}]}
                                 """))
                 .andExpect(status().isOk());
+    }
+
+    private AuthorizationAuditStore freshAuditStore() {
+        return context.getAutowireCapableBeanFactory().createBean(AuthorizationAuditStore.class);
     }
 
     private AuthorizationService freshService() {
