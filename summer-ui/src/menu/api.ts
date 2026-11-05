@@ -53,9 +53,10 @@ export async function getVisibleMenuManifest(enterpriseId: string) {
   if (current.engineMode !== 'LEGACY')
     throw new Error('Unknown navigation authorization mode');
   // Only an explicit authoritative LEGACY response permits this bounded compatibility read.
-  return request<MenuManifest>(() =>
+  const legacy = await request<MenuManifest>(() =>
     axios.get(`${base}/menu-manifest`, { timeout: 10000 })
   );
+  return { ...legacy, engineMode: 'LEGACY' as const };
 }
 
 export function updateMenuManifestOverride(

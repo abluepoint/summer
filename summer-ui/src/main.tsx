@@ -1,3 +1,5 @@
+import { InterfaceOperationHints } from './auth/interfaceOperations';
+import { useInterfaceOperations } from './auth/useInterfaceOperations';
 import { MENU_REFRESH_EVENT } from './menu/refresh';
 import './style/global.less';
 import React, { useEffect, useState } from 'react';
@@ -46,6 +48,12 @@ configureBusinessApiAuth();
 function AuthenticatedLayout() {
   const tenant = useActiveEnterprise();
   const [menuItems, setMenuItems] = useState<VisibleMenuItem[]>([]);
+  const [authorizationMode, setAuthorizationMode] = useState<'LEGACY' | 'MANAGED' | undefined>();
+  const customerOperations = useInterfaceOperations(
+    { kind: 'PLATFORM' },
+    ['customer.read', 'customer.create', 'customer.update', 'customer.delete'],
+    authorizationMode === 'MANAGED'
+  );
   const [settledContext, setSettledContext] = useState(-1);
   const t = useLocale();
   const [status, setStatus] = useState<
@@ -62,6 +70,7 @@ function AuthenticatedLayout() {
     let visibleSignature = '';
     setStatus('loading');
     setMenuItems([]);
+    setAuthorizationMode(undefined);
     getAuthenticatedUser()
       .then(async (user) => {
         if (!isCurrent()) return;
@@ -87,6 +96,7 @@ function AuthenticatedLayout() {
           const navigation = await getManagedMenuManifest();
           if (!isCurrent()) return;
           setMenuItems(navigation.items);
+          setAuthorizationMode(navigation.engineMode);
           let refreshingNavigation = false;
           let navigationSignature = JSON.stringify(navigation.items);
           const refreshNavigation = async () => {
@@ -103,6 +113,7 @@ function AuthenticatedLayout() {
               if (isCurrent() && signature !== navigationSignature) {
                 navigationSignature = signature;
                 setMenuItems(next.items);
+                setAuthorizationMode(next.engineMode);
               }
             } catch {
               if (isCurrent()) {
@@ -152,8 +163,9 @@ function AuthenticatedLayout() {
             tenant.enterpriseId
               ? getVisibleMenuManifest(tenant.enterpriseId)
               : Promise.resolve({ manifestVersion: 0, items: [] }),
-          (items) => {
+          (items, mode) => {
             if (isCurrent()) {
+              setAuthorizationMode(mode);
               visibleSignature = JSON.stringify(items);
               setMenuItems(items);
             }
@@ -193,7 +205,8 @@ function AuthenticatedLayout() {
                 tenant.enterpriseId
                   ? getVisibleMenuManifest(tenant.enterpriseId)
                   : Promise.resolve({ manifestVersion: 0, items: [] }),
-              (items) => {
+              (items, mode) => {
+                if (isCurrent()) setAuthorizationMode(mode);
                 const signature = JSON.stringify(items);
                 if (!isCurrent() || signature === visibleSignature) return;
                 visibleSignature = signature;
@@ -277,7 +290,9 @@ function AuthenticatedLayout() {
     );
   return status === 'ready' ? (
     <MenuAccessContext.Provider value={menuItems}>
-      <PageLayout key={tenant.contextVersion} />
+      <InterfaceOperationHints.Provider value={{ engineMode: authorizationMode, actions: customerOperations }}>
+        <PageLayout key={tenant.contextVersion} />
+      </InterfaceOperationHints.Provider>
     </MenuAccessContext.Provider>
   ) : (
     <Spin />

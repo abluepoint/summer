@@ -81,6 +81,12 @@ class LocalConsoleAuthenticationConfiguration {
 
             List<GrantedAuthority> authorities = new ArrayList<>();
             LocalConsoleIdentityClaims.capabilities(resolvedClaims).forEach(value -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + value)));
+            // Session callers have the console's declared delegation surface. Current resource
+            // permissions remain the business grant; old capability claims cannot create one.
+            properties.getAuthorizationServer().getClients().stream()
+                    .filter(client -> "summer-ui".equals(client.getId()))
+                    .flatMap(client -> client.getScopes().stream())
+                    .forEach(scope -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + scope)));
             authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
             authorities.add(FactorGrantedAuthority.fromFactor("PASSWORD"));
             JwtAuthenticationToken localJwt = new JwtAuthenticationToken(jwt, authorities, authentication.getName());

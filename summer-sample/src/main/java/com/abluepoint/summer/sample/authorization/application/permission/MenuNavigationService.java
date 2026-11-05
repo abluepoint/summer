@@ -64,8 +64,6 @@ public class MenuNavigationService {
       throw new AccessDeniedException("Known authorization domain mode required");
     if ("LEGACY".equals(modes.getFirst()))
       return Map.of("engineMode", "LEGACY", "manifestVersion", 0, "items", List.of());
-    if (!access.delegated(domain, authentication, false))
-      throw new AccessDeniedException("Delegated navigation scope required");
     long revision = revision(domain);
     Map<String, Map<String, Object>> nodes = new LinkedHashMap<>();
     var state = publication.read();
@@ -91,20 +89,22 @@ public class MenuNavigationService {
     }
     // Stable bootstrap identities survive before the first full frontend manifest publication.
     if (!state.published())
-      for (String id : List.of("roles", "permissions"))
+      for (var page : com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.PAGES) {
+        String id = page.id();
         nodes.computeIfAbsent(
             id,
             key -> {
               var item = new LinkedHashMap<String, Object>();
               item.put("menuId", id);
               item.put("path", "/" + id);
-              item.put("titleKey", id.equals("roles") ? "角色与权限" : "权限管理");
+              item.put("titleKey", page.title());
               item.put("iconKey", id);
               item.put("sortOrder", 0);
               item.put("enabled", true);
               item.put("version", 1L);
               return item;
             });
+      }
     if (domain.kind().equals("ENTERPRISE"))
       for (var row :
           db.queryForList(

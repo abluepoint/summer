@@ -15,16 +15,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class PlatformEnterpriseDirectoryService {
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess;
+
     private final EnterpriseRepository repository;
     private final EnterpriseRegistry registry;
     private final DirectoryJournal journal;
-    PlatformEnterpriseDirectoryService(EnterpriseRepository repository, EnterpriseRegistry registry, DirectoryJournal journal) {
+    PlatformEnterpriseDirectoryService(EnterpriseRepository repository, EnterpriseRegistry registry, DirectoryJournal journal) { this(repository, registry, journal, null); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    PlatformEnterpriseDirectoryService(EnterpriseRepository repository, EnterpriseRegistry registry, DirectoryJournal journal, com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess) {
+        this.managedAccess = managedAccess;
         this.repository = repository; this.registry = registry; this.journal = journal;
     }
 
     @Transactional(readOnly = true)
     PlatformEnterprisePage list(String search, String status, String qualification, Authentication auth) {
-        require(auth, "platform.enterprise.read");
+        requireAccess(auth, "platform.enterprise.read");
         String query = search == null ? "" : search.trim().toLowerCase(java.util.Locale.ROOT);
         List<PlatformEnterpriseView> all = repository.findAll().stream().map(PlatformEnterpriseDirectoryService::view)
                 .sorted(Comparator.comparing(PlatformEnterpriseView::name).thenComparing(PlatformEnterpriseView::enterpriseId)).toList();
@@ -41,7 +47,7 @@ class PlatformEnterpriseDirectoryService {
 
     @Transactional
     PlatformEnterpriseView transition(String id, String action, String ifMatch, String key, String requestId, Authentication auth) {
-        require(auth, "platform.enterprise.write");
+        requireAccess(auth, "platform.enterprise.write");
         if (key == null || key.isBlank() || key.length() > 128) throw SummerException.withMessage(DirectoryErrorCode.INVALID_ENTERPRISE_ACTION, "Idempotency-Key is required (maximum 128 characters)");
         if (!repository.existsByEnterpriseId(id)) throw SummerException.withMessage(DirectoryErrorCode.ENTERPRISE_NOT_FOUND, "Enterprise not found: " + id);
         registry.lock(id);
@@ -95,4 +101,17 @@ class PlatformEnterpriseDirectoryService {
         return new PlatformEnterpriseView(value.enterpriseId(), value.name(), "", "", status, "", "", "", revision(value));
     }
     record EnterpriseAudit(String actorSubject, String action, String beforeStatus, String afterStatus, String requestId) {}
+    private void requireAccess(Authentication actor, String scope) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), actor, scope)) {
+            if (actor instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwt) {
+                Object memberships = jwt.getToken().getClaims().get("enterprise_memberships");
+                if (memberships instanceof java.util.Collection<?> values && !values.isEmpty()
+                    && !"USER".equals(String.valueOf(jwt.getToken().getClaims().get("principal_type"))))
+                    throw new org.springframework.security.access.AccessDeniedException("platform identity required");
+            }
+            return;
+        }
+        PlatformEnterpriseDirectoryService.require(actor, scope);
+    }
+
 }

@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 })
 public class PermissionAccessController {
   private final ManagedRoleService roles;
+  private final com.abluepoint.summer.sample.authorization.application.permission.InterfaceOperationService operations;
+  private final com.abluepoint.summer.mvc.request.RequestIdAccessor requestIds;
   private final com.abluepoint.summer.sample.authorization.application.permission.MenuNavigationService navigation;
   private final com.abluepoint.summer.sample.authorization.application.permission
           .ManagedPermissionAccess
@@ -22,10 +24,14 @@ public class PermissionAccessController {
 
   public PermissionAccessController(
       ManagedRoleService roles,
+      com.abluepoint.summer.sample.authorization.application.permission.InterfaceOperationService operations,
+      com.abluepoint.summer.mvc.request.RequestIdAccessor requestIds,
       com.abluepoint.summer.sample.authorization.application.permission.MenuNavigationService navigation,
       com.abluepoint.summer.sample.authorization.application.permission.ManagedPermissionAccess
           access) {
     this.roles = roles;
+    this.operations = operations;
+    this.requestIds = requestIds;
     this.navigation = navigation;
     this.access = access;
   }
@@ -50,6 +56,13 @@ public class PermissionAccessController {
   @GetMapping("/navigation")
   public Object navigation(HttpServletRequest r, Authentication a) {
     return ApiResponse.success(navigation.visible(PermissionController.domain(r), a), null);
+  }
+
+  @GetMapping("/operations")
+  public Object operations(HttpServletRequest request, Authentication actor, @RequestParam java.util.List<String> actions) {
+    requireIdentity(request, actor);
+    return ApiResponse.success(Map.of("actions", operations.qualify(PermissionController.domain(request), actor, actions,
+        requestIds.currentRequestId())), requestIds.currentRequestId());
   }
 
   private void requireIdentity(HttpServletRequest r, Authentication a) {

@@ -43,12 +43,35 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
   }
 
   public static ResourceAuthorization.Domain domain(HttpServletRequest r) {
-    Object v = r.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-    if (v instanceof Map<?, ?> vars && vars.get("enterpriseId") instanceof String id)
-      return ResourceAuthorization.Domain.enterprise(id);
-    Object p = r.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-    if (p != null && p.toString().startsWith("/api/v1/platform/"))
+    return domain(r, r.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE)
+        instanceof HandlerMethod handler ? handler : null);
+  }
+
+  private static ResourceAuthorization.Domain domain(HttpServletRequest r, HandlerMethod handler) {
+    Object pattern = r.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+    // A platform enterprise audit contains an enterpriseId but still addresses PLATFORM.
+    if (pattern != null && pattern.toString().startsWith("/api/v1/platform/"))
       return ResourceAuthorization.Domain.platform();
+    Object variables = r.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+    if (variables instanceof Map<?, ?> vars && vars.get("enterpriseId") instanceof String id)
+      return ResourceAuthorization.Domain.enterprise(id);
+    if (handler == null) return null;
+    String owner = handler.getBeanType().getName();
+    String kind = com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes
+        .domainKind(owner, String.valueOf(pattern));
+    if (kind.equals("PLATFORM")) return ResourceAuthorization.Domain.platform();
+    if (owner.equals("com.abluepoint.summer.sample.authorization.AuthorizationChangeEventController")) {
+      String[] values = r.getParameterValues("enterpriseId");
+      if (values == null || values.length == 1 && values[0].isEmpty())
+        return ResourceAuthorization.Domain.enterprise("ent-acme");
+      if (values.length != 1 || !values[0].matches("[A-Za-z0-9_-]{1,80}"))
+        throw new org.springframework.security.access.AccessDeniedException("A single valid enterpriseId is required");
+      return ResourceAuthorization.Domain.enterprise(values[0]);
+    }
+    if (com.abluepoint.summer.sample.authorization.domain.permission.BusinessConsumerRoutes
+        .domainKind(owner, String.valueOf(pattern)).equals("ENTERPRISE"))
+      return ResourceAuthorization.Domain.enterprise(EnterpriseRequestContext.resolve(
+          org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()));
     return null;
   }
 
@@ -63,7 +86,15 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
         var chain = mapping.getHandler(r);
         if (chain == null) continue;
         if (chain.getHandler() instanceof HandlerMethod handler) {
-          var d = domain(r);
+          if (handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.AuthorizationChangeEventController")) {
+            String[] values = r.getParameterValues("enterpriseId");
+            if (values != null && (values.length != 1
+                || !values[0].isEmpty() && !values[0].matches("[A-Za-z0-9_-]{1,80}")))
+              // The final MVC guard rejects this malformed selector before the controller.
+              // Preserve its native AccessDenied translation and request correlation.
+              return new AuthorizationDecision(access.authenticated(a));
+          }
+          var d = domain(r, handler);
           return new AuthorizationDecision(
               d != null && access.managed(d)
                   ? evaluate(r, handler, a, d)
@@ -124,7 +155,7 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
 
   public boolean finalHandler(HttpServletRequest r, HandlerMethod handler, Authentication a) {
     try {
-    var d = domain(r);
+    var d = domain(r, handler);
     if (d == null || !access.managed(d)) return false;
     if (applicant(r,handler)) return false;
     if (!evaluate(r, handler, a, d))
@@ -169,6 +200,25 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
     return true;
   }
 
+  private boolean declaredDelegation(HandlerMethod handler, Authentication actor) {
+    var declaration=org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation(
+        handler.getMethod(), org.springframework.security.access.prepost.PreAuthorize.class);
+    if (declaration == null) declaration=org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation(
+        handler.getBeanType(), org.springframework.security.access.prepost.PreAuthorize.class);
+    if (declaration == null) return true;
+    String expression=declaration.value();
+    if (expression.equals("isAuthenticated()")) return access.authenticated(actor);
+    // These existing management annotations declare only delegation scopes. Business claims
+    // converted to authorities by the bounded legacy adapter must not enlarge OAuth scope.
+    if (!expression.matches("has(?:Any)?Authority\\(\\s*'SCOPE_[A-Za-z0-9_.-]+'(?:\\s*,\\s*'SCOPE_[A-Za-z0-9_.-]+')*\\s*\\)")) return false;
+    var scopes=new java.util.ArrayList<String>();
+    var matcher=java.util.regex.Pattern.compile("'SCOPE_([^']+)'").matcher(expression);
+    while (matcher.find()) scopes.add(matcher.group(1));
+    return access.authenticated(actor)
+        && com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess
+            .delegated(actor, scopes.toArray(String[]::new));
+  }
+
   private boolean evaluate(
       HttpServletRequest r,
       HandlerMethod handler,
@@ -182,16 +232,24 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
       throw new org.springframework.security.access.AccessDeniedException("Final handler identity changed");
     r.setAttribute(MATCH_ATTRIBUTE, resource.id());
     r.setAttribute(ManagedPermissionAccess.RESOURCE_ATTRIBUTE, resource.id());
+    r.setAttribute(com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.DOMAIN_ATTRIBUTE, d);
+    r.setAttribute(com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.DECISION_RESOURCE_ATTRIBUTE, resource);
     // These scopes belong only to the management/representative surface installed in slice 03.
     // Other business handlers retain their own method/service delegation boundaries.
     boolean management = java.util.Set.of(PermissionController.class,
         InterfacePermissionController.class, MenuPermissionController.class,
         MenuDirectoryController.class, RolePermissionController.class,
         PermissionAccessController.class).contains(handler.getBeanType());
+    boolean identityProjection = handler.getBeanType().equals(PermissionAccessController.class)
+        && java.util.Set.of("operations", "navigation").contains(handler.getMethod().getName());
     if (management
+        && !identityProjection
         && !access.delegated(
             d, a, !java.util.Set.of("GET", "HEAD", "OPTIONS").contains(r.getMethod())))
       return false;
+    if (com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes
+            .management(handler.getBeanType().getName())
+        && !declaredDelegation(handler, a)) return false;
     boolean allowed =
         unified
             .decide(new ResourceAuthorization.Request(d, a, resource, r.getHeader("X-Request-Id")))

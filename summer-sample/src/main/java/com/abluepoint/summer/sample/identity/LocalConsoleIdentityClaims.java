@@ -68,6 +68,18 @@ class LocalConsoleIdentityClaims {
         }
         for(var row:jdbc.queryForList("select m.enterprise_id from summer_enterprise_member m join summer_enterprise e on e.enterprise_id=m.enterprise_id join summer_authorization_domain d on d.domain_key=concat('ENTERPRISE:',m.enterprise_id) where m.subject=? and m.status='ACTIVE' and e.status='ACTIVE' and d.engine_mode='MANAGED'",username))visibleMemberships.add(Map.of("enterpriseId",row.get("enterprise_id"),"status","ACTIVE"));
         claims.put("enterprise_memberships",visibleMemberships);
+        // Managed grants are read through current permission resources, never reissued as old
+        // capability authorities. Keep only explicit LEGACY domain projections during expand.
+        if (claims.get("enterprise_capabilities") instanceof Map<?,?> prior) {
+            Map<String,Object> legacyEnterpriseGrants=new LinkedHashMap<>();
+            prior.forEach((key,value) -> {
+                if (!managedDomains.contains("ENTERPRISE:"+key)) legacyEnterpriseGrants.put(key.toString(),value);
+            });
+            claims.put("enterprise_capabilities",legacyEnterpriseGrants);
+        }
+        if (jdbc.queryForObject("select count(*) from summer_authorization_domain where domain_key='PLATFORM:platform' and engine_mode='MANAGED'",Integer.class)>0)
+            claims.put("platform_capabilities",List.of());
+
         claims.remove("organization_id");
         claims.remove("organization_context");
         claims.remove("active_enterprise_id");

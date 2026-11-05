@@ -42,8 +42,14 @@ class OrganizationDirectoryService {
     private final OrganizationMembershipRepository membershipRepository;
     private final OrganizationContextRepository contextRepository;
     private final com.abluepoint.summer.sample.authorization.AuthorizationService authorization;
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess;
 
     OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository, com.abluepoint.summer.sample.member.MemberDirectory memberDirectory, com.abluepoint.summer.sample.enterprise.DirectoryJournal journal, com.abluepoint.summer.sample.authorization.AuthorizationService authorization) {
+        this(enterprises, unitRepository, membershipRepository, contextRepository, memberDirectory, journal, authorization, null);
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    OrganizationDirectoryService(EnterpriseRegistry enterprises, OrganizationUnitRepository unitRepository, OrganizationMembershipRepository membershipRepository, OrganizationContextRepository contextRepository, com.abluepoint.summer.sample.member.MemberDirectory memberDirectory, com.abluepoint.summer.sample.enterprise.DirectoryJournal journal, com.abluepoint.summer.sample.authorization.AuthorizationService authorization, com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess) {
+        this.managedAccess = managedAccess;
         this.authorization = authorization;
         this.journal = journal;
         this.memberDirectory = memberDirectory;
@@ -291,12 +297,14 @@ class OrganizationDirectoryService {
     }
 
     private void requireEnterpriseRead(String enterpriseId, Authentication authentication) {
-        requireCapability(requireJwtMember(enterpriseId, authentication), enterpriseId, ORGANIZATION_READ, ORGANIZATIONS_READ);
+        if (managedAccess == null || !managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), authentication, ORGANIZATION_READ, ORGANIZATIONS_READ))
+            requireCapability(requireJwtMember(enterpriseId, authentication), enterpriseId, ORGANIZATION_READ, ORGANIZATIONS_READ);
         refresh();
     }
 
     private void requireEnterpriseWrite(String enterpriseId, Authentication authentication) {
-        requireCapability(requireJwtMember(enterpriseId, authentication), enterpriseId, ORGANIZATION_WRITE, ORGANIZATIONS_WRITE);
+        if (managedAccess == null || !managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), authentication, ORGANIZATION_WRITE, ORGANIZATIONS_WRITE))
+            requireCapability(requireJwtMember(enterpriseId, authentication), enterpriseId, ORGANIZATION_WRITE, ORGANIZATIONS_WRITE);
         publisher.publishEvent(new OrganizationAuthorizationChange(enterpriseId, enterpriseId, "", null, true));
         enterprises.lock(enterpriseId);
         refresh();
@@ -337,6 +345,9 @@ class OrganizationDirectoryService {
     }
 
     private boolean managesOrganizations(String enterpriseId, Authentication authentication) {
+        var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId);
+        if (managedAccess != null && managedAccess.managed(domain))
+            return managedAccess.organizationWriteAllowed(domain, authentication);
         if (!(authentication instanceof JwtAuthenticationToken jwt)) return false;
         try { requireCapability(jwt, enterpriseId, ORGANIZATION_WRITE, ORGANIZATIONS_WRITE); }
         catch (AccessDeniedException denied) { return false; }

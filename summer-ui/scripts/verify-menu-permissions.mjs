@@ -36,7 +36,10 @@ function evaluateModule(path, dependencies = {}) {
 }
 const authentication = evaluateModule('../src/utils/authentication.ts');
 const menu = evaluateModule('../src/menu/manifest.ts');
-const access = evaluateModule('../src/menu/access.ts', { react: { createContext: () => ({}) } });
+const access = evaluateModule('../src/menu/access.ts', {
+  react: { createContext: () => ({}) },
+  '@/auth/interfaceOperations': { useOperationHints: () => ({ actions: {} }) },
+});
 const routes = evaluateModule('../src/routes.ts', {
   '@/utils/authentication': authentication,
   '@/menu/manifest': menu,
@@ -74,6 +77,14 @@ assert.deepEqual(plain(await load(async () => {}, async () => manifest([director
 assert.equal(access.customerRouteAllowed('/customer/page/arbitrary/path', [{ menuId: 'customer/page', enabled: true, actions: ['read'] }]), false);
 assert.equal(access.customerRouteAllowed('/customer/detail/alice', [{ menuId: 'customer/page', enabled: true, pageEligible: true, actions: [] }]), true);
 assert.equal(access.customerRouteAllowed('/customer/detail/alice', [{ menuId: 'customer/page', enabled: true, navOnly: true, actions: ['read'] }]), false);
+const currentCustomerPage = [{ menuId: 'customer/page', enabled: true, pageEligible: true, actions: [] }];
+assert.equal(access.customerRouteAllowed('/customer/page/create', currentCustomerPage, { engineMode: 'MANAGED', actions: { 'customer.create': true } }), true);
+assert.equal(access.customerRouteAllowed('/customer/page/edit/alice', currentCustomerPage, { engineMode: 'MANAGED', actions: { 'customer.update': true } }), true);
+assert.equal(access.customerRouteAllowed('/customer/page/create', currentCustomerPage, { engineMode: 'MANAGED', actions: { 'customer.update': true } }), false);
+assert.equal(access.customerRouteAllowed('/customer/page/edit/alice', currentCustomerPage, { engineMode: 'MANAGED', actions: { 'customer.create': true } }), false);
+assert.equal(access.customerRouteAllowed('/customer/page/create', [{ ...currentCustomerPage[0], actions: ['create'] }], { engineMode: 'MANAGED', actions: {} }), false, 'old MENU actions cannot authorize a managed API operation');
+assert.equal(access.customerRouteAllowed('/customer/page/create', [{ ...currentCustomerPage[0], navOnly: true }], { engineMode: 'MANAGED', actions: { 'customer.create': true } }), false, 'INTERFACE hints cannot grant a missing page');
+assert.equal(access.customerRouteAllowed('/customer/page/create', currentCustomerPage, { actions: { 'customer.create': true } }), false, 'unknown mode fails closed');
 const contract = await import('../src/pages/customer/contract.mjs');
 let calls = [], modeResponse;
 const fakeAxios = { get: async url => { calls.push(url); if (modeResponse instanceof Error) throw modeResponse; return { status: 200, data: { success: true, data: calls.length === 1 ? modeResponse : { manifestVersion: 1, items: [] } } }; }, isAxiosError: () => false };
@@ -90,10 +101,11 @@ for (const failure of [new Error('403'), new Error('503'), { engineMode: 'UNKNOW
 console.log('Menu navigation: directory, explicit-owner, engine-mode and fail-closed contracts passed');
 const managedEditorApi = evaluateModule('../src/pages/menu-manifest/api.ts', { axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
 calls = [];modeResponse = { engineMode: 'LEGACY', items: [] };
-await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'), error => error.code === 'DOMAIN_NOT_MANAGED');
-assert.equal(calls.length, 1, 'legacy mode disables the new editor without probing or writing old management APIs');
+await managedEditorApi.getManagedManifest('ent-acme');
+assert.equal(calls.length, 2);
+assert.equal(calls[1], '/api/v1/enterprises/ent-acme/menu-manifest/management', 'explicit legacy mode retains the original management read');
 calls = [];modeResponse = { engineMode: 'MANAGED', items: [] };
 await managedEditorApi.getManagedManifest('ent-acme');assert.equal(calls[1], '/api/v1/enterprises/ent-acme/authorization/menu-layout');
 calls = [];modeResponse = new Error('503');
 await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'));assert.equal(calls.length, 1);
-console.log('Managed menu editor rejects LEGACY explicitly and never falls back on dependency failure');
+console.log('Menu editor selects explicit LEGACY or MANAGED and never falls back on dependency failure');

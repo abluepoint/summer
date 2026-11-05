@@ -117,21 +117,27 @@ public class ManagedAuthorizationBootstrap {
             for (var mapping : mappings.orderedStream().toList())
               for (var entry : mapping.getHandlerMethods().entrySet()) {
                 String owner = entry.getValue().getBeanType().getName();
-                if (!owner.startsWith("com.abluepoint.summer.sample.authorization.api.permission."))
+                if (!com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes.management(owner))
                   continue;
                 var info = entry.getKey();
                 if (info.getCustomCondition() != null)
                   throw new IllegalStateException("Unsupported bootstrap mapping");
                 for (String path : info.getPatternValues()) {
-                  if (path.endsWith("/capabilities")) continue;
-                  boolean platform = path.startsWith("/api/v1/platform/");
-                  if (platform != d.kind().equals("PLATFORM")) continue;
+                  String kind = com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes.domainKind(owner, path);
+                  if (!kind.equals(d.kind())) continue;
                   for (var method : info.getMethodsCondition().getMethods()) {
+                    var installedMapping = ManagedInterfaceResources.mvc(method.name(), path, entry.getValue(), info);
+                    if (!installedMapping.configurable()) continue;
                     String mode =
                         path.endsWith("/authorization/status")
                             ? "PUBLIC"
                             : (path.endsWith("/authorization/profile")
-                                    || path.endsWith("/authorization/navigation"))
+                                || path.endsWith("/authorization/operations")
+                                    || path.endsWith("/authorization/navigation")
+                                    || (owner.equals("com.abluepoint.summer.sample.menu.MenuManifestController")
+                                        && entry.getValue().getMethod().getName().equals("visible")
+                                        && method.name().equals("GET")
+                                        && path.equals("/api/v1/enterprises/{enterpriseId}/menu-manifest")))
                                 ? "AUTHENTICATED"
                                 : "AUTHORIZED";
                     String label =
@@ -180,7 +186,8 @@ public class ManagedAuthorizationBootstrap {
                   }
                 }
               }
-            for (String menuId : List.of("roles", "permissions")) {
+            for (var page : com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.PAGES) {
+              String menuId = page.id();
               String permission = id(d.key() + ":navigation:" + menuId);
               db.update(
                   "insert into summer_permission_identity values (?,?,?,'MENU')",
@@ -193,7 +200,7 @@ public class ManagedAuthorizationBootstrap {
                   d.key(),
                   permission,
                   "management-navigation-" + menuId,
-                  menuId.equals("roles") ? "角色管理导航" : "权限管理导航",
+                  page.title() + "导航",
                   group);
               db.update(
                   "insert into summer_role_permission values (?,?,?)", d.key(), role, permission);

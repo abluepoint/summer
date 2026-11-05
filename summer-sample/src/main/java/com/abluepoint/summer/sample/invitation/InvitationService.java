@@ -18,6 +18,7 @@ import java.util.*;
 
 @Service
 class InvitationService {
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess;
     private static final SecureRandom RANDOM = new SecureRandom();
     private final Map<String, InvitationRecord> invitations = new LinkedHashMap<>();
     private final Map<String, String> tokenIndex = new HashMap<>();
@@ -27,7 +28,13 @@ class InvitationService {
     private final com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises;
     InvitationService(com.abluepoint.summer.sample.member.MemberDirectory memberDirectory,
                       com.abluepoint.summer.sample.organization.OrganizationMembershipProvisioner organizationMemberships,
-                      com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises) {
+                      com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises) { this(memberDirectory, organizationMemberships, enterprises, null); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    InvitationService(com.abluepoint.summer.sample.member.MemberDirectory memberDirectory,
+                      com.abluepoint.summer.sample.organization.OrganizationMembershipProvisioner organizationMemberships,
+                      com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises, com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess) {
+        this.managedAccess = managedAccess;
         this.memberDirectory = memberDirectory; this.organizationMemberships = organizationMemberships; this.enterprises = enterprises;
     }
     private final Map<String, Receipt> idempotency = new HashMap<>();
@@ -36,6 +43,7 @@ class InvitationService {
     synchronized InvitationIssue create(String enterpriseId, InvitationCreateRequest request, String key, String requestId, Authentication auth) {
         requireAdmin(enterpriseId, auth, "enterprise.invitation.write");
         requireKey(key);
+        if (request != null) rejectLegacyGrants(enterpriseId, request.roleIds(), request.capabilityCodes());
         String fingerprint = "create|" + request;
         Receipt old = idempotency.get(op("create:" + enterpriseId, key));
         if (old != null) return replay(old, fingerprint);
@@ -115,6 +123,7 @@ class InvitationService {
 
     synchronized JoinApplicationView submit(String enterpriseId, JoinApplicationSubmitRequest req, String key, String requestId, Authentication auth) {
         requireApplicant(req == null ? null : req.applicantEmail(), auth); requireKey(key);
+        if (req != null) rejectLegacyGrants(enterpriseId, List.of(), req.capabilityCodes());
         String fingerprint = "submit|" + auth.getName() + "|" + req; Receipt old = idempotency.get(op("submit:" + enterpriseId, key)); if (old != null) return replay(old, fingerprint);
         if (!enterprises.exists(enterpriseId) || req == null || req.applicantEmail() == null || req.applicantEmail().isBlank()) throw SummerException.withMessage(InvitationErrorCode.INVALID, "Invalid join application");
         String id = "join-" + UUID.randomUUID(); JoinRecord r = new JoinRecord(id, enterpriseId, req.applicantEmail().trim(), req.applicantName(), req.organizationId(), req.capabilityCodes(), req.materials()); r.applicantSubject = auth.getName(); applications.put(id, r);
@@ -160,7 +169,15 @@ class InvitationService {
         if (auth == null || subject == null || !subject.equals(auth.getName())) throw new AccessDeniedException("Applicant identity does not match");
     }
     private static void requireApplicant(String email, Authentication auth) { if (!(auth instanceof JwtAuthenticationToken)) throw new AccessDeniedException("Applicant authentication required"); requireSubject(email, auth); }
-    private static void requireAdmin(String enterpriseId, Authentication auth, String capability) { if (!(auth instanceof JwtAuthenticationToken jwt) || !activeMember(jwt, enterpriseId) || !hasCapability(jwt, enterpriseId, capability)) throw new AccessDeniedException("Enterprise capability required"); }
+    private void rejectLegacyGrants(String enterpriseId, List<String> roles, List<String> capabilities) {
+        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId))
+            && (!roles.isEmpty() || !capabilities.isEmpty()))
+            throw SummerException.withMessage(InvitationErrorCode.INVALID, "Legacy invitation grant fields are unsupported in managed mode; assign current role permissions separately");
+    }
+    private void requireAdmin(String enterpriseId, Authentication auth, String capability) {
+        if (managedAccess != null && managedAccess.require(
+            com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capability)) return;
+ if (!(auth instanceof JwtAuthenticationToken jwt) || !activeMember(jwt, enterpriseId) || !hasCapability(jwt, enterpriseId, capability)) throw new AccessDeniedException("Enterprise capability required"); }
     private static boolean activeMember(JwtAuthenticationToken jwt, String enterpriseId) { Object c = jwt.getToken().getClaims().get("enterprise_memberships"); return c instanceof Collection<?> col && col.stream().anyMatch(v -> { if (!(v instanceof Map<?, ?> m)) return false; Object enterprise = m.get("enterpriseId"); if (enterprise == null) enterprise = m.get("enterprise_id"); Object status = m.get("status"); if (status == null) status = m.get("membership_status"); return enterpriseId.equals(String.valueOf(enterprise)) && "ACTIVE".equalsIgnoreCase(String.valueOf(status)); }); }
     private static boolean hasCapability(JwtAuthenticationToken jwt, String enterpriseId, String capability) { Object c = jwt.getToken().getClaims().get("enterprise_capabilities"); if (!(c instanceof Map<?, ?> m)) return false; Object values = m.get(enterpriseId); return values instanceof Collection<?> col && col.stream().map(String::valueOf).anyMatch(capability::equals); }
     private static String op(String enterpriseId, String key) { return enterpriseId + ":" + key; }

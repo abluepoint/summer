@@ -1,3 +1,4 @@
+import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -92,6 +93,15 @@ function RolesContent({
   onDirtyChange: (v: boolean) => void;
   onBusyChange: (v: boolean) => void;
 }) {
+  const operations = useInterfaceOperations(
+    base === '/api/v1/platform'
+      ? { kind: 'PLATFORM' }
+      : {
+          kind: 'ENTERPRISE',
+          id: decodeURIComponent(base.substring(base.lastIndexOf('/') + 1)),
+        },
+    ['roles.create', 'roles.permissions.write', 'roles.assign']
+  );
   const [roles, setRoles] = useState<AuthorizationRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -241,8 +251,11 @@ function RolesContent({
       }
     }
   };
+  const canSave =
+    operations[editing ? 'roles.permissions.write' : 'roles.create'] === true;
   const save = () =>
     write(async () => {
+      if (!canSave) return;
       const r = editing
         ? await saveRolePermissions(base, editing, permissionIds)
         : await createRole(base, name, code, permissionIds);
@@ -262,7 +275,7 @@ function RolesContent({
     });
   const saveAssignment = () =>
     write(async () => {
-      if (!assignment) return;
+      if (!assignment || !operations['roles.assign']) return;
       const v = await assignUserRoles(
         base,
         username.trim(),
@@ -363,7 +376,9 @@ function RolesContent({
         <Button
           type="primary"
           onClick={save}
-          disabled={!ready || busy || (!editing && (!name || !code))}
+          disabled={
+            !canSave || !ready || busy || (!editing && (!name || !code))
+          }
         >
           {editing ? '保存角色权限' : '创建角色'}
         </Button>
@@ -446,7 +461,13 @@ function RolesContent({
         />
         <Button
           type="primary"
-          disabled={!ready || busy || !assignment || !bindingDirty}
+          disabled={
+            !operations['roles.assign'] ||
+            !ready ||
+            busy ||
+            !assignment ||
+            !bindingDirty
+          }
           onClick={saveAssignment}
         >
           保存用户角色

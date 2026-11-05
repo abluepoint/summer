@@ -16,15 +16,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-@org.springframework.context.annotation.Import(UnifiedAuthorizationHttpTest.PolicyFixture.class)
+@org.springframework.context.annotation.Import({UnifiedAuthorizationHttpTest.PolicyFixture.class, ExplicitLegacyBusinessDomains.AcmeAndPlatform.class})
 class UnifiedAuthorizationHttpTest {
     @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
     static class PolicyFixture {
-        @org.springframework.context.annotation.Bean AuthorizationPolicy replacementPolicy(AuthorizationService legacy) {
+        @org.springframework.context.annotation.Bean java.util.concurrent.atomic.AtomicInteger replacementPolicyCalls() {
+            return new java.util.concurrent.atomic.AtomicInteger();
+        }
+        @org.springframework.context.annotation.Bean AuthorizationPolicy replacementPolicy(AuthorizationService legacy,
+                java.util.concurrent.atomic.AtomicInteger replacementPolicyCalls) {
             return new AuthorizationPolicy() {
                 public String mode() { return "FIXTURE"; }
                 public com.abluepoint.summer.security.authorization.ResourceAuthorization.Decision decide(
                         com.abluepoint.summer.security.authorization.ResourceAuthorization.Request request, long revision) {
+                    replacementPolicyCalls.incrementAndGet();
                     legacy.decision(request.principal(), request.domain().id(), "customer.read", request.requestId());
                     return new com.abluepoint.summer.security.authorization.ResourceAuthorization.Decision(false,
                             "FIXTURE_DENY", revision, request.domain(), request.resource());
@@ -35,6 +40,7 @@ class UnifiedAuthorizationHttpTest {
     @Autowired MockMvc mvc;
     @Autowired AuthorizationService authorization;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired java.util.concurrent.atomic.AtomicInteger replacementPolicyCalls;
 
     @Test
     void legacyHttpDecisionCarriesStableResourceAndAuthoritativeRevision() throws Exception {
@@ -53,7 +59,9 @@ class UnifiedAuthorizationHttpTest {
                 });
     }
     @Test
-    void serverSelectedReplacementPolicyControlsActualHttpRequest() throws Exception {
+    void unconfirmedModeNeverSelectsARegisteredPolicyOrRequestFallback() throws Exception {
+        var before = jdbc.queryForMap("select engine_mode,revision from summer_authorization_domain where domain_key='ENTERPRISE:ent-acme'");
+        int calls = replacementPolicyCalls.get();
         jdbc.update("insert into summer_authorization_domain(domain_key, engine_mode, revision) values ('ENTERPRISE:ent-acme', 'FIXTURE', 41) on duplicate key update engine_mode='FIXTURE', revision=41");
         var token = Jwt.withTokenValue("test").header("alg", "none").subject("replacement-reader")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
@@ -63,14 +71,13 @@ class UnifiedAuthorizationHttpTest {
         try {
             mvc.perform(get("/api/customers/foundation-missing").param("authorizationEngine", "LEGACY")
                     .with(authentication(principal))).andExpect(status().isForbidden());
-            var rows = authorization.audit("ent-acme", "replacement-reader", principal);
-            assertThat(rows).hasSize(2).anySatisfy(row -> assertThat(row).containsEntry("decision", "ALLOW"));
-            assertThat(rows).anySatisfy(row -> {
-                assertThat(row).containsEntry("reasonCode", "FIXTURE_DENY");
-                assertThat(row).containsEntry("decision", "DENY");
-                assertThat(((Number) row.get("authorizationRevision")).longValue()).isEqualTo(41);
-            });
-        } finally { jdbc.update("delete from summer_authorization_domain where domain_key='ENTERPRISE:ent-acme'"); }
+            assertThat(replacementPolicyCalls.get()).isEqualTo(calls);
+            assertThat(jdbc.queryForObject("select engine_mode from summer_authorization_domain where domain_key='ENTERPRISE:ent-acme'", String.class))
+                    .isEqualTo("FIXTURE");
+        } finally {
+            jdbc.update("update summer_authorization_domain set engine_mode=?,revision=? where domain_key='ENTERPRISE:ent-acme'",
+                    before.get("engine_mode"), before.get("revision"));
+        }
     }
 
     @Test

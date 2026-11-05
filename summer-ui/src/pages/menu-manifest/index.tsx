@@ -13,6 +13,7 @@ import {
 } from '@arco-design/web-react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
+import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
 import { MenuManifest, VisibleMenuItem } from '@/menu/api';
 import {
   getManagedManifest,
@@ -32,7 +33,15 @@ export default function MenuManifestPage() {
   const router = useHistory();
   const tenant = useActiveEnterprise();
   const enterpriseId = tenant.enterpriseId;
-  const [canWrite, setCanWrite] = useState(false);
+  const tenantOperations = useInterfaceOperations(
+    { kind: 'ENTERPRISE', id: enterpriseId },
+    ['menu.layout.write']
+  );
+  const platformOperations = useInterfaceOperations({ kind: 'PLATFORM' }, [
+    'menu.manifest.write',
+  ]);
+  const canWrite = tenantOperations['menu.layout.write'] === true;
+  const canPublish = platformOperations['menu.manifest.write'] === true;
   const [canPlatform, setCanPlatform] = useState(false);
   const [mode, setMode] = useState<'tenant' | 'platform'>('tenant');
   const [manifest, setManifest] = useState<MenuManifest | null>(null);
@@ -79,16 +88,14 @@ export default function MenuManifestPage() {
   const load = useCallback(() => {
     const id = ++request.current;
     setError(null);
+    setCanPlatform(false);
     if (mode === 'tenant' && !enterpriseId) {
       setManifest(null);
       setLoading(false);
       return Promise.resolve();
     }
     setLoading(true);
-    setCanWrite(false);
-    // Route read actions cannot establish management permissions. These reads
-    // are protected by the same server permissions as the corresponding writes.
-    if (mode === 'tenant')
+    if (mode === 'tenant') {
       getPlatformManifest()
         .then(() => {
           if (id === request.current) setCanPlatform(true);
@@ -96,13 +103,11 @@ export default function MenuManifestPage() {
         .catch(() => {
           if (id === request.current) setCanPlatform(false);
         });
+    }
     const call =
       mode === 'platform'
         ? getPlatformManifest()
-        : getManagedManifest(enterpriseId).then((data) => {
-            if (id === request.current) setCanWrite(true);
-            return data;
-          });
+        : getManagedManifest(enterpriseId);
     return call
       .then((data) => {
         if (id !== request.current) return;
@@ -186,7 +191,7 @@ export default function MenuManifestPage() {
     setError({ status: 0, code: 'INVALID_INPUT', message, requestId: '' });
   }
   function save() {
-    if (!editing || !draft || saving) return;
+    if (!canWrite || !editing || !draft || saving) return;
     if (!Number.isSafeInteger(draft.sortOrder) || draft.sortOrder < 0)
       return localError('排序必须是非负整数');
     if (
@@ -223,6 +228,7 @@ export default function MenuManifestPage() {
       });
   }
   function sync() {
+    if (!canPublish || saving) return;
     try {
       const items = JSON.parse(platformText);
       if (
@@ -331,7 +337,7 @@ export default function MenuManifestPage() {
         }
         style={{ marginBottom: 16 }}
       />
-      {mode === 'platform' && manifest && canPlatform && (
+      {mode === 'platform' && manifest && canPublish && (
         <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
           <InputNumber
             aria-label="清单版本"
@@ -393,6 +399,7 @@ export default function MenuManifestPage() {
             })
           }
           saving={saving}
+          canWrite={canWrite}
         />
       )}
     </Card>

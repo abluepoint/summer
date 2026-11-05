@@ -79,7 +79,7 @@ final class InterfaceResourceCatalogController {
     private ResponseEntity<?> historyResponse(Authentication authentication, java.util.function.Supplier<?> value) {
         String requestId = requestIdAccessor.currentRequestId();
         try {
-            InterfaceResourceCatalogService.requirePlatformRead(authentication);
+            service.requireRead(authentication);
             return ResponseEntity.ok().header("X-Request-Id", requestId).body(ApiResponse.success(value.get(), requestId));
         } catch (AccessDeniedException denied) {
             throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Interface resource catalog denied", denied);

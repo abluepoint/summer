@@ -587,6 +587,23 @@ class InterfaceBindingsHttpTest {
 
   @Test
   void invitationManagementHasNoApplicantBypassForUnboundResources() throws Exception {
+    String permission = db.queryForObject(
+        "select permission_id from summer_permission where domain_key='ENTERPRISE:ent-acme' and code='management-read'",
+        String.class);
+    String target = db.queryForObject(
+        "select resource_id from summer_interface_resource where normalized_path='/api/v1/enterprises/{enterpriseId}/invitations' and http_method='GET' and active=true",
+        String.class);
+    String route = "/api/v1/enterprises/ent-acme/permissions/" + permission + "/interfaces";
+    var initial = mvc.perform(get(route).with(user("summer-user")))
+        .andExpect(status().isOk()).andReturn().getResponse();
+    java.util.List<String> original = new java.util.ArrayList<>();
+    json.readTree(initial.getContentAsString()).path("data").path("resourceIds")
+        .forEach(id -> original.add(id.asText()));
+    org.junit.jupiter.api.Assertions.assertTrue(original.contains(target),
+        "Fresh management seed must cover the invitation management entry");
+    var changed = replaceInvitationBindings(route,
+        original.stream().filter(id -> !target.equals(id)).toList(), initial.getHeader("ETag"));
+    try {
     var response =
         mvc.perform(
                 get("/api/v1/enterprises/ent-acme/invitations")
@@ -600,6 +617,21 @@ class InterfaceBindingsHttpTest {
     org.junit.jupiter.api.Assertions.assertNull(
         response.getHandler(),
         "Unbound management must be rejected before MVC, not deferred to an applicant exemption");
+    } finally {
+      replaceInvitationBindings(route, original, changed.getHeader("ETag"));
+    }
+  }
+
+  private org.springframework.mock.web.MockHttpServletResponse replaceInvitationBindings(
+      String route, java.util.List<String> ids, String etag) throws Exception {
+    return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(route)
+        .with(user("summer-user"))
+        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+        .header("If-Match", etag)
+        .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+        .contentType("application/json")
+        .content(json.writeValueAsString(java.util.Map.of("resourceIds", ids))))
+        .andExpect(status().isOk()).andReturn().getResponse();
   }
 
   @Test

@@ -22,6 +22,11 @@ import java.util.*;
  */
 @Service
 final class PolicyService {
+    private final com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess;
+    PolicyService() { this(null); }
+    @org.springframework.beans.factory.annotation.Autowired
+    PolicyService(com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess) { this.managedAccess = managedAccess; }
+
     private static final String ENTERPRISE = "ent-acme";
     private static final Set<String> CONDITION_WHITELIST = Set.of(
             "organizationId", "risk", "riskLevel", "riskLevels", "subject", "actor",
@@ -410,6 +415,8 @@ final class PolicyService {
     private void requireWrite(String enterpriseId, Authentication auth) { require(enterpriseId, auth, "enterprise.policies.write"); }
 
     private void require(String enterpriseId, Authentication auth, String... capabilities) {
+        if (ENTERPRISE.equals(enterpriseId) && managedAccess != null
+            && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capabilities)) return;
         if (!ENTERPRISE.equals(enterpriseId) || !(auth instanceof JwtAuthenticationToken jwt) || !hasActiveMembership(jwt, enterpriseId)
                 || !hasCapability(jwt, enterpriseId, capabilities)
                 || jwt.getAuthorities().stream().noneMatch(a -> Arrays.stream(capabilities).anyMatch(c -> ("SCOPE_" + c).equals(a.getAuthority())))) {

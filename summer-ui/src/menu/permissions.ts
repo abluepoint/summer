@@ -5,7 +5,10 @@ import { UserPermission } from '@/utils/authentication';
 export async function loadMenuPermissions(
   sync: () => Promise<unknown>,
   read: () => Promise<MenuManifest>,
-  onVisible?: (items: MenuManifest['items']) => void
+  onVisible?: (
+    items: MenuManifest['items'],
+    mode?: MenuManifest['engineMode']
+  ) => void
 ): Promise<UserPermission> {
   try {
     await sync();
@@ -14,7 +17,8 @@ export async function loadMenuPermissions(
   }
   try {
     const visible = await read();
-    onVisible?.(visible.items);
+    onVisible?.(visible.items, visible.engineMode);
+    if (visible.engineMode === 'MANAGED') return {};
     const permissions: UserPermission = {};
     visible.items.forEach((item) => {
       if (item.navOnly || item.pageEligible === false) return;

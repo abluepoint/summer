@@ -4,7 +4,6 @@ import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Resource;
-import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -36,9 +35,9 @@ public class MenuResourceResolver implements TrustedPermissionResourceResolver {
                 db.queryForObject(
                     "select published from summer_menu_publication where publication_id='global'",
                     Boolean.class))
-            && List.of("roles", "permissions").contains(id)))
+            && com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.contains(id)))
       throw SummerException.withMessage(PermissionErrorCode.INVALID, "Unknown menu resource");
     return new Resource(
-        id, "MENU", List.of("roles", "permissions").contains(id) ? "MANAGEMENT" : "MANIFEST");
+        id, "MENU", com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.contains(id) ? "MANAGEMENT" : "MANIFEST");
   }
 }

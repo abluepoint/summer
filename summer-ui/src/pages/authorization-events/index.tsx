@@ -1,3 +1,4 @@
+import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Select, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
@@ -13,6 +14,8 @@ export default function AuthorizationEventsPage() {
 }
 function AuthorizationEventsContent({ enterpriseId, onBusyChange }: { enterpriseId: string; onBusyChange: (value: boolean) => void }) {
   const t = useLocale();
+  const operations = useInterfaceOperations({ kind: 'ENTERPRISE', id: enterpriseId }, ['authorization.events.retry']);
+  const canRetry = operations['authorization.events.retry'] === true;
   const [items, setItems] = useState<AuthorizationChangeEvent[]>([]);
   const [error, setError] = useState<EventError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,7 +38,7 @@ function AuthorizationEventsContent({ enterpriseId, onBusyChange }: { enterprise
   }, [enterpriseId]);
   useEffect(() => { load(); }, [load]);
   const retry = async (eventId: string) => {
-    if (writing.current) return;
+    if (!canRetry || writing.current) return;
     writing.current = true; setSaving(true); onBusyChange(true);
     const request = ++generation.current;
     try {
@@ -57,7 +60,7 @@ function AuthorizationEventsContent({ enterpriseId, onBusyChange }: { enterprise
       { title: t['authorizationEvents.resource'] || 'Resource', render: (_, row) => `${row.resourceType}/${row.resourceId}` },
       { title: t['authorizationEvents.version'] || 'Version', dataIndex: 'version' },
       { title: t['authorizationEvents.status'] || 'Status', dataIndex: 'status', render: (value) => <Tag color={value === 'PUBLISHED' ? 'green' : value === 'DEAD_LETTER' ? 'red' : 'orange'}>{value}</Tag> },
-      { title: t['authorizationEvents.operation'] || 'Operation', render: (_, row) => <Button size="small" disabled={saving} onClick={() => retry(row.eventId)}>{t['authorizationEvents.retry'] || 'Retry'}</Button> },
+      { title: t['authorizationEvents.operation'] || 'Operation', render: (_, row) => <Button size="small" disabled={!canRetry || saving} onClick={() => retry(row.eventId)}>{t['authorizationEvents.retry'] || 'Retry'}</Button> },
     ]} />
   </Card>;
 }

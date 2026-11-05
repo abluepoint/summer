@@ -70,11 +70,9 @@ public class ManagedInterfaceResources implements TrustedPermissionResourceResol
     conditions.put("version", List.of(info.getVersionCondition().toString()));
     boolean custom = info.getCustomCondition() != null;
     if (custom) conditions.put("custom", List.of(info.getCustomCondition().getClass().getName()));
-    String domain =
-        path.startsWith("/api/v1/platform/")
-            ? "PLATFORM"
-            : path.startsWith("/api/v1/enterprises/{enterpriseId}/") ? "ENTERPRISE" : "COMPONENT";
     String owner = handler.getBeanType().getName();
+    String domain = com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes
+        .domainKind(owner, path);
     boolean component =
         com.abluepoint.summer.sample.authorization.domain.permission.InterfaceComponentPolicy
                 .applicant(owner, method, path)

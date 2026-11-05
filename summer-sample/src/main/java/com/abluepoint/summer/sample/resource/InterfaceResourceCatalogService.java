@@ -26,6 +26,8 @@ import java.util.Set;
 
 @Service
 final class InterfaceResourceCatalogService implements SmartInitializingSingleton, org.springframework.context.ApplicationListener<org.springframework.context.event.ContextRefreshedEvent> {
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess;
+
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(InterfaceResourceCatalogService.class);
     private final ApplicationContext context;
@@ -34,7 +36,11 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
     private volatile InterfaceResourceCatalogView current = new InterfaceResourceCatalogView(List.of(), 0);
     private volatile InterfaceResourceCatalog catalog = new InterfaceResourceCatalog(List.of());
 
-    InterfaceResourceCatalogService(ApplicationContext context, InterfaceResourceHistory history) {
+    InterfaceResourceCatalogService(ApplicationContext context, InterfaceResourceHistory history) { this(context, history, null); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    InterfaceResourceCatalogService(ApplicationContext context, InterfaceResourceHistory history, com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess) {
+        this.managedAccess = managedAccess;
         this.context = context;
         this.history = history;
         this.contexts.put("application", context);
@@ -157,7 +163,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
     }
 
     InterfaceResourceCatalogView read(Authentication authentication) {
-        requirePlatformRead(authentication);
+        requireRead(authentication);
         refresh();
         return current;
     }
@@ -305,6 +311,11 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         }
         String[] parts = packageValue.getName().split("\\.");
         return parts.length == 0 ? "application" : parts[parts.length - 1];
+    }
+
+    void requireRead(Authentication actor) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), actor, "platform.interface-resources.read")) return;
+        requirePlatformRead(actor);
     }
 
     static void requirePlatformRead(Authentication authentication) {

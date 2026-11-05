@@ -16,6 +16,7 @@ type Props = {
   onSave: () => void;
   onClose: () => void;
   saving: boolean;
+  canWrite: boolean;
 };
 export default function MenuEditor({
   item,
@@ -24,6 +25,7 @@ export default function MenuEditor({
   onSave,
   onClose,
   saving,
+  canWrite,
 }: Props) {
   return (
     <Drawer
@@ -34,7 +36,7 @@ export default function MenuEditor({
       cancelText="取消"
       onOk={onSave}
       onCancel={onClose}
-      okButtonProps={{ loading: saving }}
+      okButtonProps={{ loading: saving, disabled: !canWrite }}
       cancelButtonProps={{ disabled: saving }}
     >
       <Alert
@@ -50,7 +52,7 @@ export default function MenuEditor({
             aria-label="菜单启用"
             checked={value.enabled}
             onChange={(enabled) => onChange({ ...value, enabled })}
-            disabled={saving}
+            disabled={saving || !canWrite}
           />
         </Form.Item>
         <Form.Item label="父菜单 ID">
@@ -58,7 +60,7 @@ export default function MenuEditor({
             aria-label="父菜单 ID"
             value={value.parentMenuId || ''}
             onChange={(parentMenuId) => onChange({ ...value, parentMenuId })}
-            disabled={saving}
+            disabled={saving || !canWrite}
           />
         </Form.Item>
         <Form.Item label="排序">
@@ -68,7 +70,7 @@ export default function MenuEditor({
             precision={0}
             value={value.sortOrder}
             onChange={(sortOrder) => onChange({ ...value, sortOrder })}
-            disabled={saving}
+            disabled={saving || !canWrite}
           />
         </Form.Item>
         <div>覆盖版本：{item.version}</div>

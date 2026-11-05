@@ -64,12 +64,13 @@ public class MenuCatalogService {
       items.add(item);
     }
     if (!publication.read().published())
-      for (String id : List.of("roles", "permissions")) {
+      for (var page : com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.PAGES) {
+        String id = page.id();
         var item = new LinkedHashMap<String, Object>();
         item.put("menuId", id);
         item.put("parentMenuId", null);
         item.put("path", "/" + id);
-        item.put("titleKey", id.equals("roles") ? "角色与权限" : "权限管理");
+        item.put("titleKey", page.title());
         item.put("iconKey", id);
         item.put("sortOrder", 0);
         item.put("enabled", true);

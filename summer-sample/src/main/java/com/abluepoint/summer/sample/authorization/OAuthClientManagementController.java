@@ -182,7 +182,7 @@ class OAuthClientManagementController {
     }
 
     private static List<String> scopes(List<String> values) {
-        List<String> result = values(values, "scopes", 1000);
+        List<String> result = values(values, "scopes", 4096);
         if (result.stream().anyMatch(v -> v.chars().anyMatch(c -> c < 0x21 || c > 0x7e || c == '"' || c == 0x5c || c == ',')))
             throw new IllegalArgumentException("scopes must be individual OAuth scope tokens without commas");
         return result;

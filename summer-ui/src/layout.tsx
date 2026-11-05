@@ -1,3 +1,4 @@
+import { useOperationHints } from '@/auth/interfaceOperations';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Switch, Route, Redirect, useHistory } from 'react-router-dom';
 import { Alert, Layout, Menu, Breadcrumb, Spin } from '@arco-design/web-react';
@@ -129,6 +130,7 @@ function getFlattenRoutes(routes) {
 }
 
 function PageLayout() {
+  const operationHints = useOperationHints();
   const urlParams = getUrlParams();
   const history = useHistory();
   const pathname = history.location.pathname;
@@ -333,7 +335,8 @@ function PageLayout() {
                           route.key.startsWith('customer/') &&
                           !customerRouteAllowed(
                             props.location.pathname,
-                            menuItems
+                            menuItems,
+                            operationHints
                           ) ? (
                             <Alert
                               type="error"

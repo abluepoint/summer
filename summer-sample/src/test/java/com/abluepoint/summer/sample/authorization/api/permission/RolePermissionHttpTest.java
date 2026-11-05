@@ -38,6 +38,7 @@ class RolePermissionHttpTest {
   static final String BASE = "/api/v1/platform";
 
   @TestConfiguration
+  @org.springframework.context.annotation.Import(TrustedManagedTestFixture.class)
   static class Schema {
     @Bean
     ApplicationRunner permissionSchema(JdbcTemplate db) {
@@ -256,9 +257,11 @@ class RolePermissionHttpTest {
         mvc.perform(get(BASE + "/authorization/navigation").with(user("summer-user")))
             .andExpect(status().isOk())
             .andReturn();
-    assertEquals(
-        2,
-        json.readTree(result.getResponse().getContentAsString()).path("data").path("items").size());
+    Set<String> administratorMenus = new HashSet<>();
+    json.readTree(result.getResponse().getContentAsString()).path("data").path("items")
+        .forEach(item -> administratorMenus.add(item.path("menuId").asText()));
+    assertEquals(Set.of("roles", "permissions", "menu-manifest", "interface-resources", "oauth-clients",
+        "auth-users", "organization", "authorization-events", "data-scopes"), administratorMenus);
   }
 
   @Test
@@ -306,6 +309,7 @@ class RolePermissionHttpTest {
   @Test
   void legacyEnterpriseCannotReadWriteOrBindForeignManagedRoles() throws Exception {
     String own = "mixed-own", actor = "summer-user";
+    db.update("insert into summer_authorization_domain(domain_key,engine_mode,revision) values ('ENTERPRISE:platform','LEGACY',0)");
     db.update(
         "insert into"
             + " summer_enterprise(enterprise_id,name,code,status,version,created_at,updated_at)"

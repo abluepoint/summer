@@ -25,7 +25,13 @@ final class InterfaceResourceBindingGuard implements HandlerInterceptor {
     }
 
     @Bean MappedInterceptor resourceBindingMappedInterceptor() {
-        return new MappedInterceptor(new String[]{"/api/**"}, this);
+        return new MappedInterceptor(new String[]{
+                "/api/**",
+                "/public/dictionaries/{code}",
+                "/public/dictionaries/{code}/items/{value}",
+                "/public/enterprises/{enterpriseId}/dictionaries/{code}",
+                "/public/enterprises/{enterpriseId}/dictionaries/{code}/items/{value}"
+        }, this);
     }
 
     @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

@@ -1,3 +1,4 @@
+import { OperationHints, useOperationHints } from '@/auth/interfaceOperations';
 import { createContext, useContext } from 'react';
 import { VisibleMenuItem } from './api';
 import type { IRoute } from '@/routes';
@@ -28,8 +29,32 @@ export function customerActions(
     )
   );
 }
+function currentCustomerActions(
+  items: VisibleMenuItem[],
+  menuId: string,
+  hints: OperationHints
+): string[] {
+  if (hints.engineMode === 'LEGACY') return customerActions(items, menuId);
+  if (hints.engineMode !== 'MANAGED') return [];
+  const page = items.some(
+    (item) =>
+      item.enabled &&
+      !item.navOnly &&
+      item.pageEligible !== false &&
+      (item.menuId === menuId ||
+        (menuId === 'customer/detail' &&
+          ['customer/drawer', 'customer/modal', 'customer/page'].includes(
+            item.menuId
+          )))
+  );
+  return page
+    ? ['read', 'create', 'update', 'delete'].filter(
+        (action) => hints.actions[`customer.${action}`] === true
+      )
+    : [];
+}
 export function useCustomerActions(menuId: string) {
-  return customerActions(useMenuItems(), menuId);
+  return currentCustomerActions(useMenuItems(), menuId, useOperationHints());
 }
 
 /** Resolve safe server menu metadata against local routes only. Missing items fail closed. */
@@ -108,7 +133,8 @@ export function resolveMenuRoutes(
 }
 export function customerRouteAllowed(
   path: string,
-  items: VisibleMenuItem[]
+  items: VisibleMenuItem[],
+  hints?: OperationHints
 ): boolean {
   // Each supported local pattern has explicit page ownership; arbitrary descendants never inherit access.
   const qualified = (id: string) =>
@@ -122,12 +148,18 @@ export function customerRouteAllowed(
   if (/^\/customer\/page\/create\/?$/.test(path))
     return (
       qualified('customer/page') &&
-      customerActions(items, 'customer/page').includes('create')
+      (hints
+        ? currentCustomerActions(items, 'customer/page', hints)
+        : customerActions(items, 'customer/page')
+      ).includes('create')
     );
   if (/^\/customer\/page\/edit\/[^/]+\/?$/.test(path))
     return (
       qualified('customer/page') &&
-      customerActions(items, 'customer/page').includes('update')
+      (hints
+        ? currentCustomerActions(items, 'customer/page', hints)
+        : customerActions(items, 'customer/page')
+      ).includes('update')
     );
   if (/^\/customer\/detail\/[^/]+\/?$/.test(path))
     return ['customer/drawer', 'customer/modal', 'customer/page'].some(

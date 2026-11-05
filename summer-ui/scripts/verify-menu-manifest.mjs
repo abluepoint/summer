@@ -19,3 +19,4 @@ assert.match(page, /getManagedManifest/);
 console.log('Menu manifest is generated from routes and uses real permission APIs');
 
 await import('./verify-menu-permissions.mjs');
+await import('./verify-menu-mode.mjs');

@@ -15,6 +15,8 @@ import java.util.*;
 
 @Service
 public class DataScopeService {
+    private final com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess;
+
     static final String ENTERPRISE = "ent-acme";
     private final DataScopePolicyRepository repository;
     private final DataScopePolicyAuditRepository auditRepository;
@@ -29,7 +31,14 @@ public class DataScopeService {
     DataScopeService(DataScopePolicyRepository repository, DataScopePolicyAuditRepository auditRepository,
                      ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents,
                      org.springframework.jdbc.core.JdbcTemplate jdbc, DataScopeBindingRepository bindings,
-                     AuthorizationUserBindingRepository users, AuthorizationRoleRepository roles) {
+                     AuthorizationUserBindingRepository users, AuthorizationRoleRepository roles) { this(repository, auditRepository, mapper, audit, changeEvents, jdbc, bindings, users, roles, null); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    DataScopeService(DataScopePolicyRepository repository, DataScopePolicyAuditRepository auditRepository,
+                     ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents,
+                     org.springframework.jdbc.core.JdbcTemplate jdbc, DataScopeBindingRepository bindings,
+                     AuthorizationUserBindingRepository users, AuthorizationRoleRepository roles, com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess) {
+        this.managedAccess = managedAccess;
         this.repository = repository;
         this.auditRepository = auditRepository;
         this.mapper = mapper;
@@ -68,6 +77,10 @@ public class DataScopeService {
     @Transactional
     DataScopePolicyView put(String enterpriseId, String resource, DataScopePolicyRequest request, String requestId, Authentication auth) {
         require(enterpriseId, "enterprise.data-scope.write", auth);
+        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId)))
+            throw com.abluepoint.summer.common.error.SummerException.withMessage(
+                com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
+                "Legacy DATA policy and direct bindings are unsupported in managed mode; configure DATA permissions");
         if (request == null) throw new IllegalArgumentException("policy request is required");
         if (request.sql() != null && !request.sql().isBlank()) throw new IllegalArgumentException("raw SQL is not accepted");
         String op = upper(request.operator() == null ? "AND" : request.operator());
@@ -160,6 +173,10 @@ public class DataScopeService {
     DataScopeBindingView bind(String enterprise, String resource, String kind, String subject,
                               DataScopePolicyRequest request, String requestId, Authentication auth) {
         require(enterprise, "enterprise.data-scope.write", auth);
+        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterprise)))
+            throw com.abluepoint.summer.common.error.SummerException.withMessage(
+                com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
+                "Legacy DATA policy and direct bindings are unsupported in managed mode; configure DATA permissions");
         if (!Set.of("USER", "ROLE").contains(kind) || blank(subject) || subject.length() > 128)
             throw new IllegalArgumentException("Binding requires USER or ROLE and a subject identifier");
         if (repository.findByEnterpriseIdAndResource(enterprise, resource).isEmpty())
@@ -320,6 +337,7 @@ public class DataScopeService {
     private static String principal(Authentication auth) { return auth == null || auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken ? null : auth.getName(); }
 
     private void require(String enterpriseId, String capability, Authentication auth) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capability)) return;
         if (auth == null || !hasMembership(auth, enterpriseId) || !hasCapability(auth, enterpriseId, capability)) {
             throw new AccessDeniedException("The principal is not authorized for the enterprise data scope");
         }

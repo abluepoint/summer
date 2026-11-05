@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
@@ -90,6 +91,7 @@ class DataScopeController {
     private String requestId() { return requestId.currentRequestId(); }
     private <T> ResponseEntity<ApiResponse<T>> ok(T body) { return ResponseEntity.ok().header("X-Request-Id", requestId()).body(ApiResponse.success(body, requestId())); }
     private <T> ResponseEntity<ApiResponse<T>> error(Exception exception) {
+        if (exception instanceof SummerException failure) throw failure;
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String code = "SUMMER_INTERNAL_ERROR";
         if (exception instanceof AccessDeniedException) { status = HttpStatus.FORBIDDEN; code = "SUMMER_FORBIDDEN"; }

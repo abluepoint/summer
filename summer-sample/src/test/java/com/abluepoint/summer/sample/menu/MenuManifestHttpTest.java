@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class MenuManifestHttpTest {
     @Autowired org.springframework.jdbc.core.JdbcTemplate menuDb;
@@ -236,19 +237,19 @@ class MenuManifestHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platformAdmin(String capability) {
-        return jwt().jwt(token -> token.subject("platform-admin").claim("platform_capabilities", List.of(capability)))
+        return jwt().jwt(token -> token.subject("platform-admin").claim("scope", capability).claim("platform_capabilities", List.of(capability)))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor enterpriseAdmin(String capability) {
-        return jwt().jwt(token -> token.subject("security-admin")
+        return jwt().jwt(token -> token.subject("security-admin").claim("scope", capability)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor subject(String username, String capability) {
-        return jwt().jwt(token -> token.subject(username)
+        return jwt().jwt(token -> token.subject(username).claim("scope", capability)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));
     }

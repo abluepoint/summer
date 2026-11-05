@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -194,7 +195,11 @@ class MenuNavigationHttpTest {
           "update summer_authorization_domain set engine_mode='MANAGED' where"
               + " domain_key='PLATFORM:platform'");
     }
+    // Navigation is an active identity projection in both modes, independent of management scopes.
     mvc.perform(get("/api/v1/platform/authorization/navigation").with(delegated))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.engineMode").value("MANAGED"));
+    mvc.perform(get("/api/v1/platform/authorization/menu-manifest").with(delegated))
         .andExpect(status().isForbidden());
   }
 

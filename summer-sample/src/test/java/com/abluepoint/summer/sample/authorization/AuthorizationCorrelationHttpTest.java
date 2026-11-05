@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "summer.security.storage.keys=memory",
         "summer.sample.authorization.legacy-scope-compatibility=true"
 })
+@org.springframework.context.annotation.Import(ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
 class AuthorizationCorrelationHttpTest {
     @Value("${local.server.port}") int port;
     @Autowired JWKSource<SecurityContext> keys;

@@ -1,3 +1,5 @@
+import axios from 'axios';
+import { readEnvelope } from '../customer/contract.mjs';
 import React, { useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
@@ -9,7 +11,22 @@ import useActiveEnterprise from './useActiveEnterprise';
 export default function DataScopesPage() {
   const tenant = useActiveEnterprise();
   return <><Select aria-label="活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 240, marginBottom: 16 }} />
-    {tenant.enterpriseId ? <DataScopesContent key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} onDirtyChange={tenant.setDirty} onBusyChange={tenant.setBusy} /> : tenant.ready && <Alert type="info" content="请选择一个活动成员租户；没有可用租户时不会读取配置。" />}</>;
+    {tenant.enterpriseId ? <DataScopesMode key={tenant.enterpriseId} enterpriseId={tenant.enterpriseId} onDirtyChange={tenant.setDirty} onBusyChange={tenant.setBusy} /> : tenant.ready && <Alert type="info" content="请选择一个活动成员租户；没有可用租户时不会读取配置。" />}</>;
+}
+function DataScopesMode(props: { enterpriseId: string; onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }) {
+  const [mode, setMode] = useState<'LEGACY' | 'MANAGED' | 'ERROR' | null>(null);
+  useEffect(() => {
+    let alive = true;
+    axios.get(`/api/v1/enterprises/${encodeURIComponent(props.enterpriseId)}/authorization/navigation`)
+      .then((response) => {
+        const current = readEnvelope(response.data, response.status) as { engineMode?: string };
+        if (alive) setMode(current.engineMode === 'MANAGED' ? 'MANAGED' : current.engineMode === 'LEGACY' ? 'LEGACY' : 'ERROR');
+      }).catch(() => { if (alive) setMode('ERROR'); });
+    return () => { alive = false; };
+  }, [props.enterpriseId]);
+  if (mode === 'MANAGED') return <Card title="数据权限"><Alert type="info" content="当前授权域使用独立数据权限。请在权限管理中配置业务资源、操作和数据范围。" /><Button type="primary" href="/permissions" style={{ marginTop: 16 }}>打开权限管理</Button></Card>;
+  if (mode === 'ERROR') return <Alert type="error" content="无法确认当前授权模式，请刷新后重试。" />;
+  return mode === 'LEGACY' ? <DataScopesContent {...props} /> : <Card loading />;
 }
 function DataScopesContent({ enterpriseId, onDirtyChange, onBusyChange }: { enterpriseId: string; onDirtyChange: (value: boolean) => void; onBusyChange: (value: boolean) => void }) {
   const t = useLocale();

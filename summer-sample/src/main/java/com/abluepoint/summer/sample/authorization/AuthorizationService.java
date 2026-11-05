@@ -18,6 +18,8 @@ import java.util.*;
 @Service
 @DependsOn("flywayMigrationInitializer")
 public class AuthorizationService {
+    private final com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess;
+
     private static final String ENTERPRISE = "ent-acme";
     private static final Set<String> BOOTSTRAP_PERMISSIONS = Set.of(
             "platform.interface-resources.read", "platform.menu.write",
@@ -52,7 +54,11 @@ public class AuthorizationService {
     private final AuthorizationRoleRepository roleRepository;
     private final AuthorizationChangeEventService changeEvents;
 
-    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents, AuthorizationAuditStore auditStore, org.springframework.jdbc.core.JdbcTemplate membershipJdbc) {
+    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents, AuthorizationAuditStore auditStore, org.springframework.jdbc.core.JdbcTemplate membershipJdbc) { this(bindingRepository, capabilityRepository, roleRepository, changeEvents, auditStore, membershipJdbc, null); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents, AuthorizationAuditStore auditStore, org.springframework.jdbc.core.JdbcTemplate membershipJdbc, com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess) {
+        this.managedAccess = managedAccess;
         this.membershipJdbc = membershipJdbc;
         this.bindingRepository = bindingRepository;
         this.capabilityRepository = capabilityRepository;
@@ -116,8 +122,9 @@ public class AuthorizationService {
     }
 
     synchronized CapabilityCatalogView platformCapabilities(Authentication auth) {
-        if (!(auth instanceof JwtAuthenticationToken jwt) || !hasPlatform(jwt, "platform.capabilities.read")
-                || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.capabilities.read".equals(x.getAuthority()))) {
+        if (!(managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), auth, "platform.capabilities.read"))
+            && (!(auth instanceof JwtAuthenticationToken jwt) || !hasPlatform(jwt, "platform.capabilities.read")
+                || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.capabilities.read".equals(x.getAuthority())))) {
             throw new AccessDeniedException("Platform capability denied");
         }
         List<CapabilityView> values = capabilities.values().stream()
@@ -141,6 +148,8 @@ public class AuthorizationService {
 
     @Transactional
     synchronized CapabilityView createPlatformCapability(CapabilityCreateRequest req, String key, String rid, Authentication a) {
+        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform()))
+            throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Legacy capability writes are unsupported in managed mode");
         if (!(a instanceof JwtAuthenticationToken jwt) || !hasPlatform(jwt, "platform.capabilities.write")
                 || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.capabilities.write".equals(x.getAuthority()))) throw new AccessDeniedException("Platform capability denied");
         requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op("platform", key)); if (prior != null) return replay(prior, fp);
@@ -336,6 +345,13 @@ public class AuthorizationService {
     }
 
     public void requireEnterpriseMenu(String enterpriseId, Authentication authentication, String capability) {
+        // This public gate also protects non-grant operations such as outbox retry.
+        // Rejection of unsupported legacy grant writes stays in the private writer gate.
+        if (managedAccess != null && managedAccess.require(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
+                authentication, capability)) return;
+        if (!com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.delegated(authentication, capability))
+            throw new AccessDeniedException("Authorization capability denied");
         require(enterpriseId, authentication, capability);
     }
 
@@ -347,8 +363,10 @@ public class AuthorizationService {
     }
 
     public void requirePlatformMenu(Authentication authentication) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), authentication, "platform.menu.write")) return;
         if (!(authentication instanceof JwtAuthenticationToken jwt)
                 || !hasPlatform(jwt, "platform.menu.write")
+                || !com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.delegated(authentication, "platform.menu.write")
                 || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.menu.write".equals(x.getAuthority()))) {
             throw new AccessDeniedException("Platform menu capability denied");
         }
@@ -415,7 +433,13 @@ public class AuthorizationService {
     private void validateNameCode(String n, String c) { if (blank(n) || blank(c)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name and code are required"); }
     private boolean isPlatform(Authentication a) { return a instanceof JwtAuthenticationToken j && j.getToken().getClaims().containsKey("platform_capabilities"); }
     private boolean hasPlatform(JwtAuthenticationToken j, String capability) { Object values = j.getToken().getClaims().get("platform_capabilities"); return values instanceof Collection<?> c && c.stream().map(String::valueOf).anyMatch(capability::equals); }
-    private void require(String e, Authentication a, String capability) { if (e == null || !e.matches("[A-Za-z0-9_-]{1,80}") || !(a instanceof JwtAuthenticationToken jwt) || !active(jwt, e) || !has(jwt, e, capability) || jwt.getAuthorities().stream().noneMatch(x -> ("SCOPE_" + capability).equals(x.getAuthority()))) throw new AccessDeniedException("Authorization capability denied"); }
+    private void require(String e, Authentication a, String capability) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e), a, capability)) {
+            if (capability.endsWith(".write") && (capability.contains(".capabilities.") || capability.contains(".bundles.") || capability.contains(".roles.")))
+                throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Legacy grant writes require an explicit migrated identity adapter; use permission and role management");
+            return;
+        }
+ if (e == null || !e.matches("[A-Za-z0-9_-]{1,80}") || !(a instanceof JwtAuthenticationToken jwt) || !active(jwt, e) || !has(jwt, e, capability) || jwt.getAuthorities().stream().noneMatch(x -> ("SCOPE_" + capability).equals(x.getAuthority()))) throw new AccessDeniedException("Authorization capability denied"); }
     private boolean active(JwtAuthenticationToken jwt, String enterpriseId) {
         Object claim = jwt.getToken().getClaims().get("enterprise_memberships");
         boolean claimedActive = claim instanceof Collection<?> values && values.stream().filter(Map.class::isInstance)

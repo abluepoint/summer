@@ -15,12 +15,25 @@ import java.util.Map;
 
 @Service
 final class DefaultCapabilitySetService implements CapabilitySetService {
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managed;
+    DefaultCapabilitySetService() { this(null); }
+    @org.springframework.beans.factory.annotation.Autowired
+    DefaultCapabilitySetService(com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managed) { this.managed=managed; }
+
+    private void legacyOnly(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain) {
+        if (managed != null && managed.managed(domain))
+            throw com.abluepoint.summer.common.error.SummerException.withMessage(
+                com.abluepoint.summer.common.error.CommonErrorCode.CONFLICT,
+                "Legacy capability projections are unavailable in managed mode; use current permission/role access");
+    }
+
 
     private static final String PLATFORM_WORKSPACE = "platform";
     private static final String ENTERPRISE_WORKSPACE = "enterprise";
 
     @Override
     public CapabilitySet platform(Authentication authentication) {
+        legacyOnly(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform());
         List<String> codes = claimList(authentication, "platform_capabilities");
         // The sample has no IAM persistence yet; keep a deterministic read
         // capability so the configured client can exercise the contract.
@@ -32,6 +45,7 @@ final class DefaultCapabilitySetService implements CapabilitySetService {
 
     @Override
     public CapabilitySet enterprise(String enterpriseId, Authentication authentication) {
+        legacyOnly(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId));
         if (!isActiveMember(authentication, enterpriseId)) {
             throw new AccessDeniedException("The principal is not an active member of the enterprise context");
         }

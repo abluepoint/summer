@@ -90,6 +90,10 @@ function shellFixture(identity) {
     syncMenuManifest: async () => {},
     getManagedMenuManifest: async () => ({manifestVersion: 0,items: []}),
     getVisibleMenuManifest: (enterpriseId) => new Promise((resolve, reject) => reads.push({ enterpriseId, resolve, reject })),
+    // Operation display hints are an independent transport boundary; this shell fixture
+    // supplies no grants and keeps its original tenant/navigation lifecycle assertions.
+    useInterfaceOperations: () => ({}),
+    InterfaceOperationHints: React.createContext({ actions: {} }),
     PageLayout: RoutedPage, MenuAccessContext: menuContext,
     Spin: 'spinner', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },
     window: { setInterval: (fn, delay) => { const id = Symbol(); intervals.set(id, { fn, delay }); return id; }, clearInterval: id => intervals.delete(id), addEventListener: (type, fn) => { if (type === 'focus') focus.add(fn); if (type === refreshExports.MENU_REFRESH_EVENT) menuRefresh.add(fn); }, removeEventListener: (type, fn) => { if (type === 'focus') focus.delete(fn); if (type === refreshExports.MENU_REFRESH_EVENT) menuRefresh.delete(fn); } },

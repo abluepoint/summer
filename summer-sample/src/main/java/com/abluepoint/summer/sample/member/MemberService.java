@@ -20,7 +20,13 @@ class MemberService {
     private final com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises;
     private final com.abluepoint.summer.sample.enterprise.DirectoryJournal journal;
     private final com.abluepoint.summer.sample.identity.LocalIdentityDirectory identities;
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess;
     MemberService(MemberDirectory directory, com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises, com.abluepoint.summer.sample.enterprise.DirectoryJournal journal, com.abluepoint.summer.sample.identity.LocalIdentityDirectory identities) {
+        this(directory, enterprises, journal, identities, null);
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    MemberService(MemberDirectory directory, com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterprises, com.abluepoint.summer.sample.enterprise.DirectoryJournal journal, com.abluepoint.summer.sample.identity.LocalIdentityDirectory identities, com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess) {
+        this.managedAccess = managedAccess;
         this.journal = journal;
         this.identities = identities;
         this.directory = directory; this.enterprises = enterprises;
@@ -104,6 +110,7 @@ class MemberService {
     }
 
     private void requireMembership(String enterpriseId, Authentication auth) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth)) return;
         if (!(auth instanceof JwtAuthenticationToken jwt)) throw new AccessDeniedException("enterprise membership required");
         Object claim = jwt.getToken().getClaims().get("enterprise_memberships");
         if (!(claim instanceof Collection<?> values) || values.stream().noneMatch(v -> v instanceof Map<?, ?> m && enterpriseId.equals(String.valueOf(m.get("enterpriseId"))) && "ACTIVE".equalsIgnoreCase(String.valueOf(m.get("status"))))) {

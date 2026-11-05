@@ -10,25 +10,31 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class EnterpriseReviewService {
+    private final com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess;
+
     private final EnterpriseRepository repository;
     private final EnterpriseRegistry registry;
     private final DirectoryJournal journal;
-    EnterpriseReviewService(EnterpriseRepository repository, EnterpriseRegistry registry, DirectoryJournal journal) {
+    EnterpriseReviewService(EnterpriseRepository repository, EnterpriseRegistry registry, DirectoryJournal journal) { this(repository, registry, journal, null); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    EnterpriseReviewService(EnterpriseRepository repository, EnterpriseRegistry registry, DirectoryJournal journal, com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization managedAccess) {
+        this.managedAccess = managedAccess;
         this.repository = repository; this.registry = registry; this.journal = journal;
     }
     @Transactional(readOnly = true)
     List<EnterpriseReview> list(Authentication auth) {
-        PlatformEnterpriseDirectoryService.require(auth, "platform.enterprise-review.read");
+        requireAccess(auth, "platform.enterprise-review.read");
         return repository.findAll().stream().map(EnterpriseReviewService::view).sorted(java.util.Comparator.comparing(EnterpriseReview::applicationId)).toList();
     }
     @Transactional(readOnly = true)
     EnterpriseReview detail(String id, Authentication auth) {
-        PlatformEnterpriseDirectoryService.require(auth, "platform.enterprise-review.read");
+        requireAccess(auth, "platform.enterprise-review.read");
         return view(find(id));
     }
     @Transactional
     EnterpriseReview decide(String id, String decision, String reason, String ifMatch, String key, String requestId, Authentication auth) {
-        PlatformEnterpriseDirectoryService.require(auth, "platform.enterprise-review.write");
+        requireAccess(auth, "platform.enterprise-review.write");
         if (key == null || key.isBlank() || key.length() > 128) throw SummerException.withMessage(DirectoryErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency-Key is required (maximum 128 characters)");
         String tenant = find(id).enterpriseId();
         registry.lock(tenant);
@@ -53,7 +59,7 @@ class EnterpriseReviewService {
     }
     @Transactional(readOnly = true)
     List<ReviewDecision> audit(String id, Authentication auth) {
-        PlatformEnterpriseDirectoryService.require(auth, "platform.enterprise-review.read");
+        requireAccess(auth, "platform.enterprise-review.read");
         find(id);
         return journal.audit(tenant(id), "enterprise.review.audit", id, ReviewDecision.class);
     }
@@ -67,4 +73,17 @@ class EnterpriseReviewService {
     private static EnterpriseReview view(EnterpriseEntity value) {
         return new EnterpriseReview("application-" + value.enterpriseId().substring("ent-".length()), value.enterpriseId(), value.name(), value.reviewStatus(), List.of(), PlatformEnterpriseDirectoryService.revision(value));
     }
+    private void requireAccess(Authentication actor, String scope) {
+        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), actor, scope)) {
+            if (actor instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwt) {
+                Object memberships = jwt.getToken().getClaims().get("enterprise_memberships");
+                if (memberships instanceof java.util.Collection<?> values && !values.isEmpty()
+                    && !"USER".equals(String.valueOf(jwt.getToken().getClaims().get("principal_type"))))
+                    throw new org.springframework.security.access.AccessDeniedException("platform identity required");
+            }
+            return;
+        }
+        PlatformEnterpriseDirectoryService.require(actor, scope);
+    }
+
 }

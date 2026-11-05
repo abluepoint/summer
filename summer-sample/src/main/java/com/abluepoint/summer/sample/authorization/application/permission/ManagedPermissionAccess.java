@@ -101,7 +101,15 @@ public class ManagedPermissionAccess {
             : null;
     if (!active(d, a)
         || resource == null
-        || db.queryForObject(
+        || !roleAllows(d, a, resource)) throw new AccessDeniedException("Current role management permission required");
+    if (!delegated(d, a, write))
+      throw new AccessDeniedException("Delegated management scope required");
+  }
+
+  /** Current role grant for a management resource, independent of PUBLIC access mode. */
+  public boolean roleAllows(Domain d, Authentication a, String resource) {
+    if (!active(d, a)) return false;
+    return db.queryForObject(
                 "select count(*) from summer_permission_user_role u join summer_authorization_role"
                     + " r on r.role_id=u.role_id join summer_role_permission rp on"
                     + " rp.domain_key=u.domain_key and rp.role_id=u.role_id join summer_permission"
@@ -114,9 +122,7 @@ public class ManagedPermissionAccess {
                 d.key(),
                 a.getName(),
                 resource)
-            == 0) throw new AccessDeniedException("Current role management permission required");
-    if (!delegated(d, a, write))
-      throw new AccessDeniedException("Delegated management scope required");
+             > 0;
   }
 
   /** OAuth scopes cap client delegation; they never create a business grant. */
