@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.authorization.application.permission;
 
 import com.abluepoint.summer.sample.authorization.AuthorizationAuditStore;
 import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService;
+import com.abluepoint.summer.sample.authorization.application.data.PermissionDataDetails;
 import com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 
@@ -21,6 +22,7 @@ import java.util.*;
 @Service
 public class PermissionService {
     private final JdbcTemplate db;
+    private final PermissionDataDetails dataDetails;
     private final ObjectMapper json;
     private final AuthorizationAuditStore audit;
     private final AuthorizationChangeEventService events;
@@ -29,7 +31,9 @@ public class PermissionService {
             JdbcTemplate db,
             ObjectMapper json,
             AuthorizationAuditStore audit,
-            AuthorizationChangeEventService events) {
+            AuthorizationChangeEventService events,
+            PermissionDataDetails dataDetails) {
+        this.dataDetails = dataDetails;
         this.db = db;
         this.json = json;
         this.audit = audit;
@@ -37,6 +41,39 @@ public class PermissionService {
     }
 
     public record Result(Object body, int status, long version) {}
+
+    @Transactional(readOnly = true)
+    public Result getDataScope(Domain d, String id) {
+        return dataScopeResult(get(d, false, id));
+    }
+
+    @Transactional
+    public Result replaceDataScope(
+            Domain d,
+            String actor,
+            String id,
+            Map<String, Object> body,
+            String condition,
+            String key,
+            String requestId) {
+        return dataScopeResult(
+                mutate(
+                        d,
+                        actor,
+                        false,
+                        id,
+                        "PATCH",
+                        Map.of("dataScope", body),
+                        condition,
+                        key,
+                        requestId));
+    }
+
+    private Result dataScopeResult(Result permission) {
+        if (!(permission.body() instanceof Map<?, ?> body) || !"DATA".equals(body.get("type")))
+            throw fail(400, "DATA permission required");
+        return new Result(body.get("dataScope"), permission.status(), permission.version());
+    }
 
     private static com.abluepoint.summer.common.error.SummerException fail(int s, String m) {
         return com.abluepoint.summer.common.error.SummerException.withMessage(
@@ -117,6 +154,14 @@ public class PermissionService {
             for (String k : List.of("code", "description", "type", "status")) v.put(k, r.get(k));
             v.put("accessMode", r.get("access_mode"));
             v.put("groupId", r.get("group_id"));
+            if ("DATA".equals(r.get("type")))
+                v.put(
+                        "dataScope",
+                        dataDetails.get(
+                                new Domain(
+                                        r.get("domain_key").toString().split(":", 2)[0],
+                                        r.get("domain_key").toString().split(":", 2)[1]),
+                                r.get("permission_id").toString()));
         }
         return v;
     }
@@ -418,8 +463,15 @@ public class PermissionService {
                                     "type",
                                     "accessMode",
                                     "groupId",
-                                    "status")
-                            : Set.of("name", "description", "accessMode", "groupId", "status"));
+                                    "status",
+                                    "dataScope")
+                            : Set.of(
+                                    "name",
+                                    "description",
+                                    "accessMode",
+                                    "groupId",
+                                    "status",
+                                    "dataScope"));
             String name =
                     body.containsKey("name") || create
                             ? text(body, "name", 200, true)
@@ -447,20 +499,25 @@ public class PermissionService {
                     body.containsKey("description")
                             ? text(body, "description", 2000, false)
                             : create ? null : (String) old.get("description");
-            if (type.equals("DATA") && status.equals("ACTIVE"))
-                throw fail(
-                        400,
-                        "Enabled DATA requires validated data details; not available in this"
-                            + " phase");
+            Map<String, Object> detail =
+                    body.containsKey("dataScope")
+                            ? dataDetails.validate(body.get("dataScope"))
+                            : create ? null : type.equals("DATA") ? dataDetails.get(d, id) : null;
+            if (!type.equals("DATA") && body.containsKey("dataScope"))
+                throw fail(400, "Only DATA permissions have dataScope");
+            if (type.equals("DATA") && status.equals("ACTIVE") && detail == null)
+                throw fail(400, "Enabled DATA requires complete details");
             if (!create
                     && db.queryForObject(
                                     "select count(*) from summer_permission_resource mine join"
-                                            + " summer_permission_resource other on other.domain_key=mine.domain_key and"
-                                            + " other.resource_type=mine.resource_type and"
-                                            + " other.resource_id=mine.resource_id join summer_permission p on"
-                                            + " p.domain_key=other.domain_key and p.permission_id=other.permission_id"
-                                            + " where mine.domain_key=? and mine.permission_id=? and p.permission_id<>?"
-                                            + " and p.access_mode<>?",
+                                        + " summer_permission_resource other on"
+                                        + " other.domain_key=mine.domain_key and"
+                                        + " other.resource_type=mine.resource_type and"
+                                        + " other.resource_id=mine.resource_id join"
+                                        + " summer_permission p on p.domain_key=other.domain_key"
+                                        + " and p.permission_id=other.permission_id where"
+                                        + " mine.domain_key=? and mine.permission_id=? and"
+                                        + " p.permission_id<>? and p.access_mode<>?",
                                     Integer.class,
                                     d.key(),
                                     id,
@@ -509,6 +566,7 @@ public class PermissionService {
                         version,
                         d.key(),
                         id);
+            if (detail != null) dataDetails.replace(d, id, detail);
             result = view(row(d, false, id), false);
         }
         audit.mutation(

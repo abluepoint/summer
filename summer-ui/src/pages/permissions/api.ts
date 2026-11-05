@@ -17,6 +17,7 @@ export type Permission = {
   accessMode: string;
   status: string;
   version: number;
+  dataScope?: DataScopeDetail;
 };
 export type Page<T> = { items: T[]; total: number; page: number; size: number };
 export type Failure = { status: number; message: string; requestId?: string };
@@ -48,3 +49,25 @@ export async function call<T>(
     );
   }
 }
+
+export type PermissionDomain = { kind: 'PLATFORM' | 'ENTERPRISE'; id: string };
+export type PermissionAssociationProps = {
+  domain: PermissionDomain;
+  permissionId: string;
+  version: number;
+  onSaved: () => void;
+  onDirtyChange?: (value: boolean) => void;
+  onBusyChange?: (value: boolean) => void;
+  disabled?: boolean;
+};
+export type DataScopeDetail = {
+  dataResourceKey: string;
+  action: string;
+  scopePreset: 'SELF' | 'TENANT_ALL';
+};
+export type DataResource = {
+  key: string;
+  name: string;
+  selfMeaning: string;
+  actions: string[];
+};

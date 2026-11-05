@@ -13,8 +13,18 @@ import {
   Tree,
 } from '@arco-design/web-react';
 import { Prompt } from 'react-router-dom';
+import MenuPermissionBindings from './components/MenuPermissionBindings';
+import InterfaceAssociationsEditor from './components/InterfaceAssociationsEditor';
 import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
-import { call, Failure, Group, Page, Permission } from './api';
+import {
+  call,
+  Failure,
+  Group,
+  Page,
+  Permission,
+  DataResource,
+  PermissionDomain,
+} from './api';
 
 const enumLabels: Record<string, string> = {
   INTERFACE: '接口权限',
@@ -69,7 +79,13 @@ export default function PermissionsPage() {
       </Space>
       {(platform || tenant.enterpriseId) && (
         <Content
-          key={platform ? 'PLATFORM:platform' : `ENTERPRISE:${tenant.enterpriseId}`}
+          key={
+            platform ? 'PLATFORM:platform' : `ENTERPRISE:${tenant.enterpriseId}`
+          }
+          domain={{
+            kind: platform ? 'PLATFORM' : 'ENTERPRISE',
+            id: platform ? 'platform' : tenant.enterpriseId,
+          }}
           base={
             platform
               ? '/api/v1/platform'
@@ -83,10 +99,12 @@ export default function PermissionsPage() {
   );
 }
 function Content({
+  domain,
   base,
   dirty,
   busy,
 }: {
+  domain: PermissionDomain;
   base: string;
   dirty: (v: boolean) => void;
   busy: (v: boolean) => void;
@@ -106,7 +124,57 @@ function Content({
   const [editor, setEditor] =
     useState<{ group: boolean; row?: Group | Permission }>();
   const [changed, setChanged] = useState(false);
+  const [bindingDirty, setBindingDirty] = useState(false);
+  const [bindingBusy, setBindingBusy] = useState(false);
+  const hasUnsaved = changed || bindingDirty;
+  const requestBusy = saving || bindingBusy;
+  const associationContext = useRef<string>();
+  const bindingKey =
+    editor?.row && !editor.group
+      ? (editor.row as Permission).permissionId
+      : undefined;
+  const onBindingDirty = useCallback(
+    (value: boolean) => {
+      if (bindingKey && associationContext.current === bindingKey)
+        setBindingDirty(value);
+    },
+    [bindingKey]
+  );
+  const onBindingBusy = useCallback(
+    (value: boolean) => {
+      if (bindingKey && associationContext.current === bindingKey)
+        setBindingBusy(value);
+    },
+    [bindingKey]
+  );
+  const clearBinding = () => {
+    associationContext.current = undefined;
+    setBindingDirty(false);
+    setBindingBusy(false);
+  };
   const [form] = Form.useForm();
+  const [dataType, setDataType] = useState('INTERFACE');
+  const [resources, setResources] = useState<DataResource[]>([]);
+  const [resourcesError, setResourcesError] = useState('');
+  useEffect(() => {
+    let active = true;
+    call<DataResource[]>(base, '/data-resources')
+      .then((r) => {
+        if (active) {
+          setResources(r);
+          setResourcesError('');
+        }
+      })
+      .catch((e) => {
+        if (active) {
+          setResources([]);
+          setResourcesError(e.message || '业务资源目录读取失败');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [base]);
   const generation = useRef(0);
   const alive = useRef(true);
   const pending = useRef<{ fingerprint: string; key: string }>();
@@ -120,16 +188,19 @@ function Content({
     [dirty, busy]
   );
   useEffect(() => {
-    dirty(changed);
+    dirty(hasUnsaved);
     const before = (e: BeforeUnloadEvent) => {
-      if (changed) {
+      if (hasUnsaved || requestBusy) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', before);
     return () => window.removeEventListener('beforeunload', before);
-  }, [changed, dirty]);
+  }, [hasUnsaved, requestBusy, dirty]);
+  useEffect(() => {
+    busy(requestBusy);
+  }, [requestBusy, busy]);
   const failure = useCallback((e: Failure) => {
     if (!alive.current) return;
     setError(e);
@@ -139,6 +210,7 @@ function Content({
       setGroups([]);
       setData({ items: [], total: 0, page: 1, size: 20 });
       setEditor(undefined);
+      clearBinding();
       setChanged(false);
     }
   }, []);
@@ -182,10 +254,20 @@ function Content({
     load();
   }, [load]);
   const open = (group: boolean, row?: Group | Permission) => {
+    if (
+      requestBusy ||
+      (editor && hasUnsaved && !window.confirm('放弃未保存修改？'))
+    )
+      return;
+    setBindingDirty(false);
+    setBindingBusy(false);
+    associationContext.current =
+      !group && row ? (row as Permission).permissionId : undefined;
     pending.current = undefined;
     setEditor({ group, row });
     setChanged(false);
     form.resetFields();
+    setDataType(row && !group ? (row as Permission).type : 'INTERFACE');
     form.setFieldsValue(
       row ||
         (group
@@ -199,7 +281,7 @@ function Content({
     );
   };
   const save = async (remove = false, target = editor) => {
-    if (!target || saving) return;
+    if (!target || requestBusy || bindingDirty) return;
     let values: Record<string, unknown> = {};
     if (!remove) {
       try {
@@ -218,6 +300,7 @@ function Content({
       delete values.code;
       delete values.type;
     }
+    if (!target.group && dataType !== 'DATA') delete values.dataScope;
     if (target.group) values.parentGroupId = values.parentGroupId || null;
     else if (
       typeof values.description === 'string' &&
@@ -242,7 +325,6 @@ function Content({
           .slice(2)}`,
       };
     setSaving(true);
-    busy(true);
     try {
       await call(
         base,
@@ -254,6 +336,7 @@ function Content({
       );
       if (!alive.current) return;
       setEditor(undefined);
+      clearBinding();
       setChanged(false);
       pending.current = undefined;
       if (remove && target.group && id === selected) setSelected(undefined);
@@ -263,7 +346,6 @@ function Content({
     } finally {
       if (alive.current) {
         setSaving(false);
-        busy(false);
       }
     }
   };
@@ -280,7 +362,10 @@ function Content({
       }));
   return (
     <Card title="权限管理">
-      <Prompt when={changed} message="放弃未保存修改？" />
+      <Prompt
+        when={hasUnsaved || requestBusy}
+        message={() => (requestBusy ? false : '放弃未保存修改？')}
+      />
       {error && (
         <Alert
           type="error"
@@ -291,7 +376,7 @@ function Content({
         />
       )}
       <Space wrap>
-        <Button onClick={() => open(true)} disabled={saving}>
+        <Button onClick={() => open(true)} disabled={requestBusy}>
           新建权限组
         </Button>
         <Button
@@ -301,7 +386,7 @@ function Content({
         >
           新建权限
         </Button>
-        <Button onClick={load} disabled={saving}>
+        <Button onClick={load} disabled={requestBusy}>
           刷新
         </Button>
         <Input
@@ -450,113 +535,246 @@ function Content({
         />
       </div>
       <Modal
+        style={{ width: 720, maxWidth: 'calc(100vw - 32px)' }}
         title={editor?.group ? '权限组' : '权限'}
         visible={!!editor}
         confirmLoading={saving}
+        okButtonProps={{ disabled: bindingBusy || bindingDirty }}
+        cancelButtonProps={{ disabled: requestBusy }}
+        maskClosable={!requestBusy}
+        closable={!requestBusy}
         onOk={() => save()}
         onCancel={() => {
-          if (!saving && (!changed || window.confirm('放弃未保存修改？'))) {
+          if (
+            !requestBusy &&
+            (!hasUnsaved || window.confirm('放弃未保存修改？'))
+          ) {
             setEditor(undefined);
+            clearBinding();
             setChanged(false);
           }
         }}
         unmountOnExit
       >
-        {error && (
-          <Alert
-            type="error"
-            content={`${error.status}：${error.message}`}
-            style={{ marginBottom: 12 }}
-          />
-        )}
-        <Form
-          form={form}
-          layout="vertical"
-          onValuesChange={() => setChanged(true)}
-        >
-          <Form.Item
-            label="名称"
-            field="name"
-            rules={[{ required: true, maxLength: 200 }]}
-          >
-            <Input />
-          </Form.Item>
-          {editor?.group ? (
-            <>
-              <Form.Item label="父组" field="parentGroupId">
-                <Select
-                  allowClear
-                  options={options.filter(
-                    (x) => x.value !== (editor.row as Group)?.groupId
-                  )}
-                />
-              </Form.Item>
-              <Form.Item
-                label="排序"
-                field="sortOrder"
-                rules={[{ required: true }]}
-              >
-                <InputNumber precision={0} />
-              </Form.Item>
-            </>
-          ) : (
-            <>
-              <Form.Item
-                label="稳定标识"
-                field="code"
-                rules={[
-                  {
-                    required: true,
-                    match: /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/,
-                  },
-                ]}
-              >
-                <Input disabled={!!editor?.row} />
-              </Form.Item>
-              <Form.Item label="说明" field="description">
-                <Input.TextArea maxLength={2000} />
-              </Form.Item>
-              <Form.Item
-                label="权限类型"
-                field="type"
-                rules={[{ required: true }]}
-              >
-                <Select
-                  disabled={!!editor?.row}
-                  options={enumOptions(['INTERFACE', 'MENU', 'DATA'])}
-                />
-              </Form.Item>
-              <Alert content="数据权限详情尚未交付，数据权限只能保存为停用。创建权限不会自动授予任何角色。" />
-              <Form.Item
-                label="所属组"
-                field="groupId"
-                rules={[{ required: true }]}
-              >
-                <Select options={options} />
-              </Form.Item>
-              <Form.Item
-                label="访问方式"
-                field="accessMode"
-                rules={[{ required: true }]}
-              >
-                <Select
-                  options={enumOptions([
-                    'AUTHORIZED',
-                    'AUTHENTICATED',
-                    'PUBLIC',
-                  ])}
-                />
-              </Form.Item>
-              <Form.Item
-                label="状态"
-                field="status"
-                rules={[{ required: true }]}
-              >
-                <Select options={enumOptions(['ACTIVE', 'DISABLED'])} />
-              </Form.Item>
-            </>
+        <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {error && (
+            <Alert
+              type="error"
+              content={`${error.status}：${error.message}`}
+              style={{ marginBottom: 12 }}
+            />
           )}
-        </Form>
+          {bindingDirty && (
+            <Alert
+              content="请先保存或还原关联修改，再保存权限资料。"
+              style={{ marginBottom: 12 }}
+            />
+          )}
+          <Form
+            form={form}
+            disabled={requestBusy}
+            layout="vertical"
+            onValuesChange={() => setChanged(true)}
+          >
+            <Form.Item
+              label="名称"
+              field="name"
+              rules={[{ required: true, maxLength: 200 }]}
+            >
+              <Input />
+            </Form.Item>
+            {editor?.group ? (
+              <>
+                <Form.Item label="父组" field="parentGroupId">
+                  <Select
+                    allowClear
+                    options={options.filter(
+                      (x) => x.value !== (editor.row as Group)?.groupId
+                    )}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="排序"
+                  field="sortOrder"
+                  rules={[{ required: true }]}
+                >
+                  <InputNumber precision={0} />
+                </Form.Item>
+              </>
+            ) : (
+              <>
+                <Form.Item
+                  label="稳定标识"
+                  field="code"
+                  rules={[
+                    {
+                      required: true,
+                      match: /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/,
+                    },
+                  ]}
+                >
+                  <Input disabled={!!editor?.row} />
+                </Form.Item>
+                <Form.Item label="说明" field="description">
+                  <Input.TextArea maxLength={2000} />
+                </Form.Item>
+                <Form.Item
+                  label="权限类型"
+                  field="type"
+                  rules={[{ required: true }]}
+                >
+                  <Select
+                    disabled={!!editor?.row}
+                    onChange={setDataType}
+                    options={enumOptions(['INTERFACE', 'MENU', 'DATA'])}
+                  />
+                </Form.Item>
+                <Alert content="创建权限不会自动授予任何角色。" />
+                {dataType === 'DATA' && (
+                  <>
+                    {resourcesError && (
+                      <Alert type="error" content={resourcesError} />
+                    )}
+
+                    <Form.Item
+                      label="业务资源"
+                      field="dataScope.dataResourceKey"
+                      rules={[{ required: true }]}
+                    >
+                      <Select
+                        options={resources.map((r) => ({
+                          label: r.name,
+                          value: r.key,
+                        }))}
+                        onChange={() =>
+                          form.setFieldValue('dataScope.action', undefined)
+                        }
+                      />
+                    </Form.Item>
+                    <Form.Item noStyle shouldUpdate>
+                      {() => (
+                        <Form.Item
+                          label="操作"
+                          field="dataScope.action"
+                          rules={[{ required: true }]}
+                        >
+                          <Select
+                            options={(
+                              resources.find(
+                                (r) =>
+                                  r.key ===
+                                  form.getFieldValue(
+                                    'dataScope.dataResourceKey'
+                                  )
+                              )?.actions || []
+                            ).map((action) => ({
+                              label:
+                                (
+                                  {
+                                    read: '查询',
+                                    update: '修改',
+                                    delete: '删除',
+                                    create: '创建',
+                                    export: '导出',
+                                  } as Record<string, string>
+                                )[action] || action,
+                              value: action,
+                            }))}
+                          />
+                        </Form.Item>
+                      )}
+                    </Form.Item>
+                    <Form.Item
+                      label="记录范围"
+                      field="dataScope.scopePreset"
+                      rules={[{ required: true }]}
+                    >
+                      <Select
+                        options={[
+                          { label: '本人', value: 'SELF' },
+                          { label: '当前租户全部', value: 'TENANT_ALL' },
+                        ]}
+                      />
+                    </Form.Item>
+                    <Form.Item noStyle shouldUpdate>
+                      {() => (
+                        <Alert
+                          content={
+                            resources.find(
+                              (r) =>
+                                r.key ===
+                                form.getFieldValue('dataScope.dataResourceKey')
+                            )?.selfMeaning ||
+                            '本人归属由业务资源定义，全部范围仍受租户及业务上限约束。'
+                          }
+                        />
+                      )}
+                    </Form.Item>
+                  </>
+                )}
+                <Form.Item
+                  label="所属组"
+                  field="groupId"
+                  rules={[{ required: true }]}
+                >
+                  <Select options={options} />
+                </Form.Item>
+                <Form.Item
+                  label="访问方式"
+                  field="accessMode"
+                  rules={[{ required: true }]}
+                >
+                  <Select
+                    options={enumOptions([
+                      'AUTHORIZED',
+                      'AUTHENTICATED',
+                      'PUBLIC',
+                    ])}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="状态"
+                  field="status"
+                  rules={[{ required: true }]}
+                >
+                  <Select options={enumOptions(['ACTIVE', 'DISABLED'])} />
+                </Form.Item>
+              </>
+            )}
+          </Form>
+          {!editor?.group &&
+            editor?.row &&
+            (editor.row as Permission).type === 'MENU' && (
+              <MenuPermissionBindings
+                key={`${domain.kind}:${domain.id}:${
+                  (editor.row as Permission).permissionId
+                }`}
+                domain={domain}
+                permissionId={(editor.row as Permission).permissionId}
+                version={editor.row.version}
+                onSaved={load}
+                onDirtyChange={onBindingDirty}
+                onBusyChange={onBindingBusy}
+                disabled={saving}
+              />
+            )}
+          {!editor?.group &&
+            editor?.row &&
+            (editor.row as Permission).type === 'INTERFACE' && (
+              <InterfaceAssociationsEditor
+                key={`${domain.kind}:${domain.id}:${
+                  (editor.row as Permission).permissionId
+                }`}
+                domain={domain}
+                permissionId={(editor.row as Permission).permissionId}
+                version={editor.row.version}
+                onSaved={load}
+                onDirtyChange={onBindingDirty}
+                onBusyChange={onBindingBusy}
+                disabled={saving}
+              />
+            )}
+        </div>
       </Modal>
     </Card>
   );
