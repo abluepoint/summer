@@ -95,6 +95,8 @@ public class MenuCatalogService {
           items,
           db.queryForList("select * from summer_menu_domain_layout where domain_key=?", d.key()));
     }
+    items.sort(Comparator.<Map<String, Object>>comparingInt(item -> ((Number) item.get("sortOrder")).intValue())
+        .thenComparing(item -> item.get("menuId").toString()));
     return Map.of("manifestVersion", version(), "items", items);
   }
 
@@ -114,7 +116,8 @@ public class MenuCatalogService {
                       "version")
                   .entrySet())
             if (row.get(field.getValue()) != null)
-              item.put(field.getKey(), row.get(field.getValue()));
+              item.put(field.getKey(), field.getKey().equals("parentMenuId")
+                  ? parent(row.get(field.getValue())) : row.get(field.getValue()));
         }
   }
 
@@ -132,6 +135,24 @@ public class MenuCatalogService {
     if (!(value instanceof String s) || s.length() > max || !empty && s.isBlank())
       throw invalid("Invalid menu text");
     return s;
+  }
+
+  private static String parent(Object value) {
+    if (value == null) return null;
+    String name = text(value, 160, true);
+    return name.isBlank() ? null : name;
+  }
+
+  private Object canonicalMetadata(Object value) {
+    if (value instanceof Map<?, ?> fields) {
+      var sorted = new TreeMap<String, Object>();
+      fields.forEach((key, item) -> sorted.put(key.toString(), canonicalMetadata(item)));
+      return sorted;
+    }
+    if (value instanceof List<?> items)
+      return items.stream().map(this::canonicalMetadata)
+          .sorted(Comparator.comparing(json::writeValueAsString)).toList();
+    return value;
   }
 
   private static int order(Object value) {
@@ -191,7 +212,7 @@ public class MenuCatalogService {
                   MessageDigest.getInstance("SHA-256")
                       .digest(
                           json.writeValueAsString(
-                                  Arrays.asList(operation, new TreeMap<>(body), etag))
+                                  Arrays.asList(operation, canonicalMetadata(body), etag))
                               .getBytes(StandardCharsets.UTF_8)));
     } catch (java.security.NoSuchAlgorithmException failure) {
       throw new IllegalStateException(failure);
@@ -223,7 +244,9 @@ public class MenuCatalogService {
       condition(etag, current);
       if (!(body.get("manifestVersion") instanceof Number requested)
           || requested.longValue() != requested.doubleValue()
-          || requested.longValue() <= current) throw invalid("Manifest version must increase");
+          || requested.longValue() < 1) throw invalid("A positive integer manifestVersion is required");
+      if (requested.longValue() <= current)
+        throw SummerException.withMessage(PermissionErrorCode.CONFLICT, "Manifest version must increase");
       next = requested.longValue();
       var items = new ArrayList<Map<String, Object>>();
       for (Object value : raw) {
@@ -231,8 +254,10 @@ public class MenuCatalogService {
             || !Set.of("menuId", "parentMenuId", "path", "titleKey", "iconKey", "sortOrder")
                 .containsAll(fields.keySet())) throw invalid("Only menu metadata accepted");
         var item = new LinkedHashMap<String, Object>();
-        item.put("menuId", text(fields.get("menuId"), 160, false));
-        item.put("parentMenuId", fields.get("parentMenuId"));
+        String id = text(fields.get("menuId"), 160, false);
+        if (!id.matches("[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)*")) throw invalid("Invalid menuId");
+        item.put("menuId", id);
+        item.put("parentMenuId", parent(fields.get("parentMenuId")));
         String path = text(fields.get("path"), 500, false);
         if (!path.equals("/" + item.get("menuId"))
             || path.contains("?")
@@ -281,9 +306,14 @@ public class MenuCatalogService {
       condition(etag, ((Number) item.get("version")).longValue());
       if (body.containsKey("enabled") && !(body.get("enabled") instanceof Boolean))
         throw invalid("Boolean enabled required");
-      if (body.containsKey("parentMenuId")) text(body.get("parentMenuId"), 160, true);
+      if (body.containsKey("parentMenuId")) parent(body.get("parentMenuId"));
       if (body.containsKey("sortOrder")) order(body.get("sortOrder"));
+      var previousRows = db.queryForList(
+          "select enabled,parent_menu_id,sort_order from summer_menu_domain_layout where domain_key=? and menu_id=?",
+          d.key(), menuId);
+      Map<String, Object> previous = previousRows.isEmpty() ? Map.of() : previousRows.getFirst();
       item.putAll(body);
+      if (body.containsKey("parentMenuId")) item.put("parentMenuId", parent(body.get("parentMenuId")));
       hierarchy(items);
       next = ((Number) item.get("version")).longValue() + 1;
       item.put("version", next);
@@ -295,9 +325,9 @@ public class MenuCatalogService {
           d.key() + ":" + menuId,
           d.key(),
           menuId,
-          item.get("enabled"),
-          Objects.toString(item.get("parentMenuId"), ""),
-          item.get("sortOrder"),
+          body.containsKey("enabled") ? body.get("enabled") : previous.get("enabled"),
+          body.containsKey("parentMenuId") ? Objects.toString(parent(body.get("parentMenuId")), "") : previous.get("parent_menu_id"),
+          body.containsKey("sortOrder") ? body.get("sortOrder") : previous.get("sort_order"),
           next);
       result = item;
     }

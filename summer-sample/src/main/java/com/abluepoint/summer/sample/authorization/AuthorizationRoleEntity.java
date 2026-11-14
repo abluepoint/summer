@@ -16,9 +16,9 @@ class AuthorizationRoleEntity {
     @Column(name = "code", nullable = false, length = 128) private String code;
     @Column(name = "built_in", nullable = false) private boolean builtIn;
     @Column(name = "status", nullable = false, length = 32) private String status;
-    @Column(name = "capability_ids", nullable = false, columnDefinition = "text") private String capabilityIds;
-    @Column(name = "capability_codes", nullable = false, columnDefinition = "text") private String capabilityCodes;
-    @Column(name = "bundle_id", length = 96) private String bundleId;
+    @jakarta.persistence.Transient private String capabilityIds;
+    @jakarta.persistence.Transient private String capabilityCodes;
+    @jakarta.persistence.Transient private String bundleId;
     @Column(name = "version", nullable = false) private long version;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;

@@ -1,5 +1,7 @@
 # DATA 权限读取闭环（#205）
 
+本指南保留 #205 读取接入时仅开放部分预设和动作的阶段边界。当前五种预设及组合语义以 [ADR0039](../adr/0039-manage-permissions-independently-of-resources.md) 为准，后续实际写入与导出入口见[#207 操作契约](permission-207-data-operations.md)；下文的“本票不开放”不表示当前实现仍未接入。
+
 管理员在权限管理页选择数据权限、业务资源“申请单”、查询操作及单个“本人”或“当前租户全部”预设。默认仍是授权访问；创建权限不自动授予任何角色。将具体权限授予角色，再通过用户角色关系生效。权限组只作分类。访问方式、状态、组和数据详情可在同一次权限创建或修改中保存。
 
 数据详情也支持所属域下的 `GET/PUT permissions/{id}/data-scope`，PUT 整体替换 `dataResourceKey`、`action`、`scopePreset`。条件版本是权限 ETag；写请求必须提供 `If-Match` 和 `Idempotency-Key`。该入口复用权限聚合已有的域锁、版本、审计、outbox 和 revision 事务；未知字段、任意 SQL、字段名、组织列表及表达式均不接受。

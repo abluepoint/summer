@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController
-@ResourcePermission("platform.interface-resources.read")
+
 final class InterfaceResourceCatalogController {
 
     private final InterfaceResourceCatalogService service;
@@ -35,14 +35,27 @@ final class InterfaceResourceCatalogController {
 
     @GetMapping("/api/v1/platform/interface-resources")
     @RawResponse
-    ResponseEntity<ApiResponse<InterfaceResourceCatalogView>> read(
+    ResponseEntity<?> read(
             Authentication authentication,
-            HttpServletRequest request
+            HttpServletRequest request,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Long revision,
+            @RequestParam(defaultValue = "false") boolean refresh
     ) {
         String requestId = requestIdAccessor.currentRequestId();
         try {
-            InterfaceResourceCatalogView view = service.read(authentication);
-            String etag = "\"" + view.revision() + "\"";
+            Object view;
+            String etag;
+            if (page != null || size != null) {
+                var slice = service.readPage(authentication, page == null ? 0 : page, size == null ? 10 : size, revision, refresh);
+                view = slice;
+                etag = "\"" + slice.revision() + "-p" + slice.page() + "-s" + slice.size() + "\"";
+            } else {
+                var catalog = service.read(authentication);
+                view = catalog;
+                etag = "\"" + catalog.revision() + "\"";
+            }
             if (etag.equals(request.getHeader("If-None-Match"))) {
                 return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                         .eTag(etag)
@@ -55,6 +68,8 @@ final class InterfaceResourceCatalogController {
                     .body(ApiResponse.success(view, requestId));
         } catch (AccessDeniedException exception) {
             throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, exception.getMessage(), exception);
+        } catch (IllegalArgumentException invalid) {
+            throw SummerException.withMessage(InterfaceResourceErrorCode.PAGE_INVALID, invalid.getMessage(), invalid);
         }
     }
     @GetMapping("/api/v1/platform/interface-resources/history")

@@ -12,7 +12,23 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.test.annotation.DirtiesContext
 class DictionaryGroupHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.configuration("ent-acme", "dictionaries", false, "operator");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() { managed.close(); }
+
     @Autowired MockMvc http;
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
         return jwt().jwt(j -> j.claim("scope", "platform.dictionary.read platform.dictionary.write").subject("operator").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))

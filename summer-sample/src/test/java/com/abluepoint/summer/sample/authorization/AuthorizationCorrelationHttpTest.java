@@ -29,11 +29,12 @@ import static org.assertj.core.api.Assertions.assertThat;
         "summer.security.storage.keys=memory",
         "summer.sample.authorization.legacy-scope-compatibility=true"
 })
-@org.springframework.context.annotation.Import(ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class AuthorizationCorrelationHttpTest {
     @Value("${local.server.port}") int port;
     @Autowired JWKSource<SecurityContext> keys;
     @Autowired ObjectMapper mapper;
+    @Autowired CurrentManagedAuthorizationTestFixture fixture;
 
     @ParameterizedTest
     @ValueSource(strings = {"", "correlation id:/sample"})
@@ -49,9 +50,13 @@ class AuthorizationCorrelationHttpTest {
 
     private void verifyCorrelation(String suppliedId, boolean denied) throws Exception {
         String subject = "correlation-" + UUID.randomUUID();
+        var domain=com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+        fixture.activeUser(domain,subject);
+        if (!denied) fixture.grantHandlers(domain,subject,(handler,path,method)->path.equals("/api/authorization-events") && method.equals("GET"));
+        fixture.grantHandlers(domain,"correlation-auditor",(handler,path,method)->path.equals("/api/v1/enterprises/{enterpriseId}/authorization-audit/{id}") && method.equals("GET"));
         try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()) {
-            var response = get(client, "/api/v1/platform/plugins",
-                    token(subject, denied, "platform.plugins.read"), suppliedId);
+            var response = get(client, "/api/authorization-events?enterpriseId=ent-acme",
+                    token(subject, denied, "enterprise.roles.read"), suppliedId);
             assertThat(response.statusCode()).isEqualTo(denied ? 403 : 200);
             String correlation = response.headers().firstValue("X-Request-Id").orElseThrow();
             assertThat(correlation).isNotBlank();
@@ -65,9 +70,14 @@ class AuthorizationCorrelationHttpTest {
                     token("correlation-auditor", false, "enterprise.roles.read"), "audit-read");
             assertThat(audit.statusCode()).isEqualTo(200);
             JsonNode rows = mapper.readTree(audit.body()).path("data");
-            assertThat(rows.size()).isEqualTo(1);
-            assertThat(rows.get(0).path("decision").asText()).isEqualTo(denied ? "DENY" : "ALLOW");
-            assertThat(rows.get(0).path("requestId").asText()).isEqualTo(correlation);
+            assertThat(rows.size()).isPositive();
+            // Security, final-handler and service gates each persist their current resource evidence.
+            for (JsonNode row : rows) {
+                assertThat(row.path("decision").asText()).isEqualTo(denied ? "DENY" : "ALLOW");
+                assertThat(row.path("requestId").asText()).isEqualTo(correlation);
+                assertThat(row.path("resourceId").asText()).isNotBlank();
+                assertThat(row.path("authorizationRevision").isNumber()).isTrue();
+            }
         }
     }
 

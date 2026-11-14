@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.mvc.logging.RequestLogRecord;
 import com.abluepoint.summer.mvc.logging.RequestLogSink;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -42,9 +43,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.mvc.request-body.max-bytes=256", "summer.security.storage.keys=memory",
         "summer.mvc.request-logging.body.enabled=true"})
 @AutoConfigureMockMvc
-@Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, RequestBodyLimitHttpTest.Logging.class})
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, RequestBodyLimitHttpTest.Logging.class})
 @org.springframework.test.annotation.DirtiesContext
 class RequestBodyLimitHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(Domain.platform(), "user", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                        && java.util.Set.of(
+                                "POST /api/customers",
+                                "GET /api/customers/{username}",
+                                "DELETE /api/customers/{username}")
+                        .contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "body-limit-check", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                        && java.util.Set.of(
+                                "POST /api/customers",
+                                "GET /api/customers/{username}",
+                                "DELETE /api/customers/{username}")
+                        .contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
     @Autowired JWKSource<SecurityContext> keys;

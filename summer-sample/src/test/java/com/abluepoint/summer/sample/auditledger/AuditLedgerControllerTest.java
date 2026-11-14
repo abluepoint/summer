@@ -26,12 +26,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class AuditLedgerControllerTest {
 
     @Autowired
     MockMvc mockMvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.BeforeEach
+    void currentActorFacts() {
+        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "audit-admin",
+                (handler, path, method) -> path.startsWith("/api/v1/enterprises/{enterpriseId}/") && handler.getBeanType().getName().endsWith(".AuditLedgerController"));
+
+    }
+
 
     @Test void auditAdminDenialsKeepTheirOriginalMessageCauseAndEnvelope() throws Exception {
+        managed.reachServiceWithoutDelegation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "audit-native-no-cap", (handler,path,method) -> handler.getBeanType().getName().endsWith(".AuditLedgerController") && (method.equals("GET") || path.endsWith(":mark-unknown")) && path.startsWith("/api/v1/enterprises/{enterpriseId}/"));
         for (String suffix : List.of("audit-events", "audit-events:query", "audit-events:export", "audit-events/missing",
                 "mcp-invocations", "mcp-invocations/missing", "audit-anomalies", "mcp-invocations/missing:mark-unknown")) {
             String path = "/api/v1/enterprises/ent-acme/" + suffix;
@@ -160,6 +171,11 @@ class AuditLedgerControllerTest {
 
     @Test
     void queriesByEnterpriseIdentityToolStatusAndInvocationWithoutCrossTenantLeakage() throws Exception {
+        var other=com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-other");
+        if(jdbc.queryForObject("select count(*) from summer_enterprise where enterprise_id=?",Integer.class,other.id())==0)
+            jdbc.update("insert into summer_enterprise(enterprise_id,name,code,status,review_status,version,created_at,updated_at) values(?,?,?,'ACTIVE','PENDING',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",other.id(),"Other audit tenant",other.id());
+        managed.activeUser(other,"summer-user"); managed.install(other);
+        managed.grantHandlers(other,"audit-admin-other",(handler,path,method)->handler.getBeanType().getName().endsWith(".AuditLedgerController") && path.startsWith("/api/v1/enterprises/{enterpriseId}/"));
         append("evt-query-1", "MCP_AUTHORIZATION_DECISION", "inv-query-1", "attempt-q", "{\"decision\":\"DENY\",\"initiator\":\"alice\",\"actor\":\"alice\",\"effectiveSubject\":\"alice\",\"agentInstanceId\":null,\"toolId\":\"tool-read\",\"resource\":\"customers/1\",\"action\":\"read\"}");
         append("evt-query-2", "MCP_AUTHORIZATION_DECISION", "inv-query-2", "attempt-q", "{\"decision\":\"ALLOW\",\"initiator\":\"bob\",\"actor\":\"agent-2\",\"effectiveSubject\":\"bob\",\"agentInstanceId\":\"instance-2\",\"toolId\":\"tool-write\",\"resource\":\"orders/1\",\"action\":\"write\"}", "ent-other");
 
@@ -343,14 +359,14 @@ class AuditLedgerControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
-        return jwt().jwt(token -> token.subject("audit-admin")
+        return jwt().jwt(token -> token.subject("audit-admin").claim("scope", "enterprise.audit.read")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.audit.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor adminForOther() {
-        return jwt().jwt(token -> token.subject("audit-admin-other")
+        return jwt().jwt(token -> token.subject("audit-admin-other").claim("scope", "enterprise.audit.read")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-other", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-other", List.of("enterprise.audit.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));

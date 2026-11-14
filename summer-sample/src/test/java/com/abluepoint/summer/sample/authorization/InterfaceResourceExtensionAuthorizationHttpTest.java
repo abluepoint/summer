@@ -1,16 +1,17 @@
 package com.abluepoint.summer.sample.authorization;
 
 import com.example.catalog.CatalogExtensionController;
-import com.jayway.jsonpath.JsonPath;
+import com.example.catalog.ManagedInterfaceExtensionFixture;
+import com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
-import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,32 +19,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-@Import(CatalogExtensionController.class)
+@Import({CurrentManagedAuthorizationTestFixture.class, CatalogExtensionController.class, ManagedInterfaceExtensionFixture.class})
 @DirtiesContext
 class InterfaceResourceExtensionAuthorizationHttpTest {
     @Autowired MockMvc mvc;
-    @Autowired AuthorizationCapabilityRepository capabilities;
-    @Autowired AuthorizationRoleRepository roles;
-    @Autowired AuthorizationUserBindingRepository bindings;
+    @Autowired JdbcTemplate db;
+    @Autowired ManagedInterfaceResources resources;
 
-    @Test void newPackageUsesScannedPermissionForManagedGrantAndExplicitDeny() throws Exception {
-        var response = mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
-                .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
-                .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"))))
-                .andExpect(status().isOk()).andReturn();
-        List<Map<String,Object>> rows = JsonPath.read(response.getResponse().getContentAsString(), "$.data.items");
-        String permission = rows.stream().filter(row -> "/api/catalog-extension".equals(row.get("normalizedPath")) && "GET".equals(row.get("httpMethod")))
-                .map(row -> String.valueOf(row.get("permissionCode"))).findFirst().orElseThrow();
-        assertThat(permission).isEqualTo("GET:/api/catalog-extension");
-        capabilities.saveAndFlush(new AuthorizationCapabilityEntity("extension-cap", "ent-acme", "ENTERPRISE", permission, permission, "invoke", "NORMAL", "ACTIVE", 1));
-        roles.saveAndFlush(new AuthorizationRoleEntity("extension-role", "ent-acme", "Extension", "extension", false, "ACTIVE", "extension-cap", permission, null, 1));
-        var binding = bindings.saveAndFlush(new AuthorizationUserBindingEntity("extension-binding", "ent-acme", "extension-reader", "[]", "[]", 1));
-        var member = jwt().jwt(token -> token.subject("extension-reader").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))));
-        mvc.perform(get("/api/catalog-extension").param("mode", "one").with(member)).andExpect(status().isForbidden());
-        binding.update("[\"extension-role\"]", "[]", 2); bindings.saveAndFlush(binding);
-        mvc.perform(get("/api/catalog-extension").param("mode", "one").with(member)).andExpect(status().isOk());
-        mvc.perform(get("/api/catalog-extension").param("mode", "two").with(member)).andExpect(status().isOk());
-        binding.update("[\"extension-role\"]", "[\"" + permission + "\"]", 3); bindings.saveAndFlush(binding);
-        mvc.perform(get("/api/catalog-extension").param("mode", "one").with(member)).andExpect(status().isForbidden());
+    @Test void unknownMvcOwnerIsClosedAndExplicitRuntimeAdapterUsesCurrentGrant() throws Exception {
+        resources.scan();
+        var actor = jwt().jwt(token -> token.subject("summer-user").claim("scope", "platform.interface-resources.read")
+            .claim("platform_capabilities", List.of("GET:/api/catalog-extension")));
+        assertThat(db.queryForObject("select count(*) from summer_interface_resource where normalized_path='/api/catalog-extension' and configurable=true", Integer.class)).isZero();
+        for (String mode : List.of("one", "two"))
+            mvc.perform(get("/api/catalog-extension").param("mode", mode).with(actor)).andExpect(status().isForbidden());
+        String path = "/api/v1/platform/interface-extension";
+        String resource = db.queryForObject("select resource_id from summer_interface_resource where normalized_path=? and http_method='GET' and configurable=true and active=true", String.class, path);
+        String permission = db.queryForObject("select permission_id from summer_permission where domain_key='PLATFORM:platform' and code='management-read'", String.class);
+        mvc.perform(get(path).with(actor)).andExpect(status().isForbidden());
+        db.update("insert into summer_permission_resource values ('PLATFORM:platform',?,'INTERFACE',?)", permission, resource);
+        mvc.perform(get(path).with(actor)).andExpect(status().isOk());
+        db.update("delete from summer_permission_resource where domain_key='PLATFORM:platform' and permission_id=? and resource_id=?", permission, resource);
+        db.update("update summer_authorization_domain set revision=revision+1 where domain_key='PLATFORM:platform'");
+        mvc.perform(get(path).with(actor)).andExpect(status().isForbidden());
     }
 }

@@ -1,574 +1,92 @@
 package com.abluepoint.summer.sample.authorization;
 
 import com.abluepoint.summer.common.error.SummerException;
-import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
-
+import com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import java.util.List;
+import java.util.Map;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.transaction.annotation.Transactional;
-import jakarta.annotation.PostConstruct;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.*;
-
+/** Narrow compatibility facade: old grant APIs are retired; current resource gates remain. */
 @Service
-@DependsOn("flywayMigrationInitializer")
+@org.springframework.context.annotation.DependsOn("flywayMigrationInitializer")
 public class AuthorizationService {
-    private final com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess;
-
-    private static final String ENTERPRISE = "ent-acme";
-    private static final Set<String> BOOTSTRAP_PERMISSIONS = Set.of(
-            "platform.interface-resources.read", "platform.menu.write",
-            "enterprise.roles.read", "enterprise.roles.write", "enterprise.menu.write",
-            "enterprise.capabilities.read", "enterprise.capabilities.write",
-            "platform.capabilities.read", "platform.capabilities.write",
-            "GET:/api/v1/enterprises/{enterpriseId}/capabilities/catalog",
-            "GET:/api/v1/platform/capabilities/catalog",
-            "POST:/api/v1/enterprises/{enterpriseId}/capabilities",
-            "POST:/api/v1/platform/capabilities",
-            "GET:/api/v1/enterprises/{enterpriseId}/roles",
-            "GET:/api/v1/enterprises/{enterpriseId}/roles/{id}",
-            "POST:/api/v1/enterprises/{enterpriseId}/roles",
-            "PATCH:/api/v1/enterprises/{enterpriseId}/roles/{id}",
-            "GET:/api/v1/enterprises/{enterpriseId}/roles/{id}/capabilities",
-            "PUT:/api/v1/enterprises/{enterpriseId}/roles/{id}/capabilities",
-            "GET:/api/v1/enterprises/{enterpriseId}/users/{username}/roles",
-            "PUT:/api/v1/enterprises/{enterpriseId}/users/{username}/roles");
-    @org.springframework.beans.factory.annotation.Value("${summer.sample.authorization.legacy-scope-compatibility:false}")
-    private boolean legacyScopeCompatibility;
-    @org.springframework.beans.factory.annotation.Value("${summer.security.authorization-server.user.username:}")
-    private String bootstrapUsername;
-    private final org.springframework.jdbc.core.JdbcTemplate membershipJdbc;
-    private final Map<String, CapabilityRecord> capabilities = new LinkedHashMap<>();
-    private final Map<String, RoleRecord> roles = new LinkedHashMap<>();
-    private final Map<String, BundleRecord> bundles = new LinkedHashMap<>();
-    private final Map<String, UserAssignmentRecord> userAssignments = new LinkedHashMap<>();
-    private final Map<String, Receipt> receipts = new HashMap<>();
+    private final ManagedConsumerAccess managedAccess;
+    private final JdbcTemplate membershipJdbc;
     private final AuthorizationAuditStore auditStore;
-    private final AuthorizationUserBindingRepository bindingRepository;
-    private final AuthorizationCapabilityRepository capabilityRepository;
-    private final AuthorizationRoleRepository roleRepository;
-    private final AuthorizationChangeEventService changeEvents;
-
-    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents, AuthorizationAuditStore auditStore, org.springframework.jdbc.core.JdbcTemplate membershipJdbc) { this(bindingRepository, capabilityRepository, roleRepository, changeEvents, auditStore, membershipJdbc, null); }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public AuthorizationService(AuthorizationUserBindingRepository bindingRepository, AuthorizationCapabilityRepository capabilityRepository, AuthorizationRoleRepository roleRepository, AuthorizationChangeEventService changeEvents, AuthorizationAuditStore auditStore, org.springframework.jdbc.core.JdbcTemplate membershipJdbc, com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess) {
-        this.managedAccess = managedAccess;
-        this.membershipJdbc = membershipJdbc;
-        this.bindingRepository = bindingRepository;
-        this.capabilityRepository = capabilityRepository;
-        this.roleRepository = roleRepository;
-        this.changeEvents = changeEvents;
-        this.auditStore = auditStore;
-        seed("cap-platform-enterprise-review-read", "platform.enterprise-review.read", "enterprise-review", "read", "MEDIUM", "PLATFORM");
-        seed("cap-platform-enterprise-review-approve", "platform.enterprise-review.approve", "enterprise-review", "approve", "HIGH", "PLATFORM");
-        seed("cap-enterprise-members-read", "enterprise.members.read", "members", "read", "LOW");
-        seed("cap-enterprise-members-write", "enterprise.members.write", "members", "write", "MEDIUM");
-        seed("cap-enterprise-roles-read", "enterprise.roles.read", "roles", "read", "LOW");
-        seed("cap-enterprise-roles-write", "enterprise.roles.write", "roles", "write", "HIGH");
-        seed("cap-enterprise-capabilities-read", "enterprise.capabilities.read", "capabilities", "read", "LOW");
-        seed("cap-enterprise-capabilities-write", "enterprise.capabilities.write", "capabilities", "write", "HIGH");
-        seed("cap-enterprise-bundles-read", "enterprise.bundles.read", "capability-bundles", "read", "LOW");
-        seed("cap-enterprise-bundles-write", "enterprise.bundles.write", "capability-bundles", "write", "HIGH");
-        seed("cap-enterprise-menu-read", "enterprise.menu.read", "menu-manifest", "read", "LOW");
-        seed("cap-enterprise-menu-write", "enterprise.menu.write", "menu-manifest", "write", "HIGH");
-        seed("cap-platform-menu-write", "platform.menu.write", "menu-manifest", "write", "HIGH", "PLATFORM");
-        seed("cap-platform-interface-resources-read", "platform.interface-resources.read", "interface-resources", "read", "HIGH", "PLATFORM");
-        seed("cap-platform-capabilities-read", "platform.capabilities.read", "capabilities", "read", "HIGH", "PLATFORM");
-        seed("cap-platform-capabilities-write", "platform.capabilities.write", "capabilities", "write", "HIGH", "PLATFORM");
-        seed("cap-enterprise-tasks-read", "enterprise.tasks.read", "tasks", "read", "LOW");
-        seed("cap-enterprise-tasks-write", "enterprise.tasks.write", "tasks", "write", "HIGH");
+    public AuthorizationService(ManagedConsumerAccess access,JdbcTemplate db,AuthorizationAuditStore audit) {
+        managedAccess=access; membershipJdbc=db; auditStore=audit;
     }
 
-    @PostConstruct
-    void loadUserAssignments() {
-        var persistedCapabilities = capabilityRepository.findAllByOrderByCapabilityIdAsc();
-        var persistedIds = persistedCapabilities.stream().map(AuthorizationCapabilityEntity::capabilityId).collect(java.util.stream.Collectors.toSet());
-        persistedCapabilities.forEach(entity -> {
-            // Upgraded installations may already own this code under a different ID.
-            // Persistence wins over defaults, including disabled state and version.
-            capabilities.values().removeIf(capability -> entity.code().equals(capability.code)
-                    && entity.scope().equals(capability.scope)
-                    && (Objects.equals(entity.enterpriseId(), capability.enterpriseId)
-                        || (capability.enterpriseId == null && "ENTERPRISE".equals(capability.scope) && !persistedIds.contains(capability.id)))
-                    && !entity.capabilityId().equals(capability.id));
-            capabilities.put(entity.capabilityId(), new CapabilityRecord(entity.capabilityId(), entity.enterpriseId(), entity.scope(), entity.code(), entity.resource(), entity.action(), entity.riskLevel(), entity.status(), entity.version()));
-        });
-        roleRepository.findAllByOrderByEnterpriseIdAscCodeAsc().forEach(entity -> roles.put(entity.roleId(), new RoleRecord(entity.roleId(), entity.enterpriseId(), entity.name(), entity.code(), entity.builtIn(), entity.status(), split(entity.capabilityIds()), entity.version(), entity.bundleId())));
-        bindingRepository.findAllByOrderByEnterpriseIdAscUsernameAsc().forEach(entity ->
-                userAssignments.put(entity.enterpriseId() + ":" + entity.username(),
-                        new UserAssignmentRecord(entity.username(), entity.enterpriseId(), bindingList(entity.roleIds()),
-                                bindingList(entity.deniedCapabilityCodes()), entity.version())));
+    /** Retain source compatibility for callers constructing the former adapter; no old policy. */
+    public AuthorizationService(AuthorizationUserBindingRepository bindings,AuthorizationCapabilityRepository capabilities,
+            AuthorizationRoleRepository roles,AuthorizationChangeEventService events,AuthorizationAuditStore audit,JdbcTemplate db) {
+        this(null,db,audit);
+    }
+    public AuthorizationService(AuthorizationUserBindingRepository bindings,AuthorizationCapabilityRepository capabilities,
+            AuthorizationRoleRepository roles,AuthorizationChangeEventService events,AuthorizationAuditStore audit,JdbcTemplate db,
+            ManagedConsumerAccess access) {
+        this(access,db,audit);
     }
 
-    /** Reloads node-local authorization projections after a change event. */
-    public synchronized void reloadPersistentState() {
-        roles.clear();
-        userAssignments.clear();
-        loadUserAssignments();
-    }
+    void loadUserAssignments() { /* No legacy projection is loaded in the target runtime. */ }
+    public void reloadPersistentState() { /* Current managed facts are read from the authority. */ }
 
-    synchronized CapabilityCatalogView capabilities(String enterpriseId, Authentication auth) {
-        require(enterpriseId, auth, "enterprise.capabilities.read");
-        List<CapabilityView> values = capabilities.values().stream()
-                .filter(c -> "ENTERPRISE".equals(c.scope) && (c.enterpriseId == null || enterpriseId.equals(c.enterpriseId)))
-                .map(this::capabilityView).toList();
-        return new CapabilityCatalogView("enterprise", enterpriseId, values, revision(values));
+    /** Old code/deny/bundle decisions can never supply a second ALLOW. */
+    public Decision decision(Authentication actor,String enterpriseId,String oldCode,String requestId) {
+        return new Decision(false,"CONTROLLED_MANAGED_UPGRADE_REQUIRED");
     }
-
-    synchronized CapabilityCatalogView platformCapabilities(Authentication auth) {
-        if (!(managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), auth, "platform.capabilities.read"))
-            && (!(auth instanceof JwtAuthenticationToken jwt) || !hasPlatform(jwt, "platform.capabilities.read")
-                || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.capabilities.read".equals(x.getAuthority())))) {
-            throw new AccessDeniedException("Platform capability denied");
-        }
-        List<CapabilityView> values = capabilities.values().stream()
-                .filter(c -> "PLATFORM".equals(c.scope)).map(this::capabilityView).toList();
-        return new CapabilityCatalogView("platform", null, values, revision(values));
+    public Decision platformDecision(Authentication actor,String oldCode,String requestId) {
+        return new Decision(false,"CONTROLLED_MANAGED_UPGRADE_REQUIRED");
     }
+    public record Decision(boolean allowed,String reasonCode) {}
 
-    @Transactional
-    synchronized CapabilityView createCapability(String e, CapabilityCreateRequest req, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.capabilities.write"); requireKey(key);
-        String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
-        if (req == null || blank(req.code()) || blank(req.resource()) || blank(req.action())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code, resource and action are required");
-        String scope = req.scope() == null ? "ENTERPRISE" : req.scope().toUpperCase(Locale.ROOT);
-        if (!Set.of("ENTERPRISE", "PLATFORM").contains(scope)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Invalid capability scope");
-        if ("PLATFORM".equals(scope) && !isPlatform(a)) throw new AccessDeniedException("Platform capability requires platform principal");
-        String id = "cap-" + UUID.randomUUID().toString().substring(0, 8);
-        CapabilityRecord c = new CapabilityRecord(id, "PLATFORM".equals(scope) ? null : e, scope, req.code().trim(), req.resource().trim(), req.action().trim(), req.riskLevel() == null ? "LOW" : req.riskLevel().toUpperCase(Locale.ROOT), "ACTIVE", 1);
-        if (capabilities.values().stream().anyMatch(x -> sameCapabilityOwner(x, c) && x.code.equals(c.code))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability code already exists");
-        capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_CREATED", rid, a); changeEvents.enqueueEnterprise(e, "CAPABILITY", id, "CAPABILITY_CREATED", c.version, rid); return out;
+    public void requireEnterpriseMenu(String enterpriseId,Authentication actor,String scope) {
+        if(managedAccess==null || !managedAccess.require(Domain.enterprise(enterpriseId),actor,scope))throw denied();
     }
-
-    @Transactional
-    synchronized CapabilityView createPlatformCapability(CapabilityCreateRequest req, String key, String rid, Authentication a) {
-        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform()))
-            throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Legacy capability writes are unsupported in managed mode");
-        if (!(a instanceof JwtAuthenticationToken jwt) || !hasPlatform(jwt, "platform.capabilities.write")
-                || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.capabilities.write".equals(x.getAuthority()))) throw new AccessDeniedException("Platform capability denied");
-        requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op("platform", key)); if (prior != null) return replay(prior, fp);
-        if (req == null || blank(req.code()) || blank(req.resource()) || blank(req.action())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code, resource and action are required");
-        String id = "cap-" + UUID.randomUUID().toString().substring(0, 8); CapabilityRecord c = new CapabilityRecord(id, null, "PLATFORM", req.code().trim(), req.resource().trim(), req.action().trim(), req.riskLevel() == null ? "LOW" : req.riskLevel().toUpperCase(Locale.ROOT), "ACTIVE", 1);
-        if (capabilities.values().stream().anyMatch(x -> sameCapabilityOwner(x, c) && x.code.equals(c.code))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability code already exists"); capabilities.put(id, c); capabilityRepository.save(new AuthorizationCapabilityEntity(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version)); CapabilityView out = capabilityView(c); remember("platform", key, fp, out); record(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), id, "CAPABILITY_CREATED", rid, a); changeEvents.enqueue(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "CAPABILITY", id, "CAPABILITY_CREATED", c.version, rid); return out;
+    public void requirePlatformMenu(Authentication actor) {
+        if(managedAccess==null || !managedAccess.require(Domain.platform(),actor,"platform.menu.write"))throw denied();
     }
-
-    @Transactional
-    synchronized CapabilityView setCapabilityStatus(String e, String id, String status, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.capabilities.write"); requireKey(key); String fp = fingerprint(id, status, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
-        CapabilityRecord c = capability(e, id); etag(c.version, ifm); if (status == null || !Set.of("ACTIVE", "DISABLED").contains(status)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Invalid capability status"); c.status = status; c.version++;
-        capabilityRepository.findById(c.id).ifPresent(entity -> { entity.updateStatus(status, c.version); capabilityRepository.save(entity); }); CapabilityView out = capabilityView(c); remember(e, key, fp, out); record(e, id, "CAPABILITY_" + status, rid, a); changeEvents.enqueueEnterprise(e, "CAPABILITY", id, "CAPABILITY_" + status, c.version, rid); return out;
+    public void requireEnterpriseMembership(String enterpriseId,Authentication actor) {
+        if(enterpriseId==null || !enterpriseId.matches("[A-Za-z0-9_-]{1,80}")
+                || actor==null || !actor.isAuthenticated() || managedAccess==null
+                || !managedAccess.managed(Domain.enterprise(enterpriseId))
+                || membershipJdbc.queryForObject("select count(*) from summer_enterprise_member m join summer_enterprise e on e.enterprise_id=m.enterprise_id join summer_auth_user u on u.username=m.subject where m.enterprise_id=? and m.subject=? and m.status='ACTIVE' and e.status='ACTIVE' and u.active=true",Integer.class,enterpriseId,actor.getName())!=1)
+            throw denied();
     }
-
-    synchronized List<RoleView> roles(String e, Authentication a) { require(e, a, "enterprise.roles.read"); return roles.values().stream().filter(x -> e.equals(x.enterpriseId) && legacyRoleOwner(e, x.id)).map(this::roleView).toList(); }
-    synchronized RoleView role(String e, String id, Authentication a) { require(e, a, "enterprise.roles.read"); return roleView(role(e, id)); }
-    @Transactional
-    synchronized RoleView createRole(String e, RoleCreateRequest req, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp);
-        validateRole(req == null ? null : req.name(), req == null ? null : req.code()); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role is required"); List<String> ids = resolveCapabilities(e, req.capabilityIds(), req.bundleId());
-        if (roles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role code already exists");
-        RoleRecord r = new RoleRecord("role-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), false, "ACTIVE", ids, 1, req.bundleId()); persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, r.id, "ROLE_CREATED", rid, a); changeEvents.enqueueEnterprise(e, "ROLE", r.id, "ROLE_CREATED", r.version, rid); return out;
+    synchronized List<Map<String,Object>> audit(String enterpriseId,String id,Authentication actor) {
+        requireEnterpriseMenu(enterpriseId,actor,"enterprise.roles.read");
+        return auditStore.read(Domain.enterprise(enterpriseId),id);
     }
+    public Long legacyRoleVersion(Object value) { return null; }
+    private static AccessDeniedException denied() {return new AccessDeniedException("Current managed resource permission required");}
+    private static SummerException retired() {return SummerException.withMessage(AuthorizationErrorCode.INVALID,
+        "Legacy code, deny and bundle grant APIs are retired; use permission and role management");}
 
-    @Transactional
-    synchronized RoleView updateRole(String e, String id, RoleUpdateRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = claimRoleVersion(e, id, ifm);
-        if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role update is required");
-        if (req != null && req.name() != null) { if (blank(req.name())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name is required"); r.name = req.name().trim(); }
-        if (req != null && req.code() != null) { if (blank(req.code())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code is required"); r.code = req.code().trim(); }
-        if (req != null && req.status() != null) r.status = req.status(); if (req != null && (req.capabilityIds() != null || req.bundleId() != null)) r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), req.bundleId()); if (req != null && req.bundleId() != null) r.bundleId = req.bundleId();
-        persistRole(r); committed(() -> roles.put(r.id, r));
-        RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_UPDATED", rid, a); changeEvents.enqueueEnterprise(e, "ROLE", id, "ROLE_UPDATED", r.version, rid); return out;
-    }
-
-    @Transactional
-    synchronized RoleView setRoleCapabilities(String e, String id, RoleCapabilitiesRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.roles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); RoleRecord r = claimRoleVersion(e, id, ifm); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role capabilities are required"); r.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); r.bundleId = null; persistRole(r); committed(() -> roles.put(r.id, r)); RoleView out = roleView(r); remember(e, key, fp, out); record(e, id, "ROLE_CAPABILITIES_UPDATED", rid, a); changeEvents.enqueueEnterprise(e, "ROLE", id, "ROLE_CAPABILITIES_UPDATED", r.version, rid); return out;
-    }
-
-    synchronized List<BundleView> bundles(String e, Authentication a) { require(e, a, "enterprise.bundles.read"); return bundles.values().stream().filter(x -> e.equals(x.enterpriseId)).map(this::bundleView).toList(); }
-    synchronized BundleView bundle(String e, String id, Authentication a) { require(e, a, "enterprise.bundles.read"); return bundleView(bundle(e, id)); }
-    @Transactional
-    synchronized BundleView createBundle(String e, BundleCreateRequest req, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.bundles.write"); requireKey(key); String fp = fingerprint(req); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); validateNameCode(req == null ? null : req.name(), req == null ? null : req.code()); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Bundle is required"); List<String> ids = resolveCapabilities(e, req.capabilityIds(), null);
-        if (bundles.values().stream().anyMatch(x -> e.equals(x.enterpriseId) && x.code.equals(req.code()))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Bundle code already exists"); BundleRecord b = new BundleRecord("bundle-" + UUID.randomUUID().toString().substring(0, 8), e, req.name().trim(), req.code().trim(), "ACTIVE", ids, 1, req.changeSummary() == null ? "initial" : req.changeSummary()); bundles.put(b.id, b); b.history.add(new BundleVersionView(b.id, 1, ids, b.changeSummary)); BundleView out = bundleView(b); remember(e, key, fp, out); record(e, b.id, "BUNDLE_CREATED", rid, a); changeEvents.enqueueEnterprise(e, "BUNDLE", b.id, "BUNDLE_CREATED", b.version, rid); return out;
-    }
-
-    @Transactional
-    synchronized BundleView updateBundle(String e, String id, BundleUpdateRequest req, String ifm, String key, String rid, Authentication a) {
-        require(e, a, "enterprise.bundles.write"); requireKey(key); String fp = fingerprint(req, ifm); Receipt prior = receipts.get(op(e, key)); if (prior != null) return replay(prior, fp); BundleRecord b = bundle(e, id); etag(b.version, ifm); if (req == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Bundle update is required"); if (req.name() != null) { if (blank(req.name())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name is required"); b.name = req.name().trim(); } if (req.code() != null) { if (blank(req.code())) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "code is required"); b.code = req.code().trim(); } if (req.status() != null) b.status = req.status(); if (req.capabilityIds() != null) b.capabilityIds = resolveCapabilities(e, req.capabilityIds(), null); b.changeSummary = req.changeSummary() == null ? "updated" : req.changeSummary(); b.version++; b.history.add(new BundleVersionView(b.id, b.version, b.capabilityIds, b.changeSummary)); BundleView out = bundleView(b); remember(e, key, fp, out); record(e, id, "BUNDLE_UPDATED", rid, a); changeEvents.enqueueEnterprise(e, "BUNDLE", id, "BUNDLE_UPDATED", b.version, rid); return out;
-    }
-
-    synchronized List<BundleVersionView> bundleVersions(String e, String id, Authentication a) { require(e, a, "enterprise.bundles.read"); return List.copyOf(bundle(e, id).history); }
-    synchronized List<Map<String, Object>> audit(String e, String id, Authentication a) {
-        require(e, a, "enterprise.roles.read");
-        return auditStore.read(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e), id);
-    }
-
-    @Transactional
+    synchronized CapabilityCatalogView capabilities(String enterpriseId, Authentication auth) { throw retired(); }
+    synchronized CapabilityCatalogView platformCapabilities(Authentication auth) { throw retired(); }
+    synchronized CapabilityView createCapability(String e, CapabilityCreateRequest req, String key, String rid, Authentication a) { throw retired(); }
+    synchronized CapabilityView createPlatformCapability(CapabilityCreateRequest req, String key, String rid, Authentication a) { throw retired(); }
+    synchronized CapabilityView setCapabilityStatus(String e, String id, String status, String ifm, String key, String rid, Authentication a) { throw retired(); }
+    synchronized List<RoleView> roles(String e, Authentication a) { throw retired(); }
+    synchronized RoleView role(String e, String id, Authentication a) { throw retired(); }
+    synchronized RoleView createRole(String e, RoleCreateRequest req, String key, String rid, Authentication a) { throw retired(); }
+    synchronized RoleView updateRole(String e, String id, RoleUpdateRequest req, String ifm, String key, String rid, Authentication a) { throw retired(); }
+    synchronized RoleView setRoleCapabilities(String e, String id, RoleCapabilitiesRequest req, String ifm, String key, String rid, Authentication a) { throw retired(); }
+    synchronized List<BundleView> bundles(String e, Authentication a) { throw retired(); }
+    synchronized BundleView bundle(String e, String id, Authentication a) { throw retired(); }
+    synchronized BundleView createBundle(String e, BundleCreateRequest req, String key, String rid, Authentication a) { throw retired(); }
+    synchronized BundleView updateBundle(String e, String id, BundleUpdateRequest req, String ifm, String key, String rid, Authentication a) { throw retired(); }
+    synchronized List<BundleVersionView> bundleVersions(String e, String id, Authentication a) { throw retired(); }
     synchronized UserRoleAssignmentView assignUserRoles(String enterpriseId, String username,
                                                          UserRoleAssignmentRequest request, String ifMatch,
-                                                         String key, String requestId, Authentication authentication) {
-        require(enterpriseId, authentication, "enterprise.roles.write");
-        requireKey(key);
-        if (username == null || username.isBlank()) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "username is required");
-        String assignmentKey = enterpriseId + ":" + username;
-        String fingerprint = fingerprint(username, request, ifMatch);
-        Receipt previous = receipts.get("user-assignment:" + assignmentKey + ":" + key);
-        if (previous != null) return replay(previous, fingerprint);
-        AuthorizationUserBindingEntity current = bindingRepository.findByEnterpriseIdAndUsername(enterpriseId, username).orElse(null);
-        long version = current == null ? 1 : current.version();
-        if (current != null) etag(current.version(), ifMatch);
-        else if (ifMatch != null && !ifMatch.equals("\"1\"")) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
-        if (request == null) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Role assignment is required");
-        List<String> roleIds = request.roleIds() == null ? List.of() : request.roleIds().stream().map(String::trim).filter(s -> !s.isBlank()).distinct().toList();
-        for (String roleId : roleIds) role(enterpriseId, roleId);
-        List<String> denied = request.deniedCapabilityCodes() == null ? List.of() : request.deniedCapabilityCodes().stream().map(String::trim).filter(s -> !s.isBlank()).distinct().toList();
-        UserAssignmentRecord updated = new UserAssignmentRecord(username, enterpriseId, roleIds, denied, version);
-        if (current == null) {
-            try {
-                bindingRepository.saveAndFlush(new AuthorizationUserBindingEntity("binding-" + UUID.randomUUID(),
-                        enterpriseId, username, jsonList(roleIds), jsonList(denied), 1));
-            } catch (org.springframework.dao.DataIntegrityViolationException concurrentCreate) {
-                throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed", concurrentCreate);
-            }
-        } else {
-            updated.version = current.version() + 1;
-            if (bindingRepository.updateVersion(enterpriseId, username, jsonList(roleIds), jsonList(denied),
-                    current.version(), java.time.Instant.now()) != 1) {
-                throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
-            }
-        }
-        UserRoleAssignmentView view = userAssignmentView(updated);
-        committed(() -> {
-            userAssignments.put(assignmentKey, updated);
-            receipts.put("user-assignment:" + assignmentKey + ":" + key, new Receipt(fingerprint, view));
-        });
-        record(enterpriseId, "user:" + username, "USER_ROLES_UPDATED", requestId, authentication);
-        changeEvents.enqueueEnterprise(enterpriseId, "USER_BINDING", username, "USER_ROLES_UPDATED", updated.version, requestId);
-        return view;
-    }
-
-    synchronized UserRoleAssignmentView userAssignment(String enterpriseId, String username, Authentication authentication) {
-        require(enterpriseId, authentication, "enterprise.roles.read");
-        UserAssignmentRecord record = userAssignments.get(enterpriseId + ":" + username);
-        if (record == null) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "User assignment not found");
-        record.roleIds.forEach(roleId -> requireLegacyRoleOwner(enterpriseId, roleId));
-        return userAssignmentView(record);
-    }
-
-    /** Evaluates persisted grants; unassigned subjects fail closed by default. */
-    public synchronized Decision decision(Authentication authentication, String enterpriseId, String permissionCode, String requestId) {
-        if (!(authentication instanceof JwtAuthenticationToken jwt) || enterpriseId == null || permissionCode == null) {
-            return auditedDecision(authentication, enterpriseId, permissionCode, requestId, false, "DEFAULT_DENY");
-        }
-        reloadPersistentState();
-        UserAssignmentRecord assignment = userAssignments.get(enterpriseId + ":" + authentication.getName());
-        if (assignment == null) {
-            boolean managed = Boolean.TRUE.equals(jwt.getToken().getClaims().get("summer_managed_grants"));
-            boolean local = "local-user".equals(jwt.getToken().getClaimAsString("summer_identity_source"));
-            if (local && !managed && jwt.getName().equals(bootstrapUsername) && ENTERPRISE.equals(enterpriseId) && active(jwt, enterpriseId)
-                    && has(jwt, enterpriseId, "enterprise.roles.write")
-                    && hasPlatform(jwt, "platform.capabilities.write")
-                    && BOOTSTRAP_PERMISSIONS.contains(permissionCode)) {
-                return auditedDecision(authentication, enterpriseId, permissionCode, requestId, true, "BOOTSTRAP_ADMIN");
-            }
-            if (legacyScopeCompatibility && !local && !managed) return auditedDecision(authentication, enterpriseId, permissionCode, requestId, true, "LEGACY_SCOPE");
-            return auditedDecision(authentication, enterpriseId, permissionCode, requestId, false, "DEFAULT_DENY");
-        }
-        if (!active(jwt, enterpriseId)) return auditedDecision(authentication, enterpriseId, permissionCode, requestId, false, "INACTIVE_MEMBERSHIP");
-        if (assignment.deniedCodes.contains(permissionCode)) {
-            return auditedDecision(authentication, enterpriseId, permissionCode, requestId, false, "USER_EXPLICIT_DENY");
-        }
-        boolean allowed = assignment.roleIds.stream().map(roles::get).filter(Objects::nonNull)
-                .filter(role -> enterpriseId.equals(role.enterpriseId) && "ACTIVE".equals(role.status))
-                .flatMap(role -> role.capabilityIds.stream()).map(id -> capabilities.get(id))
-                .filter(Objects::nonNull).filter(capability -> "ACTIVE".equals(capability.status)
-                        && (capability.enterpriseId == null || enterpriseId.equals(capability.enterpriseId)))
-                .anyMatch(capability -> permissionCode.equals(capability.code) || permissionCode.equals(capability.resource));
-        String reason = allowed ? "ROLE_ALLOW" : "DEFAULT_DENY";
-        return auditedDecision(authentication, enterpriseId, permissionCode, requestId, allowed, reason);
-    }
-
-    /** Evaluates the union of persisted PLATFORM grants across the subject's active memberships. */
-    public synchronized Decision platformDecision(Authentication authentication, String permissionCode, String requestId) {
-        if (!(authentication instanceof JwtAuthenticationToken jwt) || permissionCode == null) {
-            return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, false, "DEFAULT_DENY");
-        }
-        reloadPersistentState();
-        List<UserAssignmentRecord> bindings = userAssignments.values().stream()
-                .filter(binding -> jwt.getName().equals(binding.username)).toList();
-        if (bindings.isEmpty()) {
-            boolean managed = Boolean.TRUE.equals(jwt.getToken().getClaims().get("summer_managed_grants"));
-            boolean local = "local-user".equals(jwt.getToken().getClaimAsString("summer_identity_source"));
-            if (local && !managed && jwt.getName().equals(bootstrapUsername) && active(jwt, ENTERPRISE)
-                    && has(jwt, ENTERPRISE, "enterprise.roles.write")
-                    && hasPlatform(jwt, "platform.capabilities.write") && BOOTSTRAP_PERMISSIONS.contains(permissionCode)) {
-                return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, true, "BOOTSTRAP_ADMIN");
-            }
-            if (legacyScopeCompatibility && !local && !managed) {
-                return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, true, "LEGACY_SCOPE");
-            }
-        }
-        boolean explicitlyDenied = false;
-        for (UserAssignmentRecord binding : bindings) {
-            if (!active(jwt, binding.enterpriseId)) continue;
-            if (binding.deniedCodes.contains(permissionCode)) {
-                explicitlyDenied = true;
-                continue;
-            }
-            boolean allowed = binding.roleIds.stream().map(roles::get).filter(Objects::nonNull)
-                    .filter(role -> binding.enterpriseId.equals(role.enterpriseId) && "ACTIVE".equals(role.status))
-                    .flatMap(role -> role.capabilityIds.stream()).map(capabilities::get).filter(Objects::nonNull)
-                    .anyMatch(capability -> "ACTIVE".equals(capability.status) && "PLATFORM".equals(capability.scope)
-                            && capability.enterpriseId == null && permissionCode.equals(capability.code));
-            if (allowed) {
-                return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, true, "ROLE_ALLOW");
-            }
-        }
-        return auditedDomainDecision(authentication, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), permissionCode, requestId, false,
-                explicitlyDenied ? "USER_EXPLICIT_DENY" : "DEFAULT_DENY");
-    }
-
-    private Decision auditedDecision(Authentication authentication, String enterpriseId, String permissionCode,
-                                      String requestId, boolean allowed, String reason) {
-        return auditedDomainDecision(authentication, enterpriseId == null ? null
-                : com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
-                permissionCode, requestId, allowed, reason);
-    }
-
-    private Decision auditedDomainDecision(Authentication authentication,
-            com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain,
-            String permissionCode, String requestId, boolean allowed, String reason) {
-        String principal = authentication == null ? "" : authentication.getName();
-        record(domain == null ? "" : domain.key(), "user:" + principal, allowed ? "AUTHORIZATION_ALLOWED" : "AUTHORIZATION_DENIED", requestId, authentication,
-                Map.of("permissionCode", permissionCode == null ? "" : permissionCode,
-                        "decision", allowed ? "ALLOW" : "DENY", "reasonCode", reason));
-        return new Decision(allowed, reason);
-    }
-
-    public void requireEnterpriseMenu(String enterpriseId, Authentication authentication, String capability) {
-        // This public gate also protects non-grant operations such as outbox retry.
-        // Rejection of unsupported legacy grant writes stays in the private writer gate.
-        if (managedAccess != null && managedAccess.require(
-                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
-                authentication, capability)) return;
-        if (!com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.delegated(authentication, capability))
-            throw new AccessDeniedException("Authorization capability denied");
-        require(enterpriseId, authentication, capability);
-    }
-
-    public void requireEnterpriseMembership(String enterpriseId, Authentication authentication) {
-        if (enterpriseId == null || !enterpriseId.matches("[A-Za-z0-9_-]{1,80}")
-                || !(authentication instanceof JwtAuthenticationToken jwt) || !active(jwt, enterpriseId)) {
-            throw new AccessDeniedException("Enterprise membership required");
-        }
-    }
-
-    public void requirePlatformMenu(Authentication authentication) {
-        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), authentication, "platform.menu.write")) return;
-        if (!(authentication instanceof JwtAuthenticationToken jwt)
-                || !hasPlatform(jwt, "platform.menu.write")
-                || !com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.delegated(authentication, "platform.menu.write")
-                || jwt.getAuthorities().stream().noneMatch(x -> "SCOPE_platform.menu.write".equals(x.getAuthority()))) {
-            throw new AccessDeniedException("Platform menu capability denied");
-        }
-    }
-
-    private List<String> resolveCapabilities(String enterpriseId, List<String> ids, String bundleId) {
-        if (bundleId != null) {
-            BundleRecord bundle = bundle(enterpriseId, bundleId);
-            if (!"ACTIVE".equals(bundle.status)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Bundle is disabled");
-            return List.copyOf(bundle.capabilityIds);
-        }
-        if (ids == null) return List.of();
-        LinkedHashSet<String> resolved = new LinkedHashSet<>();
-        for (String id : ids) {
-            if (id == null || id.isBlank()) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Capability is required");
-            CapabilityRecord capability;
-            try {
-                capability = capability(enterpriseId, id);
-            } catch (SummerException unknown) {
-                if (unknown.errorCode() != AuthorizationErrorCode.CONFLICT) throw unknown;
-                capability = new CapabilityRecord("cap-resource-" + UUID.randomUUID(),
-                        enterpriseId, "ENTERPRISE", id.trim(), id.trim(), "invoke", "NORMAL", "ACTIVE", 1);
-            }
-            if (!"ACTIVE".equals(capability.status)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Capability is disabled");
-            // Selected built-in grants must survive a fresh login, whose claims are read from the database.
-            if (!capabilityRepository.existsById(capability.id)) {
-                if ("ENTERPRISE".equals(capability.scope) && capability.enterpriseId == null) {
-                    capability = new CapabilityRecord(capability.id, enterpriseId, capability.scope, capability.code,
-                            capability.resource, capability.action, capability.risk, capability.status, capability.version);
-                }
-                capabilityRepository.save(new AuthorizationCapabilityEntity(capability.id, capability.enterpriseId,
-                        capability.scope, capability.code, capability.resource, capability.action,
-                        capability.risk, capability.status, capability.version));
-            }
-            CapabilityRecord selected = capability;
-            committed(() -> capabilities.put(selected.id, selected));
-            resolved.add(capability.id);
-        }
-        return List.copyOf(resolved);
-    }
-    private static boolean sameCapabilityOwner(CapabilityRecord left, CapabilityRecord right) {
-        return left.scope.equals(right.scope) && Objects.equals(left.enterpriseId, right.enterpriseId);
-    }
-    private CapabilityRecord capability(String e, String id) {
-        CapabilityRecord c = capabilities.get(id);
-        if (c == null) c = capabilities.values().stream().filter(x -> x.code.equals(id) && e.equals(x.enterpriseId)).findFirst().orElse(null);
-        if (c == null) c = capabilities.values().stream().filter(x -> x.code.equals(id) && x.enterpriseId == null).findFirst().orElse(null);
-        if (c == null || (c.enterpriseId != null && !e.equals(c.enterpriseId))) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Capability not found");
-        return c;
-    }
-    // The old enterprise_id string cannot distinguish PLATFORM:platform from ENTERPRISE:platform.
-    // Unbridged legacy roles and same-enterprise expand roles remain compatible.
-    private boolean legacyRoleOwner(String enterpriseId, String roleId) {
-        return membershipJdbc.queryForList("select domain_key from summer_permission_role where role_id=?", String.class, roleId)
-                .stream().allMatch(("ENTERPRISE:" + enterpriseId)::equals);
-    }
-    private void requireLegacyRoleOwner(String enterpriseId, String roleId) {
-        if (!legacyRoleOwner(enterpriseId, roleId))
-            throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found");
-    }
-    private RoleRecord role(String e, String id) { RoleRecord r = roles.get(id); if (r == null || !e.equals(r.enterpriseId) || !legacyRoleOwner(e, id)) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found"); return r; }
-    private BundleRecord bundle(String e, String id) { BundleRecord b = bundles.get(id); if (b == null || !e.equals(b.enterpriseId)) throw SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Bundle not found"); return b; }
-    private void validateRole(String n, String c) { validateNameCode(n, c); }
-    private void validateNameCode(String n, String c) { if (blank(n) || blank(c)) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "name and code are required"); }
-    private boolean isPlatform(Authentication a) { return a instanceof JwtAuthenticationToken j && j.getToken().getClaims().containsKey("platform_capabilities"); }
-    private boolean hasPlatform(JwtAuthenticationToken j, String capability) { Object values = j.getToken().getClaims().get("platform_capabilities"); return values instanceof Collection<?> c && c.stream().map(String::valueOf).anyMatch(capability::equals); }
-    private void require(String e, Authentication a, String capability) {
-        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e), a, capability)) {
-            if (capability.endsWith(".write") && (capability.contains(".capabilities.") || capability.contains(".bundles.") || capability.contains(".roles.")))
-                throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Legacy grant writes require an explicit migrated identity adapter; use permission and role management");
-            return;
-        }
- if (e == null || !e.matches("[A-Za-z0-9_-]{1,80}") || !(a instanceof JwtAuthenticationToken jwt) || !active(jwt, e) || !has(jwt, e, capability) || jwt.getAuthorities().stream().noneMatch(x -> ("SCOPE_" + capability).equals(x.getAuthority()))) throw new AccessDeniedException("Authorization capability denied"); }
-    private boolean active(JwtAuthenticationToken jwt, String enterpriseId) {
-        Object claim = jwt.getToken().getClaims().get("enterprise_memberships");
-        boolean claimedActive = claim instanceof Collection<?> values && values.stream().filter(Map.class::isInstance)
-                .map(value -> (Map<?, ?>) value).anyMatch(m -> enterpriseId.equals(stringValue(m, "enterpriseId", "enterprise_id"))
-                        && "ACTIVE".equalsIgnoreCase(stringValue(m, "status", "membership_status")));
-        if (!claimedActive) return false;
-        // Explicit synthetic-test compatibility never applies to local or managed identities.
-        if (legacyScopeCompatibility && !Boolean.TRUE.equals(jwt.getToken().getClaims().get("summer_managed_grants"))
-                && !"local-user".equals(jwt.getToken().getClaimAsString("summer_identity_source"))) return true;
-        Integer count = membershipJdbc.queryForObject("select count(*) from summer_enterprise_member m join summer_enterprise e on e.enterprise_id=m.enterprise_id where m.enterprise_id=? and m.subject=? and m.status='ACTIVE' and e.status='ACTIVE'",
-                Integer.class, enterpriseId, jwt.getName());
-        return count != null && count > 0;
-    }
-    private static String stringValue(Map<?, ?> values, String first, String second) { Object value = values.get(first); if (value == null) value = values.get(second); return value == null ? null : value.toString(); }
-    private boolean has(JwtAuthenticationToken j, String e, String cap) { Object c = j.getToken().getClaims().get("enterprise_capabilities"); if (!(c instanceof Map<?, ?> m)) return false; Object v = m.get(e); return v instanceof Collection<?> col && col.stream().map(String::valueOf).anyMatch(cap::equals); }
-    private static void requireKey(String k) { if (k == null || k.isBlank()) throw SummerException.withMessage(AuthorizationErrorCode.INVALID, "Idempotency-Key is required"); }
-    private static void etag(long v, String h) { if (h == null || !h.equals("\"" + v + "\"")) throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed"); }
-    private static boolean blank(String s) { return s == null || s.isBlank(); }
-    private static String join(List<String> values) { return String.join("\n", values); }
-    private static List<String> split(String value) { return value == null || value.isBlank() ? List.of() : Arrays.stream(value.split("\\n", -1)).filter(s -> !s.isBlank()).toList(); }
-    private static String jsonList(List<String> values) {
-        return new tools.jackson.databind.ObjectMapper().writeValueAsString(values);
-    }
-    private static List<String> bindingList(String value) {
-        // H2 and older local projections used newline lists; MySQL requires JSON arrays.
-        if (value == null || !value.stripLeading().startsWith("[")) return split(value);
-        var node = new tools.jackson.databind.ObjectMapper().readTree(value);
-        List<String> values = new ArrayList<>();
-        for (var item : node) {
-            if (!item.isString()) throw new IllegalStateException("Invalid persisted authorization binding");
-            if (!item.asText().isBlank()) values.add(item.asText());
-        }
-        return List.copyOf(values);
-    }
-    private static String op(String e, String k) { return e + ":" + k; }
-    private static String fingerprint(Object... v) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Arrays.deepToString(v).getBytes(StandardCharsets.UTF_8))); } catch (Exception x) { throw new IllegalStateException(x); } }
-    @SuppressWarnings("unchecked") private <T> T replay(Receipt p, String fp) { if (!p.fingerprint.equals(fp)) throw SummerException.withMessage(AuthorizationErrorCode.IDEMPOTENCY_CONFLICT, "Idempotency key reused"); return (T) p.result; }
-    private void remember(String e, String k, String fp, Object result) { committed(() -> receipts.put(op(e, k), new Receipt(fp, result))); }
-    private void record(String e, String id, String action, String rid, Authentication a) {
-        record(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(e), id, action, rid, a);
-    }
-    private void record(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain,
-            String id, String action, String rid, Authentication a) {
-        auditStore.mutation(domain.key(), id, action, rid, a == null ? "" : a.getName());
-    }
-    private void record(String e, String id, String action, String rid, Authentication a, Map<String, Object> details) { auditStore.decision(e, id, action, rid, a == null ? "" : a.getName(), details); }
-    private void seed(String id, String code, String resource, String action, String risk) { seed(id, code, resource, action, risk, "ENTERPRISE"); }
-    private void seed(String id, String code, String resource, String action, String risk, String scope) { capabilities.put(id, new CapabilityRecord(id, null, scope, code, resource, action, risk, "ACTIVE", 1)); }
-    private CapabilityView capabilityView(CapabilityRecord c) { return new CapabilityView(c.id, c.enterpriseId, c.scope, c.code, c.resource, c.action, c.risk, c.status, c.version); }
-    private RoleView roleView(RoleRecord r) { List<String> ids = r.capabilityIds; if (r.bundleId != null) { BundleRecord b = bundles.get(r.bundleId); if (b != null && r.enterpriseId.equals(b.enterpriseId) && "ACTIVE".equals(b.status)) ids = b.capabilityIds; } return new RoleView(r.id, r.enterpriseId, r.name, r.code, r.builtIn, r.status, List.copyOf(ids), r.version, r.bundleId); }
-    private BundleView bundleView(BundleRecord b) { return new BundleView(b.id, b.enterpriseId, b.name, b.code, b.status, List.copyOf(b.capabilityIds), b.version, b.changeSummary); }
-    private void persistRole(RoleRecord r) {
-        AuthorizationRoleEntity entity = roleRepository.findById(r.id).orElseGet(() -> new AuthorizationRoleEntity(r.id, r.enterpriseId, r.name, r.code, r.builtIn, r.status, join(r.capabilityIds), capabilityCodes(r.capabilityIds), r.bundleId, r.version));
-        entity.update(r.name, r.code, r.status, join(r.capabilityIds), capabilityCodes(r.capabilityIds), r.bundleId, r.version);
-        roleRepository.save(entity);
-    }
-    private String capabilityCodes(List<String> ids) {
-        return ids.stream().map(id -> capabilityRepository.findById(id).map(AuthorizationCapabilityEntity::code)
-                .orElseGet(() -> capabilities.containsKey(id) ? capabilities.get(id).code : null))
-                .filter(Objects::nonNull).collect(java.util.stream.Collectors.joining("\n"));
-    }
-
-    private RoleRecord claimRoleVersion(String enterpriseId, String id, String ifMatch) {
-        requireLegacyRoleOwner(enterpriseId, id);
-        AuthorizationRoleEntity current = roleRepository.findById(id)
-                .filter(entity -> enterpriseId.equals(entity.enterpriseId()))
-                .orElseThrow(() -> SummerException.withMessage(AuthorizationErrorCode.CONFLICT, "Role not found"));
-        etag(current.version(), ifMatch);
-        RoleRecord updated = new RoleRecord(current.roleId(), current.enterpriseId(), current.name(), current.code(),
-                current.builtIn(), current.status(), split(current.capabilityIds()), current.version() + 1, current.bundleId());
-        // The database chooses the winner before any audit, outbox or local projection is changed.
-        if (roleRepository.claimVersion(id, enterpriseId, current.version()) != 1)
-            throw SummerException.withMessage(SampleTransportErrorCode.PRECONDITION_FAILED, "The resource has changed");
-        requireLegacyRoleOwner(enterpriseId, id);
-        return updated;
-    }
-
-    private void committed(Runnable update) {
-        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
-            update.run();
-            return;
-        }
-        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronization() {
-                    @Override public void afterCommit() {
-                        synchronized (AuthorizationService.this) { update.run(); }
-                    }
-                });
-    }
-
-    /** Compatibility dispatcher; new-mode callers never enter this legacy writer. */
-    public Long legacyRoleVersion(Object result) {
-        if(result instanceof RoleView r)return r.version();
-        if(result instanceof UserRoleAssignmentView u)return u.version();
-        return null;
-    }
-    @org.springframework.transaction.annotation.Transactional
+                                                         String key, String requestId, Authentication authentication) { throw retired(); }
+    synchronized UserRoleAssignmentView userAssignment(String enterpriseId, String username, Authentication authentication) { throw retired(); }
     public Object legacyRoleRequest(String e, Authentication auth, String method, String target, String id,
-                                    Map<String,Object> body, String condition, String key, String rid) {
-        var json = new tools.jackson.databind.ObjectMapper();
-        if (!method.equals("GET")) membershipJdbc.queryForList(
-                "select revision from summer_authorization_domain where domain_key=? for update", "ENTERPRISE:" + e);
-        if (id != null && !target.equals("user")) requireLegacyRoleOwner(e, id);
-        if (target.equals("user") && body.get("roleIds") instanceof Collection<?> ids)
-            ids.stream().filter(String.class::isInstance).map(String.class::cast)
-                    .forEach(roleId -> requireLegacyRoleOwner(e, roleId));
-        if (target.equals("user")) return method.equals("GET") ? userAssignment(e,id,auth)
-                : assignUserRoles(e,id,json.convertValue(body,UserRoleAssignmentRequest.class),condition,key,rid,auth);
-        if (target.equals("capabilities")) return method.equals("GET") ? role(e,id,auth).capabilityIds()
-                : setRoleCapabilities(e,id,json.convertValue(body,RoleCapabilitiesRequest.class),condition,key,rid,auth);
-        if (method.equals("GET")) return id==null ? roles(e,auth) : role(e,id,auth);
-        if (method.equals("POST")) return createRole(e,json.convertValue(body,RoleCreateRequest.class),key,rid,auth);
-        return updateRole(e,id,json.convertValue(body,RoleUpdateRequest.class),condition,key,rid,auth);
-    }
-
-    private static long revision(List<?> x) { return x.hashCode() & 0x7fffffffL; }
-    private static final class CapabilityRecord { final String id, enterpriseId, scope, code, resource, action, risk; String status; long version; CapabilityRecord(String i, String e, String s, String c, String r, String a, String k, String st, long v) { id=i; enterpriseId=e; scope=s; code=c; resource=r; action=a; risk=k; status=st; version=v; } }
-    private static final class RoleRecord { final String id, enterpriseId; String name, code, status, bundleId; final boolean builtIn; List<String> capabilityIds; long version; RoleRecord(String i,String e,String n,String c,boolean b,String s,List<String> ids,long v,String bid){id=i;enterpriseId=e;name=n;code=c;builtIn=b;status=s;capabilityIds=ids;version=v;bundleId=bid;} }
-    private static final class BundleRecord { final String id, enterpriseId; String name, code, status, changeSummary; List<String> capabilityIds; long version; final List<BundleVersionView> history = new ArrayList<>(); BundleRecord(String i,String e,String n,String c,String s,List<String> ids,long v,String summary){id=i;enterpriseId=e;name=n;code=c;status=s;capabilityIds=ids;version=v;changeSummary=summary;} }
-    private record Receipt(String fingerprint, Object result) {}
-    private UserRoleAssignmentView userAssignmentView(UserAssignmentRecord value) { return new UserRoleAssignmentView(value.username, value.enterpriseId, List.copyOf(value.roleIds), List.copyOf(value.deniedCodes), value.version); }
-    public record Decision(boolean allowed, String reasonCode) {}
-    private static final class UserAssignmentRecord { final String username, enterpriseId; final List<String> roleIds, deniedCodes; long version; UserAssignmentRecord(String u, String e, List<String> r, List<String> d, long v) { username=u; enterpriseId=e; roleIds=List.copyOf(r); deniedCodes=List.copyOf(d); version=v; } }
+                                    Map<String,Object> body, String condition, String key, String rid) { throw retired(); }
 }

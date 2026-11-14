@@ -64,7 +64,7 @@ public class DataOperationExecutor {
                 () -> { throw new AccessDeniedException("Managed data domain required"); });
     }
 
-    /** Explicit expand adapter; the persisted mode is read under the same domain write lock. */
+    /** Compatibility signature; the former legacy callback is never invoked in this runtime. */
     public <T> T write(
             Domain domain,
             String resource,
@@ -106,13 +106,12 @@ public class DataOperationExecutor {
                                 || !(storedMode instanceof String))
                             throw new AccessDeniedException("Unconfirmed authorization domain state");
                         String mode = (String) storedMode;
-                        if (!java.util.Set.of("LEGACY", "MANAGED").contains(mode))
+                        if (!"MANAGED".equals(mode))
                             throw new AccessDeniedException("Unsupported authorization mode");
                         var actions = resolveActions.get();
                         if (actions == null || actions.isEmpty() || !java.util.Set.of("create", "update", "delete").containsAll(actions))
                             throw SummerException.withMessage(PermissionErrorCode.INVALID, "Registered write actions required");
                         var orderedActions = new java.util.TreeSet<>(actions);
-                        if ("LEGACY".equals(mode)) return explicitLegacy.apply(java.util.Set.copyOf(actions));
                         if (!"MANAGED".equals(mode))
                             throw new AccessDeniedException("Unsupported authorization mode");
                         // The scope is computed on its own read-only connection; mutation uses this

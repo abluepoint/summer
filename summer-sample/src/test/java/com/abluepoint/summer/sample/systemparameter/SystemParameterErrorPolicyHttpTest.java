@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties="summer.sample.parameter-events.scheduling-enabled=false")
 @AutoConfigureMockMvc
-@Import(SystemParameterErrorPolicyHttpTest.Policy.class)
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, SystemParameterErrorPolicyHttpTest.Policy.class})
+@org.springframework.test.annotation.DirtiesContext
 class SystemParameterErrorPolicyHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate grantDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager grantTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources grantResources;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture dataGrants;
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseCurrentDataGrants() { if (dataGrants != null) dataGrants.close(); }
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        dataGrants = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(grantDb, grantTransactions, grantResources);
+        dataGrants.data("ent-acme", "operator", "system-parameters", "create", "TENANT_ALL");
+        current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of("POST /api/system-parameters").contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test

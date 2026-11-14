@@ -15,10 +15,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Exercises native MVC resource handling through the assembled application. */
 @SpringBootTest(properties = "summer.security.storage.keys=memory")
 @AutoConfigureMockMvc
-@org.springframework.context.annotation.Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class})
+@org.springframework.context.annotation.Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class})
 @org.springframework.test.annotation.DirtiesContext
 class NativeBoundaryHttpIntegrationTest {
     @Autowired MockMvc mvc;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() throws Exception {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "boundary-reader",
+                (handler, path, method) -> handler.getBeanType().getName().equals(
+                        "com.abluepoint.summer.sample.customer.CustomerController")
+                        && method.equals("GET") && path.equals("/api/customers"));
+    }
 
     @Test void authenticationAndMethodSecurityKeepTheirNativePriorityAndCorrelation() throws Exception {
         mvc.perform(get("/api/customers").header("X-Request-Id", "native-anonymous"))
@@ -27,21 +38,28 @@ class NativeBoundaryHttpIntegrationTest {
                 .andExpect(jsonPath("$.error.code").value("SUMMER_UNAUTHORIZED"))
                 .andExpect(jsonPath("$.requestId").value("native-anonymous"))
                 .andExpect(header().string("X-Request-Id", "native-anonymous"));
-        // A servlet-session user follows the normal method-security path; the JWT-only
-        // resource interceptor does not short-circuit the controller's @PreAuthorize.
+        // The current resource filter rejects an unassigned session before MVC.
+        // A separately granted session below must still reach the positive response.
         var denied = mvc.perform(get("/api/customers")
-                        .with(user("boundary-reader").authorities(new SimpleGrantedAuthority("SCOPE_unrelated")))
+                        .with(user("boundary-denied").authorities(new SimpleGrantedAuthority("SCOPE_unrelated")))
                         .header("X-Request-Id", "native-method"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
                 .andExpect(jsonPath("$.requestId").value("native-method"))
                 .andExpect(header().string("X-Request-Id", "native-method"))
                 .andReturn();
-        assertThat(denied.getResolvedException()).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThat(denied.getResolvedException()).isNull();
         assertThat(denied.getResponse().getContentAsString()).doesNotContain("stackTrace", "AuthorizationDeniedException");
         mvc.perform(get("/api/customers").with(user("boundary-reader")
                         .authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true));
+        // A current role cannot manufacture a delegated bearer scope.
+        mvc.perform(get("/api/customers").with(
+                        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(token -> token.subject("boundary-reader").claim("scope", "unrelated"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_customer.read"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
     }
 
     @Test void committedTechnicalFailureDoesNotWriteAnotherEnvelope() throws Exception {

@@ -21,13 +21,23 @@ class PersistedMembershipAuthorizationHttpTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources interfaces;
+    private BusinessManagedAuthorizationTestFixture managed;
+    private String previousEnterpriseStatus;
+    @org.junit.jupiter.api.AfterEach void releaseCurrentBusinessFixture() {
+        if (previousEnterpriseStatus != null)
+            jdbc.update("update summer_enterprise set status=? where enterprise_id='ent-acme'", previousEnterpriseStatus);
+        jdbc.update("delete from summer_enterprise_member where enterprise_id='ent-acme' and member_id='member-revocation-restored' and subject='membership-revocation'");
+        if (managed != null) managed.close();
+    }
     @Test void theSameOldJwtLosesTaskAndDictionaryAccessAfterMemberOrEnterpriseRevocation() throws Exception {
         String subject="membership-revocation";
-        members.provision("ent-acme", "member-revocation", subject, "Revocation fixture", "revocation@example.test");
-        jdbc.update("insert into summer_authorization_capability(capability_id,enterprise_id,scope,code,resource,action,risk_level,status,version,created_at,updated_at) values ('revocation-task','ent-acme','ENTERPRISE','enterprise.tasks.read','GET:/api/v1/enterprises/{enterpriseId}/tasks','read','LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),('revocation-dict','ent-acme','ENTERPRISE','platform.dictionary.read','dictionaries','read','LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-        jdbc.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at) values ('revocation-role','ent-acme','Read','revocation',false,'ACTIVE',?,'enterprise.tasks.read',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", "revocation-task\nrevocation-dict");
-        jdbc.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values ('revocation-binding','ent-acme',?,'[\"revocation-role\"]','[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",subject);
-        var oldJwt=jwt().jwt(j -> j.subject(subject).claim("summer_managed_grants",true)
+        previousEnterpriseStatus = jdbc.queryForList("select status from summer_enterprise where enterprise_id='ent-acme'", String.class).stream().findFirst().orElse(null);
+        managed = new BusinessManagedAuthorizationTestFixture(jdbc, transactions, interfaces);
+        managed.configuration("ent-acme", "dictionaries", false, subject);
+        managed.interfaces("ENTERPRISE:ent-acme", subject, java.util.Set.of("tasks"));
+        var oldJwt=jwt().jwt(j -> j.subject(subject).claim("scope", "enterprise.tasks.read platform.dictionary.read").claim("summer_managed_grants",true)
                 .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
                 .claim("enterprise_capabilities",Map.of("ent-acme",List.of("enterprise.tasks.read","platform.dictionary.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.tasks.read"),new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"));

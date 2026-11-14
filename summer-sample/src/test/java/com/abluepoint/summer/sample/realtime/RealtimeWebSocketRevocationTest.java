@@ -31,18 +31,22 @@ class RealtimeWebSocketRevocationTest {
     @BeforeEach void connect() {
         var mapper = new ObjectMapper();
         var authorization = mock(com.abluepoint.summer.sample.authorization.AuthorizationService.class);
-        when(authorization.decision(any(), any(), any(), any())).thenReturn(
-                new com.abluepoint.summer.sample.authorization.AuthorizationService.Decision(true, "ROLE_ALLOW"));
-        hub = new RealtimeWebSocketHub(mapper, new RealtimeAccess(authorization), mock(org.springframework.beans.factory.ObjectProvider.class));
+        var business = mock(com.abluepoint.summer.sample.resource.BusinessResourceAccess.class);
+        var access = new RealtimeAccess(authorization, business);
+        hub = new RealtimeWebSocketHub(mapper, access, mock(org.springframework.beans.factory.ObjectProvider.class));
         handler = new RealtimeWebSocketHandler(hub, mock(RealtimeMessageService.class), mapper);
         var jwt = Jwt.withTokenValue("realtime-session-fixture").header("alg", "none")
-                .subject("reader").issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600))
+                .subject("reader").claim("scope", RealtimeMessageService.READ).issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600))
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of(RealtimeMessageService.READ))).build();
         var attributes = new HashMap<String, Object>();
         attributes.put("enterpriseId", "ent-acme");
-        attributes.put("authentication", new JwtAuthenticationToken(jwt,
-                List.of(new SimpleGrantedAuthority("SCOPE_" + RealtimeMessageService.READ))));
+        var authentication = new JwtAuthenticationToken(jwt,
+                List.of(new SimpleGrantedAuthority("SCOPE_" + RealtimeMessageService.READ)));
+        attributes.put("authentication", authentication);
+        when(business.requireRuntime(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"),
+                authentication, access, "read", RealtimeMessageService.READ)).thenReturn(true);
         attributes.put("sessionActive", (BooleanSupplier) active::get);
         session = mock(WebSocketSession.class);
         when(session.getAttributes()).thenReturn(attributes);

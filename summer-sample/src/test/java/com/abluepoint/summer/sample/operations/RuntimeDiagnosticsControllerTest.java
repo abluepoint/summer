@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class RuntimeDiagnosticsControllerTest {
 
     @Autowired
@@ -24,6 +25,16 @@ class RuntimeDiagnosticsControllerTest {
 
     @Autowired
     ConfigurableEnvironment environment;
+
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() {
+        current.grantInstalled(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator",
+                mapping -> mapping.source().equals("MONITORING")
+                        && mapping.handler().startsWith("com.abluepoint.summer.sample.operations.RuntimeDiagnosticsController@")
+                        && mapping.method().equals("GET") && mapping.path().equals("/internal/v1/diagnostics/runtime"));
+    }
 
     @Test
     void rejectsRequestsWithoutTheDiagnosticsCapability() throws Exception {
@@ -37,7 +48,7 @@ class RuntimeDiagnosticsControllerTest {
     void returnsHealthMetersAndRequestCorrelationWithoutSecrets() throws Exception {
         mockMvc.perform(get("/internal/v1/diagnostics/runtime")
                         .header("X-Request-Id", "runtime-diagnostic-request")
-                        .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                        .with(jwt().jwt(token -> token.subject("operator").claim("scope", "platform.capabilities.read").claim("active_enterprise_id", "ent-acme")
                                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
@@ -54,7 +65,7 @@ class RuntimeDiagnosticsControllerTest {
     @Test
     void reportsMigrationsNotEnabledInsteadOfHealthyWhenFlywayIsDisabled() throws Exception {
         mockMvc.perform(get("/internal/v1/diagnostics/runtime")
-                        .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                        .with(jwt().jwt(token -> token.subject("operator").claim("scope", "platform.capabilities.read").claim("active_enterprise_id", "ent-acme")
                                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
@@ -69,7 +80,7 @@ class RuntimeDiagnosticsControllerTest {
                 Map.of("spring.flyway.enabled", true)));
         try {
             mockMvc.perform(get("/internal/v1/diagnostics/runtime")
-                            .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                            .with(jwt().jwt(token -> token.subject("operator").claim("scope", "platform.capabilities.read").claim("active_enterprise_id", "ent-acme")
                                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                     .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                     .andExpect(status().isOk())

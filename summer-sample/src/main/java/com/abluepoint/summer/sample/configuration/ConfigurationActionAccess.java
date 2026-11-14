@@ -24,6 +24,14 @@ public class ConfigurationActionAccess {
         if (!authorization.decision(auth, tenant, permission, null).allowed())
             throw new AccessDeniedException("Configuration read denied");
     }
+    /** The plugin reader invokes this fixed installed operation without a servlet request. */
+    public void requirePublishedParameter(String tenant, Authentication auth) {
+        if (!business.requireHttp(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant),
+                auth, "GET", "/public/enterprises/{enterpriseId}/system-parameters/{key}",
+                "system.parameter.read"))
+            throw new AccessDeniedException("Configuration read denied");
+    }
     public void require(String resource,String action,Authentication auth) {
         String prefix="dictionaries".equals(resource)?"platform.dictionary":"system.parameter";
         String permission=prefix+"."+action;

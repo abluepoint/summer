@@ -38,6 +38,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class SummerEndToEndTest {
 
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.AfterEach void releaseManagedBusinessFixture() { if (managed != null) managed.close(); }
+
+    @org.junit.jupiter.api.BeforeEach void prepareCurrentBusinessAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(managedDb, managedTransactions, managedInterfaces);
+        managed.interfaces("PLATFORM:platform", CLIENT_ID, java.util.Set.of("customers"));
+        managed.interfaces("ENTERPRISE:ent-acme", localUser, java.util.Set.of("roles"));
+    }
+
     private static final String CLIENT_ID = "summer-client";
     private static final String CLIENT_SECRET = "summer-client-demo-only";
 
@@ -476,13 +489,20 @@ class SummerEndToEndTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
 
-        MvcResult result = mockMvc.perform(get("/actuator/metrics").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().jwt(token -> token.subject("monitoring-e2e")
+        var monitor = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().jwt(token -> token.subject("monitoring-e2e")
+                        .claim("scope", "platform.capabilities.read")
                         .claim("active_enterprise_id", "ent-acme")
                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
-                        .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
+                        .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"));
+        managed.identity("PLATFORM:platform", "monitoring-e2e");
+        mockMvc.perform(get("/actuator/metrics").with(monitor)).andExpect(status().isForbidden());
+        managed.interfaces("PLATFORM:platform", "monitoring-e2e", java.util.Set.of("monitoring"));
+        MvcResult result = mockMvc.perform(get("/actuator/metrics").with(monitor))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).contains("names");
+        managed.revokeInterfaces("PLATFORM:platform", "monitoring-e2e");
+        mockMvc.perform(get("/actuator/metrics").with(monitor)).andExpect(status().isForbidden());
     }
 
     @Test

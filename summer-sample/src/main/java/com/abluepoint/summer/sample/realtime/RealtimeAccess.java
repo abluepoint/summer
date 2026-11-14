@@ -7,10 +7,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.Collection;
 import java.util.Map;
 
-/** Checks current membership and persisted grants as well as the signed token. */
+/** Checks token lifetime, current membership and current managed resources. */
 @Component
 final class RealtimeAccess implements com.abluepoint.summer.sample.resource.RuntimeBusinessResources {
     private final AuthorizationService authorization;
@@ -35,8 +34,7 @@ final class RealtimeAccess implements com.abluepoint.summer.sample.resource.Runt
         if (!(authentication instanceof JwtAuthenticationToken jwt)
                 || enterpriseId == null || enterpriseId.isBlank()
                 || jwt.getToken().getExpiresAt() == null
-                || !jwt.getToken().getExpiresAt().isAfter(Instant.now())
-                || !claimedMember(jwt, enterpriseId)) {
+                || !jwt.getToken().getExpiresAt().isAfter(Instant.now())) {
             throw new AccessDeniedException("Message capability denied or expired");
         }
         var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId);
@@ -50,34 +48,7 @@ final class RealtimeAccess implements com.abluepoint.summer.sample.resource.Runt
             managed = business.requireRuntime(domain, authentication, this,
                     RealtimeMessageService.READ.equals(capability) ? "read" : "send", capability);
         }
-        if (managed) {
-            authorization.requireEnterpriseMembership(enterpriseId, authentication);
-            return;
-        }
-        if (!claimedCapability(jwt, enterpriseId, capability)
-                || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + capability).equals(a.getAuthority()))
-) {
-            throw new AccessDeniedException("Message capability denied");
-        }
+        if (!managed) throw new AccessDeniedException("Current managed message permission required");
         authorization.requireEnterpriseMembership(enterpriseId, authentication);
-        if (!authorization.decision(authentication, enterpriseId, capability, null).allowed()) {
-            throw new AccessDeniedException("Message capability revoked");
-        }
-    }
-
-    private static boolean claimedMember(JwtAuthenticationToken jwt, String enterpriseId) {
-        Object value = jwt.getToken().getClaims().get("enterprise_memberships");
-        return value instanceof Collection<?> items && items.stream().filter(Map.class::isInstance)
-                .map(valueItem -> (Map<?, ?>) valueItem).anyMatch(member ->
-                        enterpriseId.equals(String.valueOf(member.containsKey("enterpriseId")
-                                ? member.get("enterpriseId") : member.get("enterprise_id")))
-                                && "ACTIVE".equalsIgnoreCase(String.valueOf(member.containsKey("status")
-                                ? member.get("status") : member.get("membership_status"))));
-    }
-
-    private static boolean claimedCapability(JwtAuthenticationToken jwt, String enterpriseId, String capability) {
-        Object value = jwt.getToken().getClaims().get("enterprise_capabilities");
-        return value instanceof Map<?, ?> map && map.get(enterpriseId) instanceof Collection<?> grants
-                && grants.stream().anyMatch(capability::equals);
     }
 }

@@ -18,24 +18,27 @@ import java.util.Map;
 public class PermissionDataController {
     private final DataResourceRegistry registry;
     private final ApplicationQueryService applications;
+    private final com.abluepoint.summer.sample.authorization.application.data.DataResourcePreviewService previews;
     private final PermissionManagementGuard guard;
     private final RequestIdAccessor requests;
 
     public PermissionDataController(
             DataResourceRegistry registry,
             ApplicationQueryService applications,
+            com.abluepoint.summer.sample.authorization.application.data.DataResourcePreviewService previews,
             PermissionManagementGuard guard,
             RequestIdAccessor requests) {
         this.requests = requests;
         this.registry = registry;
         this.applications = applications;
+        this.previews = previews;
         this.guard = guard;
     }
 
     @GetMapping("/data-resources")
     public Object resources(HttpServletRequest r, Authentication a) {
         guard.require(PermissionController.domain(r), a, false);
-        return ApiResponse.success(registry.list(), requests.currentRequestId());
+        return ApiResponse.success(registry.list(PermissionController.domain(r)), requests.currentRequestId());
     }
 
     @GetMapping("/data-records/{resource}")
@@ -82,6 +85,6 @@ public class PermissionDataController {
         var domain = PermissionController.domain(r);
         guard.require(domain, a, false);
         return ApiResponse.success(
-                applications.preview(domain, resource, body), requests.currentRequestId());
+                previews.preview(domain, resource, body), requests.currentRequestId());
     }
 }

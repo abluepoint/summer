@@ -29,7 +29,7 @@ class InterfaceResourcePaginationHttpTest {
     void setup() {
         var items = IntStream.range(0, 25).mapToObj(i -> InterfaceResourceDescriptor.mvc(
                 "GET", "/api/resource-" + i, "Fixture#read" + i, "fixture",
-                ResourceType.BUSINESS, SensitiveLevel.NORMAL, null, true)).toList();
+                ResourceType.BUSINESS, SensitiveLevel.NORMAL, true)).toList();
         var view = new InterfaceResourceCatalogView(items, 7);
         var service = new InterfaceResourceCatalogService(new StaticApplicationContext(), history);
         ReflectionTestUtils.setField(service, "current", view);

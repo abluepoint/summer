@@ -1,5 +1,8 @@
 package com.abluepoint.summer.sample.authorization.application.permission;
 
+import com.abluepoint.summer.common.error.CommonErrorCode;
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import java.util.Map;
 import org.springframework.security.core.Authentication;
@@ -24,11 +27,14 @@ public class ManagedMenuCompatibility
     return access.managed(domain);
   }
 
-  private void require(Domain domain, Authentication actor) {
-    access.require(
-        domain,
-        actor,
-        domain.kind().equals("PLATFORM") ? "platform.menu.write" : "enterprise.menu.write");
+  public void require(Domain domain, Authentication actor) {
+    try {
+      access.require(domain, actor,
+          domain.kind().equals("PLATFORM") ? "platform.menu.write" : "enterprise.menu.write");
+    } catch (org.springframework.security.access.AccessDeniedException denied) {
+      throw new org.springframework.security.access.AccessDeniedException(
+          (domain.kind().equals("PLATFORM") ? "Platform menu capability denied" : "Authorization capability denied"), denied);
+    }
   }
 
   public Map<String, Object> read(Domain domain, Authentication actor, boolean manifest) {
@@ -49,7 +55,15 @@ public class ManagedMenuCompatibility
       String key,
       String requestId) {
     require(domain, actor);
-    var changed = catalog.mutate(domain, actor.getName(), menuId, body, etag, key, requestId);
-    return new Mutation(changed.body(), changed.status(), changed.version());
+    try {
+      var changed = catalog.mutate(domain, actor.getName(), menuId, body, etag, key, requestId);
+      return new Mutation(changed.body(), changed.status(), changed.version());
+    } catch (SummerException failure) {
+      if (failure.errorCode() == PermissionErrorCode.INVALID)
+        throw SummerException.withMessage(CommonErrorCode.INVALID_ARGUMENT, failure.getMessage(), failure);
+      if (failure.errorCode() == PermissionErrorCode.CONFLICT)
+        throw SummerException.withMessage(CommonErrorCode.CONFLICT, failure.getMessage(), failure);
+      throw failure;
+    }
   }
 }

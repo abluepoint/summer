@@ -32,14 +32,51 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class CustomerMySqlFlywayIntegrationTest {
 
     private static final String CLIENT_ID = "summer-client";
     private static final String CLIENT_SECRET = "summer-client-demo-only";
 
+    private static final String SCHEMA = com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.claim(
+            CustomerMySqlFlywayIntegrationTest.class, "summer_customer_crud_" + java.util.UUID.randomUUID().toString().replace("-", ""));
+    private static boolean ownedSchemaCreated;
     @Container
     @ServiceConnection
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4");
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withDatabaseName(SCHEMA);
+
+    @org.junit.jupiter.api.BeforeAll
+    static void recordCreatedSchema() throws java.sql.SQLException {
+        org.assertj.core.api.Assertions.assertThat(MYSQL.isRunning()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(MYSQL.getDatabaseName()).isEqualTo(SCHEMA);
+        try (var connection = java.sql.DriverManager.getConnection(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
+             var statement = connection.createStatement()) {
+            org.assertj.core.api.Assertions.assertThat(connection.getCatalog()).isEqualTo(SCHEMA);
+            try (var rows = statement.executeQuery("select count(*) from information_schema.schemata where schema_name='" + SCHEMA + "'")) {
+                rows.next();
+                org.assertj.core.api.Assertions.assertThat(rows.getInt(1)).isEqualTo(1);
+            }
+        }
+        com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.created(CustomerMySqlFlywayIntegrationTest.class, SCHEMA);
+        ownedSchemaCreated = true;
+    }
+
+    @org.junit.jupiter.api.AfterAll
+    static void removeOwnedSchema() throws java.sql.SQLException {
+        if (!ownedSchemaCreated) return;
+        try (var connection = java.sql.DriverManager.getConnection(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
+             var statement = connection.createStatement()) {
+            org.assertj.core.api.Assertions.assertThat(MYSQL.getDatabaseName()).isEqualTo(SCHEMA);
+            org.assertj.core.api.Assertions.assertThat(connection.getCatalog()).isEqualTo(SCHEMA);
+            statement.executeUpdate("DROP DATABASE IF EXISTS " + SCHEMA);
+            try (var rows = statement.executeQuery("select count(*) from information_schema.schemata where schema_name='" + SCHEMA + "'")) {
+                rows.next();
+                org.assertj.core.api.Assertions.assertThat(rows.getInt(1)).isZero();
+            }
+        }
+        com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.removed(SCHEMA);
+        ownedSchemaCreated = false;
+    }
 
     @Autowired
     Flyway flyway;
@@ -49,6 +86,16 @@ class CustomerMySqlFlywayIntegrationTest {
 
     @Autowired
     MockMvc mockMvc;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "summer-client",
+                (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                        && java.util.Set.of("POST /api/customers", "GET /api/customers", "GET /api/customers/{username}",
+                                "PATCH /api/customers/{username}", "DELETE /api/customers/{username}")
+                        .contains(method + " " + path));
+    }
 
     @Test
     void migrationCreatesCustomerSchemaAndCanBeReappliedWithoutDroppingRows() {

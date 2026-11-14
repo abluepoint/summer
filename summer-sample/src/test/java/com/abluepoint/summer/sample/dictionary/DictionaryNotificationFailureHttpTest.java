@@ -15,7 +15,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties="summer.sample.parameter-events.scheduling-enabled=false")
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
+@org.springframework.test.annotation.DirtiesContext
 class DictionaryNotificationFailureHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    private String readerRole;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        readerRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "dictionary-contract",
+                (handler, path, method) -> handler.getBeanType().equals(DictionaryNotificationController.class)
+                        && handler.getMethod().getName().equals("subscribe") && method.equals("GET")
+                        && path.equals("/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events"));
+        managed.data("ent-acme", "dictionary-contract", "dictionaries", "read", "TENANT_ALL");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() {
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "dictionary-contract", readerRole);
+        managed.close();
+    }
+
+
     @Autowired MockMvc mvc;
 
     @Test
@@ -51,7 +78,7 @@ class DictionaryNotificationFailureHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor reader() {
-        return jwt().jwt(token -> token.subject("dictionary-contract")
+        return jwt().jwt(token -> token.subject("dictionary-contract").claim("scope", "platform.dictionary.read")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("platform.dictionary.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"));

@@ -14,7 +14,7 @@ public class PublishedParameterReader {
     public Optional<Value> read(String tenant, String key, Authentication auth) {
         com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(tenant, auth);
         try {
-            var value = parameters.publicRead(tenant, key, auth);
+            var value = parameters.publishedRead(tenant, key, auth);
             return Optional.of(new Value(value.value(), value.version()));
         } catch (com.abluepoint.summer.common.error.SummerException failure) {
             if (failure.errorCode().category() == com.abluepoint.summer.common.error.ErrorCategory.NOT_FOUND) return Optional.empty();

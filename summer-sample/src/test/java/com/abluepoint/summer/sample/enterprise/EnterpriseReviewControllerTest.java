@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,7 +21,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class EnterpriseReviewControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.platform(), "platform-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.EnterpriseReviewController")
+                && java.util.Set.of("list GET /api/v1/platform/enterprise-reviews",
+                        "detail GET /api/v1/platform/enterprise-reviews/{id}",
+                        "audit GET /api/v1/platform/enterprise-reviews/{id}/audit",
+                        "approve POST /api/v1/platform/enterprise-reviews/{id}:approve",
+                        "reject POST /api/v1/platform/enterprise-reviews/{id}:reject")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.platform(), "enterprise-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.EnterpriseReviewController")
+                && java.util.Set.of("list GET /api/v1/platform/enterprise-reviews")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mockMvc;
 
     @Test
@@ -60,14 +83,14 @@ class EnterpriseReviewControllerTest {
     @Test
     void deniesEnterpriseScopedPrincipalEvenWithEnterpriseMembership() throws Exception {
         mockMvc.perform(get("/api/v1/platform/enterprise-reviews")
-                        .with(jwt().jwt(token -> token.subject("enterprise-admin").claim("enterprise_memberships", java.util.List.of(
+                        .with(jwt().jwt(token -> token.subject("enterprise-admin").claim("scope", "platform.enterprise-review.read").claim("enterprise_memberships", java.util.List.of(
                                 java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise-review.read"))))
                 .andExpect(status().isForbidden());
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platformAuth(String capability) {
-        return jwt().jwt(token -> token.subject("platform-operator").claim("platform_capabilities", java.util.List.of(capability)))
+        return jwt().jwt(token -> token.subject("platform-operator").claim("scope", capability))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 }

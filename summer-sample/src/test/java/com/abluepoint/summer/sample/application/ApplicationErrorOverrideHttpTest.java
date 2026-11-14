@@ -23,9 +23,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(ApplicationErrorOverrideHttpTest.StatusOverride.class)
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, ApplicationErrorOverrideHttpTest.StatusOverride.class})
+@org.springframework.test.annotation.DirtiesContext
 class ApplicationErrorOverrideHttpTest {
     @Autowired MockMvc mvc;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture fixture;
+    @org.junit.jupiter.api.BeforeEach void authorizeExactValidationHandler() {
+        fixture.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"),
+            "admin", (handler, path, method) -> method.equals("POST") && path.equals("/api/v1/enterprises/{enterpriseId}/applications"));
+    }
 
     @Test void applicationValidationUsesTheSharedStatusPolicyAndKeepsItsLiteralMessage() throws Exception {
         mvc.perform(post("/api/v1/enterprises/ent-acme/applications")

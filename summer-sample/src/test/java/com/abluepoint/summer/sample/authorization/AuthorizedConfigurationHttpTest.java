@@ -23,7 +23,29 @@ class AuthorizedConfigurationHttpTest {
     }
 
     @Autowired MockMvc mvc;
-    @Autowired AuthorizationUserBindingRepository userBindings;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.AfterEach void releaseManagedBusinessFixture() { if (managed != null) managed.close(); }
+
+    private String positiveBobPriorStatus;
+    @org.junit.jupiter.api.AfterEach void restorePositiveBobMembership() {
+        if (positiveBobPriorStatus != null)
+            managedDb.update("update summer_enterprise_member set status=? where enterprise_id='ent-acme' and subject='bob'", positiveBobPriorStatus);
+    }
+
+    @org.junit.jupiter.api.BeforeEach void prepareCurrentBusinessAuthorization() {
+        // This scenario explicitly requires an active owner; the shared identity fixture never revives disabled members.
+        positiveBobPriorStatus = managedDb.queryForObject("select status from summer_enterprise_member where enterprise_id='ent-acme' and subject='bob'", String.class);
+        managedDb.update("update summer_enterprise_member set status='ACTIVE' where enterprise_id='ent-acme' and subject='bob'");
+        managed = new BusinessManagedAuthorizationTestFixture(managedDb, managedTransactions, managedInterfaces);
+        for (String resource : List.of("system-parameters", "dictionaries"))
+            managed.configuration("ent-acme", resource, true, "alice", "bob", "operator");
+        managed.identity("ENTERPRISE:ent-other", "foreign");
+    }
+
     @Test void publicParametersRequireBothPublicMarkerAndCurrentScope() throws Exception {
         create("visible.param", true); create("hidden.param", false);
         mvc.perform(get("/public/enterprises/ent-acme/system-parameters/visible.param")).andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("base"));
@@ -84,7 +106,7 @@ class AuthorizedConfigurationHttpTest {
     }
     @Test void explicitForeignTenantMembershipCannotReadPublicOrManageConfiguration() throws Exception {
         create("tenant.param", true);
-        var foreign=jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("foreign").claim("enterprise_memberships", List.of(Map.of("enterpriseId","ent-other","status","ACTIVE"))))
+        var foreign=jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("foreign").claim("scope", "system.parameter.read").claim("enterprise_memberships", List.of(Map.of("enterpriseId","ent-other","status","ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.read"));
         mvc.perform(get("/public/enterprises/ent-acme/system-parameters/tenant.param").with(foreign)).andExpect(status().isForbidden());
         mvc.perform(get("/api/system-parameters").with(foreign)).andExpect(status().isForbidden());
@@ -121,13 +143,59 @@ class AuthorizedConfigurationHttpTest {
                 .contentType(MediaType.APPLICATION_JSON).content(payload.replace("option", "nonexistent"))).andExpect(status().isBadRequest());
     }
 
-    @Test void publicApiHonorsPersistedInterfaceDenialsWithoutTrustingTokenScopes() throws Exception {
-        create("denied.public", true);
-        mvc.perform(get("/public/enterprises/ent-acme/system-parameters/denied.public").with(member("alice", "org-engineering")))
+    @Test void publicApiHonorsCurrentInterfaceRevocationWithoutTrustingTokenScopes() throws Exception {
+        mvc.perform(post("/api/dictionaries").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"interface-revoked-public\",\"name\":\"Public interface\",\"publicReadable\":true}"))
                 .andExpect(status().isOk());
-        userBindings.saveAndFlush(new AuthorizationUserBindingEntity("deny-public", "ent-acme", "alice", "", "system.parameter.read", 1));
-        mvc.perform(get("/public/enterprises/ent-acme/system-parameters/denied.public").with(member("alice", "org-engineering")))
+        mvc.perform(post("/api/dictionaries/interface-revoked-public/items").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/interface-revoked-public/items", "{\"value\":\"visible\",\"label\":\"Visible\",\"sortOrder\":1}")))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/dictionaries/interface-revoked-public/publish").with(member("alice", "org-engineering")).contentType(MediaType.APPLICATION_JSON)
+                .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(mvc, "/api/dictionaries/interface-revoked-public/publish", "{\"expectedVersion\":0}")))
+                .andExpect(status().isOk());
+        var actor = member("alice", "org-engineering");
+        mvc.perform(get("/public/enterprises/ent-acme/dictionaries/interface-revoked-public").with(actor))
+                .andExpect(status().isOk());
+        managed.revokeInterfaces("ENTERPRISE:ent-acme", "alice");
+        mvc.perform(get("/public/enterprises/ent-acme/dictionaries/interface-revoked-public").with(actor))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test void publicParameterHonorsCurrentInterfaceRevocationWithTheSameToken() throws Exception {
+        create("denied.public", true);
+        var actor = member("alice", "org-engineering");
+        String path = "/public/enterprises/ent-acme/system-parameters/denied.public";
+        mvc.perform(get(path).with(actor)).andExpect(status().isOk());
+        managed.revokeInterfaces("ENTERPRISE:ent-acme", "alice");
+        mvc.perform(get(path).with(actor)).andExpect(status().isForbidden()).andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test void publicParameterHonorsCurrentDataRevocationWithTheSameToken() throws Exception {
+        create("denied.public", true);
+        var actor = member("alice", "org-engineering");
+        String path = "/public/enterprises/ent-acme/system-parameters/denied.public";
+        mvc.perform(get(path).with(actor)).andExpect(status().isOk());
+        managed.revokeRead("ent-acme", "alice", "system-parameters");
+        managed.revokePublicRead("ent-acme", "system-parameters");
+        mvc.perform(get(path).with(actor)).andExpect(status().isNotFound()).andExpect(jsonPath("$.data").doesNotExist());
+        mvc.perform(get(path)).andExpect(status().isNotFound());
+        managed.data("ent-acme", "alice", "system-parameters", "read", "TENANT_ALL");
+        mvc.perform(get(path).with(actor)).andExpect(status().isOk());
+        mvc.perform(get(path)).andExpect(status().isNotFound());
+    }
+
+    @Test void missingModeCannotBeRecreatedByAnOrdinaryScopedBusinessRequest() throws Exception {
+        String missing = "ent-business10-unregistered";
+        org.junit.jupiter.api.Assertions.assertEquals(0, managedDb.queryForObject(
+                "select count(*) from summer_authorization_domain where domain_key=?", Integer.class, "ENTERPRISE:" + missing));
+        var actor = jwt().jwt(j -> j.subject("alice").claim("scope", "system.parameter.read")
+                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", missing, "status", "ACTIVE"))));
+        mvc.perform(get("/api/v1/enterprises/" + missing + "/system-parameters").with(actor))
+                .andExpect(status().isForbidden());
+        org.junit.jupiter.api.Assertions.assertEquals(0, managedDb.queryForObject(
+                "select count(*) from summer_authorization_domain where domain_key=?", Integer.class, "ENTERPRISE:" + missing));
+        org.junit.jupiter.api.Assertions.assertEquals(0, managedDb.queryForObject(
+                "select count(*) from summer_permission where domain_key=?", Integer.class, "ENTERPRISE:" + missing));
     }
 
     private void override(String org, String value, boolean pub, Long version) throws Exception {
@@ -139,15 +207,16 @@ class AuthorizedConfigurationHttpTest {
                 .content("{\"key\":\""+key+"\",\"type\":\"STRING\",\"value\":\"base\",\"public\":"+pub+"}")) .andExpect(status().isCreated());
     }
     private void policy(String resource, String field) throws Exception {
-        mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/"+resource).with(member("alice", "org-engineering"))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"rules\":[{\"type\":\""+field+"\"}]}")) .andExpect(status().isOk());
+        for (String subject : List.of("alice", "bob", "operator"))
+            managed.data("ent-acme", subject, resource, "read", field);
+        managed.publicData("ent-acme", resource, field);
     }
     private static RequestPostProcessor scopes(String... scopes) {
-        return jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("alice")).authorities(Arrays.stream(scopes).map(v->new SimpleGrantedAuthority("SCOPE_"+v)).toArray(SimpleGrantedAuthority[]::new));
+        return jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject("alice").claim("scope", String.join(" ", scopes))).authorities(Arrays.stream(scopes).map(v->new SimpleGrantedAuthority("SCOPE_"+v)).toArray(SimpleGrantedAuthority[]::new));
     }
     private static RequestPostProcessor member(String subject,String org) {
         List<String> caps=List.of("system.parameter.read","system.parameter.write","platform.dictionary.read","platform.dictionary.write","enterprise.data-scope.read","enterprise.data-scope.write");
-        return jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject(subject).claim("organization_id",org).claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))).claim("enterprise_capabilities",Map.of("ent-acme",caps)))
+        return jwt().jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).subject(subject).claim("scope", String.join(" ", caps)).claim("organization_id",org).claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))).claim("enterprise_capabilities",Map.of("ent-acme",caps)))
                 .authorities(caps.stream().map(v->new SimpleGrantedAuthority("SCOPE_"+v)).toArray(SimpleGrantedAuthority[]::new));
     }
 }

@@ -1,11 +1,12 @@
 package com.abluepoint.summer.sample.authorization;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import com.abluepoint.summer.sample.authorization.api.security.ManagedRequestAuthorization;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import java.util.*;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,119 +14,65 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.util.pattern.PathPatternParser;
-import com.abluepoint.summer.sample.resource.ResourcePermission;
-
-import java.util.List;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AuthorizationRequestInterceptorTest {
-    @AfterEach void clearContext() {
-        SecurityContextHolder.clearContext();
-        org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
-    }
+  @AfterEach void clearContext() {
+    SecurityContextHolder.clearContext();
+    org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+  }
+  private JwtAuthenticationToken authenticate(String tenant) {
+    var auth=new JwtAuthenticationToken(Jwt.withTokenValue("test").header("alg","none").subject("reader")
+        .claim("enterprise_memberships",tenant==null?List.of():List.of(Map.of("enterpriseId",tenant,"status","ACTIVE"))).build());
+    SecurityContextHolder.getContext().setAuthentication(auth); return auth;
+  }
+  private AuthorizationRequestInterceptor interceptor(AuthorizationService legacy,ManagedRequestAuthorization current) {
+    var result=new AuthorizationRequestInterceptor(legacy,()->null,mock(UnifiedAuthorizationService.class),mock(LegacyResourceAdapter.class));
+    org.springframework.test.util.ReflectionTestUtils.setField(result,"managedRequests",current); return result;
+  }
+  private HandlerMethod handler() throws Exception { return new HandlerMethod(new WidgetController(),WidgetController.class.getDeclaredMethod("read")); }
 
-    @Test
-    void unqualifiedConfigurationRouteUsesTheActiveEnterpriseInsteadOfSampleTenant() throws Exception {
-        var service = mock(AuthorizationService.class);
-        var interceptor = LegacyInterceptorFixture.create(service, () -> null);
-        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("configuration-reader")
-                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-north", "status", "ACTIVE")))
-                .build();
-        var authentication = new JwtAuthenticationToken(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        var request = new MockHttpServletRequest("GET", "/api/system-parameters");
-        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
-                new org.springframework.web.context.request.ServletRequestAttributes(request));
-        Class<?> controller = Class.forName("com.abluepoint.summer.sample.systemparameter.SystemParameterController");
-        var list = java.util.Arrays.stream(controller.getDeclaredMethods()).filter(method -> method.getName().equals("list")).findFirst().orElseThrow();
-        when(service.decision(authentication, "ent-north", "system.parameter.read", null))
-                .thenReturn(new AuthorizationService.Decision(true, "ROLE_ALLOW"));
-        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new HandlerMethod(mock(controller), list))).isTrue();
-        verify(service).decision(authentication, "ent-north", "system.parameter.read", null);
-        verifyNoMoreInteractions(service);
-    }
-
-    @Test
-    void missingMatchedMappingFailsClosedInsteadOfAuthorizingConcreteUri() throws Exception {
-        var service = mock(AuthorizationService.class);
-        var interceptor = LegacyInterceptorFixture.create(service, () -> null);
-        authenticate();
-        var request = new MockHttpServletRequest("GET", "/api/widgets/one");
-        assertThatThrownBy(() -> interceptor.preHandle(request, new MockHttpServletResponse(), handler()))
-                .isInstanceOf(AccessDeniedException.class);
-        verifyNoInteractions(service);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"/api/widgets/one", "/api/widgets/menu-manifest"})
-    void missingEnterpriseContextStillRequiresAnAuthorizationDecision(String uri) throws Exception {
-        var service = mock(AuthorizationService.class);
-        var interceptor = LegacyInterceptorFixture.create(service, () -> null);
-        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("unassigned-reader").build();
-        var authentication = new JwtAuthenticationToken(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        when(service.decision(authentication, "ent-acme", "GET:/api/widgets/{widgetId}", null))
-                .thenReturn(new AuthorizationService.Decision(false, "DEFAULT_DENY"));
-        var request = new MockHttpServletRequest("GET", uri);
-        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/widgets/{widgetId}");
-        assertThatThrownBy(() -> interceptor.preHandle(request, new MockHttpServletResponse(), handler()))
-                .isInstanceOf(AccessDeniedException.class);
-        verify(service).decision(authentication, "ent-acme", "GET:/api/widgets/{widgetId}", null);
-    }
-
-    @Test
-    void foreignEnterpriseDoesNotSelectTheTenantForGlobalBusinessOrPlatformResources() throws Exception {
-        var service = mock(AuthorizationService.class);
-        var interceptor = LegacyInterceptorFixture.create(service, () -> null);
-        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("foreign-reader")
-                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-other", "status", "ACTIVE"))).build();
-        var authentication = new JwtAuthenticationToken(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        when(service.decision(eq(authentication), eq("ent-acme"), anyString(), isNull()))
-                .thenReturn(new AuthorizationService.Decision(false, "DEFAULT_DENY"));
-        var request = new MockHttpServletRequest("GET", "/api/widgets/one");
-        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/widgets/{widgetId}");
-        assertThatThrownBy(() -> interceptor.preHandle(request, new MockHttpServletResponse(), handler()))
-                .isInstanceOf(AccessDeniedException.class);
-        var platformRequest = new MockHttpServletRequest("GET", "/api/v1/platform/interface-resources");
-        var platformHandler = new HandlerMethod(new PlatformController(), PlatformController.class.getDeclaredMethod("read"));
-        assertThatThrownBy(() -> interceptor.preHandle(platformRequest, new MockHttpServletResponse(), platformHandler))
-                .isInstanceOf(AccessDeniedException.class);
-        verify(service).decision(authentication, "ent-acme", "GET:/api/widgets/{widgetId}", null);
-        verify(service).decision(authentication, "ent-acme", "platform.interface-resources.read", null);
-    }
-
-    @Test
-    void parsedPatternUsesTheSameTemplateAsTheCatalog() throws Exception {
-        var service = mock(AuthorizationService.class);
-        var interceptor = LegacyInterceptorFixture.create(service, () -> null);
-        var authentication = authenticate();
-        when(service.decision(authentication, "ent-acme", "GET:/api/widgets/{widgetId}", null))
-                .thenReturn(new AuthorizationService.Decision(true, "ROLE_ALLOW"));
-        var request = new MockHttpServletRequest("GET", "/api/widgets/one");
-        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,
-                new PathPatternParser().parse("/api/widgets/{widgetId}"));
-        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), handler())).isTrue();
-        verify(service).decision(authentication, "ent-acme", "GET:/api/widgets/{widgetId}", null);
-    }
-
-    private JwtAuthenticationToken authenticate() {
-        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("reader")
-                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).build();
-        var authentication = new JwtAuthenticationToken(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        return authentication;
-    }
-
-    private HandlerMethod handler() throws Exception {
-        return new HandlerMethod(new WidgetController(), WidgetController.class.getDeclaredMethod("read"));
-    }
-
-    static class WidgetController { public void read() {} }
-    @ResourcePermission("platform.interface-resources.read")
-    static class PlatformController { public void read() {} }
+  @Test void unqualifiedConfigurationRouteUsesTheActiveEnterpriseInsteadOfSampleTenant() throws Exception {
+    authenticate("ent-north");
+    var request=new MockHttpServletRequest("GET","/api/system-parameters");
+    Class<?> owner=Class.forName("com.abluepoint.summer.sample.systemparameter.SystemParameterController");
+    var method=Arrays.stream(owner.getDeclaredMethods()).filter(m->m.getName().equals("list")).findFirst().orElseThrow();
+    request.setAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE,new HandlerMethod(mock(owner),method));
+    org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+    assertThat(ManagedRequestAuthorization.domain(request)).isEqualTo(Domain.enterprise("ent-north"));
+  }
+  @Test void missingMatchedMappingFailsClosedInsteadOfAuthorizingConcreteUri() throws Exception {
+    var legacy=mock(AuthorizationService.class); authenticate("ent-acme");
+    var request=new MockHttpServletRequest("GET","/api/widgets/one");
+    assertThatThrownBy(()->interceptor(legacy,null).preHandle(request,new MockHttpServletResponse(),handler()))
+        .isInstanceOf(AccessDeniedException.class).hasMessage("Matched resource mapping is unavailable");
+    verifyNoInteractions(legacy);
+  }
+  @ParameterizedTest @ValueSource(strings={"/api/widgets/one","/api/widgets/menu-manifest"})
+  void missingEnterpriseContextNeverFallsBackToTheSampleTenant(String uri) throws Exception {
+    var legacy=mock(AuthorizationService.class); authenticate(null);
+    var request=new MockHttpServletRequest("GET",uri); request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,"/api/widgets/{widgetId}");
+    assertThatThrownBy(()->interceptor(legacy,null).preHandle(request,new MockHttpServletResponse(),handler()))
+        .isInstanceOf(AccessDeniedException.class).hasMessage("Current managed resource adapter required");
+    verifyNoInteractions(legacy);
+  }
+  @Test void foreignEnterpriseDoesNotSelectTheTenantForGlobalBusinessOrPlatformResources() throws Exception {
+    authenticate("ent-other"); var request=new MockHttpServletRequest("GET","/api/widgets/one");
+    request.setAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE,handler());
+    request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,"/api/widgets/{widgetId}");
+    assertThat(ManagedRequestAuthorization.domain(request)).isNull();
+    request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,"/api/v1/platform/interface-resources");
+    assertThat(ManagedRequestAuthorization.domain(request)).isEqualTo(Domain.platform());
+  }
+  @Test void parsedPatternIsPassedUnchangedToTheCurrentFinalHandlerGuard() throws Exception {
+    var legacy=mock(AuthorizationService.class); var current=mock(ManagedRequestAuthorization.class); var auth=authenticate("ent-acme");
+    var request=new MockHttpServletRequest("GET","/api/widgets/one"); var handler=handler();
+    var pattern=new PathPatternParser().parse("/api/widgets/{widgetId}"); request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,pattern);
+    when(current.finalHandler(request,handler,auth)).thenReturn(true);
+    assertThat(interceptor(legacy,current).preHandle(request,new MockHttpServletResponse(),handler)).isTrue();
+    assertThat(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)).isSameAs(pattern);
+    verify(current).finalHandler(request,handler,auth); verifyNoInteractions(legacy);
+  }
+  static class WidgetController { public void read() {} }
 }

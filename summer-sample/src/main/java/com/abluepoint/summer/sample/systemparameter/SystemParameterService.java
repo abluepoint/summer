@@ -195,8 +195,20 @@ class SystemParameterService {
 
     @Transactional(readOnly = true)
     PublicSystemParameterView publicRead(String tenant, String key, Authentication authentication) {
+        return publicRead(tenant, key, authentication,
+                () -> actions.requirePublic(tenant, "system-parameters", authentication));
+    }
+
+    @Transactional(readOnly = true)
+    PublicSystemParameterView publishedRead(String tenant, String key, Authentication authentication) {
+        return publicRead(tenant, key, authentication,
+                () -> actions.requirePublishedParameter(tenant, authentication));
+    }
+
+    private PublicSystemParameterView publicRead(String tenant, String key, Authentication authentication,
+                                               Runnable authorizeInterface) {
         return dataScopes.read(tenant, "system-parameters", "read", authentication, scope -> {
-        actions.requirePublic(tenant, "system-parameters", authentication);
+        authorizeInterface.run();
         SystemParameterEntity row = repository.findScoped(key, scope)
                 .filter(p -> p.publicValue() && p.status() == SystemParameterStatus.ACTIVE)
                 .orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));

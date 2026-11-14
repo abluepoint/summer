@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.resilience;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.sample.cache.VersionedTwoLevelCache;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +21,51 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:resilient-configuration;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", "summer.security.storage.keys=memory", "summer.sample.resilience.enabled=true", "summer.sample.resilience.timeout=5s", "summer.sample.resilience.max-attempts=1"})
+@SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:resilient-configuration;MODE=MySQL;DB_CLOSE_DELAY=0;DB_CLOSE_ON_EXIT=FALSE", "summer.security.storage.keys=memory", "summer.sample.resilience.enabled=true", "summer.sample.resilience.timeout=5s", "summer.sample.resilience.max-attempts=1"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class ResilientConfigurationHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @Autowired org.springframework.transaction.PlatformTransactionManager grantTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources grantResources;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture dataGrants;
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseCurrentDataGrants() { if (dataGrants != null) dataGrants.close(); }
+    private String parameterReadRole;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        dataGrants = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(jdbc, grantTransactions, grantResources);
+        dataGrants.data("ent-acme", "scope-reader", "system-parameters", "read", "TENANT_ALL");
+        dataGrants.data("ent-acme", "scope-reader", "system-parameters", "create", "TENANT_ALL");
+        dataGrants.data("ent-acme", "scope-reader", "system-parameters", "update", "TENANT_ALL");
+        dataGrants.data("ent-acme", "scope-reader", "dictionaries", "read", "TENANT_ALL");
+        dataGrants.data("ent-acme", "scope-reader", "dictionaries", "create", "TENANT_ALL");
+        dataGrants.data("ent-acme", "scope-reader", "dictionaries", "update", "TENANT_ALL");
+        dataGrants.data("ent-acme", "operator", "dictionaries", "read", "TENANT_ALL");
+        current.grantHandlers(Domain.enterprise("ent-acme"), "scope-reader", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of("POST /api/system-parameters").contains(method + " " + path));
+        parameterReadRole = current.grantHandlers(Domain.enterprise("ent-acme"), "scope-reader", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of("GET /api/system-parameters/{key}").contains(method + " " + path));
+        current.grantHandlers(Domain.enterprise("ent-acme"), "scope-reader", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.dictionary.DictionaryController")
+                        && java.util.Set.of(
+                                "POST /api/dictionaries",
+                                "POST /api/dictionaries/{code}/items",
+                                "POST /api/dictionaries/{code}/publish",
+                                "POST /api/dictionaries/{code}/disable",
+                                "GET /public/dictionaries/{code}")
+                        .contains(method + " " + path));
+        current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.dictionary.DictionaryController")
+                        && java.util.Set.of("GET /api/dictionaries/{code}/draft").contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @MockitoSpyBean VersionedTwoLevelCache cache;
@@ -40,9 +82,9 @@ class ResilientConfigurationHttpTest {
     }
     @Test void unverifiedPolicyCannotReturnWarmData() throws Exception {
         parameter();
-        failure(()->jdbc.execute("alter table summer_data_scope_policy rename to unavailable_scope_policy"));
+        failure(()->jdbc.execute("alter table summer_permission_data_scope rename to unavailable_current_data_scope"));
         try { mvc.perform(get("/api/system-parameters/resilient.test").with(actor())).andExpect(status().isServiceUnavailable()); }
-        finally { jdbc.execute("alter table unavailable_scope_policy rename to summer_data_scope_policy"); }
+        finally { jdbc.execute("alter table unavailable_current_data_scope rename to summer_permission_data_scope"); }
     }
     @Test void verifiedUnchangedParameterCanFallbackAndRecover() throws Exception {
         parameter();
@@ -88,18 +130,15 @@ class ResilientConfigurationHttpTest {
     }
     @Test void changedPermissionDuringFailureInvalidatesFallback() throws Exception {
         parameter();
-        // A SELF policy is established before warming under that policy.
-        mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/system-parameters").with(actor())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"rules\":[{\"type\":\"SELF\"}]}")) .andExpect(status().isOk());
+        // Replace only this actor's current read preset before warming.
+        dataGrants.data("ent-acme", "scope-reader", "system-parameters", "read", "SELF");
         mvc.perform(get("/api/system-parameters/resilient.test").with(actor())).andExpect(status().isOk());
-        failure(()->jdbc.update("update summer_system_parameter set created_by='someone-else' where parameter_key='resilient.test'"));
+        failure(()->jdbc.update("update summer_system_parameter set owner_id='someone-else' where parameter_key='resilient.test'"));
         mvc.perform(get("/api/system-parameters/resilient.test").with(actor())).andExpect(status().isServiceUnavailable());
     }
     @Test void interfaceDenialDuringFailureDoesNotBecomeFallbackSuccess() throws Exception {
         parameter();
-        failure(() -> jdbc.update("insert into summer_authorization_user_binding "
-                + "(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) "
-                + "values ('deny','ent-acme','scope-reader','','system.parameter.read',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"));
+        failure(() -> current.revoke(Domain.enterprise("ent-acme"), "scope-reader", parameterReadRole));
         mvc.perform(get("/api/system-parameters/resilient.test").with(actor())).andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
@@ -123,10 +162,9 @@ class ResilientConfigurationHttpTest {
                 .when(cache).get(anyString(),anyString(),anyString(),any(),any());
     }
     private static RequestPostProcessor actor() {
-        var caps=List.of("system.parameter.read","system.parameter.write","platform.dictionary.read","platform.dictionary.write","enterprise.data-scope.read","enterprise.data-scope.write");
-        return jwt().jwt(j->j.subject("scope-reader").claim("organization_id","org-engineering")
-                .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
-                .claim("enterprise_capabilities",Map.of("ent-acme",caps)))
+        var caps=List.of("system.parameter.read","system.parameter.write","platform.dictionary.read","platform.dictionary.write");
+        return jwt().jwt(j->j.claim("scope", String.join(" ", caps)).subject("scope-reader").claim("organization_id","org-engineering")
+                .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
                 .authorities(caps.stream().map(v->new SimpleGrantedAuthority("SCOPE_"+v)).toArray(SimpleGrantedAuthority[]::new));
     }
 }

@@ -30,6 +30,10 @@ class AuthorizationChangeEventStreamRecoveryIntegrationTest {
     static void redisProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+        // This owned container has no ACL credentials; do not inherit shared Redis authentication.
+        registry.add("spring.data.redis.username", () -> "");
+        registry.add("spring.data.redis.password", () -> "");
+        registry.add("spring.data.redis.database", () -> 0);
     }
 
     @Autowired StringRedisTemplate redis;

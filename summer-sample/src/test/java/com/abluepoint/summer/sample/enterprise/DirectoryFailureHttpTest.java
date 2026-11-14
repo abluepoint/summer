@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,65 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class DirectoryFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(Domain.platform(), "directory-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.PlatformEnterpriseDirectoryController")
+                        && java.util.Set.of(
+                                "GET /api/v1/platform/enterprises",
+                                "POST /api/v1/platform/enterprises/{id}:freeze",
+                                "POST /api/v1/platform/enterprises/{id}:disable")
+                        .contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "directory-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.EnterpriseDirectoryController")
+                        && java.util.Set.of(
+                                "POST /api/v1/platform/enterprises",
+                                "GET /api/v1/platform/enterprises/{enterpriseId}/audit")
+                        .contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "directory-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.EnterpriseReviewController")
+                        && java.util.Set.of(
+                                "GET /api/v1/platform/enterprise-reviews/{id}",
+                                "GET /api/v1/platform/enterprise-reviews/{id}/audit",
+                                "POST /api/v1/platform/enterprise-reviews/{id}:approve",
+                                "POST /api/v1/platform/enterprise-reviews/{id}:reject")
+                        .contains(method + " " + path));
+        prepareMembers("ent-acme");
+    }
+
+
+    private final java.util.Set<String> preparedEnterprises = new java.util.HashSet<>();
+    @Autowired org.springframework.jdbc.core.JdbcTemplate grantDb;
+
+    private void prepareMembers(String enterprise) {
+        if (!preparedEnterprises.add(enterprise)) return;
+        if (!enterprise.equals("ent-acme")) {
+            // The formal creation transaction must have installed the new domain itself.
+            String domain = Domain.enterprise(enterprise).key();
+            assertEquals(List.of("MANAGED"), grantDb.queryForList(
+                    "select engine_mode from summer_authorization_domain where domain_key=?", String.class, domain));
+            assertEquals(1, grantDb.queryForObject(
+                    "select count(*) from summer_permission_bootstrap where domain_key=?", Integer.class, domain));
+            assertTrue(grantDb.queryForObject(
+                    "select count(*) from summer_permission_user_role where domain_key=? and username=?",
+                    Integer.class, domain, "directory-operator") > 0);
+        }
+        current.grantHandlers(Domain.enterprise(enterprise), "directory-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.member.MemberController")
+                        && java.util.Set.of(
+                                "GET /api/v1/enterprises/{enterpriseId}/members",
+                                "GET /api/v1/enterprises/{enterpriseId}/members/{memberId}",
+                                "GET /api/v1/enterprises/{enterpriseId}/members/{memberId}/audit",
+                                "POST /api/v1/enterprises/{enterpriseId}/members",
+                                "POST /api/v1/enterprises/{enterpriseId}/members/{memberId}:disable",
+                                "POST /api/v1/enterprises/{enterpriseId}/members/{memberId}:enable")
+                        .contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
     private final ObjectMapper json = new ObjectMapper();
     private static final String PLATFORM = "/api/v1/platform/enterprises";
@@ -122,7 +181,12 @@ class DirectoryFailureHttpTest {
     @Test void memberCreationReceiptsReplayBeforeDuplicateMembershipChecks() throws Exception {
         JsonNode enterprise = body(mvc.perform(post(PLATFORM).contentType("application/json")
                 .content(json.writeValueAsString(Map.of("name", "Receipt enterprise", "code", "receipt-" + java.util.UUID.randomUUID())))
-                .with(platform("platform.enterprise.write"))).andExpect(status().isCreated()).andReturn()).path("data");
+                .with(platform("platform.enterprise.write")))
+                .andExpect(result -> {
+                    if (result.getResolvedException() != null)
+                        throw new AssertionError("Formal enterprise creation must complete its creator bootstrap", result.getResolvedException());
+                })
+                .andExpect(status().isCreated()).andReturn()).path("data");
         String id = enterprise.path("enterpriseId").asString(); String url = "/api/v1/enterprises/" + id + "/members";
         String payload = json.writeValueAsString(Map.of("subject", "summer-user", "displayName", "Receipt member", "email", "receipt@example.test"));
         var first = mvc.perform(post(url).contentType("application/json").content(payload).header("Idempotency-Key", "member-create-receipt")
@@ -137,10 +201,10 @@ class DirectoryFailureHttpTest {
         assertEquals(1, data(get(url + "/" + memberId + "/audit").with(tenantFor(id, "enterprise.members.read"))).size());
     }
 
-    @Test void narrowPlatformPermissionAdapterRetainsItsExplicitMessage() throws Exception {
+    @Test void currentPlatformInterfaceDenialDoesNotTrustScopeAuthorityAlone() throws Exception {
         failure(post(PLATFORM + "/ent-acme:freeze").header("If-Match", "\"stale\"").header("Idempotency-Key", "denied")
                 .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise.write"))),
-                403, "SUMMER_FORBIDDEN", "platform capability required");
+                403, "SUMMER_FORBIDDEN", "Access is denied");
     }
 
     private JsonNode data(MockHttpServletRequestBuilder request) throws Exception { return body(mvc.perform(request).andExpect(status().isOk()).andReturn()).path("data"); }
@@ -157,13 +221,13 @@ class DirectoryFailureHttpTest {
     }
     private static String quote(String revision) { return "\"" + revision + "\""; }
     private static RequestPostProcessor platform(String capability) {
-        return jwt().jwt(token -> token.subject("directory-operator").claim("platform_capabilities", List.of(capability)))
+        return jwt().jwt(token -> token.claim("scope", capability).subject("directory-operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
-    private static RequestPostProcessor tenant(String capability) { return tenantFor("ent-acme", capability); }
-    private static RequestPostProcessor tenantFor(String enterprise, String capability) {
-        return jwt().jwt(token -> token.subject("directory-admin").claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of(enterprise, List.of(capability))))
+    private RequestPostProcessor tenant(String capability) { return tenantFor("ent-acme", capability); }
+    private RequestPostProcessor tenantFor(String enterprise, String capability) {
+        prepareMembers(enterprise);
+        return jwt().jwt(token -> token.claim("scope", capability).subject("directory-admin").claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 }

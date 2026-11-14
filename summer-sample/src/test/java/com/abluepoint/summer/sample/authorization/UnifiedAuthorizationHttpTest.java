@@ -43,26 +43,25 @@ class UnifiedAuthorizationHttpTest {
     @Autowired java.util.concurrent.atomic.AtomicInteger replacementPolicyCalls;
 
     @Test
-    void legacyHttpDecisionCarriesStableResourceAndAuthoritativeRevision() throws Exception {
+    void retiredLegacyModeCannotReachBusinessOrSelfHealFromClaimGrants() throws Exception {
         var token = Jwt.withTokenValue("test").header("alg", "none").subject("foundation-reader")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.roles.read"))).build();
         var principal = new JwtAuthenticationToken(token, List.of(new SimpleGrantedAuthority("SCOPE_customer.read"),
                 new SimpleGrantedAuthority("SCOPE_enterprise.roles.read")));
+        var before=jdbc.queryForMap("select engine_mode,revision from summer_authorization_domain where domain_key='PLATFORM:platform'");
         mvc.perform(get("/api/customers/foundation-missing").with(authentication(principal)))
-                .andExpect(status().isNotFound());
-        assertThat(authorization.audit("ent-acme", "foundation-reader", principal))
-                .anySatisfy(row -> {
-                    assertThat(row).containsEntry("decision", "ALLOW");
-                    assertThat(row.get("resourceId")).isNotNull();
-                    assertThat(row.get("authorizationRevision")).isInstanceOf(Number.class);
-                });
+                .andExpect(status().isForbidden());
+        assertThat(authorization.platformDecision(principal,"GET:/api/customers/{username}","retired"))
+                .isEqualTo(new AuthorizationService.Decision(false,"CONTROLLED_MANAGED_UPGRADE_REQUIRED"));
+        assertThat(jdbc.queryForMap("select engine_mode,revision from summer_authorization_domain where domain_key='PLATFORM:platform'")).isEqualTo(before);
+        // Current resource/revision evidence is covered by AuthorizationAssignmentHttpTest and AuthorizationAuditPersistenceTest.
     }
     @Test
     void unconfirmedModeNeverSelectsARegisteredPolicyOrRequestFallback() throws Exception {
-        var before = jdbc.queryForMap("select engine_mode,revision from summer_authorization_domain where domain_key='ENTERPRISE:ent-acme'");
+        var before = jdbc.queryForMap("select engine_mode,revision from summer_authorization_domain where domain_key='PLATFORM:platform'");
         int calls = replacementPolicyCalls.get();
-        jdbc.update("insert into summer_authorization_domain(domain_key, engine_mode, revision) values ('ENTERPRISE:ent-acme', 'FIXTURE', 41) on duplicate key update engine_mode='FIXTURE', revision=41");
+        jdbc.update("insert into summer_authorization_domain(domain_key, engine_mode, revision) values ('PLATFORM:platform', 'FIXTURE', 41) on duplicate key update engine_mode='FIXTURE', revision=41");
         var token = Jwt.withTokenValue("test").header("alg", "none").subject("replacement-reader")
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                 .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.roles.read"))).build();
@@ -72,10 +71,10 @@ class UnifiedAuthorizationHttpTest {
             mvc.perform(get("/api/customers/foundation-missing").param("authorizationEngine", "LEGACY")
                     .with(authentication(principal))).andExpect(status().isForbidden());
             assertThat(replacementPolicyCalls.get()).isEqualTo(calls);
-            assertThat(jdbc.queryForObject("select engine_mode from summer_authorization_domain where domain_key='ENTERPRISE:ent-acme'", String.class))
+            assertThat(jdbc.queryForObject("select engine_mode from summer_authorization_domain where domain_key='PLATFORM:platform'", String.class))
                     .isEqualTo("FIXTURE");
         } finally {
-            jdbc.update("update summer_authorization_domain set engine_mode=?,revision=? where domain_key='ENTERPRISE:ent-acme'",
+            jdbc.update("update summer_authorization_domain set engine_mode=?,revision=? where domain_key='PLATFORM:platform'",
                     before.get("engine_mode"), before.get("revision"));
         }
     }

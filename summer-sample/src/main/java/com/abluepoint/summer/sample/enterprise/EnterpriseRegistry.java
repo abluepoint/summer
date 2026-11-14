@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@org.springframework.context.annotation.DependsOn("flywayMigrationInitializer")
 public class EnterpriseRegistry {
     private final EnterpriseRepository repository;
     private final DirectoryJournal journal;

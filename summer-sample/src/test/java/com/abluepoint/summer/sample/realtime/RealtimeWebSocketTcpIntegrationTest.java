@@ -30,36 +30,26 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         "summer.security.resource-server.protected-paths[1]=/ws/**",
         "summer.sample.realtime.idle-timeout-ms=120000"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class RealtimeWebSocketTcpIntegrationTest {
     @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
     @Autowired JWKSource<SecurityContext> keys;
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
     private final ObjectMapper json = new ObjectMapper();
     private String subject;
 
     @BeforeEach void provisionCurrentGrants() {
-        String suffix = UUID.randomUUID().toString();
-        subject = "realtime-tcp-" + suffix;
-        String role = "rt-role-" + suffix;
-        members.provision("ent-acme", "rt-member-" + suffix, subject, "Realtime TCP fixture", "realtime@example.test");
-        List<String> grants = List.of(RealtimeMessageService.READ, RealtimeMessageService.WRITE,
-                "GET:/api/v1/enterprises/{enterpriseId}/messages/connections");
-        List<String> ids = new ArrayList<>();
-        for (String code : grants) {
-            var existing = jdbc.queryForList("select capability_id from summer_authorization_capability where enterprise_id=? and scope='ENTERPRISE' and code=? order by capability_id", String.class, "ent-acme", code);
-            String id;
-            if (existing.isEmpty()) {
-                id = "rt-cap-" + UUID.randomUUID();
-                jdbc.update("insert into summer_authorization_capability(capability_id,enterprise_id,scope,code,resource,action,risk_level,status,version,created_at,updated_at) values (?,?,'ENTERPRISE',?,?,'message','LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-                        id, "ent-acme", code, code);
-            } else id = existing.getLast();
-            ids.add(id);
-        }
-        jdbc.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at) values (?,?,?, ?,false,'ACTIVE',?, ?,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-                role, "ent-acme", "Realtime TCP fixture", role, String.join("\n", ids), String.join("\n", grants));
-        jdbc.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values (?,?,?,?,'[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-                "rt-binding-" + suffix, "ent-acme", subject, "[\"" + role + "\"]");
+        subject = "realtime-tcp-" + UUID.randomUUID();
+        var enterprise = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+        current.grantInstalled(enterprise, subject, mapping -> mapping.source().equals("RUNTIME")
+                && mapping.handler().startsWith("com.abluepoint.summer.sample.realtime.RealtimeAccess@")
+                && (mapping.handler().endsWith("#read") || mapping.handler().endsWith("#send"))
+                && mapping.method().equals("WS") && mapping.path().equals("/ws/v1/messages"));
+        current.grantHandlers(enterprise, subject, (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.realtime.RealtimeMessageController")
+                        && method.equals("GET")
+                        && path.equals("/api/v1/enterprises/{enterpriseId}/messages/connections"));
     }
 
     @Test void malformedCursorIsRejectedBeforeUpgradeWithoutBusinessJson() throws Exception {

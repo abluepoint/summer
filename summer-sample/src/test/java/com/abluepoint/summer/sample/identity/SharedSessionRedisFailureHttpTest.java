@@ -24,14 +24,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.sample.session-index.open-duration-ms=1000"
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class SharedSessionRedisFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("operator"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                            && java.util.Set.of("/api/v1/sessions", "/api/v1/sessions/{reference}").contains(path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
 
     @Test
     void exposesAStableDiagnosticWhenRedisIsUnavailable() throws Exception {
-        var operator = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("operator"))
+        var operator = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("operator").claim("scope", "platform.capabilities.read platform.capabilities.write"))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"));
 
         mockMvc.perform(get("/api/v1/sessions").with(operator))

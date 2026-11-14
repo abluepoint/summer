@@ -1,18 +1,16 @@
 package com.abluepoint.summer.sample.authorization.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import acceptance.perm12.MigrationArtifactHarness;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.abluepoint.summer.sample.SummerSampleApplication;
 import com.abluepoint.summer.sample.authorization.application.migration.AuthorizationDataMigrationService;
 import com.abluepoint.summer.sample.authorization.application.migration.AuthorizationMigrationService;
 import com.abluepoint.summer.sample.authorization.infrastructure.migration.LegacyAuthorizationReader.RuntimeExport;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -21,14 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @EnabledIfEnvironmentVariable(named = "SUMMER_PERM13_MYSQL", matches = "true")
-@SpringBootTest(classes = SummerSampleApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(AuthorizationMigrationMySqlTest.MvcOnlyFixture.class)
-class AuthorizationDataMigrationMySqlTest {
-  @Autowired AuthorizationMigrationService identities;
-  @Autowired AuthorizationDataMigrationService data;
-  @Autowired JdbcTemplate db;
-  @Autowired ObjectMapper json;
-  @Autowired PlatformTransactionManager transactions;
+class AuthorizationDataMigrationMySqlTest extends MigrationArtifactHarness {
 
   @Test
   void stagesExactDataPermissionsAndRollsBackFactsAuditOutboxAndCheckpointTogether() {
@@ -42,7 +33,7 @@ class AuthorizationDataMigrationMySqlTest {
     db.update("insert into summer_data_scope_policy(policy_id,enterprise_id,resource,operator_name,rules_json,version,updated_at,conditions_json,checksum) values ('perm13-upper',?,'dictionaries','AND',?,1,current_timestamp,'null','frozen')", domain.id(), tenant);
     db.update("insert into summer_data_scope_binding values ('perm13-role-scope',?,'dictionaries','ROLE','perm13-data-role','AND',?,'null','frozen',1,current_timestamp)", domain.id(), both);
     db.update("insert into summer_data_scope_binding values ('perm13-user-deny',?,'dictionaries','USER','perm13-data-alice','AND',?,'null','frozen',1,current_timestamp)", domain.id(), deny);
-    var captured = identities.capture(domain, RuntimeExport.empty());
+    var captured = captureFromBridge(domain, RuntimeExport.empty());
     String id = captured.get("snapshotId").toString(), fingerprint = captured.get("sourceFingerprint").toString();
     identities.stageFrozen(id, fingerprint, 10000, "operator");
     var frozen = identities.readFrozenInput(id);
@@ -86,7 +77,7 @@ class AuthorizationDataMigrationMySqlTest {
   void concurrentSameCheckpointHasOneAtomicWinnerAndOneStaleRevisionConflict() throws Exception {
     var domain = Domain.enterprise("perm13-concurrent-source");
     seedSource(domain, "concurrent");
-    var captured = identities.capture(domain, RuntimeExport.empty());
+    var captured = captureFromBridge(domain, RuntimeExport.empty());
     String id = captured.get("snapshotId").toString(), fingerprint = captured.get("sourceFingerprint").toString();
     identities.stageFrozen(id, fingerprint, 10000, "operator");
     var frozen = identities.readFrozenInput(id);
@@ -140,7 +131,7 @@ class AuthorizationDataMigrationMySqlTest {
     db.update("insert into summer_authorization_domain values (?,'LEGACY',0)", domain.key());
     db.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at,capability_ids,capability_codes) values ('perm13-old-role',?,'Old role','perm13-old-role',false,'ACTIVE',1,current_timestamp,current_timestamp,'','')", domain.id());
     db.update("insert into summer_authorization_user_binding values ('perm13-binding',?,'perm13-alice','[\"perm13-old-role\"]','[]',1,current_timestamp,current_timestamp)", domain.id());
-    var captured = identities.capture(domain, RuntimeExport.empty());
+    var captured = captureFromBridge(domain, RuntimeExport.empty());
     String id = captured.get("snapshotId").toString();
     String fingerprint = captured.get("sourceFingerprint").toString();
     identities.stageFrozen(id, fingerprint, 10000, "perm13-operator");
@@ -174,7 +165,7 @@ class AuthorizationDataMigrationMySqlTest {
   void preservesImmutableSourceAndUsesSeparateForeignKeyCheckpoint() {
     var domain = Domain.enterprise("perm13-empty-source");
     db.update("insert into summer_authorization_domain values (?,'LEGACY',0)", domain.key());
-    var captured = identities.capture(domain, RuntimeExport.empty());
+    var captured = captureFromBridge(domain, RuntimeExport.empty());
     String id = captured.get("snapshotId").toString();
     var frozen = identities.readFrozenInput(id);
     var before = db.queryForMap("select snapshot_json,evidence_json,plan_json from summer_authorization_migration_snapshot where snapshot_id=?", id);

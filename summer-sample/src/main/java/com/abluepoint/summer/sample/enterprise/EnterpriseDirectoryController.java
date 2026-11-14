@@ -28,7 +28,7 @@ class EnterpriseDirectoryController {
     }
 
     @PostMapping(value = "/api/v1/platform/enterprises", consumes = "application/json")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise.write")
+
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.write')")
     @RawResponse
     ResponseEntity<ApiResponse<EnterpriseRegistry.EnterpriseView>> create(@RequestBody CreateEnterpriseRequest request, org.springframework.security.core.Authentication authentication) {
@@ -44,7 +44,7 @@ class EnterpriseDirectoryController {
     }
 
     @GetMapping("/api/v1/platform/enterprises/{enterpriseId}/audit")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise.read")
+
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.read')")
     @RawResponse
     ResponseEntity<ApiResponse<List<PlatformEnterpriseDirectoryService.EnterpriseAudit>>> audit(

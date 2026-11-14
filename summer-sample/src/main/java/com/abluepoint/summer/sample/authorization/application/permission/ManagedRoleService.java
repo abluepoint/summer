@@ -221,10 +221,11 @@ public class ManagedRoleService {
                 Integer.class,
                 id)
             == 0) throw fail(PermissionErrorCode.INVALID, "Active login identity required");
+        var values = ids(body.get("roleIds"));
         if (d.kind().equals("ENTERPRISE")
             && db.queryForObject(
                     "select count(*) from summer_enterprise_member where enterprise_id=? and"
-                        + " subject=? and status='ACTIVE'",
+                        + " subject=?" + (values.isEmpty() ? "" : " and status='ACTIVE'"),
                     Integer.class,
                     d.id(),
                     id)
@@ -232,7 +233,6 @@ public class ManagedRoleService {
         var old = user(d, id);
         version = ((Number) old.get("version")).longValue();
         condition(etag, version);
-        var values = ids(body.get("roleIds"));
         for (String role : values)
           if (!"ACTIVE".equals(role(d, role).get("status")))
             throw fail(PermissionErrorCode.INVALID, "Inactive role");
@@ -263,9 +263,9 @@ public class ManagedRoleService {
           version = 1;
           db.update(
               "insert into"
-                  + " summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at)"
+                  + " summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at)"
                   + " values"
-                  + " (?,?,?,?,false,'ACTIVE','','',1,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
+                  + " (?,?,?,?,false,'ACTIVE',1,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
               id,
               d.id(),
               text(body.get("name"), 200),

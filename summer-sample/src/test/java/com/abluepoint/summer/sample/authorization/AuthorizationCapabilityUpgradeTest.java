@@ -13,6 +13,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@org.springframework.boot.test.context.SpringBootTest
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AuthorizationCapabilityUpgradeTest {
     private static final String CODE = "enterprise.roles.read";
     private static final String EXISTING_ID = "cap-existing-role-reader";
@@ -23,54 +26,47 @@ class AuthorizationCapabilityUpgradeTest {
             mock(AuthorizationUserBindingRepository.class), capabilities, roles,
             mock(AuthorizationChangeEventService.class), mock(AuthorizationAuditStore.class), membershipJdbc);
 
-    @org.junit.jupiter.api.BeforeEach void persistedMembershipFixture() {
-        org.mockito.Mockito.when(membershipJdbc.queryForObject(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(Integer.class), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(1);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "bootstrapUsername", "unassigned");
+    @org.springframework.beans.factory.annotation.Autowired CurrentManagedAuthorizationTestFixture fixture;
+    @org.springframework.beans.factory.annotation.Autowired com.abluepoint.summer.sample.authorization.application.permission.ManagedRoleService currentRoles;
+    @org.springframework.beans.factory.annotation.Autowired com.abluepoint.summer.sample.authorization.application.permission.ManagedPermissionAccess current;
+    @org.springframework.beans.factory.annotation.Autowired org.springframework.jdbc.core.JdbcTemplate db;
+    private static final com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain DOMAIN =
+            com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+
+    @Test
+    void assigningACodeCannotReenterTheRetiredApiAndCurrentRolesKeepPermissionIdentity() {
+        String permission = fixture.grantHandlers(DOMAIN, "administrator", (handler,path,method) -> path.equals("/api/v1/enterprises/{enterpriseId}/roles") && method.equals("GET"));
+        db.update("update summer_permission set version=7 where domain_key=? and permission_id=?", DOMAIN.key(), permission);
+        long count = db.queryForObject("select count(*) from summer_permission_identity where domain_key=?", Long.class, DOMAIN.key());
+        retiredCreate();
+        var role = currentRoles.mutate(DOMAIN, "administrator", "role", null, "POST",
+                Map.of("name", "Reader", "code", "reader", "permissionIds", List.of(permission)), null, "current-reader", "upgrade");
+        assertThat(((Map<?,?>)role.body()).get("permissionIds")).isEqualTo(List.of(permission));
+        assertThat(db.queryForObject("select version from summer_permission where domain_key=? and permission_id=?", Long.class, DOMAIN.key(), permission)).isEqualTo(7L);
+        assertThat(db.queryForObject("select count(*) from summer_permission_identity where domain_key=?", Long.class, DOMAIN.key())).isEqualTo(count);
+        verifyNoInteractions(capabilities, roles);
     }
 
     @Test
-    void assigningACodeReusesItsPersistedIdentityInsteadOfInsertingANewSeed() {
-        loadExistingCapability("ACTIVE");
-        var role = service.createRole("ent-acme", new RoleCreateRequest("Reader", "reader", List.of(CODE), null),
-                "create-reader", "upgrade", admin());
-
-        assertThat(role.capabilityIds()).containsExactly(EXISTING_ID);
-        assertThat(service.capabilities("ent-acme", admin()).capabilities())
-                .filteredOn(capability -> CODE.equals(capability.code()))
-                .singleElement().satisfies(capability -> {
-                    assertThat(capability.capabilityId()).isEqualTo(EXISTING_ID);
-                    assertThat(capability.version()).isEqualTo(7);
-                });
-        verify(capabilities, never()).save(any());
-    }
-
-    @Test
-    void disabledPersistedCapabilityCannotBeRevivedByTheDefaultSeed() {
-        loadExistingCapability("DISABLED");
+    void disabledPermissionCannotBeRevivedByFixtureReinstallationOrRetiredSeed() throws Exception {
+        String permission = fixture.grantHandlers(DOMAIN, "administrator", (handler,path,method) -> path.equals("/api/v1/enterprises/{enterpriseId}/roles") && method.equals("GET"));
+        db.update("update summer_permission set status='DISABLED',version=7 where domain_key=? and permission_id=?", DOMAIN.key(), permission);
         service.reloadPersistentState();
-
-        assertThatThrownBy(() -> service.createRole("ent-acme",
-                new RoleCreateRequest("Reader", "reader", List.of(CODE), null), "create-disabled", "upgrade", admin()))
-                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class).hasMessage("Capability is disabled")
-                .satisfies(error -> assertThat(((com.abluepoint.summer.common.error.SummerException) error).errorCode())
-                        .isSameAs(AuthorizationErrorCode.INVALID));
-        assertThat(service.capabilities("ent-acme", admin()).capabilities())
-                .filteredOn(capability -> CODE.equals(capability.code()))
-                .singleElement().satisfies(capability -> {
-                    assertThat(capability.capabilityId()).isEqualTo(EXISTING_ID);
-                    assertThat(capability.status()).isEqualTo("DISABLED");
-                    assertThat(capability.version()).isEqualTo(7);
-                });
-        verify(capabilities, never()).save(any());
-        verify(roles, never()).save(any());
+        retiredCreate();
+        fixture.install(DOMAIN);
+        assertThat(db.queryForMap("select status,version from summer_permission where domain_key=? and permission_id=?", DOMAIN.key(), permission))
+                .containsEntry("status", "DISABLED").containsEntry("version", 7L);
+        var resources = db.queryForList("select resource_id from summer_permission_resource where domain_key=? and permission_id=?", String.class, DOMAIN.key(), permission);
+        assertThat(resources).isNotEmpty().allSatisfy(id -> assertThat(current.allows(DOMAIN, admin(), "INTERFACE", id)).isFalse());
+        verifyNoInteractions(capabilities, roles);
     }
 
-    private void loadExistingCapability(String status) {
-        when(capabilities.findAllByOrderByCapabilityIdAsc()).thenReturn(List.of(
-                new AuthorizationCapabilityEntity(EXISTING_ID, "ent-acme", "ENTERPRISE", CODE,
-                        "roles", "read", "LOW", status, 7)));
-        when(capabilities.existsById(EXISTING_ID)).thenReturn(true);
-        service.loadUserAssignments();
+    private void retiredCreate() {
+        assertThatThrownBy(() -> service.createRole("ent-acme", new RoleCreateRequest("Reader", "reader", List.of(CODE), null),
+                "retired-reader", "upgrade", admin()))
+                .isInstanceOf(com.abluepoint.summer.common.error.SummerException.class)
+                .hasMessage("Legacy code, deny and bundle grant APIs are retired; use permission and role management")
+                .satisfies(error -> assertThat(((com.abluepoint.summer.common.error.SummerException) error).errorCode()).isSameAs(AuthorizationErrorCode.INVALID));
     }
 
     private static JwtAuthenticationToken admin() {

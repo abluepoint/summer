@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.abluepoint.summer.common.error.ErrorCategory;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
@@ -26,16 +30,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:organization-error-policy;MODE=MySQL;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-@Import(OrganizationErrorPolicyHttpTest.TransportPolicy.class)
+@Import({OrganizationErrorPolicyHttpTest.TransportPolicy.class, CurrentManagedAuthorizationTestFixture.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrganizationErrorPolicyHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("create POST /api/v1/enterprises/{enterpriseId}/org-units")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test void validationUsesTheApplicationResolverAndKeepsTheLiteralMessage() throws Exception {
         mvc.perform(post("/api/v1/enterprises/ent-acme/org-units")
-                        .with(jwt().jwt(token -> token.subject("admin")
+                        .with(jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.organization.read enterprise.organization.write")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                                .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.write"))))
+                                )
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.write")))
                         .header("Idempotency-Key", "organization-policy-error")
                         .header("X-Request-Id", "organization-policy-request")

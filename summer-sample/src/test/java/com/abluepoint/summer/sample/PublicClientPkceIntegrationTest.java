@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class PublicClientPkceIntegrationTest {
 
@@ -49,8 +49,6 @@ class PublicClientPkceIntegrationTest {
     @Autowired
     JdbcTemplate jdbc;
 
-    private boolean customerGrantInstalled;
-    private boolean customerCapabilityCreated;
 
     @Value("${summer.security.authorization-server.user.password}")
     String loginPassword;
@@ -222,7 +220,7 @@ class PublicClientPkceIntegrationTest {
         assertThat(accessToken).isNotBlank();
         assertThat(jwtPayload(accessToken).get("summer_managed_grants")).isEqualTo(true);
         assertThat(jwtPayload(accessToken).get("enterprise_capabilities"))
-                .isEqualTo(java.util.Map.of("ent-acme", java.util.List.of("GET:/api/customers")));
+                .isEqualTo(java.util.Map.of());
         assertThat(idToken).isNotBlank();
         assertThat(jwtPayload(idToken).get("sub")).isEqualTo("summer-user");
         assertThat(jwtPayload(idToken).get("preferred_username")).isEqualTo("summer-user");
@@ -244,6 +242,9 @@ class PublicClientPkceIntegrationTest {
                 .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/login")));
         mockMvc.perform(get("/api/customers").header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
+        managed.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "summer-user", currentCustomerRole);
+        mockMvc.perform(get("/api/customers").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -390,35 +391,25 @@ class PublicClientPkceIntegrationTest {
                 .anyMatch(cookie -> "JSESSIONID".equals(cookie.getName()) && cookie.getMaxAge() == 0);
         mockMvc.perform(get("/api/customers").header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
+        managed.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "summer-user", currentCustomerRole);
+        mockMvc.perform(get("/api/customers").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isForbidden());
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture managed;
+    private String currentCustomerRole;
+
     private void grantCustomerReadToLoginUser() {
-        String permission = "GET:/api/customers";
-        assertThat(jdbc.queryForObject("select count(*) from summer_authorization_user_binding where username = ?",
-                Integer.class, "summer-user")).isZero();
-        customerGrantInstalled = true;
-        var existing = jdbc.queryForList("select capability_id from summer_authorization_capability where code = ? and enterprise_id = ? and status = 'ACTIVE'",
-                String.class, permission, "ent-acme");
-        String capabilityId = existing.isEmpty() ? "pkce-customer-reader-capability" : existing.getFirst();
-        if (existing.isEmpty()) {
-            jdbc.update("insert into summer_authorization_capability (capability_id, enterprise_id, scope, code, resource, action, risk_level, status, version, created_at, updated_at) values (?, ?, 'ENTERPRISE', ?, ?, 'read', 'LOW', 'ACTIVE', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                    capabilityId, "ent-acme", permission, permission);
-            customerCapabilityCreated = true;
-        }
-        jdbc.update("insert into summer_authorization_role (role_id, enterprise_id, name, code, built_in, status, capability_ids, capability_codes, version, created_at, updated_at) values (?, ?, 'PKCE customer reader', 'pkce-customer-reader', false, 'ACTIVE', ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                "pkce-customer-reader-role", "ent-acme", capabilityId, permission);
-        jdbc.update("insert into summer_authorization_user_binding (binding_id, enterprise_id, username, role_ids, denied_capability_codes, version, created_at, updated_at) values (?, ?, ?, ?, '[]', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                "pkce-customer-reader-binding", "ent-acme", "summer-user", "[\"pkce-customer-reader-role\"]");
+        currentCustomerRole = managed.grantHandlers(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "summer-user",
+                (handler, path, method) -> method.equals("GET") && (path.equals("/api/customers") || path.equals("/api/customers/{username}")));
     }
 
     @AfterEach
     void removeCustomerReadGrant() {
-        if (!customerGrantInstalled) return;
-        jdbc.update("delete from summer_authorization_user_binding where binding_id = ?", "pkce-customer-reader-binding");
-        jdbc.update("delete from summer_authorization_role where role_id = ?", "pkce-customer-reader-role");
-        if (customerCapabilityCreated) {
-            jdbc.update("delete from summer_authorization_capability where capability_id = ?", "pkce-customer-reader-capability");
-        }
+        if (currentCustomerRole != null) managed.revoke(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "summer-user", currentCustomerRole);
     }
 
     private static java.util.Map<String, Object> jwtPayload(String token) throws Exception {

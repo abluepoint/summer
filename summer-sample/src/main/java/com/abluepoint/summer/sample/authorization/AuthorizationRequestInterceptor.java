@@ -1,6 +1,5 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.resource.ResourcePermission;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,7 +20,7 @@ import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
 
-/** Applies managed role/deny decisions at the HTTP resource seam. */
+/** Requires current managed authorization or an explicit protocol exception at the MVC seam. */
 @Component
 final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMvcConfigurer {
     private static final String SAMPLE_ENTERPRISE = "ent-acme";
@@ -68,50 +67,19 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
                     !"GET".equals(request.getMethod()));
             return true;
         }
-        if (!(authentication instanceof JwtAuthenticationToken jwt)) return true;
-        String permissionCode = permissionCode(request, method);
+        String routeKey = routeKey(request, method);
         if (method.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
-                && ("GET:/api/v1/session".equals(permissionCode) || "DELETE:/api/v1/session".equals(permissionCode))) {
+                && ("GET:/api/v1/session".equals(routeKey) || "HEAD:/api/v1/session".equals(routeKey)
+                    || "DELETE:/api/v1/session".equals(routeKey))) {
             // Reading or destroying one's own session does not require a tenant role.
             // The controller retains authentication, revocation and current-session checks.
             return true;
         }
-        if (isApplicantEndpoint(method, permissionCode, jwt)) return true;
-        String requestedEnterprise = enterpriseFromPath(request.getRequestURI());
-        if (AuthorizationChangeEventController.class.isAssignableFrom(method.getBeanType())) {
-            // This global-looking route explicitly addresses one enterprise's outbox.
-            // Other Sample/platform routes retain their existing fixed boundary.
-            requestedEnterprise = AuthorizationChangeEventController.requestedEnterpriseId(request.getParameterValues("enterpriseId"));
-        }
-        if (requestedEnterprise != null && !hasActiveMembership(jwt, requestedEnterprise)) {
-            throw new AccessDeniedException("Inactive enterprise membership");
-        }
-        if ("GET:/api/v1/enterprises/{enterpriseId}/menu-manifest".equals(permissionCode)
-                && method.getBeanType().getName().equals("com.abluepoint.summer.sample.menu.MenuManifestController")) {
-            return true;
-        }
-        // This exact identity-only marker selects the existing LEGACY menu contract; it grants no menu or API access.
-        if ("GET".equals(request.getMethod())
-                && method.getBeanType().equals(com.abluepoint.summer.sample.authorization.api.permission.PermissionAccessController.class)
-                && "navigation".equals(method.getMethod().getName())) return true;
-        // Global Sample business and platform resources share the Sample's fixed tenant boundary.
-        String enterpriseId = requestedEnterprise == null ? SAMPLE_ENTERPRISE : requestedEnterprise;
-        String controllerClass = method.getBeanType().getName();
-        if (requestedEnterprise == null && (controllerClass.startsWith("com.abluepoint.summer.sample.systemparameter.")
-                || controllerClass.startsWith("com.abluepoint.summer.sample.dictionary."))) {
-            enterpriseId = EnterpriseRequestContext.resolve(authentication);
-        }
-        var decision = unified.decide(new com.abluepoint.summer.security.authorization.ResourceAuthorization.Request(
-                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
-                authentication, resources.resolve(request, method), requestId.currentRequestId()));
-        if (!decision.allowed()) throw new AccessDeniedException("Authorization denied: " + decision.reason());
-        return true;
+        if (isApplicantEndpoint(method, routeKey, authentication)) return true;
+        throw new AccessDeniedException("Current managed resource adapter required");
     }
 
-    private static String permissionCode(HttpServletRequest request, HandlerMethod method) {
-        ResourcePermission explicit = AnnotatedElementUtils.findMergedAnnotation(method.getMethod(), ResourcePermission.class);
-        if (explicit == null) explicit = AnnotatedElementUtils.findMergedAnnotation(method.getBeanType(), ResourcePermission.class);
-        if (explicit != null && !explicit.value().isBlank()) return explicit.value().trim();
+    private static String routeKey(HttpServletRequest request, HandlerMethod method) {
         Object matched = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         String path;
         if (matched instanceof PathPattern pattern) path = pattern.getPatternString();
@@ -122,11 +90,13 @@ final class AuthorizationRequestInterceptor implements HandlerInterceptor, WebMv
         return request.getMethod().toUpperCase(Locale.ROOT) + ":" + path;
     }
 
-    private static boolean isApplicantEndpoint(HandlerMethod method, String permissionCode, JwtAuthenticationToken jwt) {
+    private static boolean isApplicantEndpoint(HandlerMethod method, String routeKey, Authentication authentication) {
         if (!method.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")) return false;
-        String scope = APPLICANT_ENDPOINT_SCOPES.get(permissionCode);
+        String scope = APPLICANT_ENDPOINT_SCOPES.get(routeKey);
         if (scope == null) return false;
-        if (jwt.getAuthorities().stream().noneMatch(authority -> ("SCOPE_" + scope).equals(authority.getAuthority()))) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken
+                || authentication.getAuthorities().stream().noneMatch(authority -> ("SCOPE_" + scope).equals(authority.getAuthority()))) {
             throw new AccessDeniedException("Applicant scope required");
         }
         // These operations precede membership. InvitationService still checks the subject,

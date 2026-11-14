@@ -24,14 +24,16 @@ class TaskBusinessIdempotencyMySqlTest extends TaskBusinessIdempotencyTest {
     private static Connection connect() throws SQLException {
         return DriverManager.getConnection(URL,"root",System.getenv("SUMMER_TASK_MYSQL_PASSWORD"));
     }
+    private static boolean schemaCreated;
     @DynamicPropertySource static void database(DynamicPropertyRegistry properties) throws SQLException {
-        try(var connection=connect();var statement=connection.createStatement()) {statement.executeUpdate("CREATE DATABASE "+SCHEMA);}
+        try(var connection=connect();var statement=connection.createStatement()) {statement.executeUpdate("CREATE DATABASE "+SCHEMA); schemaCreated=true; com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.created(TaskBusinessIdempotencyMySqlTest.class,SCHEMA);}
         properties.add("spring.datasource.url",()->URL+SCHEMA);
         properties.add("spring.datasource.username",()->"root");
         properties.add("spring.datasource.password",()->System.getenv("SUMMER_TASK_MYSQL_PASSWORD"));
         properties.add("spring.datasource.driver-class-name",()->"com.mysql.cj.jdbc.Driver");
     }
     @AfterAll static void cleanup() throws SQLException {
+        if (!schemaCreated) return; // Failed CREATE never authorizes DROP of a pre-existing schema.
         try(var connection=connect();var statement=connection.createStatement()) {
             statement.executeUpdate("DROP DATABASE IF EXISTS "+SCHEMA);
             try(var result=statement.executeQuery("select count(*) from information_schema.schemata where schema_name='"+SCHEMA+"'")) {

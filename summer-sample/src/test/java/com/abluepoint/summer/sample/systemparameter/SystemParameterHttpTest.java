@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,8 +23,40 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class SystemParameterHttpTest {
-    // These legacy fixtures now declare their enterprise; production has no implicit sample tenant.
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate grantDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager grantTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources grantResources;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture dataGrants;
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseCurrentDataGrants() { if (dataGrants != null) dataGrants.close(); }
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        dataGrants = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(grantDb, grantTransactions, grantResources);
+        dataGrants.data("ent-acme", "operator", "system-parameters", "create", "TENANT_ALL");
+        dataGrants.data("ent-acme", "operator", "system-parameters", "update", "TENANT_ALL");
+        current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of(
+                                "POST /api/system-parameters",
+                                "PATCH /api/system-parameters/{key}",
+                                "POST /api/system-parameters/{key}/enable")
+                        .contains(method + " " + path));
+        dataGrants.data("ent-acme", "reader", "system-parameters", "read", "TENANT_ALL");
+        current.grantHandlers(Domain.enterprise("ent-acme"), "reader", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of("GET /api/system-parameters").contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "auditor", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerAuditController")
+                        && java.util.Set.of("GET /api/audit-events").contains(method + " " + path));
+    }
+
+    // The token declares its enterprise; authorization uses current persisted facts.
     private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor jwt() {
         return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
                 .jwt(j -> j.claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))));

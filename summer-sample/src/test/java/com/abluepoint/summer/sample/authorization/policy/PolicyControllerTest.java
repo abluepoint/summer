@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.authorization.policy;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +32,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class PolicyControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "policy-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.policy.PolicyController")
+                && java.util.Set.of("list GET /api/v1/enterprises/{enterpriseId}/policies",
+                        "create POST /api/v1/enterprises/{enterpriseId}/policies",
+                        "detail GET /api/v1/enterprises/{enterpriseId}/policies/{policyId}",
+                        "versions GET /api/v1/enterprises/{enterpriseId}/policies/{policyId}/versions",
+                        "updateDraft PATCH /api/v1/enterprises/{enterpriseId}/policies/{policyId}/draft",
+                        "validate POST /api/v1/enterprises/{enterpriseId}/policies/{policyId}:validate",
+                        "publish POST /api/v1/enterprises/{enterpriseId}/policies/{policyId}:publish",
+                        "pause POST /api/v1/enterprises/{enterpriseId}/policies/{policyId}:pause",
+                        "revoke POST /api/v1/enterprises/{enterpriseId}/policies/{policyId}:revoke",
+                        "rollback POST /api/v1/enterprises/{enterpriseId}/policies/{policyId}:rollback")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -303,14 +327,14 @@ class PolicyControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(token -> token.subject("policy-admin")
+        return jwt().jwt(token -> token.subject("policy-admin").claim("scope", capability)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor internalCaller() {
-        return jwt().jwt(token -> token.subject("connection-service")
+        return jwt().jwt(token -> token.subject("connection-service").claim("scope", "internal.authorization.evaluate")
                         .claim("initiator", "alice")
                         .claim("actor", "alice")
                         .claim("effectiveSubject", "alice")

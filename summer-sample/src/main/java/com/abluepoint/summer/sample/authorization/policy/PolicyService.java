@@ -415,13 +415,13 @@ final class PolicyService {
     private void requireWrite(String enterpriseId, Authentication auth) { require(enterpriseId, auth, "enterprise.policies.write"); }
 
     private void require(String enterpriseId, Authentication auth, String... capabilities) {
-        if (ENTERPRISE.equals(enterpriseId) && managedAccess != null
-            && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capabilities)) return;
-        if (!ENTERPRISE.equals(enterpriseId) || !(auth instanceof JwtAuthenticationToken jwt) || !hasActiveMembership(jwt, enterpriseId)
-                || !hasCapability(jwt, enterpriseId, capabilities)
-                || jwt.getAuthorities().stream().noneMatch(a -> Arrays.stream(capabilities).anyMatch(c -> ("SCOPE_" + c).equals(a.getAuthority())))) {
-            throw new AccessDeniedException("Policy capability denied");
+        try {
+            if (ENTERPRISE.equals(enterpriseId) && managedAccess != null
+                && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capabilities)) return;
+        } catch (AccessDeniedException denied) {
+            throw new AccessDeniedException("Policy capability denied", denied);
         }
+        throw new AccessDeniedException("Policy capability denied");
     }
 
     private void requireInternal(Authentication auth) {
@@ -437,14 +437,6 @@ final class PolicyService {
         return claim instanceof Collection<?> values && values.stream().filter(Map.class::isInstance).map(Map.class::cast)
                 .anyMatch(m -> enterpriseId.equals(value(m, "enterpriseId", "enterprise_id"))
                         && "ACTIVE".equalsIgnoreCase(value(m, "status", "membership_status")));
-    }
-
-    private boolean hasCapability(JwtAuthenticationToken jwt, String enterpriseId, String... capabilities) {
-        Object claim = jwt.getToken().getClaims().get("enterprise_capabilities");
-        if (!(claim instanceof Map<?, ?> map)) return false;
-        Object values = map.get(enterpriseId);
-        return values instanceof Collection<?> collection && collection.stream().map(String::valueOf)
-                .anyMatch(v -> Arrays.asList(capabilities).contains(v));
     }
 
     private static String value(Map<?, ?> map, String first, String second) {

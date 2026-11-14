@@ -39,21 +39,56 @@ class MemberProvisioningHttpTest extends IdentityHttpSupport {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].action").value("MEMBER_CREATED"))
                 .andExpect(jsonPath("$.data[0].requestId").value("create-member"));
+        var roleCreated = mvc.perform(post("/api/v1/enterprises/ent-acme/roles")
+                        .header("Authorization", "Bearer " + admin).header("Idempotency-Key", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(Map.of("name", "Member assignment", "code", "member-" + UUID.randomUUID(), "permissionIds", List.of()))))
+                .andExpect(status().isCreated()).andReturn();
+        String assignedRole = JsonPath.read(roleCreated.getResponse().getContentAsString(), "$.data.roleId");
+        var beforeBinding = mvc.perform(get("/api/v1/enterprises/ent-acme/users/{user}/roles", user)
+                        .header("Authorization", "Bearer " + admin)).andExpect(status().isOk()).andReturn();
+        mvc.perform(put("/api/v1/enterprises/ent-acme/users/{user}/roles", user)
+                        .header("Authorization", "Bearer " + admin).header("Idempotency-Key", UUID.randomUUID())
+                        .header("If-Match", beforeBinding.getResponse().getHeader("ETag"))
+                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("roleIds", List.of(assignedRole)))))
+                .andExpect(status().isOk());
         mvc.perform(post("/api/v1/enterprises/ent-acme/members/{member}:disable", member).header("Authorization", "Bearer " + admin)
                 .header("Idempotency-Key", UUID.randomUUID()).header("If-Match", created.getResponse().getHeader("ETag")))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/v1/enterprises/ent-acme/members").header("Authorization", "Bearer " + admin)
                 .header("Idempotency-Key", UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isConflict());
+        var roles = mvc.perform(get("/api/v1/enterprises/ent-acme/users/{user}/roles", user).header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.roleIds[0]").value(assignedRole)).andReturn();
+        mvc.perform(put("/api/v1/enterprises/ent-acme/users/{user}/roles", user)
+                        .header("Authorization", "Bearer " + admin).header("Idempotency-Key", UUID.randomUUID())
+                        .header("If-Match", roles.getResponse().getHeader("ETag"))
+                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(Map.of("roleIds", List.of(assignedRole)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("Active target membership required"));
         mvc.perform(put("/api/v1/enterprises/ent-acme/users/{user}/roles", user).header("Authorization", "Bearer " + admin)
-                .header("Idempotency-Key", UUID.randomUUID()).header("If-Match", "\"1\"")
-                .contentType(MediaType.APPLICATION_JSON).content("{\"roleIds\":[],\"deniedCapabilityCodes\":[]}"))
+                .header("Idempotency-Key", UUID.randomUUID()).header("If-Match", roles.getResponse().getHeader("ETag"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"roleIds\":[]}"))
                 .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/enterprises/ent-acme/users/{user}/roles", user).header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.roleIds").isEmpty());
         mvc.perform(get("/api/v1/enterprises/ent-acme/members/{member}", member).header("Authorization", "Bearer " + admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("DISABLED"));
         mvc.perform(post("/api/v1/enterprises/ent-acme/members").header("Authorization", "Bearer " + admin)
                 .header("Idempotency-Key", UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"subject\":\"missing-user\",\"displayName\":\"Missing\",\"email\":\"missing@example.test\"}"))
                 .andExpect(status().isBadRequest());
+        String platformOnly = "platform-only-" + UUID.randomUUID();
+        identityFacts().activeUser(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), platformOnly);
+        for (String target : List.of(platformOnly, "absent-" + UUID.randomUUID())) {
+            var absentBinding = mvc.perform(get("/api/v1/enterprises/ent-acme/users/{user}/roles", target)
+                            .header("Authorization", "Bearer " + admin))
+                    .andExpect(status().isOk()).andReturn();
+            mvc.perform(put("/api/v1/enterprises/ent-acme/users/{user}/roles", target)
+                            .header("Authorization", "Bearer " + admin).header("Idempotency-Key", UUID.randomUUID())
+                            .header("If-Match", absentBinding.getResponse().getHeader("ETag"))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"roleIds\":[]}"))
+                    .andExpect(status().isBadRequest());
+        }
     }
 }

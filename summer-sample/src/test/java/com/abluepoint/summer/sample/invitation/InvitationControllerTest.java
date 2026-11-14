@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.invitation;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +28,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class InvitationControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "enterprise-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")
+                && java.util.Set.of("create POST /api/v1/enterprises/{enterpriseId}/invitations",
+                        "get GET /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}",
+                        "list GET /api/v1/enterprises/{enterpriseId}/invitations",
+                        "audit GET /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}/audit",
+                        "resend POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:resend",
+                        "revoke POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:revoke",
+                        "applications GET /api/v1/enterprises/{enterpriseId}/join-applications",
+                        "appAudit GET /api/v1/enterprises/{enterpriseId}/join-applications/{id}/audit",
+                        "approve POST /api/v1/enterprises/{enterpriseId}/join-applications/{id}:approve")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -32,10 +55,25 @@ class InvitationControllerTest {
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test
-    void createsInvitationBoundToEnterpriseOrganizationAndCapabilityBundle() throws Exception {
-        MvcResult created = mockMvc.perform(post("/api/v1/enterprises/{enterpriseId}/invitations", "ent-acme")
+    void createsInvitationBoundToEnterpriseOrganizationAndRejectsRetiredGrantFields() throws Exception {
+        Object invitationsBefore = JsonPath.read(mockMvc.perform(get("/api/v1/enterprises/ent-acme/invitations")
+                        .with(admin("ent-acme", "enterprise.invitation.read")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.data");
+        // MANAGED invitations carry no retired role/capability grants; current roles are assigned separately.
+        mockMvc.perform(post("/api/v1/enterprises/{enterpriseId}/invitations", "ent-acme")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"inviteeEmail\":\"new.user@example.test\",\"organizationId\":\"org-engineering\",\"roleIds\":[\"role-member\"],\"capabilityCodes\":[\"enterprise.members.read\"],\"expiresInSeconds\":3600}")
+                        .header("Idempotency-Key", "invite-create-1")
+                        .with(admin("ent-acme", "enterprise.invitation.write")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("Legacy invitation grant fields are unsupported in managed mode; assign current role permissions separately"));
+        Object invitationsAfter = JsonPath.read(mockMvc.perform(get("/api/v1/enterprises/ent-acme/invitations")
+                        .with(admin("ent-acme", "enterprise.invitation.read")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.data");
+        org.junit.jupiter.api.Assertions.assertEquals(invitationsBefore, invitationsAfter);
+        MvcResult created = mockMvc.perform(post("/api/v1/enterprises/{enterpriseId}/invitations", "ent-acme")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"inviteeEmail\":\"new.user@example.test\",\"organizationId\":\"org-engineering\",\"roleIds\":[],\"capabilityCodes\":[],\"expiresInSeconds\":3600}")
                         .header("Idempotency-Key", "invite-create-1")
                         .with(admin("ent-acme", "enterprise.invitation.write")))
                 .andExpect(status().isCreated())
@@ -44,7 +82,8 @@ class InvitationControllerTest {
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.enterpriseId").value("ent-acme"))
                 .andExpect(jsonPath("$.data.organizationId").value("org-engineering"))
-                .andExpect(jsonPath("$.data.capabilityCodes[0]").value("enterprise.members.read"))
+                .andExpect(jsonPath("$.data.roleIds").isEmpty())
+                .andExpect(jsonPath("$.data.capabilityCodes").isEmpty())
                 .andReturn();
         String invitationId = JsonPath.read(created.getResponse().getContentAsString(), "$.data.invitationId");
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/invitations/{invitationId}", "ent-acme", invitationId)
@@ -312,7 +351,7 @@ class InvitationControllerTest {
     private MvcResult createInvitation(String key, String email, String expiresInSeconds) throws Exception {
         return mockMvc.perform(post("/api/v1/enterprises/{enterpriseId}/invitations", "ent-acme")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"inviteeEmail\":\"" + email + "\",\"organizationId\":\"org-engineering\",\"roleIds\":[\"role-member\"],\"capabilityCodes\":[\"enterprise.members.read\"],\"expiresInSeconds\":" + expiresInSeconds + "}")
+                        .content("{\"inviteeEmail\":\"" + email + "\",\"organizationId\":\"org-engineering\",\"roleIds\":[],\"capabilityCodes\":[],\"expiresInSeconds\":" + expiresInSeconds + "}")
                         .header("Idempotency-Key", key).with(admin("ent-acme", "enterprise.invitation.write")))
                 .andExpect(status().isCreated()).andReturn();
     }
@@ -320,15 +359,15 @@ class InvitationControllerTest {
     private MvcResult submitApplication(String key, String email) throws Exception {
         return mockMvc.perform(post("/api/v1/enterprises/{enterpriseId}/join-applications", "ent-acme")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"applicantEmail\":\"" + email + "\",\"applicantName\":\"Joiner\",\"organizationId\":\"org-engineering\",\"capabilityCodes\":[\"enterprise.members.read\"]}")
+                        .content("{\"applicantEmail\":\"" + email + "\",\"applicantName\":\"Joiner\",\"organizationId\":\"org-engineering\",\"capabilityCodes\":[]}")
                         .header("Idempotency-Key", key).with(applicant(email)))
                 .andExpect(status().isCreated()).andReturn();
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String enterpriseId, String capability) {
-        return jwt().jwt(token -> token.subject("enterprise-admin")
+        return jwt().jwt(token -> token.subject("enterprise-admin").claim("scope", capability)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterpriseId, "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of(enterpriseId, List.of(capability))))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 

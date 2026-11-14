@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.delegation;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +24,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class DelegationControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "enterprise-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.delegation.DelegationController")
+                && java.util.Set.of("create POST /api/v1/enterprises/{e}/agents/{a}/delegations",
+                        "list GET /api/v1/enterprises/{e}/agents/{a}/delegations",
+                        "approval POST /internal/v1/mcp/approvals",
+                        "withdraw POST /api/v1/mcp/approvals/{id}:withdraw")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "approver", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.delegation.DelegationController")
+                && java.util.Set.of("approve POST /api/v1/mcp/approvals/{id}:approve",
+                        "reject POST /api/v1/mcp/approvals/{id}:reject",
+                        "recheck POST /api/v1/mcp/approvals/{id}:recheck",
+                        "audit GET /api/v1/mcp/approvals/{id}/audit")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mockMvc;
 
     @Test
@@ -100,7 +125,7 @@ class DelegationControllerTest {
                         .header("Idempotency-Key", key).with(admin("enterprise.agents.delegations.write"))).andExpect(status().isCreated()).andReturn();
     }
     private MvcResult createApproval(String key) throws Exception { return mockMvc.perform(post("/internal/v1/mcp/approvals").contentType(MediaType.APPLICATION_JSON).content("{\"enterpriseId\":\"ent-acme\",\"agentId\":\"agent-1\",\"mcpServerId\":\"server-1\",\"toolId\":\"tool-1\",\"requestDigest\":\"sha256:req\",\"expiresInSeconds\":900}").header("Idempotency-Key", key).with(admin("enterprise.mcp.approvals.write"))).andExpect(status().isCreated()).andReturn(); }
-    private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) { return jwt().jwt(t -> t.claim("scope", capability).subject("enterprise-admin").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability)))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability)); }
-    private static org.springframework.test.web.servlet.request.RequestPostProcessor approver(String capability) { return jwt().jwt(t -> t.claim("scope", capability).subject("approver").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability)))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability)); }
-    private static org.springframework.test.web.servlet.request.RequestPostProcessor inactive(String capability) { return jwt().jwt(t -> t.claim("scope", capability).subject("inactive").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "DISABLED"))).claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability)))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability)); }
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) { return jwt().jwt(t -> t.claim("scope", capability).subject("enterprise-admin").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability)); }
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor approver(String capability) { return jwt().jwt(t -> t.claim("scope", capability).subject("approver").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability)); }
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor inactive(String capability) { return jwt().jwt(t -> t.claim("scope", capability).subject("inactive").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "DISABLED")))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability)); }
 }

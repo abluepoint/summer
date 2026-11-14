@@ -12,24 +12,45 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class ResilienceDiagnosticsHttpTest {
     @Autowired MockMvc http;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    String subject;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactDiagnostics() {
+        subject = "resilience-" + java.util.UUID.randomUUID();
+        current.grantInstalled(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                mapping -> mapping.source().equals("MONITORING")
+                        && mapping.path().equals("/internal/v1/diagnostics/resilience")
+                        && java.util.Set.of("GET", "HEAD").contains(mapping.method()));
+    }
 
     @Test
     void exposes_resilience_state_and_metrics_without_secret_values() throws Exception {
         http.perform(get("/internal/v1/diagnostics/resilience")
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(token -> token.claim("active_enterprise_id", "ent-acme")
-                                        .claim("enterprise_memberships", java.util.List.of(java.util.Map.of(
-                                                "enterpriseId", "ent-acme", "status", "ACTIVE"))))
+                                .jwt(token -> token.subject(subject).claim("scope", "platform.capabilities.read"))
                                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
-                .andExpect(status().isOk())
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getResponse().getStatus())
+                        .as("Current diagnostics positive; resolved exception: %s", result.getResolvedException())
+                        .isEqualTo(200))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.operations").isArray())
                 .andExpect(jsonPath("$.data.operations[0].name").isString())
                 .andExpect(jsonPath("$.data.operations[0].circuitBreaker").isString())
                 .andExpect(jsonPath("$.data.operations[0].calls").isNumber())
                 .andExpect(jsonPath("$.data.operations[0].retryAttempts").isNumber());
+    }
+
+    @Test
+    void authorityWithoutRawDelegationCannotReadDiagnostics() throws Exception {
+        http.perform(get("/internal/v1/diagnostics/resilience")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(token -> token.subject(subject).claim("scope", "customer.read"))
+                                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
+                .andExpect(status().isForbidden());
     }
 
     @Test

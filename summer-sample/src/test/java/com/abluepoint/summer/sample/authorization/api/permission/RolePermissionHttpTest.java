@@ -29,6 +29,7 @@ import tools.jackson.databind.ObjectMapper;
     properties = "summer.sample.authorization.managed-bootstrap-domains=PLATFORM:platform")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class RolePermissionHttpTest {
+  @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedAuthorizationBootstrap bootstrap;
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate db;
   @Autowired ObjectMapper json;
@@ -307,143 +308,46 @@ class RolePermissionHttpTest {
   }
 
   @Test
-  void legacyEnterpriseCannotReadWriteOrBindForeignManagedRoles() throws Exception {
-    String own = "mixed-own", actor = "summer-user";
-    db.update("insert into summer_authorization_domain(domain_key,engine_mode,revision) values ('ENTERPRISE:platform','LEGACY',0)");
-    db.update(
-        "insert into"
-            + " summer_enterprise(enterprise_id,name,code,status,version,created_at,updated_at)"
-            + " values"
-            + " ('platform','Mixed','mixed','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-    db.update(
-        "insert into"
-            + " summer_enterprise_member(enterprise_id,member_id,subject,display_name,email,status,version,created_at,updated_at)"
-            + " values"
-            + " ('platform','mixed-member',?,'Mixed','mixed@example.test','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-        actor);
-    db.update(
-        "insert into"
-            + " summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at)"
-            + " values (?,'platform','Own legacy"
-            + " role','own-legacy',false,'ACTIVE','','',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-        own);
-    for (String action : List.of("read", "write"))
-      db.update(
-          "insert into"
-              + " summer_authorization_capability(capability_id,enterprise_id,scope,code,resource,action,risk_level,status,version,created_at,updated_at)"
-              + " values"
-              + " (?,'platform','ENTERPRISE',?,?,?,'LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-          "mixed-" + action,
-          "enterprise.roles." + action,
-          "enterprise.roles." + action,
-          action);
-    db.update(
-        "update summer_authorization_role set capability_ids=? where role_id=?",
-        "mixed-read\nmixed-write",
-        own);
-    db.update(
-        "insert into"
-            + " summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at)"
-            + " values ('mixed-bind','platform',?,?,'[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-        actor,
-        json.writeValueAsString(List.of(own)));
-    // Same-domain ownership during expand migration must remain compatible; no code-prefix guess.
-    db.update("insert into summer_permission_role values ('ENTERPRISE:platform',?)", own);
-    String foreign =
-        db.queryForObject(
-            "select role_id from summer_permission_role where domain_key='PLATFORM:platform' order"
-                + " by role_id limit 1",
-            String.class);
-    var auth =
-        jwt()
-            .jwt(
-                j ->
-                    j.subject(actor)
-                        .claim(
-                            "enterprise_memberships",
-                            List.of(Map.of("enterpriseId", "platform", "status", "ACTIVE")))
-                        .claim(
-                            "enterprise_capabilities",
-                            Map.of(
-                                "platform",
-                                List.of("enterprise.roles.read", "enterprise.roles.write"))))
-            .authorities(
-                new SimpleGrantedAuthority("SCOPE_enterprise.roles.read"),
-                new SimpleGrantedAuthority("SCOPE_enterprise.roles.write"));
+  void sameNamedEnterpriseCannotReadWriteOrBindPlatformManagedRoles() throws Exception {
+    String actor = "summer-user";
+    db.update("insert into summer_enterprise(enterprise_id,name,code,status,version,created_at,updated_at) values ('platform','Mixed','mixed','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+    db.update("insert into summer_enterprise_member(enterprise_id,member_id,subject,display_name,email,status,version,created_at,updated_at) values ('platform','mixed-member',?,'Mixed','mixed@example.test','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", actor);
+    var seed = com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedAuthorizationBootstrap.class
+        .getDeclaredMethod("seedNewDomain", ResourceAuthorization.Domain.class);
+    seed.setAccessible(true);
+    seed.invoke(bootstrap, ResourceAuthorization.Domain.enterprise("platform"));
     String url = "/api/v1/enterprises/platform";
-    var before =
-        db.queryForMap(
-            "select name,code,status,version from summer_authorization_role where role_id=?",
-            foreign);
-    long revision =
-        db.queryForObject(
-            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
-            Long.class);
-    int audit =
-        db.queryForObject(
-            "select count(*) from summer_authorization_audit where resource_id=?",
-            Integer.class,
-            foreign);
-    mvc.perform(get(url + "/roles/" + foreign).with(auth)).andExpect(status().isConflict());
-    mvc.perform(get(url + "/roles/" + foreign + "/capabilities").with(auth))
-        .andExpect(status().isConflict());
-    mvc.perform(
-            patch(url + "/roles/" + foreign)
-                .with(auth)
-                .with(csrf())
-                .contentType("application/json")
-                .header("If-Match", "\"" + before.get("version") + "\"")
-                .header("Idempotency-Key", "mixed-patch")
-                .content("{\"status\":\"DISABLED\"}"))
-        .andExpect(status().isConflict());
-    mvc.perform(
-            put(url + "/roles/" + foreign + "/capabilities")
-                .with(auth)
-                .with(csrf())
-                .contentType("application/json")
-                .header("If-Match", "\"" + before.get("version") + "\"")
-                .header("Idempotency-Key", "mixed-capabilities")
-                .content("{\"capabilityIds\":[]}"))
-        .andExpect(status().isConflict());
-    mvc.perform(
-            put(url + "/users/" + actor + "/roles")
-                .with(auth)
-                .with(csrf())
-                .contentType("application/json")
-                .header("If-Match", "\"1\"")
-                .header("Idempotency-Key", "mixed-binding")
-                .content(json.writeValueAsString(Map.of("roleIds", List.of(foreign)))))
-        .andExpect(status().isConflict());
-    assertEquals(
-        before,
-        db.queryForMap(
-            "select name,code,status,version from summer_authorization_role where role_id=?",
-            foreign));
-    assertEquals(
-        revision,
-        db.queryForObject(
-            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
-            Long.class));
-    assertEquals(
-        audit,
-        db.queryForObject(
-            "select count(*) from summer_authorization_audit where resource_id=?",
-            Integer.class,
-            foreign));
+    var created = mvc.perform(post(url + "/roles").with(user(actor)).with(csrf())
+        .header("Idempotency-Key", "mixed-own-create").contentType("application/json")
+        .content("{\"name\":\"Own managed role\",\"code\":\"own-managed\",\"permissionIds\":[]}"))
+        .andExpect(status().isCreated()).andReturn().getResponse();
+    String own = json.readTree(created.getContentAsString()).path("data").path("roleId").asText();
+    String foreign = db.queryForObject("select role_id from summer_permission_role where domain_key='PLATFORM:platform' order by role_id limit 1", String.class);
+    var before = db.queryForMap("select name,code,status,version from summer_authorization_role where role_id=?", foreign);
+    long revision = db.queryForObject("select revision from summer_authorization_domain where domain_key='PLATFORM:platform'", Long.class);
+    int mutations = db.queryForObject("select count(*) from summer_permission_mutation where domain_key='PLATFORM:platform'", Integer.class);
+    var auth = jwt().jwt(j -> j.subject(actor).claim("scope", List.of("enterprise.roles.read", "enterprise.roles.write"))
+        .claim("enterprise_capabilities", Map.of("platform", List.of("enterprise.roles.read", "enterprise.roles.write"))))
+        .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.roles.read"), new SimpleGrantedAuthority("SCOPE_enterprise.roles.write"));
+    mvc.perform(get(url + "/roles/" + foreign).with(auth)).andExpect(status().isNotFound());
+    mvc.perform(get(url + "/roles/" + foreign + "/permissions").with(auth)).andExpect(status().isNotFound());
+    mvc.perform(get(url + "/roles/" + foreign + "/capabilities").with(auth)).andExpect(status().isBadRequest());
+    mvc.perform(patch(url + "/roles/" + foreign).with(auth).with(csrf())
+        .header("If-Match", "\"" + before.get("version") + "\"")
+        .header("Idempotency-Key", "mixed-patch").contentType("application/json").content("{\"status\":\"DISABLED\"}"))
+        .andExpect(status().isNotFound());
+    mvc.perform(put(url + "/users/" + actor + "/roles").with(auth).with(csrf())
+        .header("If-Match", "\"1\"").header("Idempotency-Key", "mixed-binding")
+        .contentType("application/json").content(json.writeValueAsString(Map.of("roleIds", List.of(foreign)))))
+        .andExpect(status().isNotFound());
+    assertEquals(before, db.queryForMap("select name,code,status,version from summer_authorization_role where role_id=?", foreign));
+    assertEquals(revision, db.queryForObject("select revision from summer_authorization_domain where domain_key='PLATFORM:platform'", Long.class));
+    assertEquals(mutations, db.queryForObject("select count(*) from summer_permission_mutation where domain_key='PLATFORM:platform'", Integer.class));
     mvc.perform(get(url + "/roles/" + own).with(auth)).andExpect(status().isOk());
-    mvc.perform(
-            patch(url + "/roles/" + own)
-                .with(auth)
-                .with(csrf())
-                .contentType("application/json")
-                .header("If-Match", "\"1\"")
-                .header("Idempotency-Key", "mixed-own-patch")
-                .content("{\"name\":\"Still compatible\"}"))
+    mvc.perform(patch(url + "/roles/" + own).with(auth).with(csrf())
+        .header("If-Match", created.getHeader("ETag")).header("Idempotency-Key", "mixed-own-patch")
+        .contentType("application/json").content("{\"name\":\"Still isolated\"}"))
         .andExpect(status().isOk());
-    assertEquals(
-        revision,
-        db.queryForObject(
-            "select revision from summer_authorization_domain where domain_key='PLATFORM:platform'",
-            Long.class));
+    assertEquals(revision, db.queryForObject("select revision from summer_authorization_domain where domain_key='PLATFORM:platform'", Long.class));
   }
 }

@@ -1,9 +1,10 @@
 package com.abluepoint.summer.sample.authorization.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import acceptance.perm12.MigrationArtifactHarness;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.abluepoint.summer.sample.SummerSampleApplication;
 import com.abluepoint.summer.sample.authorization.application.migration.AuthorizationMigrationService;
 import com.abluepoint.summer.sample.authorization.infrastructure.migration.LegacyAuthorizationReader.RuntimeExport;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
@@ -11,24 +12,17 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Full installed production catalog: unproved historical credential upper bounds must block. */
 @EnabledIfEnvironmentVariable(named = "SUMMER_PERM12_MYSQL", matches = "true")
-@SpringBootTest(
-    classes = SummerSampleApplication.class,
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class AuthorizationMigrationRuntimeMySqlTest {
-  @Autowired AuthorizationMigrationService migration;
-  @Autowired JdbcTemplate db;
+class AuthorizationMigrationRuntimeMySqlTest extends MigrationArtifactHarness {
 
   @Test
   void inventoriesExactInstalledRuntimeAndBlocksRatherThanSynthesizingAGrant() {
     var domain = Domain.enterprise("migration-runtime-block-test");
     db.update("insert into summer_authorization_domain values (?,'LEGACY',0)", domain.key());
-    var report = migration.capture(domain, RuntimeExport.empty());
+    var report = captureFromBridge(domain, RuntimeExport.empty());
     var blockers = (List<?>) report.get("blockers");
     assertThat(blockers)
         .withFailMessage(
@@ -83,4 +77,5 @@ class AuthorizationMigrationRuntimeMySqlTest {
                 input.domain().key()))
         .isEqualTo("LEGACY");
   }
+  @Override protected boolean fullRuntime() { return true; }
 }

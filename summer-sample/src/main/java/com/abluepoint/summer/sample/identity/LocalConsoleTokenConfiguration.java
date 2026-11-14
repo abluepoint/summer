@@ -31,23 +31,13 @@ class LocalConsoleTokenConfiguration {
                     || !"local-user".equals(login.getToken().getClaimAsString("summer_identity_source"))) return;
             var claims = identities.resolve(login.getName(), login.getToken().getClaims());
             for (String key : BUSINESS_CLAIMS) if (claims.containsKey(key)) context.getClaims().claim(key, claims.get(key));
-            // OAuth scope remains the client's authorized scopes. Business grants are separate signed claims.
+            // OAuth scope remains the client's authorized scopes; grants are read from current resources.
         };
     }
 
     @Bean JwtAuthenticationConverter localConsoleJwtAuthenticationConverter() {
         var converter = new JwtAuthenticationConverter();
-        var scopes = new JwtGrantedAuthoritiesConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Set<GrantedAuthority> authorities = new LinkedHashSet<>(scopes.convert(jwt));
-            if ("local-user".equals(jwt.getClaimAsString("summer_identity_source")) && jwt.getAudience().contains("summer-ui")) {
-                // Existing Sample method guards use SCOPE_ names for business actions;
-                // this adapter does not add these actions to the OAuth scope claim.
-                LocalConsoleIdentityClaims.capabilities(jwt.getClaims()).forEach(code ->
-                        authorities.add(new SimpleGrantedAuthority("SCOPE_" + code)));
-            }
-            return authorities;
-        });
+        converter.setJwtGrantedAuthoritiesConverter(new JwtGrantedAuthoritiesConverter());
         return converter;
     }
 }

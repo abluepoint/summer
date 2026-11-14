@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.connection;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +25,46 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class ConnectionServiceControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.platform(), "platform-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.connection.ConnectionController")
+                && java.util.Set.of("list GET /api/v1/platform/connection-services",
+                        "create POST /api/v1/platform/connection-services",
+                        "status PATCH /api/v1/platform/connection-services/{serviceId}")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "alice", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.connection.ConnectionController")
+                && java.util.Set.of("bindings GET /api/v1/enterprises/{enterpriseId}/mcp-connections",
+                        "createBinding POST /api/v1/enterprises/{enterpriseId}/mcp-connections",
+                        "binding GET /api/v1/enterprises/{enterpriseId}/mcp-connections/{connectionId}",
+                        "tools GET /api/v1/enterprises/{enterpriseId}/mcp-connections/{connectionId}/tools",
+                        "health GET /api/v1/enterprises/{enterpriseId}/mcp-connections/{connectionId}/health")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.platform(), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.connection.ConnectionController")
+                && java.util.Set.of("list GET /api/v1/platform/connection-services",
+                        "create POST /api/v1/platform/connection-services",
+                        "status PATCH /api/v1/platform/connection-services/{serviceId}")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.connection.ConnectionController")
+                && java.util.Set.of("bindings GET /api/v1/enterprises/{enterpriseId}/mcp-connections",
+                        "createBinding POST /api/v1/enterprises/{enterpriseId}/mcp-connections",
+                        "binding GET /api/v1/enterprises/{enterpriseId}/mcp-connections/{connectionId}",
+                        "tools GET /api/v1/enterprises/{enterpriseId}/mcp-connections/{connectionId}/tools",
+                        "health GET /api/v1/enterprises/{enterpriseId}/mcp-connections/{connectionId}/health")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.platform(), "user", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.connection.ConnectionController")
+                && java.util.Set.of("list GET /api/v1/platform/connection-services")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mockMvc;
 
     @Test void nativeAccessDenialsKeepTheirOriginalMessageAndCause() throws Exception {
@@ -109,9 +152,9 @@ class ConnectionServiceControllerTest {
                          int status, String code, String message) throws Exception {
         List<String> caps = List.of("platform.connection-services.read", "platform.connection-services.write",
                 "enterprise.connection.write", "enterprise.mcp-connections.read");
-        mockMvc.perform(request.with(jwt().jwt(t -> t.claim("scope", caps.stream().map(value -> value.replaceFirst("^SCOPE_", "")).collect(java.util.stream.Collectors.joining(" "))).subject("operator").claim("platform_capabilities", caps)
+        mockMvc.perform(request.with(jwt().jwt(t -> t.claim("scope", caps.stream().map(value -> value.replaceFirst("^SCOPE_", "")).collect(java.util.stream.Collectors.joining(" "))).subject("operator")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                                .claim("enterprise_capabilities", Map.of("ent-acme", caps)))
+                                )
                         .authorities(caps.stream().map(c -> new SimpleGrantedAuthority("SCOPE_" + c)).toArray(SimpleGrantedAuthority[]::new)))
                         .header("X-Request-Id", "connection-rejected"))
                 .andExpect(status().is(status)).andExpect(jsonPath("$.error.code").value(code))
@@ -249,7 +292,7 @@ class ConnectionServiceControllerTest {
         return JsonPath.read(result.getResponse().getContentAsString(), "$.data.serviceId");
     }
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platform(String capability) {
-        return jwt().jwt(t -> t.claim("scope", capability).subject("platform-operator").claim("platform_capabilities", List.of(capability)))
+        return jwt().jwt(t -> t.claim("scope", capability).subject("platform-operator"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
     private static org.springframework.test.web.servlet.request.RequestPostProcessor service(String serviceId, boolean trusted) {
@@ -261,7 +304,7 @@ class ConnectionServiceControllerTest {
     private static org.springframework.test.web.servlet.request.RequestPostProcessor enterprise(String capability) {
         return jwt().jwt(t -> t.claim("scope", capability).subject("alice")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 }

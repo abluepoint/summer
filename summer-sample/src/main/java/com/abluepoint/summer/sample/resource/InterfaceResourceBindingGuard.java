@@ -27,6 +27,14 @@ final class InterfaceResourceBindingGuard implements HandlerInterceptor {
     @Bean MappedInterceptor resourceBindingMappedInterceptor() {
         return new MappedInterceptor(new String[]{
                 "/api/**",
+                "/actuator/metrics", "/actuator/metrics/**", "/actuator/prometheus",
+                "/internal/v1/diagnostics/runtime",
+                "/internal/v1/diagnostics/resilience",
+                "/internal/v1/release/performance-budgets", "/internal/v1/release/readiness",
+                "/internal/v1/release/performance-benchmarks", "/internal/v1/release/gates:validate",
+                "/internal/v1/release/rollback:dry-run", "/internal/v1/release/failure-drills",
+                "/public/system-parameters/{key}",
+                "/public/enterprises/{enterpriseId}/system-parameters/{key}",
                 "/public/dictionaries/{code}",
                 "/public/dictionaries/{code}/items/{value}",
                 "/public/enterprises/{enterpriseId}/dictionaries/{code}",
@@ -41,16 +49,12 @@ final class InterfaceResourceBindingGuard implements HandlerInterceptor {
                     || handler instanceof org.springframework.web.socket.server.support.WebSocketHttpRequestHandler) return true;
             throw new AccessDeniedException("Non-MVC business resource requires a managed permission adapter");
         }
-        ResourcePermission explicit = AnnotatedElementUtils.findMergedAnnotation(method.getMethod(), ResourcePermission.class);
-        if (explicit == null) explicit = AnnotatedElementUtils.findMergedAnnotation(method.getBeanType(), ResourcePermission.class);
         Object matched = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         String path = matched instanceof PathPattern pattern ? pattern.getPatternString() : matched instanceof String value ? value : null;
         if (path == null) throw new AccessDeniedException("Matched resource mapping is unavailable");
         path = path.trim().replaceAll("/{2,}", "/");
         if (path.length() > 1 && path.endsWith("/")) path = path.substring(0, path.length() - 1);
-        String automatic = request.getMethod().toUpperCase(java.util.Locale.ROOT) + ":" + path;
-        String permission = explicit != null && !explicit.value().isBlank() ? explicit.value().trim() : automatic;
-        if (history.isReplaced(permission,
+        if (history.isReplaced(request.getMethod().toUpperCase(java.util.Locale.ROOT),path,
                 InterfaceResourceCatalogService.handlerIdentity(method)))
             throw new AccessDeniedException("SUMMER_RESOURCE_PERMISSION_REUSE: replacement requires an explicit new permission");
         return true;

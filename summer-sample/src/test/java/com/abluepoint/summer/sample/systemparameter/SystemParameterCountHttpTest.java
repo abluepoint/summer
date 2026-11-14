@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(properties = {
         "summer.security.storage.keys=memory",
-        "summer.sample.authorization.legacy-scope-compatibility=true",
         "spring.data.redis.host=${SUMMER_REDIS_HOST:127.0.0.1}",
         "spring.data.redis.port=${SUMMER_REDIS_PORT:6379}",
         "spring.data.redis.username=${SUMMER_REDIS_USERNAME:}",
@@ -35,10 +35,68 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
+@org.junit.jupiter.api.TestInstance(org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS)
 class SystemParameterCountHttpTest {
+    private static final String CACHE_NAMESPACE = java.util.Optional.ofNullable(System.getenv("SUMMER_TEST_CACHE_NAMESPACE"))
+            .filter(value -> !value.isBlank())
+            .orElseGet(() -> "system-parameter-count-" + UUID.randomUUID());
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void isolatedCache(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("summer.sample.cache.namespace", () -> CACHE_NAMESPACE);
+    }
+
+    @org.junit.jupiter.api.AfterAll
+    void releaseOwnedCacheKeys() {
+        String ownedPrefix = "summer:cache:namespace:" + java.util.Base64.getUrlEncoder()
+                .withoutPadding().encodeToString(CACHE_NAMESPACE.getBytes(java.nio.charset.StandardCharsets.UTF_8)) + ":";
+        var options = org.springframework.data.redis.core.ScanOptions.scanOptions()
+                .match(ownedPrefix + "*").count(100).build();
+        java.util.List<String> ownedKeys = new java.util.ArrayList<>();
+        try (var cursor = redis.scan(options)) {
+            cursor.forEachRemaining(ownedKeys::add);
+        }
+        if (!ownedKeys.isEmpty()) redis.delete(ownedKeys);
+        try (var cursor = redis.scan(options)) {
+            assertTrue(!cursor.hasNext(), "Owned cache namespace must be released");
+        }
+    }
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate grantDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager grantTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources grantResources;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture dataGrants;
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseCurrentDataGrants() { if (dataGrants != null) dataGrants.close(); }
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        prefix = "count." + UUID.randomUUID().toString().replace("-", "");
+        dataGrants = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(grantDb, grantTransactions, grantResources);
+        dataGrants.data("ent-acme", "count-fixture", "system-parameters", "create", "TENANT_ALL");
+        dataGrants.data("ent-acme", "count-fixture", "system-parameters", "read", "TENANT_ALL");
+        dataGrants.data("ent-acme", "count-fixture", "system-parameters", "update", "TENANT_ALL");
+        current.grantHandlers(Domain.enterprise("ent-acme"), "count-fixture", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of(
+                                "POST /api/v1/enterprises/{enterpriseId}/system-parameters",
+                                "GET /api/v1/enterprises/{enterpriseId}/system-parameters",
+                                "GET /api/v1/enterprises/{enterpriseId}/system-parameters/{key}",
+                                "POST /api/v1/enterprises/{enterpriseId}/system-parameters/{key}/disable")
+                        .contains(method + " " + path));
+        current.grantHandlers(Domain.enterprise("ent-acme"), "count-fixture", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterCountController")
+                        && java.util.Set.of(
+                                "GET /api/v1/enterprises/{enterpriseId}/system-parameters:count",
+                                "GET /api/system-parameters:count")
+                        .contains(method + " " + path));
+    }
+
     private static final String ROOT = "/api/v1/enterprises/ent-acme/system-parameters";
-    private final String prefix = "count." + UUID.randomUUID().toString().replace("-", "");
+    private String prefix;
     @Autowired MockMvc http;
     @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
     @Autowired org.springframework.core.env.Environment configuration;
@@ -118,10 +176,10 @@ class SystemParameterCountHttpTest {
     }
 
     @Test
-    void countAndListApplyTheSameDenyingDataScope() throws Exception {
+    void countAndListApplyTheSameMissingCurrentReadPermission() throws Exception {
         create("scoped", "STRING", "\"scoped\"", false);
         try {
-            scope("{\"type\":\"TENANT\",\"effect\":\"DENY\"}");
+            dataGrants.revokeRead("ent-acme", "count-fixture", "system-parameters");
             http.perform(get(ROOT + ":count?key=" + prefix).with(auth("system.parameter.read")))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
             http.perform(get(ROOT + "?key=" + prefix).with(auth("system.parameter.read")))
@@ -130,15 +188,8 @@ class SystemParameterCountHttpTest {
             http.perform(get(ROOT + "/" + prefix + ".scoped").with(auth("system.parameter.read")))
                     .andExpect(status().isNotFound());
         } finally {
-            scope("{\"type\":\"TENANT\"}");
+            dataGrants.data("ent-acme", "count-fixture", "system-parameters", "read", "TENANT_ALL");
         }
-    }
-
-    private void scope(String rule) throws Exception {
-        http.perform(put("/api/v1/enterprises/ent-acme/data-scopes/system-parameters")
-                        .with(auth("enterprise.data-scope.write")).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"operator\":\"AND\",\"rules\":[" + rule + "]}"))
-                .andExpect(status().isOk());
     }
 
     private void create(String suffix, String type, String value, boolean publicValue) throws Exception {
@@ -149,8 +200,7 @@ class SystemParameterCountHttpTest {
 
     private static RequestPostProcessor auth(String scope) {
         return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                .jwt(jwt -> jwt.claim("scope", scope).subject("count-fixture").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.data-scope.write"))))
+                .jwt(jwt -> jwt.claim("scope", scope).subject("count-fixture").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + scope));
     }
 }

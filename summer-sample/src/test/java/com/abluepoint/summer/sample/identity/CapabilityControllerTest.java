@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class CapabilityControllerTest {
 
     private static final String CLIENT_ID = "summer-client";
@@ -30,64 +31,61 @@ class CapabilityControllerTest {
     @Autowired
     MockMvc mockMvc;
 
-    @Test
-    void returnsPlatformCapabilitySetAndSupportsConditionalRevalidation() throws Exception {
-        MvcResult first = mockMvc.perform(get("/api/v1/platform/capabilities")
-                        .with(jwt().jwt(token -> token
-                                .subject("platform-operator")
-                                .claim("platform_capabilities", List.of(
-                                        "platform.enterprise-review.read",
-                                        "platform.enterprise-review.approve"
-                                )))
-                                .authorities(new SimpleGrantedAuthority("SCOPE_capabilities.platform.read")))
-                        .header("X-Request-Id", "platform-capabilities-request"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("X-Request-Id", "platform-capabilities-request"))
-                .andExpect(header().string("ETag", org.hamcrest.Matchers.startsWith("\"")))
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.workspace").value("platform"))
-                .andExpect(jsonPath("$.data.enterpriseId").doesNotExist())
-                .andExpect(jsonPath("$.data.capabilities")
-                        .value(org.hamcrest.Matchers.containsInAnyOrder(
-                                "platform.enterprise-review.read",
-                                "platform.enterprise-review.approve"
-                        )))
-                .andExpect(jsonPath("$.data.revision").isString())
-                .andReturn();
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    String platformPermission, enterprisePermission;
 
-        String etag = first.getResponse().getHeader("ETag");
-        mockMvc.perform(get("/api/v1/platform/capabilities")
-                        .with(jwt().jwt(token -> token
-                                .subject("platform-operator")
-                                .claim("platform_capabilities", List.of(
-                                        "platform.enterprise-review.read",
-                                        "platform.enterprise-review.approve"
-                                )))
-                                .authorities(new SimpleGrantedAuthority("SCOPE_capabilities.platform.read")))
-                        .header("If-None-Match", etag))
-                .andExpect(status().isNotModified())
-                .andExpect(header().string("ETag", etag));
+    @org.junit.jupiter.api.BeforeEach
+    void currentProjectionReplacements() {
+        for (String subject : List.of("platform-operator", CLIENT_ID)) {
+            String id = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> method.equals("GET") && (
+                            handler.getBeanType() == CapabilityController.class
+                            || handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.api.permission.PermissionController")
+                            || handler.getBeanType().getName().equals("com.abluepoint.summer.sample.resource.InterfaceResourceCatalogController")));
+            if (subject.equals("platform-operator")) platformPermission = id;
+        }
+        enterprisePermission = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "alice",
+                (handler, path, method) -> method.equals("GET") && (handler.getBeanType() == CapabilityController.class
+                        || handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.api.permission.PermissionController")));
     }
 
     @Test
-    void returnsEnterpriseCapabilitySetOnlyForTheExplicitActiveEnterpriseContext() throws Exception {
-        mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/capabilities", "ent-acme")
-                        .with(jwt().jwt(token -> token
-                                .subject("alice")
-                                .claim("enterprise_memberships", List.of(
-                                        Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")
-                                ))
-                                .claim("enterprise_capabilities", Map.of(
-                                        "ent-acme", List.of("enterprise.members.read", "enterprise.members.update")
-                                )))
-                                .authorities(new SimpleGrantedAuthority("SCOPE_capabilities.enterprise.read")))
-                        .header("X-Request-Id", "enterprise-capabilities-request"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("X-Request-Id", "enterprise-capabilities-request"))
-                .andExpect(header().string("ETag", org.hamcrest.Matchers.startsWith("\"")))
-                .andExpect(jsonPath("$.data.workspace").value("enterprise"))
-                .andExpect(jsonPath("$.data.enterpriseId").value("ent-acme"))
-                .andExpect(jsonPath("$.data.capabilities[1]").value("enterprise.members.update"));
+    void managedPlatformUsesCurrentPermissionsAndRevalidatesTheCurrentCatalog() throws Exception {
+        var auth = jwt().jwt(claims -> claims.subject("platform-operator")
+                        .claim("platform_capabilities", List.of("platform.enterprise-review.approve"))
+                        .claim("scope", "platform.capabilities.read platform.interface-resources.read capabilities.platform.read"))
+                .authorities(new SimpleGrantedAuthority("SCOPE_capabilities.platform.read"),
+                        new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"),new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"));
+        mockMvc.perform(get("/api/v1/platform/capabilities").with(auth).header("X-Request-Id", "platform-capabilities-request"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("Legacy capability projections are unavailable in managed mode; use current permission/role access"))
+                .andExpect(jsonPath("$.requestId").value("platform-capabilities-request"))
+                .andExpect(header().string("X-Request-Id", "platform-capabilities-request"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+        mockMvc.perform(get("/api/v1/platform/permissions/{id}",platformPermission).with(auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.permissionId").value(platformPermission));
+        var first = mockMvc.perform(get("/api/v1/platform/interface-resources").with(auth))
+                .andExpect(status().isOk()).andExpect(header().string("ETag",org.hamcrest.Matchers.startsWith("\"")))
+                .andReturn();
+        mockMvc.perform(get("/api/v1/platform/interface-resources").with(auth).header("If-None-Match",first.getResponse().getHeader("ETag")))
+                .andExpect(status().isNotModified()).andExpect(header().string("ETag",first.getResponse().getHeader("ETag")));
+    }
+
+    @Test
+    void managedEnterpriseRetiresTheOldProjectionAndReadsItsCurrentPermissionFacts() throws Exception {
+        var auth = jwt().jwt(claims -> claims.subject("alice").claim("scope","enterprise.roles.read capabilities.enterprise.read")
+                        .claim("active_enterprise_id","ent-acme")
+                        .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
+                        .claim("enterprise_capabilities",Map.of("ent-acme",List.of("enterprise.members.update"))))
+                .authorities(new SimpleGrantedAuthority("SCOPE_capabilities.enterprise.read"),new SimpleGrantedAuthority("SCOPE_enterprise.roles.read"));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/capabilities").with(auth).header("X-Request-Id","enterprise-capabilities-request"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("Legacy capability projections are unavailable in managed mode; use current permission/role access"))
+                .andExpect(jsonPath("$.requestId").value("enterprise-capabilities-request"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/permissions/{id}",enterprisePermission).with(auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.permissionId").value(enterprisePermission));
     }
 
     @Test
@@ -123,7 +121,7 @@ class CapabilityControllerTest {
     org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository clients;
 
     @Test
-    void acceptsTheRegisteredPlatformCapabilityScopeFromTheAuthorizationServer() throws Exception {
+    void registeredPlatformScopeIsIssuedButCannotRestoreTheRetiredCapabilityProjection() throws Exception {
         var original = clients.findByClientId(CLIENT_ID);
         clients.save(org.springframework.security.oauth2.server.authorization.client.RegisteredClient.from(original)
                 .scope("capabilities.platform.read").build());
@@ -134,11 +132,17 @@ class CapabilityControllerTest {
             clients.save(original);
         }
 
+        var claims = new tools.jackson.databind.ObjectMapper().readTree(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]));
+        var rawScope = claims.path("scope");
+        org.assertj.core.api.Assertions.assertThat(rawScope.isArray()
+                ? java.util.stream.StreamSupport.stream(rawScope.spliterator(),false).anyMatch(value -> value.asText().equals("capabilities.platform.read"))
+                : java.util.Arrays.asList(rawScope.asText().split(" ")).contains("capabilities.platform.read")).isTrue();
         mockMvc.perform(get("/api/v1/platform/capabilities")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.workspace").value("platform"))
-                .andExpect(jsonPath("$.data.capabilities[0]").value("platform.capabilities.read"));
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Request-Id", "registered-capability-scope"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("SUMMER_CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("Legacy capability projections are unavailable in managed mode; use current permission/role access"))
+                .andExpect(jsonPath("$.requestId").value("registered-capability-scope"));
     }
 
     private String accessToken(String scope) throws Exception {

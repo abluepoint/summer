@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.delegation;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.abluepoint.summer.common.error.ErrorCategory;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
@@ -26,16 +30,30 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:delegation-error-policy;MODE=MySQL;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-@Import(DelegationErrorPolicyHttpTest.TransportPolicy.class)
+@Import({DelegationErrorPolicyHttpTest.TransportPolicy.class,CurrentManagedAuthorizationTestFixture.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class DelegationErrorPolicyHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.delegation.DelegationController")
+                && java.util.Set.of("create POST /api/v1/enterprises/{e}/agents/{a}/delegations")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "user", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.delegation.DelegationController")
+                && java.util.Set.of("approval POST /internal/v1/mcp/approvals")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test void validationUsesTheApplicationResolverAndKeepsTheLiteralMessage() throws Exception {
         mvc.perform(post("/api/v1/enterprises/ent-acme/agents/agent-1/delegations")
                         .with(jwt().jwt(token -> token.claim("scope", "enterprise.agents.delegations.write").subject("admin")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                                .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.agents.delegations.write"))))
+                                )
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.agents.delegations.write")))
                         .header("Idempotency-Key", "delegation-policy-error")
                         .header("X-Request-Id", "delegation-policy-request")
@@ -50,7 +68,10 @@ class DelegationErrorPolicyHttpTest {
     }
 
     @Test void nativeBusinessDenialUsesTheApplicationResolverWithoutLosingItsCause() throws Exception {
-        mvc.perform(post("/internal/v1/mcp/approvals").with(jwt())
+        mvc.perform(post("/internal/v1/mcp/approvals").with(jwt().jwt(j -> j.subject("user")
+                        .claim("scope", "enterprise.mcp.approvals.write")
+                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.mcp.approvals.write")))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"enterpriseId\":\"ent-other\"}")
                         .header("Idempotency-Key", "native-denial").header("X-Request-Id", "native-delegation-denial"))
                 .andExpect(status().is(422))

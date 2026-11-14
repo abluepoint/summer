@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.member;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +22,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class MemberControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.member.MemberController")
+                && java.util.Set.of("list GET /api/v1/enterprises/{enterpriseId}/members",
+                        "detail GET /api/v1/enterprises/{enterpriseId}/members/{memberId}",
+                        "disable POST /api/v1/enterprises/{enterpriseId}/members/{memberId}:disable",
+                        "enable POST /api/v1/enterprises/{enterpriseId}/members/{memberId}:enable",
+                        "resign POST /api/v1/enterprises/{enterpriseId}/members/{memberId}:resign",
+                        "audit GET /api/v1/enterprises/{enterpriseId}/members/{memberId}/audit")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -31,7 +51,7 @@ class MemberControllerTest {
                         .queryParam("q", "alice")
                         .queryParam("status", "ACTIVE")
                         .with(jwt().jwt(token -> token
-                                .subject("admin")
+                                .subject("admin").claim("scope", "enterprise.members.read enterprise.members.write")
                                 .claim("enterprise_memberships", java.util.List.of(
                                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")
                                 )))
@@ -50,7 +70,7 @@ class MemberControllerTest {
     void refusesToReadMembersFromAnEnterpriseWhereThePrincipalIsNotAnActiveMember() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/members", "ent-other")
                         .with(jwt().jwt(token -> token
-                                .subject("admin")
+                                .subject("admin").claim("scope", "enterprise.members.read enterprise.members.write")
                                 .claim("enterprise_memberships", java.util.List.of(
                                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")
                                 )))
@@ -62,7 +82,7 @@ class MemberControllerTest {
     @Test
     void readsMemberDetailsAndUsesEtagForConditionalWrites() throws Exception {
         var authenticated = jwt().jwt(token -> token
-                        .subject("admin")
+                        .subject("admin").claim("scope", "enterprise.members.read enterprise.members.write")
                         .claim("enterprise_memberships", java.util.List.of(
                                 java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")
                         )))
@@ -79,7 +99,7 @@ class MemberControllerTest {
                         .header("If-Match", etag)
                         .header("Idempotency-Key", "disable-alice-1")
                         .with(jwt().jwt(token -> token
-                                .subject("admin")
+                                .subject("admin").claim("scope", "enterprise.members.read enterprise.members.write")
                                 .claim("enterprise_memberships", java.util.List.of(
                                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")
                                 )))
@@ -95,7 +115,7 @@ class MemberControllerTest {
                         .header("If-Match", "\"stale\"")
                         .header("Idempotency-Key", "enable-alice-stale")
                         .with(jwt().jwt(token -> token
-                                .subject("admin")
+                                .subject("admin").claim("scope", "enterprise.members.read enterprise.members.write")
                                 .claim("enterprise_memberships", java.util.List.of(
                                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")
                                 )))
@@ -107,14 +127,14 @@ class MemberControllerTest {
     @Test
     void replaysAnIdempotentMemberMutationWithoutApplyingItTwice() throws Exception {
         String etag = mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/members/{memberId}", "ent-acme", "member-alice")
-                        .with(jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+                        .with(jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                                 java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.read"))))
                 .andReturn().getResponse().getHeader("ETag");
         java.util.function.Supplier<org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder> request = () -> post("/api/v1/enterprises/{enterpriseId}/members/{memberId}:disable", "ent-acme", "member-alice")
                 .header("If-Match", etag)
                 .header("Idempotency-Key", "disable-alice-replay")
-                .with(jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+                .with(jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                         .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.write")));
 
@@ -127,10 +147,10 @@ class MemberControllerTest {
 
     @Test
     void rejectsReusingAnIdempotencyKeyForAnotherMutation() throws Exception {
-        var writeAuth = jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+        var writeAuth = jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.write"));
-        var readAuth = jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+        var readAuth = jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                         java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.read"));
         String etag = mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/members/{memberId}", "ent-acme", "member-alice")
@@ -148,19 +168,19 @@ class MemberControllerTest {
     @Test
     void supportsLeaveAndExposesAnAuditRecordWithRequestCorrelation() throws Exception {
         String etag = mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/members/{memberId}", "ent-acme", "member-alice")
-                        .with(jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+                        .with(jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                                 java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.read"))))
                 .andReturn().getResponse().getHeader("ETag");
         mockMvc.perform(post("/api/v1/enterprises/{enterpriseId}/members/{memberId}:resign", "ent-acme", "member-alice")
                         .header("If-Match", etag).header("Idempotency-Key", "leave-alice-1")
-                        .with(jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+                        .with(jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                                 java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.write"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("RESIGNED"));
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/members/{memberId}/audit", "ent-acme", "member-alice")
-                        .with(jwt().jwt(token -> token.subject("admin").claim("enterprise_memberships", java.util.List.of(
+                        .with(jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.members.read enterprise.members.write").claim("enterprise_memberships", java.util.List.of(
                                 java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.members.read"))))
                 .andExpect(status().isOk())

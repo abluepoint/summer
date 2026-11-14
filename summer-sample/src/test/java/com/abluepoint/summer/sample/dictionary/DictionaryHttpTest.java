@@ -19,6 +19,21 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionaryHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.configuration("ent-acme", "dictionaries", true, "operator");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() { managed.close(); }
+
     // These legacy fixtures now declare their enterprise; production has no implicit sample tenant.
     private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor jwt() {
         return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()

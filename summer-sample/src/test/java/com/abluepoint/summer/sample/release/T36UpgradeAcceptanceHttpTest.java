@@ -24,10 +24,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class T36UpgradeAcceptanceHttpTest {
+
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void currentReleaseResources() {
+        for (String subject : java.util.List.of("t36-release-operator", "t36-invalid-claim"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType() == ReleaseGateController.class
+                            && java.util.Set.of("/internal/v1/release/readiness", "/internal/v1/release/gates:validate", "/internal/v1/release/rollback:dry-run").contains(path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+    RuntimeReleaseChecks runtimeChecks;
 
     @Test
     void validatesTheCrossModuleReleaseMatrixWithCorrelationAndIdempotency() throws Exception {
@@ -98,22 +111,34 @@ class T36UpgradeAcceptanceHttpTest {
     }
 
     @Test
-    void unexpectedClaimConversionFailureDoesNotExposeInternalDetails() throws Exception {
+    void unexpectedReadinessFailureDoesNotExposeInternalDetails() throws Exception {
+        var oldClaim = jwt().jwt(token -> token.subject("t36-invalid-claim")
+                        .claim("scope", "internal.release.read")
+                        .claim("release_operator", java.util.Map.of("value", "t36-private-canary")))
+                .authorities(new SimpleGrantedAuthority("SCOPE_internal.release.read"));
+        mockMvc.perform(get("/internal/v1/release/readiness").with(oldClaim))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true));
+        org.mockito.Mockito.clearInvocations(runtimeChecks);
+        org.mockito.Mockito.doThrow(new IllegalStateException("t36-private-canary"))
+                .when(runtimeChecks).snapshot();
+        try {
         mockMvc.perform(get("/internal/v1/release/readiness")
                         .header("X-Request-Id", "t36-safe-error")
-                        .with(jwt().jwt(token -> token.subject("t36-invalid-claim")
-                                        .claim("release_operator", java.util.Map.of("value", "t36-private-canary")))
-                                .authorities(new SimpleGrantedAuthority("SCOPE_internal.release.read"))))
+                        .with(oldClaim))
                 .andExpect(status().isInternalServerError())
                 .andExpect(header().string("X-Request-Id", "t36-safe-error"))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_INTERNAL_ERROR"))
                 .andExpect(jsonPath("$.error.message").value("An unexpected error occurred"))
                 .andExpect(jsonPath("$.requestId").value("t36-safe-error"));
+        org.mockito.Mockito.verify(runtimeChecks).snapshot();
+        } finally {
+            org.mockito.Mockito.reset(runtimeChecks);
+        }
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor operator(String scope) {
         return jwt().jwt(token -> token.subject("t36-release-operator")
-                        .claim("release_operator", true)
+                        .claim("scope", scope).claim("release_operator", true)
                         .claim("service_trust_verified", true))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + scope));
     }

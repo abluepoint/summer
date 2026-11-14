@@ -2,7 +2,7 @@
 
 Run from the repository root with Python 3.10+ (standard library only). This entry exercises real HTTP against two current application nodes and their shared real MySQL database. It does not create containers, services, schemas, accounts, grants, or tenants, and has no dependency on scratch files.
 
-Supply two distinct application origins backed by an explicitly owned, disposable test database with migrations applied, and an existing owned domain. The authenticated principal must already have active persistent management membership/role grants and the matching OAuth management scopes (during expand: enterprise.roles.read/write, or platform.capabilities.read/write for an isolated platform domain). Creating these grants is intentionally outside this runner.
+Supply two distinct application origins backed by an explicitly owned, disposable test database with migrations applied, and an existing owned domain. The authenticated principal must already have active persistent management membership/role grants and the matching OAuth management scopes (enterprise.roles.read/write, or platform.capabilities.read/write for an isolated platform domain). OAuth scopes cap client delegation and do not create persistent management grants. Creating these grants is intentionally outside this runner.
 
 Supply a current Bearer credential through `SUMMER_PERMISSION_ACCEPTANCE_TOKEN` in the process environment; never put its value in the command, report, or repository. Example invocation, after supplying that environment variable securely:
 

@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import com.abluepoint.summer.security.autoconfigure.storage.SummerKeyStore;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -29,7 +30,24 @@ import java.util.Map;
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class KeyCapabilityHttpTest {
+    @org.junit.jupiter.api.Test
+    void authorityWithoutDelegatedKeyScopeCannotReadMetadata() throws Exception {
+        mockMvc.perform(get("/api/security/keys").with(jwt()
+                        .jwt(keyClaims -> keyClaims.subject("user").claim("scope", "openid"))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_security.key.read"))))
+                .andExpect(status().isForbidden());
+    }
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("user", "key-admin"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.key.KeyCapabilityController")
+                            && java.util.Set.of("/api/security/keys", "/api/security/keys:rotate").contains(path));
+    }
+
 
     @Autowired MockMvc mockMvc;
     @Autowired JwtDecoder jwtDecoder;
@@ -38,7 +56,7 @@ class KeyCapabilityHttpTest {
 
     @Test
     void exposesOnlyKeyMetadataAndProtectsItByCapability() throws Exception {
-        mockMvc.perform(get("/api/security/keys").with(jwt().authorities(
+        mockMvc.perform(get("/api/security/keys").with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(
                         new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.read"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -81,7 +99,7 @@ class KeyCapabilityHttpTest {
                         .content("{\"retentionDays\":30}")
                         .header("If-Match", "\"1\"")
                         .header("Idempotency-Key", "key-rotation-1")
-                        .with(jwt().jwt(token -> token.subject("key-admin"))
+                        .with(jwt().jwt(token -> token.subject("key-admin").claim("scope", "security.key.read security.key.rotate"))
                                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
                 .andExpect(status().isOk())
                 .andExpect(header().string("ETag", "\"2\""))
@@ -93,7 +111,7 @@ class KeyCapabilityHttpTest {
         mockMvc.perform(post("/api/security/keys:rotate")
                         .contentType("application/json").content("{\"retentionDays\":30}")
                         .header("If-Match", "\"1\"").header("Idempotency-Key", "key-rotation-1")
-                        .with(jwt().authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
+                        .with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
                 .andExpect(status().isOk()).andExpect(header().string("ETag", "\"2\""))
                 .andExpect(jsonPath("$.data.activeKid").value(activeKid));
         Jwt newToken = new NimbusJwtEncoder(keyStore).encode(JwtEncoderParameters.from(
@@ -102,7 +120,7 @@ class KeyCapabilityHttpTest {
         org.assertj.core.api.Assertions.assertThat(jwtDecoder.decode(oldToken).getSubject()).isEqualTo("before-rotation");
         mockMvc.perform(get("/oauth2/jwks")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.keys.length()").value(2));
-        MvcResult metadata = mockMvc.perform(get("/api/security/keys").with(jwt().authorities(
+        MvcResult metadata = mockMvc.perform(get("/api/security/keys").with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(
                         new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.read"))))
                 .andExpect(status().isOk()).andReturn();
         List<Map<String, Object>> items = JsonPath.read(metadata.getResponse().getContentAsString(), "$.data.items");
@@ -123,7 +141,7 @@ class KeyCapabilityHttpTest {
         mockMvc.perform(post("/api/security/keys:rotate")
                         .contentType("application/json").content("{\"retentionDays\":30}")
                         .header("If-Match", "\"999\"").header("Idempotency-Key", "key-rotation-stale")
-                        .with(jwt().authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
+                        .with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
                 .andExpect(status().isPreconditionFailed())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"));
     }

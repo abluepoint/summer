@@ -19,8 +19,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class McpAuthorizationControllerTest {
     @Autowired MockMvc mockMvc;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() throws Exception {
+        var enterprise = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+        current.grantHandlers(enterprise, "admin", (handler, path, method) -> handler.getBeanType().getName().equals(
+                "com.abluepoint.summer.sample.mcpauthorization.McpAuthorizationController") && method.equals("POST")
+                && path.contains("/mcp-execution-permits/") && path.endsWith(":revoke"));
+        current.grantHandlers(enterprise, "approver", (handler, path, method) -> handler.getBeanType().getName().equals(
+                "com.abluepoint.summer.sample.delegation.DelegationController") && method.equals("POST")
+                && path.equals("/api/v1/mcp/approvals/{id}:approve"));
+    }
 
     @Test
     void missingDecisionFieldsUseTheUnifiedInvalidCode() throws Exception {

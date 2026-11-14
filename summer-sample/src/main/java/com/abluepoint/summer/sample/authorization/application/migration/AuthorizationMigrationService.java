@@ -30,6 +30,7 @@ public class AuthorizationMigrationService {
   private final PermissionResourceAssociations associations;
   private final AuthorizationAuditStore audit;
   private final AuthorizationChangeEventService events;
+  private final RuntimeMigrationResolution runtimeResolution;
 
   public AuthorizationMigrationService(
       JdbcTemplate db,
@@ -38,7 +39,8 @@ public class AuthorizationMigrationService {
       List<TrustedPermissionResourceResolver> resolvers,
       PermissionResourceAssociations associations,
       AuthorizationAuditStore audit,
-      AuthorizationChangeEventService events) {
+      AuthorizationChangeEventService events,
+      RuntimeMigrationResolution runtimeResolution) {
     this.db = db;
     this.json = json;
     this.source = source;
@@ -46,6 +48,7 @@ public class AuthorizationMigrationService {
     this.associations = associations;
     this.audit = audit;
     this.events = events;
+    this.runtimeResolution = runtimeResolution;
   }
 
   private static SummerException conflict(String message) {
@@ -156,7 +159,10 @@ public class AuthorizationMigrationService {
     var state = lockDomain(domain);
     var row = snapshot(snapshotId, true);
     var plan = json.readValue(row.get("plan_json").toString(), MigrationPlan.class);
-    if (hardBlocked(plan)) throw conflict("Migration contains unresolved blockers; inspect report");
+    var effectiveInput = readDataInput(snapshotId);
+    var effectivePlan = effectiveInput.plan();
+    if (hardBlocked(effectivePlan)) throw conflict("Migration contains unresolved blockers; inspect report");
+    runtimeResolution.requireNoTargetRuntimeAssociation(effectiveInput);
     if (((Number) state.get("revision")).longValue()
         != ((Number) row.get("expected_revision")).longValue())
       throw conflict("Authorization revision changed; a new dry-run is required");
@@ -227,9 +233,9 @@ public class AuthorizationMigrationService {
               plan.roles().stream().filter(r -> r.id().equals(target)).findFirst().orElseThrow();
           db.update(
               "insert into"
-                  + " summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at,capability_ids,capability_codes,bundle_id)"
+                  + " summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at)"
                   + " values (?,?,?,"
-                  + " ?,false,'ACTIVE',1,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),'','',null)",
+                  + " ?,false,'ACTIVE',1,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
               target,
               domain.id(),
               "Migrated " + target,
@@ -300,6 +306,17 @@ public class AuthorizationMigrationService {
     return readDataInput(snapshotId);
   }
 
+  /** A separate derived proof cannot modify the original snapshot, mappings or blocker report. */
+  @Transactional
+  public Map<String, Object> resolveRuntime(String snapshotId, String actor) {
+    var input = readFrozenInput(snapshotId);
+    lockDomain(input.domain());
+    if (!json.readTree(input.evidenceJson()).path("legacyFactsFingerprint").asString()
+        .equals(source.currentLegacyFactsFingerprint(input.domain())))
+      throw conflict("Frozen source changed before runtime resolution");
+    return runtimeResolution.record(input, actor);
+  }
+
   private void verifyFrozenEvidence(Map<String, Object> row, String expectedFingerprint) {
     String encoded = row.get("evidence_json").toString();
     if (!expectedFingerprint.equals(row.get("source_fingerprint"))
@@ -350,7 +367,7 @@ public class AuthorizationMigrationService {
     var row = snapshot(snapshotId, false);
     var source =
         json.readValue(row.get("snapshot_json").toString(), LegacyAuthorizationSnapshot.class);
-    return new DataInput(
+    return runtimeResolution.effective(new DataInput(
         snapshotId,
         new Domain(source.domainKind(), source.domainId()),
         ((Number) row.get("source_revision")).longValue(),
@@ -358,7 +375,7 @@ public class AuthorizationMigrationService {
         row.get("source_fingerprint").toString(),
         source,
         json.readValue(row.get("plan_json").toString(), MigrationPlan.class),
-        row.get("evidence_json").toString());
+        row.get("evidence_json").toString()));
   }
 
   public Map<String, Object> report(String snapshotId) {

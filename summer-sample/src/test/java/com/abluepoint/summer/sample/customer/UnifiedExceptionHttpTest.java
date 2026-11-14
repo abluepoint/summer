@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.common.error.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +19,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "summer.security.storage.keys=memory")
 @AutoConfigureMockMvc
-@Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, UnifiedExceptionHttpTest.Endpoint.class, UnifiedExceptionHttpTest.Messages.class})
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, com.abluepoint.summer.sample.testsupport.ExactCurrentHttpTestFixture.class, UnifiedExceptionHttpTest.Endpoint.class, UnifiedExceptionHttpTest.Messages.class})
 @org.springframework.test.annotation.DirtiesContext
 class UnifiedExceptionHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(Domain.platform(), "user", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest$Endpoint")
+                        && java.util.Set.of("GET /api/exception-pilot/{mode}").contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "exception-pilot", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.UnifiedExceptionHttpTest$Endpoint")
+                        && java.util.Set.of("GET /api/exception-pilot/{mode}").contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "user", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerAuditController")
+                        && java.util.Set.of("GET /api/audit-events/{eventId}").contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "exception-pilot", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerAuditController")
+                        && java.util.Set.of("GET /api/audit-events/{eventId}").contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
     @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
     @Autowired com.nimbusds.jose.jwk.source.JWKSource<com.nimbusds.jose.proc.SecurityContext> keys;
@@ -130,6 +149,9 @@ class UnifiedExceptionHttpTest {
     }
     @TestConfiguration
     static class Messages {
+        @Bean com.abluepoint.summer.sample.testsupport.ExactCurrentHttpTestFixture.Owner currentTestOwner() {
+            return new com.abluepoint.summer.sample.testsupport.ExactCurrentHttpTestFixture.Owner(Endpoint.class);
+        }
         @Bean StaticMessageSource messageSource() {
             var source = new StaticMessageSource();
             source.addMessage("SUMMER_NOT_FOUND", Locale.ENGLISH, "Missing {0}");

@@ -33,17 +33,50 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class IdentityChainE2EContractTest {
 
     @Autowired
     MockMvc mockMvc;
+
+    @Autowired
+    com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate fixtureDb;
+    @org.springframework.beans.factory.annotation.Value("${summer.security.authorization-server.user.username}")
+    String bootstrapSubject;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() throws Exception {
+        var acme = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+        fixtureDb.update("insert into summer_enterprise(enterprise_id,name,code,status,created_at,updated_at) "
+                + "select 'ent-other','Identity contract other','identity-contract-other','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP "
+                + "where not exists(select 1 from summer_enterprise where enterprise_id='ent-other')");
+        var other = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-other");
+        current.activeUser(other, bootstrapSubject);
+        current.install(other);
+        for (var domain : List.of(acme, other)) {
+            current.grantHandlers(domain, "auditor-" + domain.id(), (handler, path, method) ->
+                    handler.getBeanType().getName().equals("com.abluepoint.summer.sample.auditledger.AuditLedgerController")
+                    && method.equals("GET")
+                    && java.util.Set.of("/api/v1/enterprises/{enterpriseId}/mcp-invocations",
+                            "/api/v1/enterprises/{enterpriseId}/mcp-invocations/{invocationId}").contains(path));
+        }
+        current.grantHandlers(acme, "enterprise-admin", (handler, path, method) -> method.equals("POST")
+                && java.util.Set.of("com.abluepoint.summer.sample.delegation.DelegationController",
+                        "com.abluepoint.summer.sample.mcpauthorization.McpAuthorizationController")
+                        .contains(handler.getBeanType().getName())
+                && (java.util.Set.of("/internal/v1/mcp/approvals",
+                        "/api/v1/mcp/approvals/{id}:approve", "/api/v1/mcp/approvals/{id}:reject",
+                        "/api/v1/mcp/approvals/{id}:recheck").contains(path)
+                    || path.contains("/mcp-execution-permits/") && path.endsWith(":revoke")));
+    }
 
     @Test
     void humanDirectMcpCallKeepsHumanActorAndEffectiveSubject() throws Exception {
         MvcResult decision = decide("ctx-human", "human-1", "human-1", null, "human-1", "LOW");
         String permitId = JsonPath.read(decision.getResponse().getContentAsString(), "$.data.permit.permitId");
 
-        MvcResult execution = invoke("ctx-human", permitId, "attempt-human", "human-1", "human-1", null);
+        MvcResult execution = invoke("ctx-human", permitId, "attempt-human", "human-1", "human-1", null, "human-1");
         String invocationId = JsonPath.read(execution.getResponse().getContentAsString(), "$.data.invocationId");
 
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/mcp-invocations/{id}", invocationId)
@@ -58,7 +91,7 @@ class IdentityChainE2EContractTest {
         MvcResult decision = decide("ctx-agent", "agent-principal", "user-1", "agent-instance-1", "human-1", "LOW");
         String permitId = JsonPath.read(decision.getResponse().getContentAsString(), "$.data.permit.permitId");
 
-        MvcResult execution = invoke("ctx-agent", permitId, "attempt-agent", "agent-principal", "user-1", "agent-instance-1");
+        MvcResult execution = invoke("ctx-agent", permitId, "attempt-agent", "agent-principal", "user-1", "agent-instance-1", "human-1");
         String invocationId = JsonPath.read(execution.getResponse().getContentAsString(), "$.data.invocationId");
 
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/mcp-invocations/{id}", invocationId)
@@ -82,26 +115,44 @@ class IdentityChainE2EContractTest {
                         .with(service("cs-1", "ctx-high-risk", "agent-principal", "agent-instance-1", "user-1", "human-1")))
                 .andExpect(status().isConflict());
 
-        // TODO-AICT-E2E-02: the decision response must include a bound approvalId
-        // and the BFF must create/approve it before asking the ConnectionService
-        // to claim a permit. The current Sample exposes approval CRUD separately.
-        MvcResult approval = mockMvc.perform(post("/internal/v1/mcp/approvals")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"enterpriseId\":\"ent-acme\",\"agentId\":\"agent-1\",\"agentInstanceId\":\"agent-instance-1\",\"mcpServerId\":\"server-1\",\"toolId\":\"tool-search\",\"requestDigest\":\"args\",\"approvalScope\":\"ONE_CALL\",\"expiresInSeconds\":900}")
-                        .header("Idempotency-Key", "approval-e2e-1")
-                        .with(admin("enterprise.mcp.approvals.write")))
-                .andExpect(status().isCreated())
+        String approvalId = JsonPath.read(decisionBody, "$.data.approvalId");
+        mockMvc.perform(post("/api/v1/mcp/approvals/{id}:recheck", approvalId).with(approver()))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.requestedByPrincipalId").value("human-1"))
                 .andExpect(jsonPath("$.data.agentInstanceId").value("agent-instance-1"))
                 .andExpect(jsonPath("$.data.toolId").value("tool-search"))
-                .andExpect(jsonPath("$.data.requestDigest").value("args"))
-                .andReturn();
-        String approvalId = JsonPath.read(approval.getResponse().getContentAsString(), "$.data.approvalId");
+                .andExpect(jsonPath("$.data.requestDigest").value("args"));
         mockMvc.perform(post("/api/v1/mcp/approvals/{id}:approve", approvalId)
                         .header("Idempotency-Key", "approval-e2e-approve-1")
                         .with(approver()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+                .andExpect(jsonPath("$.data.status").value("APPROVED"))
+                .andExpect(jsonPath("$.data.approvedBy").value("enterprise-admin"));
+        String request = decisionBody("ent-acme", "ctx-high-risk", "agent-principal", "user-1", "agent-instance-1", "HIGH");
+        MvcResult approved = mockMvc.perform(post("/internal/v1/mcp/execution-decisions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request.substring(0, request.length() - 1) + ",\"approvalId\":\"" + approvalId + "\"}")
+                        .with(service("cs-1", "ctx-high-risk", "agent-principal", "agent-instance-1", "user-1", "human-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.decision").value("ALLOW"))
+                .andExpect(jsonPath("$.data.allow").value(true))
+                .andExpect(jsonPath("$.data.permit.permitId").isNotEmpty()).andReturn();
+        String permitId = JsonPath.read(approved.getResponse().getContentAsString(), "$.data.permit.permitId");
+        MvcResult execution = invoke("ctx-high-risk", permitId, "attempt-approved-high-risk",
+                "agent-principal", "user-1", "agent-instance-1", "human-1");
+        String invocationId = JsonPath.read(execution.getResponse().getContentAsString(), "$.data.invocationId");
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/mcp-invocations/{id}", invocationId).with(auditor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.invocationId").value(invocationId))
+                .andExpect(jsonPath("$.data.actor").value("agent-principal"))
+                .andExpect(jsonPath("$.data.effectiveSubject").value("user-1"))
+                .andExpect(jsonPath("$.data.agentInstanceId").value("agent-instance-1"))
+                .andExpect(jsonPath("$.data.resultStatus").value("SUCCEEDED"));
+        mockMvc.perform(post("/api/v1/mcp/approvals/{id}:recheck", approvalId).with(approver()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CONSUMED"))
+                .andExpect(jsonPath("$.data.consumedAt").isNotEmpty());
     }
 
     @Test
@@ -210,13 +261,14 @@ class IdentityChainE2EContractTest {
                 .andReturn();
     }
 
-    private MvcResult invoke(String context, String permitId, String attempt, String actor, String effective, String instance)
+    private MvcResult invoke(String context, String permitId, String attempt, String actor, String effective, String instance, String initiator)
             throws Exception {
         return mockMvc.perform(post("/internal/v1/connections/ext-1/tools/search:invoke")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invokeBody(permitId, attempt, actor, effective, instance))
-                        .with(service("cs-1", context, actor, instance, effective, actor)))
+                        .with(service("cs-1", context, actor, instance, effective, initiator)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.resultStatus").value("SUCCEEDED"))
                 .andReturn();
     }
 
@@ -262,7 +314,7 @@ class IdentityChainE2EContractTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor auditorFor(String enterprise) {
-        return jwt().jwt(t -> t.claim("scope", "enterprise.audit.read").subject("auditor")
+        return jwt().jwt(t -> t.claim("scope", "enterprise.audit.read").subject("auditor-" + enterprise)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of(enterprise, List.of("enterprise.audit.read"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));

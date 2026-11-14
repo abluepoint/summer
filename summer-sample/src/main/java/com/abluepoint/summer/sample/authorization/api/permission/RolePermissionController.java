@@ -35,7 +35,7 @@ public class RolePermissionController {
     this.rid = rid;
   }
 
-  @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.roles.read")
+
   @GetMapping({
     "/roles",
     "/roles/{id}",
@@ -56,7 +56,7 @@ public class RolePermissionController {
         null);
   }
 
-  @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.roles.write")
+
   @PostMapping("/roles")
   public Object create(
       HttpServletRequest r,
@@ -66,7 +66,7 @@ public class RolePermissionController {
     return execute(r, a, null, body, null, key);
   }
 
-  @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.roles.write")
+
   @PatchMapping("/roles/{id}")
   public Object patch(
       HttpServletRequest r,
@@ -78,7 +78,7 @@ public class RolePermissionController {
     return execute(r, a, id, body, condition, key);
   }
 
-  @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.roles.write")
+
   @PutMapping({"/roles/{id}/permissions", "/roles/{id}/capabilities", "/users/{username}/roles"})
   public Object replace(
       HttpServletRequest r,

@@ -37,6 +37,7 @@ class ConfigurationDataHttpTest {
 
   @Test void fixedPublicParameterRetainsItsPublicFlagAndCurrentPublicDataRange() throws Exception {
     bindBusinessInterfaces();
+    bindPublicParameterInterfaces();
     data("create", "SELF");
     mvc.perform(post(BASE + "/system-parameters").with(actor()).with(csrf()).contentType("application/json")
         .content("{\"key\":\"scope10.public\",\"type\":\"STRING\",\"value\":\"public-value\",\"public\":true}"))
@@ -280,6 +281,33 @@ class ConfigurationDataHttpTest {
       if ((page + 1) * 200 >= data.path("total").asInt()) break;
     }
     assertFalse(ids.isEmpty());
+    bindInterfaces(ids);
+  }
+
+  private void bindPublicParameterInterfaces() throws Exception {
+    var paths = java.util.Set.of("/public/system-parameters/{key}",
+        "/public/enterprises/{enterpriseId}/system-parameters/{key}");
+    var found = new java.util.HashSet<String>();
+    var ids = new java.util.ArrayList<String>();
+    for (int page = 0; page < 10; page++) {
+      var response = mvc.perform(get(BASE + "/authorization/interface-directory").param("size", "200").param("page", "" + page)
+          .with(user("summer-user"))).andExpect(status().isOk()).andReturn();
+      var data = json.readTree(response.getResponse().getContentAsString()).path("data");
+      for (var row : data.path("items")) {
+        String path = row.path("normalizedPath").asText();
+        if (paths.contains(path) && "GET".equals(row.path("httpMethod").asText())) {
+          found.add(path);
+          ids.add(row.path("resourceId").asText());
+        }
+      }
+      if ((page + 1) * 200 >= data.path("total").asInt()) break;
+    }
+    assertEquals(paths, found);
+    assertEquals(2, ids.size());
+    bindInterfaces(ids);
+  }
+
+  private void bindInterfaces(java.util.List<String> ids) throws Exception {
     String id = permission(Map.of("type", "INTERFACE"));
     var collection = mvc.perform(get(BASE + "/permissions/" + id + "/interfaces").with(user("summer-user")))
         .andExpect(status().isOk()).andReturn();
@@ -287,5 +315,165 @@ class ConfigurationDataHttpTest {
         .header("If-Match", collection.getResponse().getHeader("ETag"))
         .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
         .content(json.writeValueAsString(Map.of("resourceIds", ids)))).andExpect(status().isOk());
+  }
+
+  @Test
+  void oneMenuPermissionAloneQualifiesMultiplePagesAndRevokingItRemovesBoth() throws Exception {
+    String subject = "menu-causal-" + UUID.randomUUID();
+    String parent = "menu-parent-" + UUID.randomUUID();
+    var pages = List.of("menu-a-" + UUID.randomUUID(), "menu-b-" + UUID.randomUUID());
+    causalIdentity(subject);
+    causalPublish(parent, pages);
+    for (String page : pages) causalAssociations(page, java.util.Set.of());
+    var before = causalNavigation(subject, List.of());
+    for (String page : pages) causalPage(before, page, false);
+
+    String permission = causalPermission(pages);
+    String role = causalRole(permission);
+    causalAssign(subject, List.of(role));
+    var granted = causalNavigation(subject, List.of(role));
+    for (String page : pages) {
+      causalAssociations(page, java.util.Set.of(permission));
+      causalPage(granted, page, true);
+    }
+    causalDirectory(granted, parent);
+
+    // Keep the identity, navigation entry point and user-role binding unchanged.
+    causalReplace(BASE + "/roles/" + role + "/permissions", Map.of("permissionIds", List.of()));
+    assertEquals(0, db.queryForObject("select count(*) from summer_role_permission where domain_key=? and role_id=?",
+        Integer.class, "ENTERPRISE:ent-acme", role));
+    var revoked = causalNavigation(subject, List.of(role));
+    for (String page : pages) {
+      causalAssociations(page, java.util.Set.of(permission));
+      causalPage(revoked, page, false);
+    }
+  }
+
+  private tools.jackson.databind.JsonNode causalCreate(String path, Map<String, Object> body) throws Exception {
+    var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path)
+            .with(user("summer-user"))
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+            .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+            .contentType("application/json").content(json.writeValueAsString(body)))
+        .andExpect(status().isCreated()).andReturn();
+    return json.readTree(result.getResponse().getContentAsString()).path("data");
+  }
+
+  private tools.jackson.databind.JsonNode causalReplace(String path, Map<String, Object> body) throws Exception {
+    var before = mvc.perform(get(path).with(user("summer-user")))
+        .andExpect(status().isOk()).andReturn();
+    assertNotNull(before.getResponse().getHeader("ETag"));
+    var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path)
+            .with(user("summer-user"))
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+            .header("If-Match", before.getResponse().getHeader("ETag"))
+            .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+            .contentType("application/json").content(json.writeValueAsString(body)))
+        .andExpect(status().isOk()).andReturn();
+    return json.readTree(result.getResponse().getContentAsString()).path("data");
+  }
+
+  private void causalPublish(String parent, java.util.List<String> children) throws Exception {
+    String path = "/api/v1/platform/authorization/menu-manifest";
+    var before = mvc.perform(get(path).with(user("summer-user")))
+        .andExpect(status().isOk()).andReturn();
+    var current = json.readTree(before.getResponse().getContentAsString()).path("data");
+    var items = json.createArrayNode();
+    // Re-publish only supported metadata, preserving the existing catalog.
+    for (var old : current.path("items")) {
+      var item = json.createObjectNode();
+      for (String field : java.util.List.of("menuId", "parentMenuId", "path", "titleKey", "iconKey", "sortOrder"))
+        if (old.has(field)) item.set(field, old.get(field));
+      items.add(item);
+    }
+    var directory = json.createObjectNode();
+    directory.put("menuId", parent); directory.put("path", "/" + parent);
+    directory.put("titleKey", "Causal directory"); directory.put("iconKey", ""); directory.put("sortOrder", 900);
+    items.add(directory);
+    for (String child : children) {
+      var item = json.createObjectNode();
+      item.put("menuId", child); item.put("parentMenuId", parent); item.put("path", "/" + child);
+      item.put("titleKey", "Causal page"); item.put("iconKey", ""); item.put("sortOrder", 901);
+      items.add(item);
+    }
+    causalReplace(path, Map.of("manifestVersion", current.path("manifestVersion").asLong() + 1, "items", items));
+  }
+
+  private void causalIdentity(String subject) {
+    assertEquals(0, db.queryForObject("select count(*) from summer_auth_user where username=?", Integer.class, subject));
+    db.update("insert into summer_auth_user(username,password_hash,role,active,created_at,updated_at) values (?,'!unusable-menu-fixture-login','USER',true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", subject);
+    assertEquals(1, db.queryForObject("select count(*) from summer_enterprise where enterprise_id='ent-acme' and status='ACTIVE'", Integer.class));
+    db.update("insert into summer_enterprise_member(enterprise_id,member_id,subject,display_name,email,status,version,created_at,updated_at) values ('ent-acme',?,?,?,?,'ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", java.util.UUID.randomUUID().toString(), subject, subject, subject + "@example.test");
+  }
+
+  private String causalPermission(java.util.List<String> menus) throws Exception {
+    String group = causalCreate(BASE + "/permission-groups", Map.of("name", "Causal menus")).path("groupId").asText();
+    String permission = causalCreate(BASE + "/permissions", Map.of(
+        "name", "Causal MENU", "code", java.util.UUID.randomUUID().toString(), "groupId", group,
+        "type", "MENU", "accessMode", "AUTHORIZED", "status", "ACTIVE")).path("permissionId").asText();
+    var bound = causalReplace(BASE + "/permissions/" + permission + "/menus", Map.of("menuIds", menus));
+    var actual = new java.util.HashSet<String>();
+    for (var id : bound.path("resourceIds")) actual.add(id.asText());
+    assertEquals(new java.util.HashSet<>(menus), actual);
+    assertEquals(new java.util.HashSet<>(menus), new java.util.HashSet<>(db.queryForList(
+        "select resource_id from summer_permission_resource where domain_key=? and permission_id=? and resource_type='MENU'",
+        String.class, "ENTERPRISE:ent-acme", permission)));
+    return permission;
+  }
+
+  private String causalRole(String permission) throws Exception {
+    String role = causalCreate(BASE + "/roles", Map.of("name", "Causal role",
+        "code", java.util.UUID.randomUUID().toString(), "permissionIds", java.util.List.of(permission))).path("roleId").asText();
+    assertEquals(java.util.List.of(permission), db.queryForList(
+        "select permission_id from summer_role_permission where domain_key=? and role_id=?",
+        String.class, "ENTERPRISE:ent-acme", role));
+    return role;
+  }
+
+  private void causalAssign(String subject, java.util.List<String> roles) throws Exception {
+    var result = causalReplace(BASE + "/users/" + subject + "/roles", Map.of("roleIds", roles));
+    var actual = new java.util.HashSet<String>();
+    for (var role : result.path("roleIds")) actual.add(role.asText());
+    assertEquals(new java.util.HashSet<>(roles), actual);
+  }
+
+  private tools.jackson.databind.JsonNode causalNavigation(String subject, java.util.List<String> roles) throws Exception {
+    assertEquals(1, db.queryForObject("select count(*) from summer_auth_user where username=? and active=true", Integer.class, subject));
+    assertEquals(1, db.queryForObject("select count(*) from summer_enterprise_member m join summer_enterprise e on e.enterprise_id=m.enterprise_id where m.enterprise_id='ent-acme' and m.subject=? and m.status='ACTIVE' and e.status='ACTIVE'", Integer.class, subject));
+    assertEquals(new java.util.HashSet<>(roles), new java.util.HashSet<>(db.queryForList(
+        "select role_id from summer_permission_user_role where domain_key=? and username=?", String.class, "ENTERPRISE:ent-acme", subject)));
+    var result = mvc.perform(get(BASE + "/authorization/navigation").with(user(subject)))
+        .andExpect(status().isOk()).andReturn();
+    var response = json.readTree(result.getResponse().getContentAsString());
+    assertTrue(response.path("success").asBoolean());
+    var items = response.path("data").path("items");
+    assertTrue(items.isArray());
+    return items;
+  }
+
+  private void causalPage(tools.jackson.databind.JsonNode items, String id, boolean eligible) {
+    var matches = java.util.stream.StreamSupport.stream(items.spliterator(), false)
+        .filter(item -> id.equals(item.path("menuId").asText())).toList();
+    assertTrue(matches.size() <= 1);
+    for (var item : matches) assertTrue(item.path("pageEligible").isBoolean());
+    assertEquals(eligible, matches.stream().anyMatch(item -> item.path("pageEligible").asBoolean()), id);
+    if (eligible) assertFalse(matches.getFirst().path("navOnly").asBoolean());
+  }
+
+  private void causalDirectory(tools.jackson.databind.JsonNode items, String parent) {
+    var directory = java.util.stream.StreamSupport.stream(items.spliterator(), false)
+        .filter(item -> parent.equals(item.path("menuId").asText())).findFirst().orElseThrow();
+    assertTrue(directory.path("navOnly").asBoolean());
+    assertFalse(directory.path("pageEligible").asBoolean());
+    assertEquals(0, directory.path("actions").size());
+  }
+
+  private void causalAssociations(String menu, java.util.Set<String> permissions) {
+    assertEquals(permissions, new java.util.HashSet<>(db.queryForList(
+        "select permission_id from summer_permission_resource where domain_key=? and resource_type='MENU' and resource_id=?",
+        String.class, "ENTERPRISE:ent-acme", menu)));
+    assertEquals(permissions.size(), db.queryForObject(
+        "select count(*) from summer_permission_resource x join summer_permission p on p.domain_key=x.domain_key and p.permission_id=x.permission_id where x.domain_key=? and x.resource_type='MENU' and x.resource_id=? and p.type='MENU' and p.access_mode='AUTHORIZED' and p.status='ACTIVE'",
+        Integer.class, "ENTERPRISE:ent-acme", menu));
   }
 }

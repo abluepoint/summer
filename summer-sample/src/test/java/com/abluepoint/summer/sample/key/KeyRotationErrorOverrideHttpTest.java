@@ -22,8 +22,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "summer.security.storage.keys=mysql")
 @AutoConfigureMockMvc
-@Import(KeyRotationErrorOverrideHttpTest.StatusOverride.class)
+@Import({KeyRotationErrorOverrideHttpTest.StatusOverride.class, com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 class KeyRotationErrorOverrideHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("user", "key-admin"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.key.KeyCapabilityController")
+                            && java.util.Set.of("/api/security/keys", "/api/security/keys:rotate").contains(path));
+    }
+
     @DynamicPropertySource
     static void keyProperties(DynamicPropertyRegistry properties) {
         String material = java.util.UUID.randomUUID().toString();
@@ -37,7 +46,7 @@ class KeyRotationErrorOverrideHttpTest {
         mvc.perform(post("/api/security/keys:rotate").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"retentionDays\":0}").header("If-Match", "\"1\"")
                         .header("X-Request-Id", "key-policy")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
+                        .with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(new SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
                 .andExpect(status().is(422))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_KEY_ROTATION_INVALID"))
                 .andExpect(jsonPath("$.error.message").value("retentionDays must be between 1 and 365"))

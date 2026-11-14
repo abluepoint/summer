@@ -76,7 +76,9 @@ public class ManagedInterfaceResources implements TrustedPermissionResourceResol
     boolean component =
         com.abluepoint.summer.sample.authorization.domain.permission.InterfaceComponentPolicy
                 .applicant(owner, method, path)
-            || owner.equals("com.abluepoint.summer.sample.identity.SessionController");
+            || (owner.equals("com.abluepoint.summer.sample.identity.SessionController")
+                && com.abluepoint.summer.sample.authorization.domain.permission.InterfaceComponentPolicy
+                    .componentOwned(owner, handler.getMethod().getName(), method, path));
     boolean namedBean = handler.getBean() instanceof String;
     return new InterfaceMapping(
         "application",

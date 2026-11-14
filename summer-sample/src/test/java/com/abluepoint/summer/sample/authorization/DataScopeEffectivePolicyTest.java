@@ -1,216 +1,283 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
+import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.authorization.application.data.DataReadService;
+import com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
+import static com.abluepoint.summer.sample.authorization.DataScopeManagedAuthorizationTestFixture.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+/** Persisted current DATA grants; historical expression semantics are tested only as migration input. */
+@SpringBootTest(properties = {"summer.security.storage.keys=memory", "summer.sample.cache.enabled=false",
+        "summer.sample.resilience.enabled=false", "summer.sample.authorization.managed-bootstrap-domains=ENTERPRISE:ent-acme"})
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@Import(DataScopeManagedAuthorizationTestFixture.Schema.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DataScopeEffectivePolicyTest {
-    private static final String ENTERPRISE = "ent-acme";
     private static final String RESOURCE = "system-parameters";
-    private static final String TENANT_RULE = "[{\"type\":\"TENANT\"}]";
-    private final ObjectMapper mapper = new ObjectMapper();
-    private final DataScopePolicyRepository policies = mock(DataScopePolicyRepository.class);
-    private final DataScopeBindingRepository bindings = mock(DataScopeBindingRepository.class);
-    private final AuthorizationUserBindingRepository users = mock(AuthorizationUserBindingRepository.class);
-    private final AuthorizationRoleRepository roles = mock(AuthorizationRoleRepository.class);
-    private final DataScopePolicyEntity policy = new DataScopePolicyEntity("policy", ENTERPRISE, RESOURCE, "AND", TENANT_RULE);
-    private DataScopeService service;
+    @Autowired JdbcTemplate db;
+    @Autowired ManagedInterfaceResources interfaces;
+    @Autowired BusinessDataScopes scopes;
+    @Autowired DataReadService reads;
+    @Autowired DataScopeService legacy;
+    @Autowired PlatformTransactionManager transactions;
+    @Autowired ObjectMapper mapper;
+    private DataScopeManagedAuthorizationTestFixture fixture;
+
+    private String positiveBobPriorStatus;
+    @org.junit.jupiter.api.AfterEach void restorePositiveBobMembership() {
+        if (positiveBobPriorStatus != null)
+            db.update("update summer_enterprise_member set status=? where enterprise_id='ent-acme' and subject='bob'", positiveBobPriorStatus);
+    }
 
     @BeforeEach
     void setUp() {
-        when(policies.findByEnterpriseIdAndResource(anyString(), anyString())).thenReturn(Optional.of(policy));
-        when(bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(ENTERPRISE, RESOURCE)).thenReturn(List.of());
-        service = new DataScopeService(policies, mock(DataScopePolicyAuditRepository.class), mapper,
-                mock(CustomerAuditService.class), mock(AuthorizationChangeEventService.class), mock(JdbcTemplate.class),
-                bindings, users, roles);
+        // This scenario explicitly requires an active owner; the shared identity fixture never revives disabled members.
+        positiveBobPriorStatus = db.queryForObject("select status from summer_enterprise_member where enterprise_id='ent-acme' and subject='bob'", String.class);
+        db.update("update summer_enterprise_member set status='ACTIVE' where enterprise_id='ent-acme' and subject='bob'");
+        fixture = new DataScopeManagedAuthorizationTestFixture(db, interfaces);
+        fixture.identity("alice");
+        fixture.identity("bob");
     }
 
     @Test
-    void jsonRoleAssignmentsContributeTheUnionOfTheirPersistedRanges() {
-        assignRoles(mapper.writeValueAsString(List.of("role-a", "role-b")));
-        role("role-a", ENTERPRISE, "ACTIVE");
-        role("role-b", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "role-a", creator("alice")), binding("ROLE", "role-b", creator("bob")));
-
-        var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-        assertThat(filter.allows(null, "alice", null, null)).isTrue();
-        assertThat(filter.allows(null, "bob", null, null)).isTrue();
-        assertThat(filter.allows(null, "charlie", null, null)).isFalse();
+    void normalizedRoleAssignmentsContributeTheUnionOfTheirPersistedRanges() {
+        fixture.role("alice", "role08-self");
+        fixture.role("alice", "role08-department");
+        fixture.dataForRole("role08-self", RESOURCE, "read", "SELF");
+        fixture.dataForRole("role08-department", RESOURCE, "read", "SPECIFIED_DEPARTMENTS", "org-operations");
+        assertThat(allows("alice", "org-engineering", "alice")).isTrue();
+        assertThat(allows("alice", "org-operations", "bob")).isTrue();
+        assertThat(allows("alice", "org-engineering", "charlie")).isFalse();
     }
 
     @Test
-    void legacyNewlineRoleAssignmentsRetainTheirExistingMeaning() {
-        assignRoles("role-a\nrole-b");
-        role("role-a", ENTERPRISE, "ACTIVE");
-        role("role-b", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "role-a", creator("alice")), binding("ROLE", "role-b", creator("bob")));
-
-        var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-        assertThat(filter.allows(null, "alice", null, null)).isTrue();
-        assertThat(filter.allows(null, "bob", null, null)).isTrue();
+    void legacyNewlineRoleTextCannotSupplyOrRemoveCurrentNormalizedGrants() {
+        oldAssignment("role08-self\nrole08-department");
+        assertThat(allows("alice", "org-engineering", "alice")).isFalse();
+        fixture.role("alice", "role08-self");
+        fixture.role("alice", "role08-department");
+        fixture.dataForRole("role08-self", RESOURCE, "read", "SELF");
+        fixture.dataForRole("role08-department", RESOURCE, "read", "SPECIFIED_DEPARTMENTS", "org-operations");
+        assertThat(allows("alice", "org-engineering", "alice")).isTrue();
+        assertThat(allows("alice", "org-operations", "bob")).isTrue();
     }
 
     @Test
-    void explicitUserDenyIsSubtractedAfterTheRoleUnion() {
-        assignRoles(mapper.writeValueAsString(List.of("role-a", "role-b")));
-        role("role-a", ENTERPRISE, "ACTIVE");
-        role("role-b", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "role-a", creator("alice")), binding("ROLE", "role-b", creator("bob")),
-                binding("USER", "alice", creator("bob")));
-
-        var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-        assertThat(filter.allows(null, "alice", null, null)).isTrue();
-        assertThat(filter.allows(null, "bob", null, null)).isFalse();
-        assertThat(preview("bob", null).reasonCode()).isEqualTo("USER_DENY");
+    void removingOneRoleGrantNarrowsTheUnionWithoutAUserDenyFallback() {
+        fixture.data("alice", RESOURCE, "read", "SELF");
+        fixture.role("alice", "role08-department");
+        String permission = fixture.dataForRole("role08-department", RESOURCE, "read", "SPECIFIED_DEPARTMENTS", "org-operations");
+        assertThat(allows("alice", "org-operations", "bob")).isTrue();
+        fixture.revoke("role08-department", permission);
+        assertThat(allows("alice", "org-engineering", "alice")).isTrue();
+        assertThat(allows("alice", "org-operations", "bob")).isFalse();
+        assertThatThrownBy(() -> legacy.preview(TENANT, RESOURCE,
+                new DataScopePreviewRequest("alice", "org-operations", "bob", null, List.of(), List.of()), principal("alice")))
+                .isInstanceOf(SummerException.class).hasMessageContaining("retired");
     }
 
     @Test
     void inactiveForeignAndUnassignedRolesNeverSupplyARange() {
-        assignRoles(mapper.writeValueAsString(List.of("inactive", "foreign")));
-        role("inactive", ENTERPRISE, "DISABLED");
-        role("foreign", "ent-other", "ACTIVE");
-        role("unassigned", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "inactive", TENANT_RULE), binding("ROLE", "foreign", TENANT_RULE),
-                binding("ROLE", "unassigned", TENANT_RULE));
-
-        assertThat(service.filter(ENTERPRISE, RESOURCE, principal("alice")).allows(null, "alice", null, null)).isFalse();
-        assertThat(service.filter(ENTERPRISE, RESOURCE, principal("unassigned-user")).allows(null, "alice", null, null)).isFalse();
+        fixture.data("alice", RESOURCE, "read", "SELF");
+        assertThat(allows("alice", "org-engineering", "alice")).isTrue();
+        db.update("update summer_authorization_role set status='DISABLED' where role_id=?", roleId("alice"));
+        fixture.advance();
+        assertThat(allows("alice", "org-engineering", "alice")).isFalse();
+        fixture.data("bob", RESOURCE, "read", "TENANT_ALL");
+        assertThat(allows("bob", "org-engineering", "alice")).isTrue();
+        assertThat(allows("alice", "org-engineering", "alice")).isFalse();
+        // A complete normalized grant in another domain must not contribute to this one.
+        foreignGrant();
+        assertThat(reads.<Boolean>read(Domain.enterprise("ent-other"), RESOURCE, "read", principal("alice"), DataReadService.Scope::all)).isTrue();
+        assertThat(allows("alice", "org-engineering", "alice")).isFalse();
     }
 
     @Test
-    void malformedJsonRoleAssignmentsFailClosedWithoutGrantingValidPrefixes() {
-        role("role-a", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "role-a", TENANT_RULE));
-        for (String invalid : List.of("[\"role-a\",1]", "[\"role-a\",null]", "[\"role-a\",{}]", "[\"role-a\"")) {
-            assignRoles(invalid);
-            assertThatThrownBy(() -> service.filter(ENTERPRISE, RESOURCE, principal("alice")))
-                    .as("invalid persisted role_ids must reject the whole decision")
-                    .isInstanceOf(AccessDeniedException.class);
+    void malformedLegacyRoleJsonCannotGrantPrefixesOrInvalidateCurrentGrants() {
+        for (String invalid : List.of("[\"role08-self\",1]", "[\"role08-self\",null]", "[\"role08-self\",{}]", "[\"role08-self\"")) {
+            oldAssignment(invalid);
+            assertThat(allows("alice", "org-engineering", "alice")).as("retired role text cannot supply authority").isFalse();
         }
+        fixture.data("alice", RESOURCE, "read", "SELF");
+        assertThat(allows("alice", "org-engineering", "alice")).isTrue();
+        assertThat(allows("alice", "org-engineering", "bob")).isFalse();
     }
 
     @Test
-    void resourceDenyIsEnforcedInBothFilterAndPreviewUnderAndAndOr() {
+    void historicalResourceDenyIsPreservedUnderAndAndOrForMigration() {
         String rules = "[{\"type\":\"TENANT\"},{\"field\":\"CREATOR\",\"value\":\"bob\",\"effect\":\"DENY\"}]";
         for (String operator : List.of("AND", "OR")) {
-            policy.update(operator, rules, "null", "checksum");
-            var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-            assertThat(filter.allows(null, "bob", null, null)).as(operator).isFalse();
-            assertThat(filter.allows(null, "alice", null, null)).as(operator).isTrue();
-            var preview = preview("bob", null);
-            assertThat(preview.allowed()).isFalse();
-            assertThat(preview.reasonCode()).isEqualTo("POLICY_DENY");
+            var expression = compile(operator, rules, "null");
+            assertThat(expression.matches(row("org-engineering", "bob"))).as(operator).isFalse();
+            assertThat(expression.matches(row("org-engineering", "alice"))).as(operator).isTrue();
         }
     }
 
     @Test
-    void nestedAndDenyKeepsItsBranchGateWhenAnotherOrBranchAllowsTheRow() {
-        policy.update("OR", "[]", """
+    void historicalNestedAndDenyKeepsItsBranchGateUnderOrForMigration() {
+        var expression = compile("OR", "[]", """
                 {"operator":"OR","children":[
                   {"operator":"AND","children":[
                     {"field":"ORGANIZATION","value":"org-engineering"},
-                    {"field":"CREATOR","value":"bob","effect":"DENY"}
-                  ]},
-                  {"field":"TENANT"}
-                ]}
-                """, "checksum");
-        var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-        assertThat(filter.allows("org-engineering", "bob", null, null)).isFalse();
-        assertThat(filter.allows("org-marketing", "bob", null, null)).isTrue();
-        assertThat(filter.allows("org-engineering", "alice", null, null)).isTrue();
+                    {"field":"CREATOR","value":"bob","effect":"DENY"}]},
+                  {"field":"TENANT"}]}
+                """);
+        assertThat(expression.matches(row("org-engineering", "bob"))).isFalse();
+        assertThat(expression.matches(row("org-marketing", "bob"))).isTrue();
+        assertThat(expression.matches(row("org-engineering", "alice"))).isTrue();
     }
 
     @Test
-    void roleUnionCannotOverrideResourceDenialsOrTheResourceMaximum() {
-        assignRoles("[\"role-a\"]");
-        role("role-a", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "role-a", TENANT_RULE));
-        policy.update("AND", "[{\"field\":\"ORGANIZATION\",\"value\":\"org-engineering\"},"
-                + "{\"field\":\"CREATOR\",\"value\":\"bob\",\"effect\":\"DENY\"}]", "null", "checksum");
-
-        var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-        assertThat(filter.allows("org-engineering", "alice", null, null)).isTrue();
-        assertThat(filter.allows("org-engineering", "bob", null, null)).isFalse();
-        assertThat(filter.allows("org-marketing", "alice", null, null)).isFalse();
+    void roleUnionCannotOverrideTenantOrRegisteredBusinessMaximum() {
+        fixture.data("alice", "applications", "read", "SELF");
+        fixture.data("alice", "applications", "read", "TENANT_ALL");
+        application("visible", DOMAIN, TENANT, "bob", true);
+        application("hidden", DOMAIN, TENANT, "alice", false);
+        application("foreign", "ENTERPRISE:ent-other", "ent-other", "alice", true);
+        application("wrong-domain", "PLATFORM:ent-acme", TENANT, "alice", true);
+        var query = new NamedParameterJdbcTemplate(db);
+        var ids = reads.read(Domain.enterprise(TENANT), "applications", "read", principal("alice"), range ->
+                query.queryForList("select record_id from summer_application_record where " + range.predicate(), range.bindings(), String.class));
+        assertThat(ids).containsExactly("visible");
     }
 
     @Test
-    void denyInsideRoleBindingRemainsEffective() {
-        assignRoles("[\"role-a\"]");
-        role("role-a", ENTERPRISE, "ACTIVE");
-        configureBindings(binding("ROLE", "role-a", "[{\"type\":\"TENANT\"},"
-                + "{\"field\":\"CREATOR\",\"value\":\"bob\",\"effect\":\"DENY\"}]"));
-
-        var filter = service.filter(ENTERPRISE, RESOURCE, principal("alice"));
-        assertThat(filter.allows(null, "alice", null, null)).isTrue();
-        assertThat(filter.allows(null, "bob", null, null)).isFalse();
+    void historicalDenyInsideRoleExpressionRemainsEffectiveForMigration() {
+        var expression = compile("OR", "[{\"type\":\"TENANT\"},"
+                + "{\"field\":\"CREATOR\",\"value\":\"bob\",\"effect\":\"DENY\"}]", "null");
+        assertThat(expression.matches(row(null, "alice"))).isTrue();
+        assertThat(expression.matches(row(null, "bob"))).isFalse();
     }
 
     @Test
     void orBranchesAndDenyNeverExpandTheTenantBoundary() {
-        Object rules = mapper.readValue("[{\"field\":\"TENANT\",\"value\":\"ent-other\"},"
+        var expression = compile("OR", "[{\"field\":\"TENANT\",\"value\":\"ent-other\"},"
                 + "{\"field\":\"CREATOR\",\"value\":\"alice\"},"
-                + "{\"field\":\"CREATOR\",\"value\":\"bob\",\"effect\":\"DENY\"}]", Object.class);
-        var compiled = DataScopeExpression.compile("OR", rules, null,
-                new DataScopeExpression.Context(ENTERPRISE, "alice", null, List::copyOf));
-        assertThat(compiled.expression().matches(new DataScopeExpression.Row("ent-other", null, "alice", null, null))).isFalse();
-        assertThat(compiled.expression().matches(new DataScopeExpression.Row(ENTERPRISE, null, "alice", null, null))).isTrue();
-        assertThat(compiled.expression().matches(new DataScopeExpression.Row(ENTERPRISE, null, "bob", null, null))).isFalse();
+                + "{\"field\":\"CREATOR\",\"value\":\"bob\",\"effect\":\"DENY\"}]", "null");
+        assertThat(expression.matches(new DataScopeExpression.Row("ent-other", null, "alice", null, null))).isFalse();
+        assertThat(expression.matches(row(null, "alice"))).isTrue();
+        assertThat(expression.matches(row(null, "bob"))).isFalse();
     }
 
-    private void assignRoles(String stored) {
-        when(users.findByEnterpriseIdAndUsername(ENTERPRISE, "alice")).thenReturn(Optional.of(
-                new AuthorizationUserBindingEntity("assignment", ENTERPRISE, "alice", stored, "[]", 1)));
+    @Test
+    void historicalNestedComparatorsKeepTheirMeaningAndBindValuesForMigration() {
+        var expression = compile("AND", "[]", """
+                {"operator":"AND","children":[
+                  {"field":"ORGANIZATION","operator":"IN","value":["org-engineering"]},
+                  {"operator":"OR","children":[{"field":"CREATOR","operator":"EQ","value":"alice"},
+                    {"field":"OWNER","operator":"EQ","value":"carol"}]},
+                  {"field":"CREATOR","operator":"NOT_IN","value":["bob"]}]}
+                """);
+        assertThat(expression.matches(row("org-engineering", "alice"))).isTrue();
+        assertThat(expression.matches(row("org-operations", "alice"))).isFalse();
+        assertThat(expression.matches(row("org-engineering", "bob"))).isFalse();
+        assertThat(expression.matches(new DataScopeExpression.Row(TENANT, "org-engineering", "dave", "carol", null))).isTrue();
+        var bound = DataScopeExpression.sql(compile("OR", "[{\"field\":\"CREATOR\",\"value\":\"alice' OR 1=1 --\"}]", "null"));
+        assertThat(bound.predicate()).doesNotContain("alice' OR 1=1 --");
+        assertThat(bound.bindings()).containsValue("alice' OR 1=1 --");
     }
 
-    private void role(String id, String enterprise, String status) {
-        when(roles.findById(id)).thenReturn(Optional.of(new AuthorizationRoleEntity(id, enterprise, id, id,
-                false, status, "", "", null, 1)));
+    @Test
+    void malformedHistoricalTreesAndComparatorsFailBeforeMigrationEvaluation() {
+        for (String invalid : List.of(
+                "{\"operator\":\"AND\",\"children\":[]}",
+                "{\"field\":\"CREATOR\",\"operator\":\"MATCHES\",\"value\":\".*\"}",
+                "{\"field\":\"CREATOR\",\"operator\":\"IN\",\"value\":[]}",
+                "{\"type\":\"TENANT\",\"effect\":\"IGNORE\"}")) {
+            assertThatThrownBy(() -> compile("AND", "[]", invalid)).isInstanceOf(IllegalArgumentException.class);
+        }
     }
 
-    private void configureBindings(DataScopeBindingEntity... rows) {
-        when(bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(ENTERPRISE, RESOURCE)).thenReturn(List.of(rows));
+    @Test
+    void currentReadSeesRevocationOutsideAnEarlierRepeatableReadSnapshot() {
+        String permission = fixture.data("alice", RESOURCE, "read", "SELF");
+        var actor = principal("alice");
+        assertThat(scopes.<Boolean>read(TENANT, RESOURCE, "read", actor, range -> range.allows(null, "alice", "alice", null))).isTrue();
+        var outer = new TransactionTemplate(transactions);
+        outer.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        var fresh = new TransactionTemplate(transactions);
+        fresh.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        outer.executeWithoutResult(tx -> {
+            assertThat(db.queryForObject("select count(*) from summer_role_permission where domain_key=? and permission_id=?", Integer.class, DOMAIN, permission)).isEqualTo(1);
+            fresh.executeWithoutResult(change -> fixture.revoke(roleId("alice"), permission));
+            assertThat(db.queryForObject("select count(*) from summer_role_permission where domain_key=? and permission_id=?", Integer.class, DOMAIN, permission)).isEqualTo(1);
+            assertThat(scopes.<Boolean>read(TENANT, RESOURCE, "read", actor, range -> range.allows(null, "alice", "alice", null))).isFalse();
+        });
+        db.update("delete from summer_authorization_domain where domain_key=?", DOMAIN);
+        assertThatThrownBy(() -> scopes.read(TENANT, RESOURCE, "read", actor, range -> true)).isInstanceOf(AccessDeniedException.class);
+        assertThat(db.queryForObject("select count(*) from summer_authorization_domain where domain_key=?", Integer.class, DOMAIN)).isZero();
     }
 
-    private static DataScopeBindingEntity binding(String type, String subject, String rules) {
-        DataScopeBindingEntity binding = new DataScopeBindingEntity();
-        binding.subjectType = type;
-        binding.subjectId = subject;
-        binding.operator = "OR";
-        binding.rulesJson = rules;
-        binding.conditionsJson = "null";
-        return binding;
+    @Test
+    void retiredRangeEntryPointRejectsAndConstructionNeverSeedsLegacyPolicies() {
+        assertThatThrownBy(() -> legacy.filter(TENANT, RESOURCE, principal("alice")))
+                .isInstanceOf(AccessDeniedException.class).hasMessageContaining("retired");
+        var policies = mock(DataScopePolicyRepository.class);
+        var bindings = mock(DataScopeBindingRepository.class);
+        new DataScopeService(policies, mock(DataScopePolicyAuditRepository.class), mapper,
+                mock(com.abluepoint.summer.sample.customer.CustomerAuditService.class),
+                mock(AuthorizationChangeEventService.class), mock(JdbcTemplate.class), bindings,
+                mock(AuthorizationUserBindingRepository.class), mock(AuthorizationRoleRepository.class));
+        verifyNoInteractions(policies, bindings);
+        assertThat(db.queryForObject("select count(*) from summer_data_scope_policy", Integer.class)).isZero();
     }
 
-    private static String creator(String subject) {
-        return "[{\"field\":\"CREATOR\",\"value\":\"" + subject + "\"}]";
+    private boolean allows(String subject, String organization, String owner) {
+        return scopes.read(TENANT, RESOURCE, "read", principal(subject), range -> range.allows(organization, owner, owner, null));
     }
 
-    private DataScopePreviewView preview(String creator, String organization) {
-        return service.preview(ENTERPRISE, RESOURCE, new DataScopePreviewRequest("alice", organization, creator,
-                null, List.of(), List.of()), principal("alice"));
+    private void oldAssignment(String stored) {
+        if (db.update("update summer_authorization_user_binding set role_ids=? where enterprise_id=? and username='alice'", stored, TENANT) == 0) {
+            db.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values('fixture08-old',?,'alice',?,'[]',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", TENANT, stored);
+        }
     }
 
-    private static JwtAuthenticationToken principal(String subject) {
-        Jwt jwt = Jwt.withTokenValue("test-token").header("alg", "none").subject(subject)
-                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", ENTERPRISE, "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of(ENTERPRISE, List.of("enterprise.data-scope.read"))).build();
-        return new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.read")));
+    private DataScopeExpression.Node compile(String operator, String rules, String conditions) {
+        return DataScopeExpression.compile(operator, mapper.readValue(rules, Object.class), mapper.readValue(conditions, Object.class),
+                new DataScopeExpression.Context(TENANT, "alice", null, List::copyOf)).expression();
+    }
+
+    private static DataScopeExpression.Row row(String organization, String creator) {
+        return new DataScopeExpression.Row(TENANT, organization, creator, creator, null);
+    }
+
+    private void application(String id, String domain, String tenant, String owner, boolean visible) {
+        db.update("insert into summer_application_record(record_id,domain_key,tenant_id,applicant_id,created_by,business_visible) values(?,?,?,?,?,?)", id, domain, tenant, owner, "proxy", visible);
+    }
+
+    private void foreignGrant() {
+        String foreign = "ENTERPRISE:ent-other";
+        db.update("insert into summer_enterprise(enterprise_id,name,code,status,created_at,updated_at) values('ent-other','Other','OTHER','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        db.update("insert into summer_enterprise_member(enterprise_id,member_id,subject,display_name,email,status,version,created_at,updated_at) values('ent-other','foreign08','alice','Alice','foreign08@example.test','ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        db.update("insert into summer_authorization_domain(domain_key,engine_mode,revision) values(?,'MANAGED',0)", foreign);
+        db.update("insert into summer_permission_group(domain_key,group_id,name,sort_order,version) values(?,'foreign08','Foreign',0,0)", foreign);
+        db.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at) values('role08-foreign','ent-other','Foreign','foreign08',false,'ACTIVE',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        db.update("insert into summer_permission_role(domain_key,role_id) values(?,'role08-foreign')", foreign);
+        db.update("insert into summer_permission_user(domain_key,username,version) values(?,'alice',0)", foreign);
+        db.update("insert into summer_permission_user_role(domain_key,username,role_id) values(?,'alice','role08-foreign')", foreign);
+        db.update("insert into summer_permission_identity(domain_key,permission_id,code,type) values(?,'foreign08','foreign08','DATA')", foreign);
+        db.update("insert into summer_permission(domain_key,permission_id,code,name,type,access_mode,group_id,status,version) values(?,'foreign08','foreign08','Foreign','DATA','AUTHORIZED','foreign08','ACTIVE',0)", foreign);
+        db.update("insert into summer_permission_data_scope(domain_key,permission_id,data_resource_key,action,scope_preset) values(?,'foreign08','system-parameters','read','TENANT_ALL')", foreign);
+        db.update("insert into summer_role_permission(domain_key,role_id,permission_id) values(?,'role08-foreign','foreign08')", foreign);
+        fixture.advance();
     }
 }

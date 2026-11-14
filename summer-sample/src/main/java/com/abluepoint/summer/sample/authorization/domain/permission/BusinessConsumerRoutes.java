@@ -9,14 +9,18 @@ public final class BusinessConsumerRoutes {
       "configuration.ConfigurationOverrideController", "dictionary.DictionaryController",
       "dictionary.DictionaryNotificationController", "systemparameter.SystemParameterController",
       "systemparameter.SystemParameterCountController", "systemparameter.SystemParameterEventController",
+      "systemparameter.PublicSystemParameterController",
       "statistics.StatisticsController", "realtime.RealtimeMessageController",
       "task.TaskProgressController", "task.TaskSchedulerController");
   private static final Set<String> PLATFORM = Set.of(
-      "customer.CustomerController", "customer.CustomerAuditController");
+      "customer.CustomerController", "customer.CustomerAuditController", "key.KeyCapabilityController", "key.ReferenceKeyCapabilityController",
+      "release.ReleaseGateController");
   private BusinessConsumerRoutes() {}
   public static String domainKind(String owner, String path) {
     if (!owner.startsWith(ROOT)) return "COMPONENT";
     String relative = owner.substring(ROOT.length());
+    if (relative.equals("identity.SessionController") && Set.of(
+        "/api/v1/sessions", "/api/v1/sessions/{reference}").contains(path)) return "PLATFORM";
     if (relative.equals("delegation.DelegationController")) {
       if (path.startsWith("/api/v1/enterprises/{e}/") || Set.of(
           "/internal/v1/mcp/approvals", "/api/v1/mcp/approvals/{id}:approve",

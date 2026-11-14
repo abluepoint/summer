@@ -1,216 +1,136 @@
 package com.abluepoint.summer.sample.authorization;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.abluepoint.summer.sample.authorization.application.permission.ManagedRoleService;
+import com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {"summer.security.storage.keys=memory", "summer.sample.authorization.legacy-scope-compatibility=true"})
+@SpringBootTest(properties="summer.security.storage.keys=memory")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Import(CurrentManagedAuthorizationTestFixture.class)
+@DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AuthorizationAuditPersistenceTest {
-    private static final String ENTERPRISE = "ent-acme";
-    private static final String PLATFORM = "PLATFORM:platform";
-    @Autowired AuthorizationService authorization;
-    @Autowired AuthorizationChangeEventOutboxRepository outbox;
-    @Autowired ApplicationContext context;
-    @Autowired PlatformTransactionManager transactions;
-    @Autowired MockMvc mvc;
-    @Autowired JdbcTemplate jdbc;
+  static final Domain ENTERPRISE=Domain.enterprise("ent-acme"), PLATFORM=Domain.platform();
+  @Autowired ManagedRoleService roles;
+  @Autowired AuthorizationService retired;
+  @Autowired UnifiedAuthorizationService unified;
+  @Autowired AuthorizationChangeEventOutboxRepository outbox;
+  @Autowired ApplicationContext context;
+  @Autowired PlatformTransactionManager transactions;
+  @Autowired MockMvc mvc;
+  @Autowired JdbcTemplate jdbc;
+  @Autowired CurrentManagedAuthorizationTestFixture fixture;
+  @Autowired ManagedInterfaceResources resources;
+  @Autowired org.springframework.beans.factory.ObjectProvider<RequestMappingHandlerMapping> mappings;
 
-    @BeforeEach
-    void initializeUnpublishedMenuState() {
-        jdbc.update("insert into summer_menu_publication(publication_id,published,manifest_version) values ('global',false,0)");
+  @BeforeEach void initializeUnpublishedMenuState() {
+    fixture.grantHandlers(PLATFORM,"audit-admin",(h,p,m)->p.startsWith("/api/v1/platform/menu-manifest"));
+    fixture.grantHandlers(ENTERPRISE,"audit-admin",(h,p,m)->p.startsWith("/api/v1/enterprises/{enterpriseId}/menu-manifest"));
+    jdbc.update("update summer_menu_publication set published=false,manifest_version=0 where publication_id='global'");
+  }
+  private AuthorizationAuditStore freshAuditStore() { return context.getAutowireCapableBeanFactory().createBean(AuthorizationAuditStore.class); }
+  private Map<String,Object> create(String code,String request) {
+    return (Map<String,Object>) roles.mutate(ENTERPRISE,"audit-admin","role",null,"POST",Map.of("name","Reader","code",code,"permissionIds",List.of()),null,code,request).body();
+  }
+  private JwtAuthenticationToken principal(String name) {
+    return new JwtAuthenticationToken(Jwt.withTokenValue("test-only").header("alg","none").subject(name)
+        .claim("scope","enterprise.menu.write platform.menu.write enterprise.roles.read enterprise.roles.write customer.read").build(),
+        java.util.Arrays.stream(new String[]{"enterprise.menu.write", "platform.menu.write", "enterprise.roles.read", "enterprise.roles.write", "customer.read"})
+            .map(scope -> new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + scope)).toList());
+  }
+  private ResourceAuthorization.Resource resource(String method,String path) {
+    for(var mapping:mappings.orderedStream().toList()) for(var entry:mapping.getHandlerMethods().entrySet())
+      if(entry.getKey().getPatternValues().contains(path) && entry.getKey().getMethodsCondition().getMethods().stream().anyMatch(m->m.name().equals(method)))
+        return resources.registered(ManagedInterfaceResources.mvc(method,path,entry.getValue(),entry.getKey()));
+    throw new IllegalArgumentException("Exact installed test mapping missing");
+  }
+  @Test void committedMutationAuditCanBeReadByAnIndependentServiceInstance() {
+    String id=create("audit-reader","audit-request").get("roleId").toString();
+    assertThat(freshAuditStore().read(ENTERPRISE,id)).singleElement().satisfies(row->assertThat(row)
+        .containsEntry("action","ROLE_role_POST").containsEntry("requestId","audit-request").containsEntry("principal","audit-admin").containsKey("at"));
+    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE.key(),"ROLE")).anyMatch(e->e.resourceId().equals(id));
+  }
+  @Test void rolledBackMutationLeavesNeitherAuditNorOutboxEvent() {
+    var id=new AtomicReference<String>(); long before=outbox.count();
+    new TransactionTemplate(transactions).executeWithoutResult(tx->{
+      id.set(create("audit-rollback","audit-rollback-request").get("roleId").toString());
+      assertThat(freshAuditStore().read(ENTERPRISE,id.get())).hasSize(1);
+      assertThat(outbox.count()).isGreaterThan(before); tx.setRollbackOnly();
+    });
+    assertThat(freshAuditStore().read(ENTERPRISE,id.get())).isEmpty(); assertThat(outbox.count()).isEqualTo(before);
+    assertThat(jdbc.queryForObject("select count(*) from summer_permission_mutation where domain_key=? and idempotency_key=?",Long.class,ENTERPRISE.key(),"audit-rollback")).isZero();
+  }
+  @Test void authorizationDecisionsRemainDurableWhenAnOuterTransactionRollsBack() {
+    fixture.grantHandlers(PLATFORM,"alice",(h,p,m)->p.equals("/api/customers") && m.equals("GET"));
+    var read=resource("GET","/api/customers"); var write=resource("POST","/api/customers");
+    new TransactionTemplate(transactions).executeWithoutResult(tx->{
+      assertThat(unified.decide(new ResourceAuthorization.Request(PLATFORM,principal("alice"),read,"allow-request")).allowed()).isTrue();
+      assertThat(unified.decide(new ResourceAuthorization.Request(PLATFORM,principal("alice"),write,"deny-request")).allowed()).isFalse(); tx.setRollbackOnly();
+    });
+    var rows=freshAuditStore().read(PLATFORM,"alice");
+    assertThat(rows).anySatisfy(row->assertThat(row).containsEntry("action","RESOURCE_AUTHORIZATION_ALLOWED").containsEntry("requestId","allow-request")
+        .containsEntry("principal","alice").containsEntry("resourceId",read.id()).containsEntry("decision","ALLOW").containsEntry("reasonCode","CURRENT_PERMISSION_ALLOW").containsKey("at"));
+    assertThat(rows).anySatisfy(row->assertThat(row).containsEntry("action","RESOURCE_AUTHORIZATION_DENIED").containsEntry("requestId","deny-request")
+        .containsEntry("resourceId",write.id()).containsEntry("decision","DENY").containsEntry("reasonCode","NO_APPLICABLE_PERMISSION"));
+  }
+  @Test void menuSyncAndOverrideHaveDurableAuditsAlongsideTheirOutboxEvents() throws Exception {
+    syncMenu();
+    mvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/audit-menu").with(authentication(principal("audit-admin")))
+        .contentType("application/json").header("Idempotency-Key","audit-menu-override").header("If-Match","\"1\"")
+        .header("X-Request-Id","menu-override-request").content("{\"enabled\":false}")).andExpect(status().isOk());
+    assertThat(freshAuditStore().read(PLATFORM,"manifest")).anySatisfy(row->assertThat(row).containsEntry("action","MENU_MANIFEST_PUBLISHED").containsEntry("requestId","menu-sync-request").containsEntry("principal","audit-admin"));
+    // Current metadata writes remain in their complete domain; historical bare rows are never unioned.
+    assertThat(freshAuditStore().read(ENTERPRISE,"audit-menu")).anySatisfy(row->assertThat(row).containsEntry("action","MENU_LAYOUT_CHANGED").containsEntry("requestId","menu-override-request"));
+    assertThat(freshAuditStore().read(ENTERPRISE,"manifest")).isEmpty();
+    assertThat(freshAuditStore().read(ENTERPRISE.id(),"audit-menu")).isEmpty();
+    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(PLATFORM.key(),"MENU")).singleElement().satisfies(e->{ assertThat(e.enterpriseId()).isEqualTo(PLATFORM.key()); assertThat(e.resourceId()).isEqualTo("manifest"); assertThat(e.eventType()).isEqualTo("MENU_CHANGED"); assertThat(e.requestId()).isEqualTo("menu-sync-request"); });
+    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE.key(),"MENU")).singleElement().satisfies(e->{ assertThat(e.resourceId()).isEqualTo("audit-menu"); assertThat(e.eventType()).isEqualTo("MENU_CHANGED"); assertThat(e.requestId()).isEqualTo("menu-override-request"); });
+  }
+  @Test void menuMutationAuditAndOutboxRollBackTogether() {
+    long before=outbox.count();
+    new TransactionTemplate(transactions).executeWithoutResult(tx->{
+      try { syncMenu(); } catch(Exception e) { throw new IllegalStateException(e); }
+      assertThat(freshAuditStore().read(PLATFORM,"manifest")).hasSize(1);
+      assertThat(jdbc.queryForObject("select manifest_version from summer_menu_publication where publication_id='global'",Long.class)).isEqualTo(1L);
+      assertThat(outbox.count()).isGreaterThan(before); tx.setRollbackOnly();
+    });
+    assertThat(freshAuditStore().read(PLATFORM,"manifest")).isEmpty();
+    assertThat(jdbc.queryForObject("select manifest_version from summer_menu_publication where publication_id='global'",Long.class)).isZero();
+    assertThat(outbox.count()).isEqualTo(before);
+  }
+  @Test void retiredEarlyBranchesCannotGrantWhileCurrentDecisionReasonsArePersisted() {
+    var read=resource("GET","/api/customers");
+    fixture.activeUser(PLATFORM,"unassigned"); fixture.activeUser(PLATFORM,"inactive");
+    jdbc.update("update summer_auth_user set active=false where username='inactive'");
+    for(String subject:List.of("legacy","managed","summer-user","inactive"))
+      assertThat(retired.platformDecision(principal(subject),"GET:/api/customers","retired-"+subject)).isEqualTo(new AuthorizationService.Decision(false,"CONTROLLED_MANAGED_UPGRADE_REQUIRED"));
+    for(String subject:List.of("unassigned","inactive")) {
+      assertThat(unified.decide(new ResourceAuthorization.Request(PLATFORM,principal(subject),read,subject+"-request")).allowed()).isFalse();
+      assertThat(freshAuditStore().read(PLATFORM,subject)).anySatisfy(row->assertThat(row).containsEntry("decision","DENY").containsEntry("reasonCode","NO_APPLICABLE_PERMISSION").containsEntry("resourceId",read.id()));
     }
-
-    @Test
-    void committedMutationAuditCanBeReadByAnIndependentServiceInstance() {
-        var role = authorization.createRole(ENTERPRISE, new RoleCreateRequest("Reader", "audit-reader", List.of(), null),
-                "audit-create", "audit-request", admin());
-
-        var rows = freshService().audit(ENTERPRISE, role.roleId(), admin());
-        assertThat(rows).hasSize(1);
-        assertThat(rows.getFirst()).containsEntry("action", "ROLE_CREATED")
-                .containsEntry("requestId", "audit-request").containsEntry("principal", "audit-admin")
-                .containsKey("at");
-        assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE, "ROLE"))
-                .anyMatch(event -> role.roleId().equals(event.resourceId()));
-    }
-
-    @Test
-    void rolledBackMutationLeavesNeitherAuditNorOutboxEvent() {
-        AtomicReference<String> roleId = new AtomicReference<>();
-        long originalEvents = outbox.count();
-        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            var role = authorization.createRole(ENTERPRISE, new RoleCreateRequest("Rollback", "audit-rollback", List.of(), null),
-                    "audit-rollback", "audit-rollback-request", admin());
-            roleId.set(role.roleId());
-            assertThat(authorization.audit(ENTERPRISE, role.roleId(), admin())).hasSize(1);
-            assertThat(outbox.count()).isGreaterThan(originalEvents);
-            transaction.setRollbackOnly();
-        });
-
-        assertThat(authorization.audit(ENTERPRISE, roleId.get(), admin())).isEmpty();
-        assertThat(freshService().audit(ENTERPRISE, roleId.get(), admin())).isEmpty();
-        assertThat(outbox.count()).isEqualTo(originalEvents);
-    }
-
-    @Test
-    void authorizationDecisionsRemainDurableWhenAnOuterTransactionRollsBack() {
-        var role = authorization.createRole(ENTERPRISE, new RoleCreateRequest("Customer reader", "audit-decision-reader",
-                List.of("GET:/api/customers"), null), "audit-decision-role", "role-request", admin());
-        authorization.assignUserRoles(ENTERPRISE, "alice", new UserRoleAssignmentRequest(List.of(role.roleId()),
-                List.of("POST:/api/customers")), "\"1\"", "audit-decision-binding", "binding-request", admin());
-
-        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            assertThat(authorization.decision(principal("alice"), ENTERPRISE, "GET:/api/customers", "allow-request").allowed()).isTrue();
-            assertThat(authorization.decision(principal("alice"), ENTERPRISE, "POST:/api/customers", "deny-request").allowed()).isFalse();
-            transaction.setRollbackOnly();
-        });
-
-        var rows = freshService().audit(ENTERPRISE, "alice", admin());
-        assertThat(rows).anySatisfy(row -> assertThat(row).containsEntry("action", "AUTHORIZATION_ALLOWED")
-                .containsEntry("requestId", "allow-request").containsEntry("principal", "alice")
-                .containsEntry("permissionCode", "GET:/api/customers").containsEntry("decision", "ALLOW")
-                .containsEntry("reasonCode", "ROLE_ALLOW").containsKey("at"));
-        assertThat(rows).anySatisfy(row -> assertThat(row).containsEntry("action", "AUTHORIZATION_DENIED")
-                .containsEntry("requestId", "deny-request").containsEntry("principal", "alice")
-                .containsEntry("permissionCode", "POST:/api/customers").containsEntry("decision", "DENY")
-                .containsEntry("reasonCode", "USER_EXPLICIT_DENY").containsKey("at"));
-    }
-
-    @Test
-    void menuSyncAndOverrideHaveDurableAuditsAlongsideTheirOutboxEvents() throws Exception {
-        syncMenu();
-        mvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/audit-menu")
-                        .with(authentication(admin())).contentType(MediaType.APPLICATION_JSON)
-                        .header("Idempotency-Key", "audit-menu-override").header("If-Match", "\"1\"")
-                        .header("X-Request-Id", "menu-override-request").content("{\"enabled\":false}"))
-                .andExpect(status().isOk());
-
-        assertThat(freshAuditStore().read(PLATFORM, "manifest")).anySatisfy(row ->
-                assertThat(row).containsEntry("action", "MENU_MANIFEST_SYNCED").containsEntry("principal", "audit-admin")
-                        .containsEntry("requestId", "menu-sync-request"));
-        assertThat(freshService().audit(ENTERPRISE, "audit-menu", admin())).anySatisfy(row ->
-                assertThat(row).containsEntry("action", "MENU_OVERRIDE_UPDATED").containsEntry("principal", "audit-admin")
-                        .containsEntry("requestId", "menu-override-request"));
-        assertThat(freshService().audit(ENTERPRISE, "manifest", admin())).isEmpty();
-        assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(PLATFORM, "MENU_MANIFEST"))
-                .singleElement().satisfies(event -> {
-                    assertThat(event.enterpriseId()).isEqualTo(PLATFORM);
-                    assertThat(event.resourceId()).isEqualTo("manifest");
-                    assertThat(event.eventType()).isEqualTo("MENU_MANIFEST_SYNCED");
-                    assertThat(event.requestId()).isEqualTo("menu-sync-request");
-                });
-        assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE, "MENU_MANIFEST"))
-                .singleElement().satisfies(event -> {
-                    assertThat(event.enterpriseId()).isEqualTo(ENTERPRISE);
-                    assertThat(event.resourceId()).isEqualTo("audit-menu");
-                    assertThat(event.eventType()).isEqualTo("MENU_OVERRIDE_UPDATED");
-                    assertThat(event.requestId()).isEqualTo("menu-override-request");
-                });
-    }
-
-    @Test
-    void menuMutationAuditAndOutboxRollBackTogether() {
-        long originalEvents = outbox.count();
-        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            try { syncMenu(); } catch (Exception failure) { throw new IllegalStateException(failure); }
-            assertThat(freshAuditStore().read(PLATFORM, "manifest")).hasSize(1);
-            assertThat(jdbc.queryForObject("select manifest_version from summer_menu_publication where publication_id='global'", Long.class))
-                    .isEqualTo(1L);
-            assertThat(outbox.count()).isGreaterThan(originalEvents);
-            transaction.setRollbackOnly();
-        });
-
-        assertThat(freshAuditStore().read(PLATFORM, "manifest")).isEmpty();
-        assertThat(jdbc.queryForObject("select manifest_version from summer_menu_publication where publication_id='global'", Long.class))
-                .isZero();
-        assertThat(outbox.count()).isEqualTo(originalEvents);
-    }
-
-    @Test
-    void earlyDecisionBranchesAlsoKeepTheirPersistedReasons() {
-        authorization.decision(principal("legacy"), ENTERPRISE, "GET:/api/customers", "legacy-request");
-        authorization.decision(withClaims(principal("managed"), Map.of("summer_managed_grants", true)),
-                ENTERPRISE, "GET:/api/customers", "managed-request");
-        var bootstrap = withClaims(principal("summer-user", "enterprise.roles.write"), Map.of(
-                "summer_identity_source", "local-user", "platform_capabilities", List.of("platform.capabilities.write")));
-        authorization.decision(bootstrap, ENTERPRISE, "POST:/api/v1/enterprises/{enterpriseId}/roles", "bootstrap-request");
-        authorization.assignUserRoles(ENTERPRISE, "inactive", new UserRoleAssignmentRequest(List.of(), List.of()),
-                "\"1\"", "inactive-binding", "inactive-binding-request", admin());
-        authorization.decision(withClaims(principal("inactive"), Map.of("enterprise_memberships",
-                List.of(Map.of("enterpriseId", ENTERPRISE, "status", "DISABLED")))),
-                ENTERPRISE, "GET:/api/customers", "inactive-request");
-
-        var independent = freshService();
-        assertThat(independent.audit(ENTERPRISE, "legacy", admin())).anySatisfy(row ->
-                assertThat(row).containsEntry("decision", "ALLOW").containsEntry("reasonCode", "LEGACY_SCOPE"));
-        assertThat(independent.audit(ENTERPRISE, "managed", admin())).anySatisfy(row ->
-                assertThat(row).containsEntry("decision", "DENY").containsEntry("reasonCode", "DEFAULT_DENY"));
-        assertThat(independent.audit(ENTERPRISE, "summer-user", admin())).anySatisfy(row ->
-                assertThat(row).containsEntry("decision", "ALLOW").containsEntry("reasonCode", "BOOTSTRAP_ADMIN"));
-        assertThat(independent.audit(ENTERPRISE, "inactive", admin())).anySatisfy(row ->
-                assertThat(row).containsEntry("decision", "DENY").containsEntry("reasonCode", "INACTIVE_MEMBERSHIP"));
-    }
-
-    private void syncMenu() throws Exception {
-        mvc.perform(put("/api/v1/platform/menu-manifest").with(authentication(admin()))
-                        .contentType(MediaType.APPLICATION_JSON).header("Idempotency-Key", "audit-menu-sync")
-                        .header("X-Request-Id", "menu-sync-request")
-                        .content("""
-                                {"manifestVersion":1,"items":[{"menuId":"audit-menu","path":"/audit-menu",
-                                "titleKey":"menu.audit","iconKey":"icon.audit","sortOrder":1,
-                                "capabilityCode":"enterprise.roles.read"}]}
-                                """))
-                .andExpect(status().isOk());
-    }
-
-    private AuthorizationAuditStore freshAuditStore() {
-        return context.getAutowireCapableBeanFactory().createBean(AuthorizationAuditStore.class);
-    }
-
-    private AuthorizationService freshService() {
-        return context.getAutowireCapableBeanFactory().createBean(AuthorizationService.class);
-    }
-
-    private static JwtAuthenticationToken admin() {
-        return principal("audit-admin", "enterprise.roles.write", "enterprise.roles.read", "enterprise.menu.write", "platform.menu.write");
-    }
-
-    private static JwtAuthenticationToken principal(String subject, String... capabilities) {
-        Jwt jwt = Jwt.withTokenValue("test-only").header("alg", "none").subject(subject)
-                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", ENTERPRISE, "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of(ENTERPRISE, List.of(capabilities)))
-                .claim("platform_capabilities", List.of("platform.menu.write")).build();
-        return new JwtAuthenticationToken(jwt, java.util.Arrays.stream(capabilities)
-                .map(code -> new SimpleGrantedAuthority("SCOPE_" + code)).toList());
-    }
-
-    private static JwtAuthenticationToken withClaims(JwtAuthenticationToken authentication, Map<String, Object> extraClaims) {
-        Jwt original = authentication.getToken();
-        Jwt jwt = Jwt.withTokenValue("test-only").headers(values -> values.putAll(original.getHeaders()))
-                .claims(values -> { values.putAll(original.getClaims()); values.putAll(extraClaims); }).build();
-        return new JwtAuthenticationToken(jwt, authentication.getAuthorities(), authentication.getName());
-    }
+  }
+  private void syncMenu() throws Exception {
+    mvc.perform(put("/api/v1/platform/menu-manifest").with(authentication(principal("audit-admin"))).contentType("application/json")
+        .header("If-Match","\"0\"").header("Idempotency-Key","audit-menu-sync").header("X-Request-Id","menu-sync-request")
+        .content("{\"manifestVersion\":1,\"items\":[{\"menuId\":\"audit-menu\",\"path\":\"/audit-menu\",\"titleKey\":\"menu.audit\",\"iconKey\":\"icon.audit\",\"sortOrder\":1}]}")).andExpect(status().isOk());
+  }
 }

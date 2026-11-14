@@ -22,14 +22,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Real TCP and the assembled Spring Security filter chain; no security mocks. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(ResourceFilterAuthorizationHttpTest.Fixture.class)
+@Import({ResourceFilterAuthorizationHttpTest.Fixture.class, CurrentManagedAuthorizationTestFixture.class})
 class ResourceFilterAuthorizationHttpTest {
     @LocalServerPort int port;
     @Autowired com.nimbusds.jose.jwk.source.JWKSource<com.nimbusds.jose.proc.SecurityContext> keys;
+    @Autowired CurrentManagedAuthorizationTestFixture fixture;
     @TestConfiguration(proxyBeanMethods = false)
     static class Fixture {
         @Bean ResourceRequestAuthorization adapter() {
-            return (authentication, context) -> context.getRequest().getRequestURI().endsWith("/allow")
+            return (authentication, context) -> context.getRequest().getRequestURI().endsWith("/allow") || context.getRequest().getRequestURI().equals("/api/customers")
                     ? new AuthorizationDecision(true) : null;
         }
         @Bean Probe probe() { return new Probe(); }
@@ -46,17 +47,23 @@ class ResourceFilterAuthorizationHttpTest {
     @Test void authenticatedAbstentionCannotReachBusinessHandler() throws Exception {
         assertThat(send("abstain", true).statusCode()).isEqualTo(403);
     }
-    @Test void explicitAdapterAllowanceStillReachesBusinessHandler() throws Exception {
+    @Test void explicitAdapterAllowanceCannotBypassCurrentFinalHandlerGuard() throws Exception {
         var response = send("allow", false);
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(response.body()).doesNotContain("\"executed\":true");
+    }
+    @Test void explicitAdapterAndCurrentRoleReachTheExactInstalledBusinessHandler() throws Exception {
+        fixture.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),"filter-reader",
+                (handler,path,method)->path.equals("/api/customers") && method.equals("GET"));
+        var response=send("/api/customers",true);
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("\"executed\":true");
     }
     private HttpResponse<String> send(String route, boolean authenticated) throws Exception {
-        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/filter-foundation/" + route));
+        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + (route.startsWith("/") ? route : "/api/filter-foundation/" + route)));
         if (authenticated) {
             var now = Instant.now();
             var claims = JwtClaimsSet.builder().issuer("http://127.0.0.1:8080").subject("filter-reader")
-                    .issuedAt(now).expiresAt(now.plusSeconds(120))
+                    .issuedAt(now).expiresAt(now.plusSeconds(120)).claim("scope","customer.read")
                     .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).build();
             var token = new NimbusJwtEncoder(keys).encode(JwtEncoderParameters.from(JwsHeader.with(SignatureAlgorithm.RS256).build(), claims));
             request.header("Authorization", "Bearer " + token.getTokenValue());

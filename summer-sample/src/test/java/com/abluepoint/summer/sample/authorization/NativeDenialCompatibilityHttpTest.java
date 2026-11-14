@@ -31,44 +31,56 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@org.springframework.context.annotation.Import({ExplicitLegacyBusinessDomains.AcmeAndOther.class,ExplicitLegacyBusinessDomains.Platform.class})
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class NativeDenialCompatibilityHttpTest {
     @Autowired MockMvc mvc;
-
-    @Test void authorizationAdministrationKeepsItsOwnDenialAcrossTheOldAdapterEntries() throws Exception {
-        String base = "/api/v1/enterprises/ent-acme/";
-        for (String[] entry : new String[][]{
-                {"GET", "capabilities/catalog"}, {"POST", "capabilities", "{}"},
-                {"POST", "capabilities/missing:enable"}, {"POST", "capabilities/missing:disable"},
-                {"PATCH", "capabilities/missing", "{}"},
-                {"GET", "roles"}, {"GET", "roles/missing"}, {"POST", "roles", "{}"},
-                {"PATCH", "roles/missing", "{}"}, {"PUT", "roles/missing/capabilities", "{}"},
-                {"GET", "roles/missing/capabilities"}, {"GET", "capability-bundles"},
-                {"GET", "capability-bundles/missing"}, {"GET", "capability-bundles/missing/versions"},
-                {"POST", "capability-bundles", "{}"}, {"PATCH", "capability-bundles/missing", "{}"},
-                {"PUT", "capability-bundles/missing/capabilities", "{}"},
-                {"GET", "authorization-audit/missing"}, {"PUT", "users/native-user/roles", "{}"},
-                {"GET", "users/native-user/roles"}}) {
-            denied(endpoint(entry[0], base + entry[1], entry.length == 3 ? entry[2] : null),
-                    member(), "Authorization capability denied");
-        }
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+    com.abluepoint.summer.security.web.JsonAccessDeniedHandler forbidden;
+    @Autowired CurrentManagedAuthorizationTestFixture fixture;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate db;
+    @org.junit.jupiter.api.BeforeEach void exactNativeServiceSeams() {
+        var enterprise=com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+        fixture.reachServiceWithoutDelegation(enterprise,"native-boundary-member",(h,p,m)->p.startsWith("/api/v1/enterprises/{enterpriseId}/policies") || p.startsWith("/api/v1/enterprises/{enterpriseId}/menu-manifest") || p.startsWith("/api/authorization-events") || p.startsWith("/api/v1/enterprises/{e}/mcp-execution-permits"));
+        fixture.reachServiceWithoutDelegation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),"native-boundary-member",(h,p,m)->p.startsWith("/api/v1/platform/menu-manifest"));
+        fixture.grantHandlers(enterprise,"native-boundary-member",(h,p,m)->h.getBeanType().getName().endsWith(".AuthorizationController") && p.startsWith("/api/v1/enterprises/{enterpriseId}/"));
+        fixture.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),"native-boundary-member",(h,p,m)->h.getBeanType().getName().endsWith(".AuthorizationController") && p.startsWith("/api/v1/platform/"));
     }
 
-    @Test void platformCapabilityChecksKeepTheirOriginalMessages() throws Exception {
-        denied(get("/api/v1/platform/capabilities/catalog"), member(), "Platform capability denied");
-        denied(endpoint("POST", "/api/v1/platform/capabilities", "{}"), member(), "Platform capability denied");
+
+    @Test void retiredAuthorizationAdministrationCannotWriteThroughOldAdapterEntries() throws Exception {
+        String base="/api/v1/enterprises/ent-acme/";
+        for(String[] entry:new String[][]{{"GET","capabilities/catalog"},{"POST","capabilities","{}"},
+                {"POST","capabilities/missing:enable"},{"POST","capabilities/missing:disable"},{"PATCH","capabilities/missing","{}"},
+                {"GET","capability-bundles"},{"GET","capability-bundles/missing"},{"GET","capability-bundles/missing/versions"},
+                {"POST","capability-bundles","{}"},{"PATCH","capability-bundles/missing","{}"},{"PUT","capability-bundles/missing/capabilities","{}"}})
+            retired(endpoint(entry[0],base+entry[1],entry.length==3?entry[2]:null));
+        // Roles now use the current permission controller. Native grants/claims cannot bypass it;
+        // positive role/assignment/version semantics are retained in AuthorizationControllerTest/AuthorizationAssignmentHttpTest.
+        mvc.perform(get(base+"roles").with(member())).andExpect(status().isForbidden());
+    }
+    @Test void platformCapabilityApisAreRetiredWithoutWrites() throws Exception {
+        retired(get("/api/v1/platform/capabilities/catalog"));
+        retired(endpoint("POST","/api/v1/platform/capabilities","{}"));
+    }
+    @Test void retiredEnterpriseCapabilityCreationCannotCreatePlatformScope() throws Exception {
+        retired(endpoint("POST","/api/v1/enterprises/ent-acme/capabilities",
+                "{\"code\":\"native.platform\",\"resource\":\"native-resource\",\"action\":\"read\",\"scope\":\"PLATFORM\"}"));
+    }
+    private void retired(MockHttpServletRequestBuilder request) throws Exception {
+        var before=retiredCounts();
+        mvc.perform(request.with(member()).header("If-Match","\"1\"").header("Idempotency-Key","retired-native").header("X-Request-Id","retired-native"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SUMMER_AUTHORIZATION_INVALID"))
+                .andExpect(jsonPath("$.error.message").value("Legacy code, deny and bundle grant APIs are retired; use permission and role management"))
+                .andExpect(jsonPath("$.requestId").value("retired-native"));
+        org.assertj.core.api.Assertions.assertThat(retiredCounts()).isEqualTo(before);
+        org.assertj.core.api.Assertions.assertThat(db.queryForObject("select engine_mode from summer_authorization_domain where domain_key='ENTERPRISE:ent-acme'",String.class)).isEqualTo("MANAGED");
     }
 
-    @Test void authorizedEnterpriseCapabilityCreationCannotCreatePlatformScopeAndKeepsItsOriginalMessage() throws Exception {
-        denied(endpoint("POST", "/api/v1/enterprises/ent-acme/capabilities",
-                        "{\"code\":\"native.platform\",\"resource\":\"native-resource\",\"action\":\"read\",\"scope\":\"PLATFORM\"}"),
-                member("enterprise.capabilities.write"), "Platform capability requires platform principal");
-        mvc.perform(get("/api/v1/enterprises/ent-acme/capabilities/catalog")
-                        .with(member("enterprise.capabilities.read")))
-                .andExpect(status().isOk()).andExpect(result -> {
-                    List<String> codes = JsonPath.read(result.getResponse().getContentAsString(), "$.data.capabilities[*].code");
-                    assertFalse(codes.contains("native.platform"));
-                });
+    private Map<String,Long> retiredCounts() {
+        var counts=new java.util.LinkedHashMap<String,Long>();
+        for(String table:List.of("summer_authorization_capability","summer_authorization_user_binding","summer_authorization_role","summer_permission_mutation"))
+            counts.put(table,db.queryForObject("select count(*) from "+table,Long.class));
+        return counts;
     }
 
     @Test void policyAdministrationKeepsItsOriginalDenialAcrossLifecycleAndReadEntries() throws Exception {
@@ -101,15 +113,27 @@ class NativeDenialCompatibilityHttpTest {
                 member(), "Authorization capability denied");
         denied(endpoint("PATCH", "/api/v1/enterprises/ent-acme/menu-manifest", "{}").queryParam("menuId", "missing"),
                 member(), "Authorization capability denied");
-        denied(get("/api/v1/enterprises/ent-acme/menu-manifest"), user("native-session-principal"),
-                "Enterprise membership required");
+        org.mockito.Mockito.clearInvocations(forbidden);
+        mvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(user("native-session-principal"))
+                        .header("X-Request-Id", "native-session-denial"))
+                .andExpect(status().isForbidden()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                .andExpect(jsonPath("$.error.message").value("Access is denied"))
+                .andExpect(jsonPath("$.requestId").value("native-session-denial"))
+                .andExpect(header().string("X-Request-Id", "native-session-denial"))
+                .andExpect(jsonPath("$.error.cause").doesNotExist())
+                .andExpect(result -> assertNull(result.getResolvedException()));
+        var denied = org.mockito.ArgumentCaptor.forClass(AccessDeniedException.class);
+        org.mockito.Mockito.verify(forbidden).handle(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), denied.capture());
+        assertInstanceOf(org.springframework.security.authorization.AuthorizationDeniedException.class, denied.getValue());
     }
 
     @Test void authorizationEventListAndRetryKeepTheirOriginalServiceDenial() throws Exception {
         denied(get("/api/authorization-events").queryParam("enterpriseId", "ent-acme"),
-                member(), "Authorization capability denied");
+                member(), "Current management resource permission required");
         denied(post("/api/authorization-events/missing/retry").queryParam("enterpriseId", "ent-acme"),
-                member(), "Authorization capability denied");
+                member(), "Current management resource permission required");
     }
 
     @Test void mcpDecisionKeepsTrustTenantIdentityAndAudienceDenials() throws Exception {
@@ -135,11 +159,10 @@ class NativeDenialCompatibilityHttpTest {
     }
 
     @Test void preControllerTenantManagedGrantAndAmbiguousQueryDenialsRetainTheGlobalMessage() throws Exception {
-        priorDenial(get("/api/v1/enterprises/ent-acme/capabilities/catalog"), jwt(), "Inactive enterprise membership");
-        priorDenial(get("/api/v1/enterprises/ent-acme/capabilities/catalog"),
-                jwt().jwt(t -> t.subject("native-managed-no-role").claim("summer_managed_grants", true)
-                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))),
-                "Authorization denied: DEFAULT_DENY");
+        mvc.perform(get("/api/v1/enterprises/ent-acme/capabilities/catalog").with(jwt()))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.message").value("Access is denied"));
+        mvc.perform(get("/api/v1/enterprises/ent-acme/roles").with(jwt().jwt(t->t.subject("native-managed-no-role").claim("summer_managed_grants",true))))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.message").value("Access is denied"));
         priorDenial(get("/api/authorization-events").queryParam("enterpriseId", "ent-acme", "ent-other"),
                 member(), "A single valid enterpriseId is required");
     }
@@ -159,6 +182,11 @@ class NativeDenialCompatibilityHttpTest {
                     SummerException error = assertInstanceOf(SummerException.class, result.getResolvedException());
                     assertSame(CommonErrorCode.FORBIDDEN, error.errorCode());
                     assertSame(origin(result), error.getCause());
+                    if (List.of("Policy capability denied", "Platform menu capability denied",
+                            "Authorization capability denied").contains(message)) {
+                        var cause = assertInstanceOf(AccessDeniedException.class, origin(result).getCause());
+                        assertEquals("Current management resource permission required", cause.getMessage());
+                    }
                 });
     }
 
@@ -182,7 +210,7 @@ class NativeDenialCompatibilityHttpTest {
     }
 
     private static RequestPostProcessor member(String... capabilities) {
-        return jwt().jwt(t -> t.subject("native-boundary-member")
+        return jwt().jwt(t -> t.subject("native-boundary-member").claim("scope",String.join(" ",capabilities))
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capabilities))))
                 .authorities(Arrays.stream(capabilities).map(c -> new SimpleGrantedAuthority("SCOPE_" + c)).toArray(SimpleGrantedAuthority[]::new));

@@ -18,8 +18,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionaryNameResolutionHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    private String operatorRole;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.configuration("ent-acme", "dictionaries", true, "dictionary-operator");
+        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+                (handler, path, method) -> handler.getBeanType().equals(DictionaryController.class)
+                        && handler.getMethod().getName().equals("draft") && method.equals("GET")
+                        && path.equals("/api/dictionaries/{code}/draft"));
+        managed.data("ent-acme", "operator", "dictionaries", "read", "TENANT_ALL");
+        managed.interfaces("ENTERPRISE:ent-acme", "other-author", java.util.Set.of("dictionaries"));
+        managed.data("ent-acme", "other-author", "dictionaries", "create", "TENANT_ALL");
+        // Creating an item also advances the parent dictionary draft revision.
+        managed.data("ent-acme", "other-author", "dictionaries", "update", "TENANT_ALL");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() {
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator", operatorRole);
+        managed.close();
+    }
+
     private static final String PUBLIC = "/public/enterprises/ent-acme/dictionaries/name-resolution";
     private static final String RESOLVE = "/api/v1/enterprises/ent-acme/dictionaries/name-resolution/resolve-names";
     @Autowired MockMvc http;
@@ -100,13 +130,9 @@ class DictionaryNameResolutionHttpTest {
                 .content(DraftRevisionFixture.revised(http, "/api/dictionaries/name-resolution/items", "{\"value\":\"hidden\",\"label\":\"Secret name\",\"sortOrder\":1,\"enabled\":true}")))
                 .andExpect(status().isOk());
         publish(1);
-        var policyWriter = jwt().jwt(j -> j.claim("scope", "enterprise.data-scope.write").subject("dictionary-operator")
-                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.data-scope.write"))))
-                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.write"));
-        http.perform(put("/api/v1/enterprises/ent-acme/data-scopes/dictionaries").with(policyWriter)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"rules\":[{\"type\":\"SELF\"}]}"))
-                .andExpect(status().isOk());
+        // Current DATA scope replaces the retired domain-level data-scopes write API.
+        managed.revokePublicRead("ent-acme", "dictionaries");
+        managed.data("ent-acme", "dictionary-operator", "dictionaries", "read", "SELF");
         http.perform(post(RESOLVE).with(identity("SCOPE_platform.dictionary.read"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"values\":[\"hidden\",\"absent\"]}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].status").value("unknown"))
@@ -144,7 +170,6 @@ class DictionaryNameResolutionHttpTest {
     }
     private static RequestPostProcessor identity(String subject, String authority) {
         return jwt().jwt(token -> token.claim("scope", authority.replaceFirst("^SCOPE_", "")).subject(subject)
-                .claim("summer_managed_grants", !"dictionary-operator".equals(subject))
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority(authority));
     }

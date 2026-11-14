@@ -27,8 +27,6 @@ import java.util.function.Supplier;
 public final class VersionedTwoLevelCache {
     private static final Logger log = LoggerFactory.getLogger(VersionedTwoLevelCache.class);
     private static final String KEY_PREFIX = "summer:cache:";
-    private static final String VERSION_PREFIX = KEY_PREFIX + "version:";
-    private static final String ENTRY_PREFIX = KEY_PREFIX + "entry:";
 
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
@@ -41,9 +39,17 @@ public final class VersionedTwoLevelCache {
     private final AtomicLong remoteHits = new AtomicLong();
     private final AtomicLong loads = new AtomicLong();
     private final String nodeId;
+    private final String keyPrefix;
 
     public VersionedTwoLevelCache(StringRedisTemplate redis, ObjectMapper objectMapper,
                                   Duration ttl, String nodeId) {
+        this(redis, objectMapper, ttl, nodeId, "");
+    }
+
+    public VersionedTwoLevelCache(StringRedisTemplate redis, ObjectMapper objectMapper,
+                                  Duration ttl, String nodeId, String namespace) {
+        this.keyPrefix = namespace == null || namespace.isBlank()
+                ? KEY_PREFIX : KEY_PREFIX + "namespace:" + encoded(namespace) + ":";
         this.redis = Objects.requireNonNull(redis, "redis");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
         Duration safeTtl = ttl == null || ttl.isNegative() || ttl.isZero()
@@ -154,16 +160,16 @@ public final class VersionedTwoLevelCache {
     }
 
     private void evictLocal(String scope) {
-        String prefix = ENTRY_PREFIX + encoded(scope) + ":";
+        String prefix = keyPrefix + "entry:" + encoded(scope) + ":";
         l1.asMap().keySet().removeIf(key -> key.startsWith(prefix));
     }
 
     private String versionKey(String scope) {
-        return VERSION_PREFIX + encoded(scope);
+        return keyPrefix + "version:" + encoded(scope);
     }
 
     private String entryKey(String scope, String version, String entry) {
-        return ENTRY_PREFIX + encoded(scope) + ":" + encoded(version) + ":" + encoded(entry);
+        return keyPrefix + "entry:" + encoded(scope) + ":" + encoded(version) + ":" + encoded(entry);
     }
 
     private static String scope(String tenantId, String resource) {

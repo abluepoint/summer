@@ -31,23 +31,23 @@ final class InterfaceResourceHistory {
             Set<String> previous = owners.get(bindingKey(item));
             if (managedAutomatic(item) && previous != null && !previous.contains(item.handler()))
                 return new InterfaceResourceDescriptor(item.httpMethod(), item.normalizedPath(), item.handler(), item.module(),
-                        item.resourceType(), item.sensitiveLevel(), item.permissionCode(), false, item.contextId(), item.source(),
+                        item.resourceType(), item.sensitiveLevel(), false, item.contextId(), item.source(),
                         item.conditions(), "REPLACED_REQUIRES_EXPLICIT_PERMISSION");
             return item;
         }).toList(), catalog.issues());
     }
 
-    boolean isReplaced(String permissionCode, String handler) {
-        Set<String> owners = originalHandlers.get("application:" + permissionCode);
-        return owners != null && !owners.contains(handler);
+    boolean isReplaced(String method,String path, String handler) {
+        String prefix="application MVC "+method+" "+path+" ";
+        return originalHandlers.entrySet().stream().filter(entry->entry.getKey().startsWith(prefix))
+                .anyMatch(entry->!entry.getValue().contains(handler));
     }
 
     private static boolean managedAutomatic(InterfaceResourceDescriptor item) {
-        return item.resourceType() == ResourceType.BUSINESS && "MANAGED_ROLE".equals(item.configurationPolicy())
-                && item.permissionCode().equals(item.httpMethod() + ":" + item.normalizedPath());
+        return item.resourceType() == ResourceType.BUSINESS && "MANAGED_ROLE".equals(item.configurationPolicy());
     }
 
-    private static String bindingKey(InterfaceResourceDescriptor item) { return item.contextId() + ":" + item.permissionCode(); }
+    private static String bindingKey(InterfaceResourceDescriptor item) { return item.contextId()+" "+item.source()+" "+item.httpMethod()+" "+item.normalizedPath()+" "+item.conditions(); }
     private static Map<String, Set<String>> immutableOwners(Map<String, Set<String>> owners) {
         Map<String, Set<String>> copy = new HashMap<>();
         owners.forEach((key, value) -> copy.put(key, Set.copyOf(value)));

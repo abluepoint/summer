@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,7 +20,27 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class PlatformEnterpriseDirectoryControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.platform(), "platform-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.PlatformEnterpriseDirectoryController")
+                && java.util.Set.of("list GET /api/v1/platform/enterprises",
+                        "transition POST /api/v1/platform/enterprises/{id}:freeze")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.platform(), "platform-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.EnterpriseDirectoryController")
+                && java.util.Set.of("create POST /api/v1/platform/enterprises")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.platform(), "enterprise-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.PlatformEnterpriseDirectoryController")
+                && java.util.Set.of("list GET /api/v1/platform/enterprises")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mockMvc;
 
     @Test
@@ -56,9 +80,9 @@ class PlatformEnterpriseDirectoryControllerTest {
     @Test
     void enterpriseScopedPrincipalCannotReadPlatformDirectory() throws Exception {
         mockMvc.perform(get("/api/v1/platform/enterprises")
-                        .with(jwt().jwt(token -> token.subject("enterprise-admin")
+                        .with(jwt().jwt(token -> token.subject("enterprise-admin").claim("scope", "platform.enterprise.read")
                                 .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme")))
-                                .claim("platform_capabilities", java.util.List.of("platform.enterprise.read")))
+                                )
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise.read"))))
                 .andExpect(status().isForbidden());
     }
@@ -67,6 +91,10 @@ class PlatformEnterpriseDirectoryControllerTest {
     void aCreatedEnterpriseIsVisibleInThePlatformDirectory() throws Exception {
         var created = mockMvc.perform(post("/api/v1/platform/enterprises").with(platformAuth("platform.enterprise.write"))
                         .contentType("application/json").content("{\"name\":\"Created directory enterprise\",\"code\":\"created-directory-enterprise\"}"))
+                .andExpect(result -> {
+                    if (result.getResolvedException() != null)
+                        throw new AssertionError("Formal enterprise creation must complete its creator bootstrap", result.getResolvedException());
+                })
                 .andExpect(status().isCreated()).andReturn();
         String id = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.data.enterpriseId");
         mockMvc.perform(get("/api/v1/platform/enterprises").param("search", "Created directory enterprise")
@@ -75,7 +103,7 @@ class PlatformEnterpriseDirectoryControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor platformAuth(String capability) {
-        return jwt().jwt(token -> token.subject("platform-operator").claim("platform_capabilities", java.util.List.of(capability)))
+        return jwt().jwt(token -> token.subject("platform-operator").claim("scope", capability))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 }

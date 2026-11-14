@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Collections;
 
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(value={"permissionCode"})
 public record InterfaceResourceDescriptor(
         String httpMethod,
         String normalizedPath,
@@ -14,7 +15,6 @@ public record InterfaceResourceDescriptor(
         String module,
         ResourceType resourceType,
         SensitiveLevel sensitiveLevel,
-        String permissionCode,
         boolean configurable,
         String contextId,
         String source,
@@ -35,9 +35,6 @@ public record InterfaceResourceDescriptor(
         module = requireText(module, "module");
         resourceType = Objects.requireNonNull(resourceType, "resourceType");
         sensitiveLevel = Objects.requireNonNull(sensitiveLevel, "sensitiveLevel");
-        permissionCode = permissionCode == null || permissionCode.isBlank()
-                ? httpMethod + ":" + normalizedPath
-                : permissionCode.trim();
     }
 
     public static InterfaceResourceDescriptor mvc(
@@ -47,11 +44,10 @@ public record InterfaceResourceDescriptor(
             String module,
             ResourceType resourceType,
             SensitiveLevel sensitiveLevel,
-            String permissionCode,
             boolean configurable
     ) {
         return new InterfaceResourceDescriptor(
-                httpMethod, path, handler, module, resourceType, sensitiveLevel, permissionCode, configurable,
+                httpMethod, path, handler, module, resourceType, sensitiveLevel, configurable,
                 "application", "MVC", Map.of(), resourceType == ResourceType.BUSINESS ? "MANAGED_ROLE" : "COMPONENT_OWNED"
         );
     }

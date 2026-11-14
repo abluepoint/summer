@@ -29,6 +29,14 @@ public class InterfaceOperationService {
           Map.entry(
               "menu.manifest.write",
               management("PUT", "/api/v1/platform/authorization/menu-manifest")),
+          Map.entry("groups.create", management("POST", "/permission-groups")),
+          Map.entry("groups.update", management("PATCH", "/permission-groups/{id}")),
+          Map.entry("groups.delete", management("DELETE", "/permission-groups/{id}")),
+          Map.entry("permissions.create", management("POST", "/permissions")),
+          Map.entry("permissions.update", management("PATCH", "/permissions/{id}")),
+          Map.entry("permissions.delete", management("DELETE", "/permissions/{id}")),
+          Map.entry("permissions.interfaces.write", management("PUT", "/permissions/{permissionId}/interfaces")),
+          Map.entry("permissions.menus.write", management("PUT", "/permissions/{permissionId}/menus")),
           Map.entry("roles.create", management("POST", "/roles")),
           Map.entry("roles.update", management("PATCH", "/roles/{id}")),
           Map.entry("roles.permissions.write", management("PUT", "/roles/{id}/permissions")),
@@ -187,22 +195,8 @@ public class InterfaceOperationService {
     return result;
   }
 
-  /** Only the three existing LEGACY writes retain their original delegated capability gate.
-   * New permission/role writes never inherit this adapter. Token business claims cannot supply
-   * a current grant: only the old engine's freshly loaded persistent ROLE_ALLOW qualifies.
-   */
+  /** Target operation hints never revive the old business engine. */
   private boolean legacyAllowed(Domain domain, Authentication actor, String action, String requestId) {
-    String capability = switch (action) {
-      case "menu.layout.write" -> domain.kind().equals("ENTERPRISE") ? "enterprise.menu.write" : null;
-      case "menu.manifest.write" -> domain.kind().equals("PLATFORM") ? "platform.menu.write" : null;
-      case "authorization.events.retry" -> domain.kind().equals("ENTERPRISE") ? "enterprise.roles.write" : null;
-      default -> null;
-    };
-    if (capability == null || !access.active(domain, actor)
-        || !ManagedConsumerAccess.delegated(actor, capability)) return false;
-    var decision = domain.kind().equals("PLATFORM")
-        ? legacy.getObject().platformDecision(actor, capability, requestId)
-        : legacy.getObject().decision(actor, domain.id(), capability, requestId);
-    return decision.allowed() && "ROLE_ALLOW".equals(decision.reasonCode());
+    return false;
   }
 }

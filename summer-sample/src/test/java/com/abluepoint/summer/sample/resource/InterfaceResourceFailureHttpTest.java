@@ -17,7 +17,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties="summer.sample.parameter-events.scheduling-enabled=false")
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class InterfaceResourceFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCatalogRead() {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "catalog-contract",
+                (handler, path, method) -> handler.getBeanType() == InterfaceResourceCatalogController.class
+                        && method.equals("GET") && java.util.Set.of(
+                                "/api/v1/platform/interface-resources", "/api/v1/platform/interface-resources/history",
+                                "/api/v1/platform/interface-resources/history/{revision}",
+                                "/api/v1/platform/interface-resources/diff").contains(path));
+    }
+
     private static final String ROOT = "/api/v1/platform/interface-resources";
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -62,7 +74,7 @@ class InterfaceResourceFailureHttpTest {
                 .andExpect(header().string("X-Request-Id", "resource-contract"));
     }
     private static RequestPostProcessor reader() {
-        return jwt().jwt(token -> token.subject("catalog-contract").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+        return jwt().jwt(token -> token.subject("catalog-contract").claim("scope", "platform.interface-resources.read").claim("platform_capabilities", List.of("platform.interface-resources.read")))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"));
     }
 }

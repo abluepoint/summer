@@ -14,14 +14,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {"management.endpoints.web.exposure.include=health,info,metrics,prometheus",
         "management.tracing.sampling.probability=1"})
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class RuntimeObservabilityHttpTest {
     @Autowired MockMvc mvc;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired io.micrometer.core.instrument.MeterRegistry registry;
 
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() {
+        var platform = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform();
+        current.grantInstalled(platform, "runtime-observer", mapping -> mapping.source().equals("MONITORING")
+                && mapping.method().equals("GET")
+                && (mapping.path().equals("/internal/v1/diagnostics/runtime")
+                        && mapping.handler().startsWith("com.abluepoint.summer.sample.operations.RuntimeDiagnosticsController@")
+                    || mapping.path().equals("/actuator/prometheus")
+                        && mapping.handler().startsWith("org.springframework.boot.webmvc.actuate.endpoint.web.AbstractWebMvcEndpointHandlerMapping$OperationHandler@")));
+        current.grantHandlers(platform, "trace-writer", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                        && method.equals("POST") && path.equals("/api/customers"));
+    }
+
     @Test
     void diagnosticsExposeMetricMeaningAndConnectedAuditInsteadOfOnlyMeterCount() throws Exception {
-        mvc.perform(get("/internal/v1/diagnostics/runtime").with(jwt().jwt(token -> token.claim("active_enterprise_id", "ent-acme")
+        mvc.perform(get("/internal/v1/diagnostics/runtime").with(jwt().jwt(token -> token.subject("runtime-observer").claim("scope", "platform.capabilities.read").claim("active_enterprise_id", "ent-acme")
                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                         .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
@@ -35,7 +52,7 @@ class RuntimeObservabilityHttpTest {
 
     @Test
     void prometheusIsRawTextForTheDiagnosticsCapability() throws Exception {
-        mvc.perform(get("/actuator/prometheus").with(jwt().jwt(token -> token.claim("active_enterprise_id", "ent-acme")
+        mvc.perform(get("/actuator/prometheus").with(jwt().jwt(token -> token.subject("runtime-observer").claim("scope", "platform.capabilities.read").claim("active_enterprise_id", "ent-acme")
                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                         .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())
@@ -86,7 +103,8 @@ class RuntimeObservabilityHttpTest {
         String canary = "sensitive-" + suffix;
         String body = "{\"username\":\"trace." + suffix + "\",\"email\":\"" + suffix
                 + "@example.test\",\"displayName\":\"" + canary + "\"}";
-        var writer = jwt().authorities(new SimpleGrantedAuthority("SCOPE_customer.write"));
+        var writer = jwt().jwt(token -> token.subject("trace-writer").claim("scope", "customer.write"))
+                .authorities(new SimpleGrantedAuthority("SCOPE_customer.write"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/customers")
                 .with(writer).contentType("application/json").content(body)).andExpect(status().isOk());
         var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("com.abluepoint.summer.mvc.requestlog");

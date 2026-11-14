@@ -5,7 +5,6 @@ import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
-import com.abluepoint.summer.sample.resource.ResourcePermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,7 +36,7 @@ class AuthorizationChangeEventController {
 
     @GetMapping
     @RawResponse
-    @ResourcePermission("enterprise.roles.read")
+
     ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                             @RequestParam(required = false) String resourceType,
                                                             Authentication authentication) {
@@ -50,7 +49,7 @@ class AuthorizationChangeEventController {
 
     @PostMapping("/{eventId}/retry")
     @RawResponse
-    @ResourcePermission("enterprise.roles.write")
+
     ResponseEntity<ApiResponse<AuthorizationChangeEventView>> retry(@PathVariable String eventId,
                                                                       @RequestParam(defaultValue = DEFAULT_ENTERPRISE_ID) String enterpriseId,
                                                                       Authentication authentication) {

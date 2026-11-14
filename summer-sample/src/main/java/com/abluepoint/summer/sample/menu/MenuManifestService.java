@@ -237,7 +237,7 @@ class MenuManifestService {
     }
     private static String blankToNull(String value) { return value == null || value.isBlank() ? null : value; }
 
-    private static void validate(MenuManifestSyncRequest request) {
+    static void validate(MenuManifestSyncRequest request) {
         if (request == null || request.manifestVersion() < 1 || request.items() == null) throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "manifestVersion and items are required");
         Set<String> ids = new HashSet<>();
         for (MenuManifestItemRequest item : request.items()) {

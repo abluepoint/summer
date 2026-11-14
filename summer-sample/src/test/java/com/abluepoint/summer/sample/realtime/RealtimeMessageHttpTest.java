@@ -17,7 +17,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @org.springframework.boot.test.context.SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
+@org.springframework.test.annotation.DirtiesContext
 class RealtimeMessageHttpTest extends RealtimeMessageTestSupport {
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() throws Exception {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "message-operator",
+                (handler, path, method) -> handler.getBeanType().getName().equals(
+                        "com.abluepoint.summer.sample.realtime.RealtimeMessageController")
+                        && java.util.Set.of("GET", "POST").contains(method));
+    }
 
     @Test
     void persistsOrdersDeduplicatesAndAcknowledgesMessages() throws Exception {

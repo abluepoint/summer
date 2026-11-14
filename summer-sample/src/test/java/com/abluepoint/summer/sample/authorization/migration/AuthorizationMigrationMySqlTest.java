@@ -1,60 +1,21 @@
 package com.abluepoint.summer.sample.authorization.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import acceptance.perm12.MigrationArtifactHarness;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.abluepoint.summer.sample.SummerSampleApplication;
 import com.abluepoint.summer.sample.authorization.application.migration.AuthorizationMigrationService;
 import com.abluepoint.summer.sample.authorization.infrastructure.migration.LegacyAuthorizationReader.RuntimeExport;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Opt-in real MySQL ledger protocol. The launcher provisions and owns the database/Redis DB. */
 @EnabledIfEnvironmentVariable(named = "SUMMER_PERM12_MYSQL", matches = "true")
-@SpringBootTest(
-    classes = SummerSampleApplication.class,
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@org.springframework.context.annotation.Import(AuthorizationMigrationMySqlTest.MvcOnlyFixture.class)
-class AuthorizationMigrationMySqlTest {
-  /**
-   * Explicit controlled ledger fixture: no realtime controller, handler or runtime owner installed.
-   */
-  @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
-  static class MvcOnlyFixture {
-    @org.springframework.context.annotation.Bean
-    static org.springframework.beans.factory.config.BeanFactoryPostProcessor
-        omitRealtimeSubsystem() {
-      return factory -> {
-        var registry = (org.springframework.beans.factory.support.BeanDefinitionRegistry) factory;
-        var removed = new java.util.HashSet<String>();
-        boolean changed;
-        do {
-          changed = false;
-          for (String name : registry.getBeanDefinitionNames()) {
-            var definition = registry.getBeanDefinition(name);
-            String owner = definition.getBeanClassName();
-            if (owner != null && owner.startsWith("com.abluepoint.summer.sample.realtime.")
-                || removed.contains(definition.getFactoryBeanName())) {
-              registry.removeBeanDefinition(name);
-              removed.add(name);
-              changed = true;
-            }
-          }
-        } while (changed);
-      };
-    }
-  }
+class AuthorizationMigrationMySqlTest extends MigrationArtifactHarness {
 
-  @Autowired AuthorizationMigrationService migration;
-  @Autowired JdbcTemplate db;
-
-  @Autowired
-  com.abluepoint.summer.sample.authorization.infrastructure.migration.LegacyAuthorizationReader
-      reader;
 
   private Domain enrolledDomain(String id) {
     var domain = Domain.enterprise(id);
@@ -66,7 +27,7 @@ class AuthorizationMigrationMySqlTest {
   @Test
   void rejectsFrozenHashFormatPersistentFactAndTargetIncarnationDrift() {
     var domain = enrolledDomain("migration-frozen-guard-test");
-    var capture = migration.capture(domain, RuntimeExport.empty());
+    var capture = captureFromBridge(domain, RuntimeExport.empty());
     String id = capture.get("snapshotId").toString();
     String fingerprint = capture.get("sourceFingerprint").toString();
     var frozen = migration.readFrozenInput(id);
@@ -131,7 +92,7 @@ class AuthorizationMigrationMySqlTest {
   @Test
   void readsFrozenInputWithoutReopeningRemovedLegacyTables() {
     var domain = enrolledDomain("migration-frozen-read-test");
-    var capture = migration.capture(domain, RuntimeExport.empty());
+    var capture = captureFromBridge(domain, RuntimeExport.empty());
     String id = capture.get("snapshotId").toString();
     db.execute("rename table summer_authorization_role to summer_perm12_frozen_role_backup");
     try {
@@ -145,9 +106,9 @@ class AuthorizationMigrationMySqlTest {
   @Test
   void resumesTheSamePersistedFrozenInputWithoutRecapturingItsLegacyCodes() {
     var domain = enrolledDomain("migration-frozen-resume-test");
-    var capture = migration.capture(domain, RuntimeExport.empty());
+    var capture = captureFromBridge(domain, RuntimeExport.empty());
     String id = capture.get("snapshotId").toString();
-    migration.stage(id, 1, "migration-operator");
+    continueFrozen(id, 1, "migration-operator");
     var resumed =
         migration.stageFrozen(
             id, capture.get("sourceFingerprint").toString(), 10000, "migration-operator");
@@ -253,7 +214,7 @@ class AuthorizationMigrationMySqlTest {
   @Test
   void resumesStagingFromDurableStepsAndReplaysWithoutMoreAuditOrVersions() {
     var domain = enrolledDomain("migration-resume-test");
-    var captured = migration.capture(domain, RuntimeExport.empty());
+    var captured = captureFromBridge(domain, RuntimeExport.empty());
     String id = captured.get("snapshotId").toString();
     assertThat(
             db.queryForObject(
@@ -273,10 +234,10 @@ class AuthorizationMigrationMySqlTest {
                 .filter(row -> row.get("source").toString().equals("MVC") == false)
                 .toList())
         .isEqualTo(java.util.List.of());
-    migration.stage(id, 1, "migration-operator");
+    continueFrozen(id, 1, "migration-operator");
     var partial = migration.report(id);
     assertThat(((java.util.Map<?, ?>) partial.get("coverage")).get("appliedSteps")).isEqualTo(1L);
-    var resumed = migration.stage(id, 10000, "migration-operator");
+    var resumed = continueFrozen(id, 10000, "migration-operator");
     assertThat(resumed.get("status")).isEqualTo("STAGED");
     long revision =
         db.queryForObject(
@@ -288,7 +249,7 @@ class AuthorizationMigrationMySqlTest {
             "select count(*) from summer_authorization_audit where enterprise_id=?",
             Integer.class,
             domain.key());
-    migration.stage(id, 10000, "migration-operator");
+    continueFrozen(id, 10000, "migration-operator");
     assertThat(
             db.queryForObject(
                 "select revision from summer_authorization_domain where domain_key=?",

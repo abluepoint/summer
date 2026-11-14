@@ -24,7 +24,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:plugin-failure-contract;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class PluginFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate pluginDb;
+    String pluginEnterpriseRole;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactPluginOperations() {
+        for (String subject : java.util.List.of("plugin-admin", "user"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType() == PluginController.class
+                            && path.startsWith("/api/v1/platform/plugins"));
+        for (String subject : java.util.List.of("plugin-reader")) {
+            pluginEnterpriseRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), subject,
+                    (handler, path, method) -> handler.getBeanType() == PluginController.class
+                            && path.startsWith("/api/v1/enterprises/{enterpriseId}/plugins"));
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                            && method.equals("GET") && path.equals("/api/customers"));
+        }
+    }
+
     @Autowired MockMvc mvc;
 
     @Test

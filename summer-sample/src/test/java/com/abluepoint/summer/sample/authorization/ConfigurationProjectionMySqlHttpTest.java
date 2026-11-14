@@ -41,22 +41,29 @@ class ConfigurationProjectionMySqlHttpTest {
     }
     @Autowired MockMvc mvc;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
     @Autowired jakarta.persistence.EntityManager entityManager;
     @Test void migratesAndEnforcesScopesAndOverridesThroughHttp() throws Exception {
         assertThat(jdbc.queryForObject("select count(*) from flyway_schema_history where version in ('29','30') and success=1",Integer.class)).isEqualTo(2);
-        var actor=jwt().jwt(j->j.subject("mysql-user").claim("organization_id","org-engineering")
-                .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
-                .claim("enterprise_capabilities",Map.of("ent-acme",List.of("enterprise.data-scope.write","enterprise.data-scope.read"))))
-                .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"),new SimpleGrantedAuthority("SCOPE_system.parameter.read"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.write"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.read"));
-        mvc.perform(post("/api/system-parameters").with(actor).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"key\":\"mysql.scope\",\"type\":\"STRING\",\"value\":\"base\",\"public\":true}")) .andExpect(status().isCreated());
-        jakarta.persistence.Tuple row = (jakarta.persistence.Tuple) entityManager.createNativeQuery("select required_flag, public_flag, created_at, updated_at, value_json from summer_system_parameter", jakarta.persistence.Tuple.class).getSingleResult();
-        assertThat(row.get(2)).isInstanceOf(java.sql.Timestamp.class);
-        var response = mvc.perform(get("/api/system-parameters").with(actor)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items[0].key").value("mysql.scope"))
-                .andExpect(jsonPath("$.data.items[0].public").value(true))
-                .andExpect(jsonPath("$.data.items[0].value").value("base")).andReturn();
-        String created = com.jayway.jsonpath.JsonPath.read(response.getResponse().getContentAsString(), "$.data.items[0].createdAt");
-        assertThat(java.time.Instant.parse(created)).isCloseTo(java.time.Instant.now(), org.assertj.core.api.Assertions.within(30, java.time.temporal.ChronoUnit.SECONDS));
+        try (var managed = new BusinessManagedAuthorizationTestFixture(jdbc, managedTransactions, managedInterfaces)) {
+            managed.interfaces("ENTERPRISE:ent-acme", "mysql-user", Set.of("system-parameters"));
+            for (String action : List.of("create", "read"))
+                managed.data("ent-acme", "mysql-user", "system-parameters", action, "TENANT_ALL");
+            var actor=jwt().jwt(j->j.subject("mysql-user").claim("scope","system.parameter.write system.parameter.read").claim("organization_id","org-engineering")
+                    .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
+                    .claim("enterprise_capabilities",Map.of("ent-acme",List.of("enterprise.data-scope.write","enterprise.data-scope.read"))))
+                    .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"),new SimpleGrantedAuthority("SCOPE_system.parameter.read"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.write"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.read"));
+            mvc.perform(post("/api/system-parameters").with(actor).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"key\":\"mysql.scope\",\"type\":\"STRING\",\"value\":\"base\",\"public\":true}")) .andExpect(status().isCreated());
+            jakarta.persistence.Tuple row = (jakarta.persistence.Tuple) entityManager.createNativeQuery("select required_flag, public_flag, created_at, updated_at, value_json from summer_system_parameter", jakarta.persistence.Tuple.class).getSingleResult();
+            assertThat(row.get(2)).isInstanceOf(java.sql.Timestamp.class);
+            var response = mvc.perform(get("/api/system-parameters").with(actor)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.items[0].key").value("mysql.scope"))
+                    .andExpect(jsonPath("$.data.items[0].public").value(true))
+                    .andExpect(jsonPath("$.data.items[0].value").value("base")).andReturn();
+            String created = com.jayway.jsonpath.JsonPath.read(response.getResponse().getContentAsString(), "$.data.items[0].createdAt");
+            assertThat(java.time.Instant.parse(created)).isCloseTo(java.time.Instant.now(), org.assertj.core.api.Assertions.within(30, java.time.temporal.ChronoUnit.SECONDS));
+        }
     }
 }

@@ -38,30 +38,10 @@ public class AuthorizationMigrationCommand implements ApplicationRunner {
     Map<String, Object> report;
     switch (environment.getRequiredProperty(PREFIX + "command")) {
       case "capture" -> {
-        Domain domain =
-            new Domain(
-                environment.getRequiredProperty(PREFIX + "domain-kind"),
-                environment.getRequiredProperty(PREFIX + "domain-id"));
-        String exported = environment.getProperty(PREFIX + "runtime-export-file");
-        var runtime =
-            exported == null
-                ? RuntimeExport.empty()
-                : json.readValue(Files.readString(Path.of(exported)), RuntimeExport.class);
-        report = migration.capture(domain, runtime);
+        throw new IllegalArgumentException("Capture must execute on the pinned actual old bridge");
       }
-      case "stage" ->
-          report =
-              migration.stage(
-                  environment.getRequiredProperty(PREFIX + "snapshot-id"),
-                  environment.getProperty(PREFIX + "batch-size", Integer.class, 100),
-                  environment.getRequiredProperty(PREFIX + "actor"));
-      case "stage-frozen" ->
-          report =
-              migration.stageFrozen(
-                  environment.getRequiredProperty(PREFIX + "snapshot-id"),
-                  environment.getRequiredProperty(PREFIX + "source-fingerprint"),
-                  environment.getProperty(PREFIX + "batch-size", Integer.class, 100),
-                  environment.getRequiredProperty(PREFIX + "actor"));
+      case "stage", "stage-frozen", "resolve-runtime" ->
+          throw new IllegalArgumentException("Target staging requires the approved upgrade stage command");
       case "frozen-input" ->
           report =
               Map.of(

@@ -48,12 +48,6 @@ public class DataScopeService {
         this.bindings = bindings;
         this.users = users;
         this.roles = roles;
-        repository.findByEnterpriseIdAndResource(ENTERPRISE, "system-parameters")
-                .orElseGet(() -> repository.save(new DataScopePolicyEntity(UUID.randomUUID().toString(), ENTERPRISE,
-                        "system-parameters", "AND", "[{\"type\":\"TENANT\"}]")));
-        repository.findByEnterpriseIdAndResource(ENTERPRISE, "dictionaries")
-                .orElseGet(() -> repository.save(new DataScopePolicyEntity(UUID.randomUUID().toString(), ENTERPRISE,
-                        "dictionaries", "AND", "[{\"type\":\"TENANT\"}]")));
     }
 
     @Transactional(readOnly = true)
@@ -116,50 +110,13 @@ public class DataScopeService {
 
     @Transactional(readOnly = true)
     DataScopePreviewView preview(String enterpriseId, String resource, DataScopePreviewRequest request, Authentication auth) {
-        require(enterpriseId, "enterprise.data-scope.read", auth);
-        DataScopePolicyEntity policy = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
-                .orElseThrow(() -> new NoSuchElementException("Data scope policy was not configured"));
-        DataScopePreviewRequest input = request == null ? new DataScopePreviewRequest(null, null, null, null, List.of(), List.of(), List.of()) : request;
-        String subject = blank(input.subject()) ? principal(auth) : input.subject();
-        String subjectOrganization = subject.equals(principal(auth)) ? organization(enterpriseId, auth) : storedOrganization(enterpriseId, subject);
-        assertOrganization(enterpriseId, subjectOrganization);
-        DataScopeExpression.Compiled policyExpression = compile(enterpriseId, policy.operator(), policy.rulesJson(),
-                policy.conditionsJson(), subject, subjectOrganization);
-        DataScopeExpression.Row row = new DataScopeExpression.Row(enterpriseId, input.organizationId(),
-                blank(input.creatorId()) ? subject : input.creatorId(), input.ownerId(),
-                blank(input.creatorId()) ? subject : input.creatorId());
-        boolean denied = policyExpression.denied().matches(row);
-        boolean allowed = policyExpression.expression().matches(row);
-        if ((input.userDenies() != null && !input.userDenies().isEmpty())
-                || (input.roleAllows() != null && !input.roleAllows().isEmpty())
-                || (input.organizationIds() != null && !input.organizationIds().isEmpty())) {
-            throw new IllegalArgumentException("Preview reads persisted bindings; hypothetical authorization inputs are not accepted");
-        }
-        Effective effectivePolicy = effective(policy, subject, subjectOrganization);
-        allowed = effectivePolicy.expression().matches(row);
-        boolean userDenied = effectivePolicy.userDenied().matches(row);
-        String reason = userDenied ? "USER_DENY" : denied ? "POLICY_DENY" : allowed ? "POLICY_ALLOW" : "DEFAULT_DENY";
-        Map<String, Object> effective = new LinkedHashMap<>();
-        effective.put("tenant", enterpriseId);
-        effective.put("organizationId", subjectOrganization);
-        effective.put("bindings", effectivePolicy.sources());
-        return new DataScopePreviewView(enterpriseId, resource, subject, allowed, allowed ? "ALLOW" : "DENY", reason,
-                "The same validated condition expression is used by database queries and this row preview.",
-                allowed ? List.of("POLICY_ALLOW") : List.of(), denied || userDenied ? List.of(reason) : List.of(),
-                policy.version(), policy.checksum(), effective);
+        throw com.abluepoint.summer.common.error.SummerException.withMessage(
+            com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
+            "Legacy DATA previews are retired; use the current DATA resource preview");
     }
 
     public ScopeFilter filter(String enterpriseId, String resource, Authentication auth) {
-        if (auth != null && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken))
-            EnterpriseRequestContext.requireMembership(enterpriseId, auth);
-        DataScopePolicyEntity policy = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
-                .orElseThrow(() -> new AccessDeniedException("Sensitive resource has no data scope policy"));
-        try {
-            Effective expression = effective(policy, principal(auth), organization(enterpriseId, auth));
-            return new ScopeFilter(enterpriseId, expression.expression(), policy.checksum());
-        } catch (IllegalArgumentException invalid) {
-            throw new AccessDeniedException("Sensitive resource has an invalid data scope policy");
-        }
+        throw new AccessDeniedException("Legacy DATA range evaluation is retired; use current DATA permissions");
     }
 
     @Transactional(readOnly = true)
@@ -338,9 +295,7 @@ public class DataScopeService {
 
     private void require(String enterpriseId, String capability, Authentication auth) {
         if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capability)) return;
-        if (auth == null || !hasMembership(auth, enterpriseId) || !hasCapability(auth, enterpriseId, capability)) {
-            throw new AccessDeniedException("The principal is not authorized for the enterprise data scope");
-        }
+        throw new AccessDeniedException("Current managed resource permission required for enterprise data scope");
     }
 
     private static boolean hasMembership(Authentication auth, String enterpriseId) {

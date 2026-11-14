@@ -14,6 +14,6 @@ class VersionedTwoLevelCacheConfiguration {
             StringRedisTemplate redis,
             ObjectMapper objectMapper,
             VersionedTwoLevelCacheProperties properties) {
-        return new VersionedTwoLevelCache(redis, objectMapper, properties.getTtl(), properties.getNodeId());
+        return new VersionedTwoLevelCache(redis, objectMapper, properties.getTtl(), properties.getNodeId(), properties.getNamespace());
     }
 }

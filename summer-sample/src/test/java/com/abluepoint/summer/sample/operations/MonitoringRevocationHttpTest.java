@@ -22,39 +22,48 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "management.endpoints.web.exposure.include=health,info,metrics,prometheus"})
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class MonitoringRevocationHttpTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
 
     @ParameterizedTest
     @ValueSource(strings = {"/actuator/prometheus", "/actuator/metrics", "/internal/v1/diagnostics/runtime"})
-    void theSameOldJwtCannotReadAfterPersistedDenyOrRoleRemoval(String path) throws Exception {
-        String id = UUID.randomUUID().toString();
-        String subject = "monitor-" + id;
-        members.provision("ent-acme", id, subject, "Monitoring fixture", "monitor@example.test");
-        jdbc.update("""
-                insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,
-                  capability_ids,capability_codes,version,created_at,updated_at)
-                values (?,'ent-acme','Monitoring',?,false,'ACTIVE','cap-platform-capabilities-read',
-                  'platform.capabilities.read',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-                """, id, id);
-        jdbc.update("""
-                insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,
-                  denied_capability_codes,version,created_at,updated_at)
-                values (?,'ent-acme',?,?,'[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-                """, id, subject, "[\"" + id + "\"]");
-        var oldJwt = jwt().jwt(token -> token.subject(subject).claim("summer_managed_grants", true)
+    void theSameOldJwtCannotReadAfterCurrentPermissionDisableOrRoleRemoval(String path) throws Exception {
+        String subject = "monitor-" + UUID.randomUUID();
+        var platform = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform();
+        String roleId = current.grantInstalled(platform, subject,
+                mapping -> mapping.source().equals("MONITORING") && mapping.method().equals("GET")
+                        && mapping.path().equals(path)
+                        && (mapping.handler().startsWith("com.abluepoint.summer.sample.operations.RuntimeDiagnosticsController@")
+                            || mapping.handler().startsWith("org.springframework.boot.webmvc.actuate.endpoint.web.AbstractWebMvcEndpointHandlerMapping$OperationHandler@")));
+        var oldJwt = jwt().jwt(token -> token.subject(subject).claim("scope", "platform.capabilities.read")
                         .claim("active_enterprise_id", "ent-acme")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("platform_capabilities", List.of("platform.capabilities.read")))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"));
         mvc.perform(get(path).with(oldJwt)).andExpect(status().isOk());
-        jdbc.update("update summer_authorization_user_binding set denied_capability_codes=? where binding_id=?",
-                "[\"platform.capabilities.read\"]", id);
+        // Current interface grant and raw OAuth delegation remain independent.
+        mvc.perform(get(path).with(jwt().jwt(token -> token.subject(subject).claim("scope", ""))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
+                .andExpect(status().isForbidden());
+        new org.springframework.transaction.support.TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            jdbc.update("update summer_permission set status='DISABLED' where domain_key=? and permission_id=?",
+                    platform.key(), roleId);
+            jdbc.update("update summer_authorization_domain set revision=revision+1 where domain_key=?", platform.key());
+        });
         mvc.perform(get(path).with(oldJwt)).andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
-        jdbc.update("update summer_authorization_user_binding set denied_capability_codes='[]',role_ids='[]' where binding_id=?", id);
+        // Restore only the permission created by this test, then independently remove its role.
+        new org.springframework.transaction.support.TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            jdbc.update("update summer_permission set status='ACTIVE' where domain_key=? and permission_id=?",
+                    platform.key(), roleId);
+            jdbc.update("update summer_authorization_domain set revision=revision+1 where domain_key=?", platform.key());
+        });
+        mvc.perform(get(path).with(oldJwt)).andExpect(status().isOk());
+        current.revoke(platform, subject, roleId);
         mvc.perform(get(path).with(oldJwt)).andExpect(status().isForbidden());
     }
 }

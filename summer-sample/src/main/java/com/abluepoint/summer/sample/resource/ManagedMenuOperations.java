@@ -10,6 +10,9 @@ public interface ManagedMenuOperations {
 
   boolean managed(Domain domain);
 
+  /** Preserve the existing authorization-before-metadata-validation boundary. */
+  void require(Domain domain, Authentication actor);
+
   Map<String, Object> read(Domain domain, Authentication actor, boolean manifest);
 
   Map<String, Object> visible(Domain domain, Authentication actor);

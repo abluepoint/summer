@@ -24,6 +24,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class TaskRetryRecoveryHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.interfaces("ENTERPRISE:ent-acme", "task-admin", java.util.Set.of("tasks"));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() { managed.close(); }
+
     @Autowired MockMvc mockMvc;
 
     @Test

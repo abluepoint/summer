@@ -20,10 +20,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class ApplicationControllerTest {
     @Autowired MockMvc mockMvc;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.BeforeEach
+    void currentActorFacts() {
+        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "enterprise-admin",
+                (handler, path, method) -> path.startsWith("/api/v1/enterprises/{enterpriseId}/applications"));
+        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "admin", (handler, path, method) -> path.startsWith("/api/v1/enterprises/{enterpriseId}/applications"));
+    }
+
 
     @Test void nativeAccessDenialsKeepTheirOriginalMessageAndCause() throws Exception {
+        managed.reachServiceWithoutDelegation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "application-native-no-cap", (handler,path,method) -> handler.getBeanType().getName().endsWith(".ApplicationController") && method.equals("GET") && path.startsWith("/api/v1/enterprises/{enterpriseId}/"));
         String path = "/api/v1/enterprises/ent-acme/applications/missing";
         MvcResult result = mockMvc.perform(get(path).with(jwt().jwt(t -> t.subject("application-native-no-cap").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))).header("X-Request-Id", "native-denied"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))

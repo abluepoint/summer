@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {"spring.datasource.url=jdbc:h2:mem:configured-bootstrap;MODE=MySQL;DB_CLOSE_DELAY=-1",
         "summer.security.authorization-server.user.username=configured-bootstrap-admin"})
 @Transactional
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class ConfiguredBootstrapMembershipTest {
     @Autowired LocalConsoleIdentityClaims identities;
     @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
@@ -22,8 +23,12 @@ class ConfiguredBootstrapMembershipTest {
         var prior = Map.<String,Object>of("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")),
                 "enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.roles.write")),
                 "platform_capabilities", List.of("platform.capabilities.write"));
-        assertThat(LocalConsoleIdentityClaims.capabilities(identities.resolve(username, prior))).contains("enterprise.roles.write");
+        var before = identities.resolve(username, prior);
+        assertThat(LocalConsoleIdentityClaims.capabilities(before)).isEmpty();
+        assertThat((java.util.Collection<?>) before.get("enterprise_memberships")).hasSize(1);
         jdbc.update("update summer_enterprise_member set status='DISABLED' where subject=?", username);
-        assertThat(LocalConsoleIdentityClaims.capabilities(identities.resolve(username, prior))).isEmpty();
+        var after = identities.resolve(username, prior);
+        assertThat(LocalConsoleIdentityClaims.capabilities(after)).isEmpty();
+        assertThat((java.util.Collection<?>) after.get("enterprise_memberships")).isEmpty();
     }
 }

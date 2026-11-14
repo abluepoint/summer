@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.invitation;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -23,8 +27,41 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class InvitationFailureHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "invitation-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")
+                && java.util.Set.of("create POST /api/v1/enterprises/{enterpriseId}/invitations",
+                        "get GET /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}",
+                        "list GET /api/v1/enterprises/{enterpriseId}/invitations",
+                        "audit GET /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}/audit",
+                        "resend POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:resend",
+                        "revoke POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:revoke",
+                        "applications GET /api/v1/enterprises/{enterpriseId}/join-applications",
+                        "appAudit GET /api/v1/enterprises/{enterpriseId}/join-applications/{id}/audit",
+                        "approve POST /api/v1/enterprises/{enterpriseId}/join-applications/{id}:approve",
+                        "reject POST /api/v1/enterprises/{enterpriseId}/join-applications/{id}:reject")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "invitation-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.member.MemberController")
+                && java.util.Set.of("list GET /api/v1/enterprises/{enterpriseId}/members")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "alice", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("members GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+
+    }
+
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.core.env.Environment environment;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean InvitationService invitationService;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean com.abluepoint.summer.sample.enterprise.EnterpriseRegistry enterpriseRegistry;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final ObjectMapper json = new ObjectMapper();
     private static final String INV = "/api/v1/enterprises/ent-acme/invitations";
     private static final String JOIN = "/api/v1/enterprises/ent-acme/join-applications";
@@ -35,13 +72,36 @@ class InvitationFailureHttpTest {
 
     @Test void invitationLookupKeeps404WhileMissingMutationTargetsKeep409() throws Exception {
         failure(get(INV + "/absent").with(admin("enterprise.invitation.read")), 404, "SUMMER_NOT_FOUND", "Invitation not found");
-        failure(get("/api/v1/enterprises/absent/invitations/absent").with(adminFor("absent", "enterprise.invitation.read")),
-                404, "SUMMER_NOT_FOUND", "Enterprise not found");
-        for (String action : List.of("resend", "revoke")) {
-            failure(post(INV + "/absent:" + action).header("If-Match", "\"v1\"").header("Idempotency-Key", key())
-                    .with(admin("enterprise.invitation.write")), 409, UNUSABLE, "Invitation not found");
-            failure(post("/api/v1/enterprises/absent/invitations/absent:" + action).header("If-Match", "\"v1\"")
-                    .header("Idempotency-Key", key()).with(adminFor("absent", "enterprise.invitation.write")), 409, UNUSABLE, "Enterprise not found");
+        // An actually missing enterprise cannot satisfy the current HTTP guard.
+        mvc.perform(get("/api/v1/enterprises/absent/invitations/absent")
+                        .with(adminFor("absent", "enterprise.invitation.read")))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+        // Model a directory lookup disappearing after authorization: keep real current guard facts,
+        // then inject only the business existence lookup to exercise the native 404/409 adapters.
+        jdbc.update("insert into summer_enterprise(enterprise_id,name,code,status,review_status,version,created_at,updated_at) values('absent','Native lookup boundary','native-lookup-boundary','ACTIVE','PENDING',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        try {
+            var domain = Domain.enterprise("absent");
+            managed.activeUser(domain, environment.getRequiredProperty("summer.security.authorization-server.user.username"));
+            managed.install(domain);
+            managed.grantHandlers(domain, "invitation-admin", (handler, path, method) ->
+                    handler.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")
+                    && java.util.Set.of("get GET /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}",
+                            "resend POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:resend",
+                            "revoke POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:revoke")
+                            .contains(handler.getMethod().getName() + " " + method + " " + path));
+            org.mockito.Mockito.doReturn(false).when(enterpriseRegistry).exists("absent");
+            failure(get("/api/v1/enterprises/absent/invitations/absent").with(adminFor("absent", "enterprise.invitation.read")),
+                    404, "SUMMER_NOT_FOUND", "Enterprise not found");
+            for (String action : List.of("resend", "revoke")) {
+                failure(post(INV + "/absent:" + action).header("If-Match", "\"v1\"").header("Idempotency-Key", key())
+                        .with(admin("enterprise.invitation.write")), 409, UNUSABLE, "Invitation not found");
+                failure(post("/api/v1/enterprises/absent/invitations/absent:" + action).header("If-Match", "\"v1\"")
+                        .header("Idempotency-Key", key()).with(adminFor("absent", "enterprise.invitation.write")), 409, UNUSABLE, "Enterprise not found");
+            }
+        } finally {
+            org.mockito.Mockito.reset(enterpriseRegistry);
+            jdbc.update("delete from summer_enterprise where enterprise_id='absent' and code='native-lookup-boundary'");
         }
     }
 
@@ -186,10 +246,27 @@ class InvitationFailureHttpTest {
     @Test void auditMissingIdsRemainEmptyAndNativeListPermissionAdaptersKeepTheirMessage() throws Exception {
         assertEquals(0, invitationAudit("absent").size()); assertEquals(0, applicationAudit("absent").size());
         for (var entry : Map.of(INV, "enterprise.invitation.read", JOIN, "enterprise.join-application.read").entrySet()) {
-            failure(get(entry.getKey()).with(jwt().jwt(token -> token.subject("invitation-admin")
-                            .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
-                    .authorities(new SimpleGrantedAuthority("SCOPE_" + entry.getValue()))),
-                    403, "SUMMER_FORBIDDEN", "Enterprise capability required");
+            var denied = new org.springframework.security.access.AccessDeniedException("Enterprise capability required");
+            // Exercise the controller's native adapter after the real current HTTP authorization succeeds.
+            try {
+                if (entry.getKey().equals(INV)) {
+                    org.mockito.Mockito.doThrow(denied).when(invitationService).listInvitations(
+                            org.mockito.ArgumentMatchers.eq("ent-acme"), org.mockito.ArgumentMatchers.isNull(),
+                            org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.eq(1),
+                            org.mockito.ArgumentMatchers.eq(20), org.mockito.ArgumentMatchers.any(org.springframework.security.core.Authentication.class));
+                } else {
+                    org.mockito.Mockito.doThrow(denied).when(invitationService).listApplications(
+                            org.mockito.ArgumentMatchers.eq("ent-acme"), org.mockito.ArgumentMatchers.isNull(),
+                            org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.eq(1),
+                            org.mockito.ArgumentMatchers.eq(20), org.mockito.ArgumentMatchers.any(org.springframework.security.core.Authentication.class));
+                }
+                var result = failure(get(entry.getKey()).with(admin(entry.getValue())),
+                        403, "SUMMER_FORBIDDEN", "Enterprise capability required");
+                var wrapped = assertInstanceOf(com.abluepoint.summer.common.error.SummerException.class, result.getResolvedException());
+                assertSame(denied, wrapped.getCause());
+            } finally {
+                org.mockito.Mockito.reset(invitationService);
+            }
         }
     }
 
@@ -227,26 +304,26 @@ class InvitationFailureHttpTest {
     private JsonNode application(String id) throws Exception { return success(get(JOIN).param("search", id).with(admin("enterprise.join-application.read")), 200).path("items").get(0); }
     private JsonNode applicationAudit(String id) throws Exception { return success(get(JOIN + "/" + id + "/audit").with(admin("enterprise.join-application.read")), 200); }
     private JsonNode members() throws Exception { return success(get("/api/v1/enterprises/ent-acme/members").param("size", "200").with(admin("enterprise.members.read")), 200); }
-    private JsonNode organizationMembers() throws Exception { return success(get("/api/v1/enterprises/ent-acme/org-units/org-engineering/members").with(jwt().jwt(token -> token.subject("alice")
+    private JsonNode organizationMembers() throws Exception { return success(get("/api/v1/enterprises/ent-acme/org-units/org-engineering/members").with(jwt().jwt(token -> token.subject("alice").claim("scope", "enterprise.organization.read")
             .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-            .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.read"))))
+            )
             .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"))), 200); }
     private JsonNode success(MockHttpServletRequestBuilder request, int status) throws Exception { return json.readTree(mvc.perform(request).andExpect(status().is(status)).andReturn().getResponse().getContentAsString()).path("data"); }
-    private void failure(MockHttpServletRequestBuilder request, int status, String code, String message) throws Exception {
-        mvc.perform(request.header("X-Request-Id", "invitation-failure")).andExpect(status().is(status))
+    private MvcResult failure(MockHttpServletRequestBuilder request, int status, String code, String message) throws Exception {
+        return mvc.perform(request.header("X-Request-Id", "invitation-failure")).andExpect(status().is(status))
                 .andExpect(header().string("X-Request-Id", "invitation-failure")).andExpect(jsonPath("$.requestId").value("invitation-failure"))
                 .andExpect(jsonPath("$.error.code").value(code)).andExpect(jsonPath("$.error.message").value(message))
                 .andExpect(jsonPath("$.success").value(false)).andExpect(jsonPath("$.data").doesNotExist())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.error.violations").isEmpty()).andExpect(jsonPath("$.error.cause").doesNotExist())
-                .andExpect(jsonPath("$.error.stackTrace").doesNotExist());
+                .andExpect(jsonPath("$.error.stackTrace").doesNotExist()).andReturn();
     }
     private static String key() { return UUID.randomUUID().toString(); }
     private static String quote(String revision) { return "\"" + revision + "\""; }
     private static RequestPostProcessor admin(String capability) { return adminFor("ent-acme", capability); }
     private static RequestPostProcessor adminFor(String enterprise, String capability) {
-        return jwt().jwt(token -> token.subject("invitation-admin").claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of(enterprise, List.of(capability)))).authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
+        return jwt().jwt(token -> token.subject("invitation-admin").claim("scope", capability).claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterprise, "status", "ACTIVE")))
+                ).authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
     private static RequestPostProcessor applicant(String subject) { return jwt().jwt(token -> token.subject(subject)).authorities(new SimpleGrantedAuthority("SCOPE_enterprise.join-application.submit")); }
     private static RequestPostProcessor invitee(String subject) { return jwt().jwt(token -> token.subject(subject)).authorities(new SimpleGrantedAuthority("SCOPE_enterprise.invitation.accept")); }

@@ -34,8 +34,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.security.storage.consent=jdbc"
 })
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class OAuthPersistenceHttpTest {
     @Autowired MockMvc mockMvc;
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
     @Autowired JdbcTemplate jdbc;
     @Autowired SummerOAuthClientStore clients;
     @Autowired SummerAuthorizationStore authorizations;
@@ -45,6 +47,7 @@ class OAuthPersistenceHttpTest {
 
     @BeforeEach
     void createJdbcSchema() {
+        managed.grant(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "user", "security.oauth-client.read", "security.oauth-client.write");
         jdbc.execute("create table if not exists oauth2_registered_client (id varchar(100) primary key, client_id varchar(100) unique not null, client_id_issued_at timestamp(6) not null, client_secret varchar(200), client_secret_expires_at timestamp(6), client_name varchar(200) not null, client_authentication_methods varchar(1000) not null, authorization_grant_types varchar(1000) not null, redirect_uris varchar(2000), post_logout_redirect_uris varchar(2000), scopes varchar(1000) not null, client_settings varchar(2000) not null, token_settings varchar(2000) not null)");
         jdbc.execute("create table if not exists oauth2_authorization_consent (registered_client_id varchar(100) not null, principal_name varchar(200) not null, authorities varchar(1000) not null, primary key (registered_client_id, principal_name))");
         jdbc.execute("create table if not exists summer_oauth_client_status (client_id varchar(100) primary key, status varchar(20) not null, version integer not null, updated_at timestamp(6) not null)");
@@ -106,7 +109,7 @@ class OAuthPersistenceHttpTest {
                         .with(SecurityMockMvcRequestPostProcessors.jwt()))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/security/oauth-clients")
-                        .with(SecurityMockMvcRequestPostProcessors.jwt().authorities(
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(t -> t.subject("user").claim("scope", "security.oauth-client.read")).authorities(
                                 new org.springframework.security.core.authority.SimpleGrantedAuthority(
                                         "SCOPE_security.oauth-client.read"))))
                 .andExpect(status().isOk())
@@ -136,7 +139,7 @@ class OAuthPersistenceHttpTest {
 
     @Test
     void managesPublicClientLifecycleWithoutReturningSecrets() throws Exception {
-        var admin = SecurityMockMvcRequestPostProcessors.jwt().authorities(
+        var admin = SecurityMockMvcRequestPostProcessors.jwt().jwt(t -> t.subject("user").claim("scope", "security.oauth-client.read security.oauth-client.write")).authorities(
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.write"),
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read"));
         mockMvc.perform(post("/api/security/oauth-clients").with(admin)
@@ -153,7 +156,7 @@ class OAuthPersistenceHttpTest {
     }
     @Test
     void editsClientMetadataWithVersionAndPreservesPublicPkceProtocol() throws Exception {
-        var admin = SecurityMockMvcRequestPostProcessors.jwt().authorities(
+        var admin = SecurityMockMvcRequestPostProcessors.jwt().jwt(t -> t.subject("user").claim("scope", "security.oauth-client.read security.oauth-client.write")).authorities(
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.write"),
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read"));
         mockMvc.perform(post("/api/security/oauth-clients").with(admin).contentType("application/json")
@@ -226,7 +229,7 @@ class OAuthPersistenceHttpTest {
     void metadataWritesRequirePermissionAndVersionAndKnownClient() throws Exception {
         createEditableClient();
         mockMvc.perform(patch("/api/security/oauth-clients/editable-client")
-                        .with(SecurityMockMvcRequestPostProcessors.jwt().authorities(
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(t -> t.subject("user").claim("scope", "security.oauth-client.read")).authorities(
                                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read")))
                         .contentType("application/json").content("{\"clientName\":\"Denied\",\"version\":1}"))
                 .andExpect(status().isForbidden());
@@ -295,7 +298,7 @@ class OAuthPersistenceHttpTest {
     }
 
     private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor manager() {
-        return SecurityMockMvcRequestPostProcessors.jwt().authorities(
+        return SecurityMockMvcRequestPostProcessors.jwt().jwt(t -> t.subject("user").claim("scope", "security.oauth-client.read security.oauth-client.write")).authorities(
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.write"),
                 new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_security.oauth-client.read"));
     }

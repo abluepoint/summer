@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "management.endpoints.web.exposure.include=health,info,metrics,prometheus",
         "summer.security.resource-server.protected-paths[0]=/api/**",
         "summer.security.resource-server.protected-paths[1]=/ws/**"})
-@Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class, NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class, NativeBoundaryTcpIntegrationTest.NativeFilter.class})
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, NativeBoundaryHttpIntegrationTest.CommittedEndpoint.class, NativeBoundaryTcpIntegrationTest.NativeFilter.class})
 @org.springframework.test.annotation.DirtiesContext
 class NativeBoundaryTcpIntegrationTest {
     @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
@@ -46,6 +46,26 @@ class NativeBoundaryTcpIntegrationTest {
             registration.setDispatcherTypes(jakarta.servlet.DispatcherType.REQUEST);
             return registration;
         }
+    }
+
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() {
+        var platform = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform();
+        current.grantHandlers(platform, "native-boundary-tcp", (handler, path, method) ->
+                (handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                        && java.util.Set.of("POST", "DELETE").contains(method))
+                || (handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerAuditController")
+                        && method.equals("GET")));
+        current.grantInstalled(platform, "native-boundary-tcp", mapping -> mapping.source().equals("MONITORING")
+                && mapping.handler().startsWith("org.springframework.boot.webmvc.actuate.endpoint.web.AbstractWebMvcEndpointHandlerMapping$OperationHandler@")
+                && mapping.method().equals("GET")
+                && java.util.Set.of("/actuator/metrics", "/actuator/prometheus").contains(mapping.path()));
+        current.grantInstalled(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "native-boundary-tcp",
+                mapping -> mapping.source().equals("RUNTIME") && mapping.handler().startsWith("com.abluepoint.summer.sample.realtime.RealtimeAccess@")
+                        && mapping.handler().endsWith("#read") && mapping.method().equals("WS")
+                        && mapping.path().equals("/ws/v1/messages"));
     }
 
     @Test void filterIOExceptionBeforeDispatcherRemainsANativeContainerError() throws Exception {

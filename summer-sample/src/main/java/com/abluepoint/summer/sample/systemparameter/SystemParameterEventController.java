@@ -22,7 +22,7 @@ class SystemParameterEventController {
     }
 
     @GetMapping
-    @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.read")
+
     @RawResponse
     @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.read', 'platform.parameter.read', 'customer.read') or (hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read'))")
     ResponseEntity<ApiResponse<Map<String, Object>>> list(@RequestParam(required = false) String key, org.springframework.security.core.Authentication auth) {
@@ -31,7 +31,7 @@ class SystemParameterEventController {
     }
 
     @PostMapping("/{eventId}/retry")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("system.parameter.update")
+
     @RawResponse
     @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.update', 'platform.parameter.update', 'system.parameter.write', 'platform.parameter.write', 'customer.write') or (hasAnyAuthority('SCOPE_system.parameter.update','SCOPE_platform.parameter.update','SCOPE_system.parameter.write','SCOPE_platform.parameter.write','SCOPE_customer.write'))")
     ResponseEntity<ApiResponse<SystemParameterEventView>> retry(@PathVariable String eventId, org.springframework.security.core.Authentication auth) {

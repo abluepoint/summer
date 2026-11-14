@@ -20,7 +20,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class InterfaceResourceHistoryHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCatalogRead() {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "catalog-reader",
+                (handler, path, method) -> handler.getBeanType() == InterfaceResourceCatalogController.class
+                        && method.equals("GET") && java.util.Set.of(
+                                "/api/v1/platform/interface-resources", "/api/v1/platform/interface-resources/history",
+                                "/api/v1/platform/interface-resources/history/{revision}",
+                                "/api/v1/platform/interface-resources/diff").contains(path));
+    }
+
     @Autowired MockMvc mvc;
     @Autowired InterfaceResourceRevisionRepository revisions;
     @Autowired tools.jackson.databind.ObjectMapper mapper;
@@ -81,7 +93,7 @@ class InterfaceResourceHistoryHttpTest {
             mvc.perform(get("/api/catalog-explicit-reused").with(jwt())).andExpect(status().isForbidden());
             var restored = new InterfaceResourceHistory(revisions, mapper);
             restored.protect(new InterfaceResourceCatalog(List.of()));
-            assertThat(restored.isReplaced("GET:/api/catalog-explicit-reused", ExplicitOldHandler.class.getName() + "#read[]")).isTrue();
+            assertThat(restored.isReplaced("GET","/api/catalog-explicit-reused", ExplicitOldHandler.class.getName() + "#read[]")).isTrue();
         } finally { mappings.unregisterMapping(info); }
     }
 
@@ -110,7 +122,7 @@ class InterfaceResourceHistoryHttpTest {
         return ((Number) JsonPath.read(response.getResponse().getContentAsString(), "$.data.revision")).longValue();
     }
     private static RequestPostProcessor reader() {
-        return jwt().jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+        return jwt().jwt(token -> token.subject("catalog-reader").claim("scope", "platform.interface-resources.read").claim("platform_capabilities", List.of("platform.interface-resources.read")))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"));
     }
     public static class DynamicHandler { public String read() { return "metadata fixture"; } }

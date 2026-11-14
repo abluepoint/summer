@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "spring.flyway.enabled=true")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class RuntimeMigrationDiagnosticsHttpTest {
     @Autowired MockMvc mockMvc;
     @MockitoBean Flyway flyway;
@@ -37,6 +38,16 @@ class RuntimeMigrationDiagnosticsHttpTest {
         when(flyway.validateWithResult()).thenReturn(validation(true));
         when(migrations.pending()).thenReturn(new MigrationInfo[0]);
         when(migrations.applied()).thenReturn(new MigrationInfo[]{mock(MigrationInfo.class)});
+    }
+
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() {
+        current.grantInstalled(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator",
+                mapping -> mapping.source().equals("MONITORING")
+                        && mapping.handler().startsWith("com.abluepoint.summer.sample.operations.RuntimeDiagnosticsController@")
+                        && mapping.method().equals("GET") && mapping.path().equals("/internal/v1/diagnostics/runtime"));
     }
 
     @Test
@@ -71,7 +82,7 @@ class RuntimeMigrationDiagnosticsHttpTest {
     private void expectMigrationStatus(String expected) throws Exception {
         mockMvc.perform(get("/internal/v1/diagnostics/runtime")
                         .header("X-Request-Id", "migration-diagnostic-request")
-                        .with(jwt().jwt(token -> token.subject("operator").claim("active_enterprise_id", "ent-acme")
+                        .with(jwt().jwt(token -> token.subject("operator").claim("scope", "platform.capabilities.read").claim("active_enterprise_id", "ent-acme")
                                         .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"))))
                 .andExpect(status().isOk())

@@ -1,3 +1,4 @@
+import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -110,6 +111,35 @@ function Content({
   dirty: (v: boolean) => void;
   busy: (v: boolean) => void;
 }) {
+  const operations = useInterfaceOperations(
+    domain.kind === 'PLATFORM'
+      ? { kind: 'PLATFORM' }
+      : { kind: 'ENTERPRISE', id: domain.id },
+    [
+      'groups.create',
+      'groups.update',
+      'groups.delete',
+      'permissions.create',
+      'permissions.update',
+      'permissions.delete',
+      'permissions.interfaces.write',
+      'permissions.menus.write',
+    ]
+  );
+  const allowed = (action: string) => operations[action] === true;
+  const metadataAction = (group: boolean, exists: boolean, remove = false) =>
+    `${group ? 'groups' : 'permissions'}.${
+      remove ? 'delete' : exists ? 'update' : 'create'
+    }`;
+  const canOpen = (group: boolean, row?: Group | Permission) =>
+    allowed(metadataAction(group, !!row)) ||
+    (!group &&
+      !!row &&
+      allowed(
+        (row as Permission).type === 'MENU'
+          ? 'permissions.menus.write'
+          : 'permissions.interfaces.write'
+      ));
   const [groups, setGroups] = useState<Group[]>([]);
   const [data, setData] = useState<Page<Permission>>({
     items: [],
@@ -286,6 +316,7 @@ function Content({
   const open = (group: boolean, row?: Group | Permission) => {
     if (
       requestBusy ||
+      !canOpen(group, row) ||
       (editor && hasUnsaved && !window.confirm('放弃未保存修改？'))
     )
       return;
@@ -312,7 +343,13 @@ function Content({
     setChanged(false);
   };
   const save = async (remove = false, target = editor) => {
-    if (!target || requestBusy || bindingDirty) return;
+    if (
+      !target ||
+      requestBusy ||
+      bindingDirty ||
+      !allowed(metadataAction(target.group, !!target.row, remove))
+    )
+      return;
     let values: Record<string, unknown> = {};
     if (!remove) {
       try {
@@ -415,13 +452,18 @@ function Content({
         />
       )}
       <Space wrap>
-        <Button onClick={() => open(true)} disabled={requestBusy}>
+        <Button
+          onClick={() => open(true)}
+          disabled={requestBusy || !allowed('groups.create')}
+        >
           新建权限组
         </Button>
         <Button
           type="primary"
           onClick={() => open(false)}
-          disabled={saving || !groups.length}
+          disabled={
+            requestBusy || !groups.length || !allowed('permissions.create')
+          }
         >
           新建权限
         </Button>
@@ -475,6 +517,7 @@ function Content({
           {selected && (
             <Space>
               <Button
+                disabled={!allowed('groups.update')}
                 onClick={() =>
                   open(
                     true,
@@ -485,6 +528,7 @@ function Content({
                 编辑组
               </Button>
               <Button
+                disabled={!allowed('groups.delete')}
                 status="danger"
                 onClick={() =>
                   Modal.confirm({
@@ -554,8 +598,14 @@ function Content({
               title: '操作',
               render: (_, row: Permission) => (
                 <Space>
-                  <Button onClick={() => open(false, row)}>编辑</Button>
                   <Button
+                    disabled={!canOpen(false, row)}
+                    onClick={() => open(false, row)}
+                  >
+                    编辑
+                  </Button>
+                  <Button
+                    disabled={!allowed('permissions.delete')}
                     status="danger"
                     onClick={() =>
                       Modal.confirm({
@@ -578,7 +628,13 @@ function Content({
         title={editor?.group ? '权限组' : '权限'}
         visible={!!editor}
         confirmLoading={saving}
-        okButtonProps={{ disabled: bindingBusy || bindingDirty }}
+        okButtonProps={{
+          disabled:
+            bindingBusy ||
+            bindingDirty ||
+            !editor ||
+            !allowed(metadataAction(editor.group, !!editor.row)),
+        }}
         cancelButtonProps={{ disabled: requestBusy }}
         maskClosable={!requestBusy}
         closable={!requestBusy}
@@ -611,7 +667,11 @@ function Content({
           )}
           <Form
             form={form}
-            disabled={requestBusy}
+            disabled={
+              requestBusy ||
+              !editor ||
+              !allowed(metadataAction(editor.group, !!editor.row))
+            }
             layout="vertical"
             onValuesChange={() => setChanged(true)}
           >
@@ -859,7 +919,7 @@ function Content({
                 onSaved={load}
                 onDirtyChange={onBindingDirty}
                 onBusyChange={onBindingBusy}
-                disabled={saving}
+                disabled={saving || !allowed('permissions.menus.write')}
               />
             )}
           {!editor?.group &&
@@ -875,7 +935,7 @@ function Content({
                 onSaved={load}
                 onDirtyChange={onBindingDirty}
                 onBusyChange={onBindingBusy}
-                disabled={saving}
+                disabled={saving || !allowed('permissions.interfaces.write')}
               />
             )}
         </div>

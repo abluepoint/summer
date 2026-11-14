@@ -18,7 +18,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class ReleaseFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach void currentReleaseResources() {
+        for (String subject : java.util.List.of("release-contract-operator", "user"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler,path,method) -> handler.getBeanType() == ReleaseGateController.class
+                            && java.util.Set.of("/internal/v1/release/gates:validate", "/internal/v1/release/readiness").contains(path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test
@@ -49,7 +58,7 @@ class ReleaseFailureHttpTest {
     @Test
     void nativeOperatorRejectionKeepsItsPublicMessage() throws Exception {
         mvc.perform(get("/internal/v1/release/readiness").header("X-Request-Id", "release-denied")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_internal.release.read"))))
+                        .with(jwt().jwt(claims -> claims.claim("scope", "openid")).authorities(new SimpleGrantedAuthority("SCOPE_internal.release.read"))))
                 .andExpect(status().isForbidden()).andExpect(header().string("X-Request-Id", "release-denied"))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
                 .andExpect(jsonPath("$.error.message").value("Release operator denied"))
@@ -57,7 +66,7 @@ class ReleaseFailureHttpTest {
     }
 
     private RequestPostProcessor operator() {
-        return jwt().jwt(token -> token.subject("release-contract-operator").claim("release_operator", true))
+        return jwt().jwt(token -> token.subject("release-contract-operator").claim("release_operator", true).claim("scope", "internal.release.write"))
                 .authorities(new SimpleGrantedAuthority("SCOPE_internal.release.write"));
     }
 }

@@ -23,7 +23,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "summer.sample.authorization.legacy-scope-compatibility=false")
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class AuthorizationEventTenantAuthorizationHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+    Map<String,String> readRoles = new java.util.HashMap<>(), writeRoles = new java.util.HashMap<>();
     private static final String A = "ent-acme", READ = "enterprise.roles.read", WRITE = "enterprise.roles.write";
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -32,21 +35,16 @@ class AuthorizationEventTenantAuthorizationHttpTest {
     String b, subject, eventA, eventB;
     RequestPostProcessor oldJwt;
 
-    @BeforeEach void fixture() {
+    @BeforeEach void fixture() throws Exception {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         b = "ent-event-" + suffix; subject = "event-reader-" + suffix;
         jdbc.update("insert into summer_enterprise(enterprise_id,name,code,status,review_status,version,created_at,updated_at) values(?,?,?,'ACTIVE','PENDING',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", b, "Event tenant", b);
         for (String tenant : List.of(A, b)) {
-            members.provision(tenant, "member-" + tenant + suffix, subject, "Event fixture", "event@example.test");
-            String role = "role-" + tenant + suffix;
-            String read = tenant.equals(A) ? "event-fixture-A-read" : "read-" + tenant + suffix;
-            String write = tenant.equals(A) ? "event-fixture-A-write" : "write-" + tenant + suffix;
-            for (String code : List.of(READ, WRITE)) {
-                if (jdbc.queryForObject("select count(*) from summer_authorization_capability where capability_id=?", Integer.class, code.equals(READ) ? read : write) == 0)
-                    jdbc.update("insert into summer_authorization_capability(capability_id,enterprise_id,scope,code,resource,action,risk_level,status,version,created_at,updated_at) values (?,?,'ENTERPRISE',?,?,'event','LOW','ACTIVE',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", code.equals(READ) ? read : write, tenant, code, code);
-            }
-            jdbc.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at) values (?,?,?, ?,false,'ACTIVE',?, ?,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", role, tenant, "Event fixture", role, read + "\n" + write, READ + "\n" + WRITE);
-            jdbc.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values (?,?,?,?,'[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", "binding-" + tenant + suffix, tenant, subject, "[\"" + role + "\"]");
+            var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant);
+            managed.activeUser(domain, "summer-user");
+            managed.install(domain);
+            readRoles.put(tenant, managed.grantHandlers(domain, subject, (handler,path,method) -> path.equals("/api/authorization-events") && method.equals("GET")));
+            writeRoles.put(tenant, managed.grantHandlers(domain, subject, (handler,path,method) -> path.equals("/api/authorization-events/{eventId}/retry") && method.equals("POST")));
             events.enqueue(tenant, "ROLE", subject, "ROLE_CREATED", 1, "fixture-" + suffix);
         }
         eventA = eventId(A); eventB = eventId(b);
@@ -77,8 +75,11 @@ class AuthorizationEventTenantAuthorizationHttpTest {
         mvc.perform(list(b).with(oldJwt).header("X-Request-Id", "event-B-read"))
                 .andExpect(status().isOk()).andExpect(header().string("X-Request-Id", "event-B-read"))
                 .andExpect(jsonPath("$.requestId").value("event-B-read"))
-                .andExpect(jsonPath("$.data.items.length()").value(1))
-                .andExpect(jsonPath("$.data.items[0].enterpriseId").value(b));
+                .andExpect(jsonPath("$.data.items[*].enterpriseId").value(org.hamcrest.Matchers.hasItem(b)))
+                .andExpect(jsonPath("$.data.items[*].enterpriseId").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.isOneOf(b, "ENTERPRISE:" + b))))
+                .andExpect(jsonPath("$.data.items[*].domainKey").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.equalTo("ENTERPRISE:" + b))))
+                .andExpect(jsonPath("$.data.items[*].eventId").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(eventA))))
+                .andExpect(jsonPath("$.data.items[*].eventId").value(org.hamcrest.Matchers.hasItem(eventB)));
     }
 
     @Test void aDenyCannotBlockLegitimateBRetry() throws Exception {
@@ -101,8 +102,8 @@ class AuthorizationEventTenantAuthorizationHttpTest {
                 .andExpect(UnifiedBusinessFailure.unified("SUMMER_NOT_FOUND", "Authorization change event not found: " + eventA));
         assertThat(outbox(eventA)).isEqualTo(before);
         mvc.perform(list(b).with(oldJwt)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items.length()").value(1))
-                .andExpect(jsonPath("$.data.items[0].eventId").value(eventB));
+                .andExpect(jsonPath("$.data.items[*].eventId").value(org.hamcrest.Matchers.hasItem(eventB)))
+                .andExpect(jsonPath("$.data.items[*].eventId").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(eventA))));
     }
 
     @Test void persistedMemberRevocationStillRejectsReadAndRetry() throws Exception {
@@ -110,9 +111,10 @@ class AuthorizationEventTenantAuthorizationHttpTest {
         forbidden(list(b).with(oldJwt)); forbidden(retry(b, eventB).with(oldJwt));
     }
 
-    @Test void missingBClaimsCannotBeReplacedByPersistedPermission() throws Exception {
+    @Test void retiredCapabilityClaimsDoNotOverrideCurrentPersistedPermission() throws Exception {
         var missing = token(List.of(), List.of(READ, WRITE));
-        forbidden(list(b).with(missing)); forbidden(retry(b, eventB).with(missing));
+        mvc.perform(list(b).with(missing)).andExpect(status().isOk());
+        mvc.perform(retry(b,eventB).with(missing)).andExpect(status().isOk());
     }
 
     @Test void missingScopesCannotBeReplacedByPersistedPermission() throws Exception {
@@ -133,34 +135,30 @@ class AuthorizationEventTenantAuthorizationHttpTest {
     }
 
     @Test void removingBRoleAlsoRevokesTheSameJwtWithoutAffectingA() throws Exception {
-        jdbc.update("update summer_authorization_user_binding set role_ids='[]' where enterprise_id=? and username=?", b, subject);
+        managed.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(b), subject, readRoles.get(b));
+        managed.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(b), subject, writeRoles.get(b));
         forbidden(list(b).with(oldJwt)); forbidden(retry(b, eventB).with(oldJwt));
         mvc.perform(list(A).with(oldJwt)).andExpect(status().isOk());
     }
 
-    @Test void anotherGlobalControllerIgnoresEnterpriseQueryAndKeepsSampleBoundary() throws Exception {
+    @Test void anotherGlobalControllerCannotSelectTenantThroughAnUnrelatedQuery() throws Exception {
         var service = org.mockito.Mockito.mock(AuthorizationService.class);
         var interceptor = LegacyInterceptorFixture.create(service, () -> "global-event-control");
-        var auth = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(
-                org.springframework.security.oauth2.jwt.Jwt.withTokenValue("synthetic").header("alg", "none").subject(subject).build());
-        org.mockito.Mockito.when(service.decision(auth, A, READ, "global-event-control"))
-                .thenReturn(new AuthorizationService.Decision(true, "ROLE_ALLOW"));
         var request = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/other-global");
         request.addParameter("enterpriseId", b);
-        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
-        try {
-            assertThat(interceptor.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(),
-                    new org.springframework.web.method.HandlerMethod(new OtherGlobalController(), OtherGlobalController.class.getDeclaredMethod("read")))).isTrue();
-            org.mockito.Mockito.verify(service).decision(auth, A, READ, "global-event-control");
-            org.mockito.Mockito.verifyNoMoreInteractions(service);
-        } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
+        request.setAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,"/api/other-global");
+        var handler = new org.springframework.web.method.HandlerMethod(new OtherGlobalController(), OtherGlobalController.class.getDeclaredMethod("read"));
+        assertThat(com.abluepoint.summer.sample.authorization.api.security.ManagedRequestAuthorization.domain(request)).isNull();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> interceptor.preHandle(request,new org.springframework.mock.web.MockHttpServletResponse(),handler))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class).hasMessage("Current managed resource adapter required");
+        org.mockito.Mockito.verifyNoInteractions(service);
     }
     static class OtherGlobalController {
-        @com.abluepoint.summer.sample.resource.ResourcePermission(READ) public void read() {}
+        public void read() {}
     }
 
     private RequestPostProcessor token(List<String> bCapabilities, List<String> scopes) {
-        return jwt().jwt(j -> j.subject(subject).claim("summer_managed_grants", true)
+        return jwt().jwt(j -> j.subject(subject).claim("scope", String.join(" ",scopes)).claim("summer_managed_grants", true)
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", A, "status", "ACTIVE"), Map.of("enterpriseId", b, "status", "ACTIVE")))
                 .claim("enterprise_capabilities", Map.of(A, List.of(READ, WRITE), b, bCapabilities)))
                 .authorities(scopes.stream().map(c -> new SimpleGrantedAuthority("SCOPE_" + c)).toArray(SimpleGrantedAuthority[]::new));
@@ -175,10 +173,10 @@ class AuthorizationEventTenantAuthorizationHttpTest {
                 .andExpect(header().string("X-Request-Id", requestId)).andExpect(jsonPath("$.requestId").value(requestId));
     }
     private void deny(String tenant, String permission) {
-        jdbc.update("update summer_authorization_user_binding set denied_capability_codes=? where enterprise_id=? and username=?", "[\"" + permission + "\"]", tenant, subject);
+        managed.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant), subject, permission.equals(READ) ? readRoles.get(tenant) : writeRoles.get(tenant));
     }
     private String eventId(String tenant) {
-        return jdbc.queryForObject("select event_id from summer_authorization_change_outbox where enterprise_id=? and resource_id=?", String.class, tenant, subject);
+        return jdbc.queryForObject("select event_id from summer_authorization_change_outbox where enterprise_id=? and resource_id=?", String.class, "ENTERPRISE:"+tenant, subject);
     }
     private void deadLetter(String event) {
         jdbc.update("update summer_authorization_change_outbox set status='DEAD_LETTER',attempts=3,last_error='fixture-delivery-failed' where event_id=?", event);

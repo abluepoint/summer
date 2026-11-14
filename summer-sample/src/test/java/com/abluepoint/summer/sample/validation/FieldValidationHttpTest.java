@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.validation;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.ErrorCategory;
 import com.abluepoint.summer.common.error.ErrorCode;
@@ -41,8 +42,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import({FieldValidationHttpTest.Endpoint.class, FieldValidationHttpTest.Messages.class})
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, com.abluepoint.summer.sample.testsupport.ExactCurrentHttpTestFixture.class, FieldValidationHttpTest.Endpoint.class, FieldValidationHttpTest.Messages.class})
+@org.springframework.test.annotation.DirtiesContext
 class FieldValidationHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(Domain.platform(), "user", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.validation.FieldValidationHttpTest$Endpoint")
+                        && java.util.Set.of(
+                                "GET /api/field-validation/{mode}",
+                                "GET /api/field-validation/query",
+                                "POST /api/field-validation/items",
+                                "POST /api/field-validation/bean",
+                                "POST /api/field-validation/validated")
+                        .contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test
@@ -227,6 +244,9 @@ class FieldValidationHttpTest {
 
     @TestConfiguration
     static class Messages {
+        @Bean com.abluepoint.summer.sample.testsupport.ExactCurrentHttpTestFixture.Owner currentTestOwner() {
+            return new com.abluepoint.summer.sample.testsupport.ExactCurrentHttpTestFixture.Owner(Endpoint.class);
+        }
         @Bean StaticMessageSource messageSource() {
             var source = new StaticMessageSource();
             source.addMessage("SUMMER_INVALID_ARGUMENT", Locale.FRENCH, "Champ invalide");

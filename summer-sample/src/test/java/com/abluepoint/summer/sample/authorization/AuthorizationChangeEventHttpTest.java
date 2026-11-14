@@ -18,7 +18,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class AuthorizationChangeEventHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.BeforeEach void currentFacts() {
+        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "security-admin", (handler,path,method) -> path.startsWith("/api/authorization-events") || path.startsWith("/api/v1/enterprises/{enterpriseId}/roles"));
+    }
     @Autowired
     MockMvc mockMvc;
 
@@ -26,7 +31,7 @@ class AuthorizationChangeEventHttpTest {
     void authorizationMutationIsTraceableAndCanBeRetried() throws Exception {
         mockMvc.perform(post("/api/v1/enterprises/ent-acme/roles")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Event reader\",\"code\":\"event-reader\",\"capabilityIds\":[\"GET:/api/customers\"]}")
+                        .content("{\"name\":\"Event reader\",\"code\":\"event-reader\",\"permissionIds\":[]}")
                         .header("Idempotency-Key", "event-role-1")
                         .with(admin("enterprise.roles.write")))
                 .andExpect(status().isCreated());
@@ -37,7 +42,7 @@ class AuthorizationChangeEventHttpTest {
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andReturn().getResponse().getContentAsString();
         String eventId = JsonPath.read(events, "$.data.items[0].eventId");
-        org.junit.jupiter.api.Assertions.assertEquals("ROLE_CREATED", JsonPath.read(events, "$.data.items[0].eventType"));
+        org.junit.jupiter.api.Assertions.assertEquals("ROLE_CHANGED", JsonPath.read(events, "$.data.items[0].eventType"));
 
         mockMvc.perform(post("/api/authorization-events/" + eventId + "/retry")
                         .with(admin("enterprise.roles.write")))
@@ -47,7 +52,7 @@ class AuthorizationChangeEventHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {
-        return jwt().jwt(token -> token.subject("security-admin")
+        return jwt().jwt(token -> token.subject("security-admin").claim("scope", capability)
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + capability));

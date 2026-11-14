@@ -184,7 +184,7 @@ public class AuthorizationDataMigrationService {
     var vector = roleVector(plan, id);
     if (db.queryForObject("select count(*) from summer_authorization_role where role_id=?", Integer.class, id) != 0)
       throw conflict("Uncheckpointed DATA role collision");
-    db.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at,capability_ids,capability_codes,bundle_id) values (?,?,?, ?,false,'ACTIVE',1,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),'','',null)",
+    db.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,version,created_at,updated_at) values (?,?,?, ?,false,'ACTIVE',1,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
         id, domain.id(), "Migrated DATA " + id, domain.kind() + ":" + id);
     db.update("insert into summer_permission_role values (?,?)", domain.key(), id);
     for (String permission : permissions(vector))
@@ -238,6 +238,20 @@ public class AuthorizationDataMigrationService {
       if (!List.of(expected).equals(db.queryForList("select role_id from summer_permission_user_role where domain_key=? and username=? order by role_id", String.class, domain.key(), vector.subject())))
         throw conflict("Staged subject assignment drift");
     }
+  }
+
+  /** Revalidate current applied target facts before an explicitly approved mode transition. */
+  @Transactional(readOnly = true)
+  public AuthorizationDataMigrationPlan requireApplied(String snapshotId) {
+    var input = identities.readFrozenInput(snapshotId);
+    var row = proofRow(snapshotId);
+    var plan = checkedPlan(input, row);
+    if (!Set.of("APPLIED", "VERIFIED").contains(row.get("status"))
+        || !plan.blockers().isEmpty() || !plan.equals(planner.plan(input))
+        || db.queryForObject("select count(*) from summer_authorization_data_migration_step where snapshot_id=? and applied=false", Integer.class, snapshotId) != 0)
+      throw conflict("Complete unchanged applied DATA proof required");
+    validateTargets(input.domain(), plan);
+    return plan;
   }
 
   /** History remains readable after legacy tables are contracted. No live legacy lookup here. */

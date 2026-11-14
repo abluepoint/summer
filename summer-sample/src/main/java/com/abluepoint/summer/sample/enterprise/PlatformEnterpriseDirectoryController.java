@@ -28,7 +28,7 @@ class PlatformEnterpriseDirectoryController {
     }
 
     @GetMapping("/api/v1/platform/enterprises")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise.read")
+
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.read')")
     @RawResponse
     ResponseEntity<ApiResponse<PlatformEnterprisePage>> list(
@@ -47,7 +47,7 @@ class PlatformEnterpriseDirectoryController {
             "/api/v1/platform/enterprises/{id}:disable",
             "/api/v1/platform/enterprises/{id}:reject"
     })
-    @com.abluepoint.summer.sample.resource.ResourcePermission("platform.enterprise.write")
+
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.write')")
     @RawResponse
     ResponseEntity<ApiResponse<PlatformEnterpriseView>> transition(

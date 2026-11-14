@@ -35,9 +35,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.sample.session-index.retries=0"
 })
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-@Import(SessionErrorPolicyHttpTest.TransportPolicy.class)
+@Import({SessionErrorPolicyHttpTest.TransportPolicy.class, com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class SessionErrorPolicyHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("reader", "user"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                            && java.util.Set.of("/api/v1/sessions", "/api/v1/sessions/{reference}").contains(path));
+    }
+
     @Autowired MockMvc mvc;
     @MockitoBean StringRedisTemplate redis;
 
@@ -49,7 +58,7 @@ class SessionErrorPolicyHttpTest {
 
     @Test void sessionFailureUsesTheApplicationResolverAndKeepsItsPublicMessage() throws Exception {
         mvc.perform(get("/api/v1/session").session(new MockHttpSession())
-                        .with(jwt().jwt(token -> token.subject("reader")))
+                        .with(jwt().jwt(token -> token.subject("reader").claim("scope", "platform.capabilities.read platform.capabilities.write")))
                         .header("X-Request-Id", "session-policy-request"))
                 .andExpect(status().is(422))
                 .andExpect(header().string("X-Request-Id", "session-policy-request"))

@@ -15,7 +15,7 @@ class TaskProgressAccessTest {
     @Test
     void missingOrExpiredTokenLifetimeFailsBeforeReadingPersistedGrants() {
         var authorization = mock(AuthorizationService.class);
-        var access = new TaskProgressAccess(authorization);
+        var access = new TaskProgressAccess(authorization, mock(com.abluepoint.summer.sample.resource.BusinessResourceAccess.class));
         for (Instant expiry : new Instant[] { null, Instant.now().minusSeconds(60) }) {
             var token = Jwt.withTokenValue("test").header("alg", "none").subject("reader")
                     .issuedAt(Instant.now().minusSeconds(3600));
@@ -29,7 +29,7 @@ class TaskProgressAccessTest {
     @Test
     void currentPersistentDenyStopsAStillValidToken() {
         var authorization = mock(AuthorizationService.class);
-        var access = new TaskProgressAccess(authorization);
+        var access = new TaskProgressAccess(authorization, mock(com.abluepoint.summer.sample.resource.BusinessResourceAccess.class));
         var token = Jwt.withTokenValue("test").header("alg", "none").subject("reader")
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
         var authentication = new JwtAuthenticationToken(token, List.of(new SimpleGrantedAuthority("SCOPE_enterprise.tasks.read")));

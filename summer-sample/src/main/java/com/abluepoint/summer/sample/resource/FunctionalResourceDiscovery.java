@@ -40,7 +40,7 @@ final class FunctionalResourceDiscovery implements RouterFunctions.Visitor {
         for (Branch branch : branches) {
             String path = branch.path == null ? "/**" : branch.path;
             for (String method : branch.methods) items.add(new InterfaceResourceDescriptor(method, path, identity,
-                    "functional", ResourceType.BUSINESS, SensitiveLevel.SENSITIVE, null, false,
+                    "functional", ResourceType.BUSINESS, SensitiveLevel.SENSITIVE, false,
                     "application", "FUNCTIONAL", branch.conditions, "MANAGED_ADAPTER_REQUIRED"));
         }
     }
@@ -50,7 +50,7 @@ final class FunctionalResourceDiscovery implements RouterFunctions.Visitor {
         org.springframework.util.ReflectionUtils.makeAccessible(field);
         String path = ((PathPattern) org.springframework.util.ReflectionUtils.getField(field, lookup)).getPatternString();
         for (String method : List.of("GET", "HEAD")) items.add(new InterfaceResourceDescriptor(method, path,
-                lookup.getClass().getName(), "web", ResourceType.STATIC, SensitiveLevel.NORMAL, null, false,
+                lookup.getClass().getName(), "web", ResourceType.STATIC, SensitiveLevel.NORMAL, false,
                 "application", "FUNCTIONAL", Map.of(), "STATIC_MAPPING"));
     }
     @Override public void attributes(Map<String, Object> attributes) { /* Arbitrary attributes may contain sensitive values. */ }

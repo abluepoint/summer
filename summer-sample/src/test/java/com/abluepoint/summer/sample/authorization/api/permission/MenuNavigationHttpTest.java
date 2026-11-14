@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.authorization.api.permission;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
+import java.util.Map;
 
 /** HTTP navigation contract; isolated SQL fixtures establish resource hierarchy and role facts. */
 @SpringBootTest(
@@ -22,6 +24,7 @@ import tools.jackson.databind.ObjectMapper;
     })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(RolePermissionHttpTest.Schema.class)
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class MenuNavigationHttpTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate db;
@@ -167,38 +170,24 @@ class MenuNavigationHttpTest {
   }
 
   @Test
-  void legacyMarkerNeedsActiveIdentityButNoManagedDelegation() throws Exception {
-    db.update(
-        "update summer_authorization_domain set engine_mode='LEGACY' where"
-            + " domain_key='PLATFORM:platform'");
-    var delegated =
-        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
-            .jwt()
-            .jwt(x -> x.subject("summer-user").claim("scope", java.util.List.of("profile")));
+  void retiredLegacyMarkerCannotExposeNavigationAndManagedIdentityRemainsRequired() throws Exception {
+    var delegated = jwt().jwt(x -> x.subject("summer-user").claim("scope", java.util.List.of("profile")));
+    db.update("update summer_authorization_domain set engine_mode='LEGACY' where domain_key='PLATFORM:platform'");
     try {
-      var response =
-          mvc.perform(get("/api/v1/platform/authorization/navigation").with(delegated))
-              .andExpect(status().isOk())
-              .andReturn();
-      assertEquals(
-          "LEGACY",
-          json.readTree(response.getResponse().getContentAsString())
-              .path("data")
-              .path("engineMode")
-              .asText());
-      db.update("update summer_auth_user set active=false where username='summer-user'");
       mvc.perform(get("/api/v1/platform/authorization/navigation").with(delegated))
           .andExpect(status().isForbidden());
+      org.junit.jupiter.api.Assertions.assertEquals("LEGACY", db.queryForObject(
+          "select engine_mode from summer_authorization_domain where domain_key='PLATFORM:platform'", String.class));
     } finally {
-      db.update("update summer_auth_user set active=true where username='summer-user'");
-      db.update(
-          "update summer_authorization_domain set engine_mode='MANAGED' where"
-              + " domain_key='PLATFORM:platform'");
+      db.update("update summer_authorization_domain set engine_mode='MANAGED' where domain_key='PLATFORM:platform'");
     }
-    // Navigation is an active identity projection in both modes, independent of management scopes.
     mvc.perform(get("/api/v1/platform/authorization/navigation").with(delegated))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.engineMode").value("MANAGED"));
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.engineMode").value("MANAGED"));
+    db.update("update summer_auth_user set active=false where username='summer-user'");
+    try {
+      mvc.perform(get("/api/v1/platform/authorization/navigation").with(delegated))
+          .andExpect(status().isForbidden());
+    } finally { db.update("update summer_auth_user set active=true where username='summer-user'"); }
     mvc.perform(get("/api/v1/platform/authorization/menu-manifest").with(delegated))
         .andExpect(status().isForbidden());
   }
@@ -480,5 +469,170 @@ class MenuNavigationHttpTest {
             "select * from summer_permission_resource where domain_key='PLATFORM:platform' and"
                 + " permission_id=?",
             id));
+  }
+
+  @Test
+  @org.springframework.test.annotation.DirtiesContext(methodMode = org.springframework.test.annotation.DirtiesContext.MethodMode.BEFORE_METHOD)
+  void eitherMenuPermissionAloneQualifiesTheSamePageAndNeitherDoesNot() throws Exception {
+    String subject = "menu-or-" + java.util.UUID.randomUUID();
+    String parent = "menu-or-parent-" + java.util.UUID.randomUUID();
+    String page = "menu-or-page-" + java.util.UUID.randomUUID();
+    causalIdentity(subject);
+    causalPublish(parent, java.util.List.of(page));
+    causalAssociations(page, java.util.Set.of());
+    String p1 = causalPermission(java.util.List.of(page));
+    String p2 = causalPermission(java.util.List.of(page));
+    String r1 = causalRole(p1), r2 = causalRole(p2);
+    var permissions = java.util.Set.of(p1, p2);
+    causalAssociations(page, permissions);
+    causalPage(causalNavigation(subject, java.util.List.of()), page, false);
+
+    causalAssign(subject, java.util.List.of(r1));
+    var firstOnly = causalNavigation(subject, java.util.List.of(r1));
+    causalPage(firstOnly, page, true);
+    causalDirectory(firstOnly, parent);
+    causalAssociations(page, permissions);
+
+    causalAssign(subject, java.util.List.of(r2));
+    var secondOnly = causalNavigation(subject, java.util.List.of(r2));
+    causalPage(secondOnly, page, true);
+    causalDirectory(secondOnly, parent);
+    causalAssociations(page, permissions);
+
+    causalAssign(subject, java.util.List.of());
+    causalPage(causalNavigation(subject, java.util.List.of()), page, false);
+    // Both active, same-mode permissions stay associated; only the user's roles changed.
+    causalAssociations(page, permissions);
+    assertEquals(java.util.List.of(p1), db.queryForList(
+        "select permission_id from summer_role_permission where domain_key='PLATFORM:platform' and role_id=?", String.class, r1));
+    assertEquals(java.util.List.of(p2), db.queryForList(
+        "select permission_id from summer_role_permission where domain_key='PLATFORM:platform' and role_id=?", String.class, r2));
+  }
+
+  private tools.jackson.databind.JsonNode causalCreate(String path, Map<String, Object> body) throws Exception {
+    var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path)
+            .with(user("summer-user"))
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+            .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+            .contentType("application/json").content(json.writeValueAsString(body)))
+        .andExpect(status().isCreated()).andReturn();
+    return json.readTree(result.getResponse().getContentAsString()).path("data");
+  }
+
+  private tools.jackson.databind.JsonNode causalReplace(String path, Map<String, Object> body) throws Exception {
+    var before = mvc.perform(get(path).with(user("summer-user")))
+        .andExpect(status().isOk()).andReturn();
+    assertNotNull(before.getResponse().getHeader("ETag"));
+    var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path)
+            .with(user("summer-user"))
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+            .header("If-Match", before.getResponse().getHeader("ETag"))
+            .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+            .contentType("application/json").content(json.writeValueAsString(body)))
+        .andExpect(status().isOk()).andReturn();
+    return json.readTree(result.getResponse().getContentAsString()).path("data");
+  }
+
+  private void causalPublish(String parent, java.util.List<String> children) throws Exception {
+    String path = "/api/v1/platform/authorization/menu-manifest";
+    var before = mvc.perform(get(path).with(user("summer-user")))
+        .andExpect(status().isOk()).andReturn();
+    var current = json.readTree(before.getResponse().getContentAsString()).path("data");
+    var items = json.createArrayNode();
+    // Re-publish only supported metadata, preserving the existing catalog.
+    for (var old : current.path("items")) {
+      var item = json.createObjectNode();
+      for (String field : java.util.List.of("menuId", "parentMenuId", "path", "titleKey", "iconKey", "sortOrder"))
+        if (old.has(field)) item.set(field, old.get(field));
+      items.add(item);
+    }
+    var directory = json.createObjectNode();
+    directory.put("menuId", parent); directory.put("path", "/" + parent);
+    directory.put("titleKey", "Causal directory"); directory.put("iconKey", ""); directory.put("sortOrder", 900);
+    items.add(directory);
+    for (String child : children) {
+      var item = json.createObjectNode();
+      item.put("menuId", child); item.put("parentMenuId", parent); item.put("path", "/" + child);
+      item.put("titleKey", "Causal page"); item.put("iconKey", ""); item.put("sortOrder", 901);
+      items.add(item);
+    }
+    causalReplace(path, Map.of("manifestVersion", current.path("manifestVersion").asLong() + 1, "items", items));
+  }
+
+  private void causalIdentity(String subject) {
+    assertEquals(0, db.queryForObject("select count(*) from summer_auth_user where username=?", Integer.class, subject));
+    db.update("insert into summer_auth_user(username,password_hash,role,active,created_at,updated_at) values (?,'!unusable-menu-fixture-login','USER',true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", subject);
+
+  }
+
+  private String causalPermission(java.util.List<String> menus) throws Exception {
+    String group = causalCreate("/api/v1/platform" + "/permission-groups", Map.of("name", "Causal menus")).path("groupId").asText();
+    String permission = causalCreate("/api/v1/platform" + "/permissions", Map.of(
+        "name", "Causal MENU", "code", java.util.UUID.randomUUID().toString(), "groupId", group,
+        "type", "MENU", "accessMode", "AUTHORIZED", "status", "ACTIVE")).path("permissionId").asText();
+    var bound = causalReplace("/api/v1/platform" + "/permissions/" + permission + "/menus", Map.of("menuIds", menus));
+    var actual = new java.util.HashSet<String>();
+    for (var id : bound.path("resourceIds")) actual.add(id.asText());
+    assertEquals(new java.util.HashSet<>(menus), actual);
+    assertEquals(new java.util.HashSet<>(menus), new java.util.HashSet<>(db.queryForList(
+        "select resource_id from summer_permission_resource where domain_key=? and permission_id=? and resource_type='MENU'",
+        String.class, "PLATFORM:platform", permission)));
+    return permission;
+  }
+
+  private String causalRole(String permission) throws Exception {
+    String role = causalCreate("/api/v1/platform" + "/roles", Map.of("name", "Causal role",
+        "code", java.util.UUID.randomUUID().toString(), "permissionIds", java.util.List.of(permission))).path("roleId").asText();
+    assertEquals(java.util.List.of(permission), db.queryForList(
+        "select permission_id from summer_role_permission where domain_key=? and role_id=?",
+        String.class, "PLATFORM:platform", role));
+    return role;
+  }
+
+  private void causalAssign(String subject, java.util.List<String> roles) throws Exception {
+    var result = causalReplace("/api/v1/platform" + "/users/" + subject + "/roles", Map.of("roleIds", roles));
+    var actual = new java.util.HashSet<String>();
+    for (var role : result.path("roleIds")) actual.add(role.asText());
+    assertEquals(new java.util.HashSet<>(roles), actual);
+  }
+
+  private tools.jackson.databind.JsonNode causalNavigation(String subject, java.util.List<String> roles) throws Exception {
+    assertEquals(1, db.queryForObject("select count(*) from summer_auth_user where username=? and active=true", Integer.class, subject));
+
+    assertEquals(new java.util.HashSet<>(roles), new java.util.HashSet<>(db.queryForList(
+        "select role_id from summer_permission_user_role where domain_key=? and username=?", String.class, "PLATFORM:platform", subject)));
+    var result = mvc.perform(get("/api/v1/platform" + "/authorization/navigation").with(user(subject)))
+        .andExpect(status().isOk()).andReturn();
+    var response = json.readTree(result.getResponse().getContentAsString());
+    assertTrue(response.path("success").asBoolean());
+    var items = response.path("data").path("items");
+    assertTrue(items.isArray());
+    return items;
+  }
+
+  private void causalPage(tools.jackson.databind.JsonNode items, String id, boolean eligible) {
+    var matches = java.util.stream.StreamSupport.stream(items.spliterator(), false)
+        .filter(item -> id.equals(item.path("menuId").asText())).toList();
+    assertTrue(matches.size() <= 1);
+    for (var item : matches) assertTrue(item.path("pageEligible").isBoolean());
+    assertEquals(eligible, matches.stream().anyMatch(item -> item.path("pageEligible").asBoolean()), id);
+    if (eligible) assertFalse(matches.getFirst().path("navOnly").asBoolean());
+  }
+
+  private void causalDirectory(tools.jackson.databind.JsonNode items, String parent) {
+    var directory = java.util.stream.StreamSupport.stream(items.spliterator(), false)
+        .filter(item -> parent.equals(item.path("menuId").asText())).findFirst().orElseThrow();
+    assertTrue(directory.path("navOnly").asBoolean());
+    assertFalse(directory.path("pageEligible").asBoolean());
+    assertEquals(0, directory.path("actions").size());
+  }
+
+  private void causalAssociations(String menu, java.util.Set<String> permissions) {
+    assertEquals(permissions, new java.util.HashSet<>(db.queryForList(
+        "select permission_id from summer_permission_resource where domain_key=? and resource_type='MENU' and resource_id=?",
+        String.class, "PLATFORM:platform", menu)));
+    assertEquals(permissions.size(), db.queryForObject(
+        "select count(*) from summer_permission_resource x join summer_permission p on p.domain_key=x.domain_key and p.permission_id=x.permission_id where x.domain_key=? and x.resource_type='MENU' and x.resource_id=? and p.type='MENU' and p.access_mode='AUTHORIZED' and p.status='ACTIVE'",
+        Integer.class, "PLATFORM:platform", menu));
   }
 }

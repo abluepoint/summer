@@ -23,8 +23,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
 class TaskProgressSseHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.interfaces("ENTERPRISE:ent-acme", "task-admin", java.util.Set.of("tasks"));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() { managed.close(); }
+
     @Autowired MockMvc mockMvc;
     @Autowired TaskProgressEventRepository events;
     @Autowired TaskExecutionService executionService;
@@ -41,9 +55,7 @@ class TaskProgressSseHttpTest {
         var stream = mockMvc.perform(get("/api/v1/enterprises/ent-acme/tasks/{id}/events", taskId)
                         .accept(MediaType.TEXT_EVENT_STREAM).with(admin("enterprise.tasks.read")))
                 .andExpect(request().asyncStarted()).andReturn();
-        jdbc.update("insert into summer_authorization_user_binding (binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values (?,?,?,?,?,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
-                java.util.UUID.randomUUID().toString(), "ent-acme", "task-admin", "[]",
-                "[\"GET:/api/v1/enterprises/{enterpriseId}/tasks/{taskId}/events\"]");
+        managed.revokeInterfaces("ENTERPRISE:ent-acme", "task-admin");
         executionService.execute(taskId, "revocation-fire");
         stream.getAsyncResult(3000);
         org.assertj.core.api.Assertions.assertThat(stream.getResponse().getContentAsString())

@@ -22,14 +22,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(ReleaseErrorStatusHttpTest.TransportPolicy.class)
+@Import({ReleaseErrorStatusHttpTest.TransportPolicy.class, com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ReleaseErrorStatusHttpTest {
+
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void currentReleaseResources() {
+        for (String subject : java.util.List.of("release-operator"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType() == ReleaseGateController.class
+                            && java.util.Set.of("/internal/v1/release/gates:validate").contains(path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test void applicationCanOverrideReleaseValidationStatusWithoutChangingItsBusinessCode() throws Exception {
         mvc.perform(post("/internal/v1/release/gates:validate")
-                        .with(jwt().jwt(token -> token.subject("release-operator").claim("release_operator", true))
+                        .with(jwt().jwt(token -> token.subject("release-operator").claim("release_operator", true).claim("scope", "internal.release.write"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_internal.release.write")))
                         .header("Idempotency-Key", "typed-validation").header("X-Request-Id", "typed-release-error")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"releaseVersion\":\"candidate\",\"dryRun\":false}"))

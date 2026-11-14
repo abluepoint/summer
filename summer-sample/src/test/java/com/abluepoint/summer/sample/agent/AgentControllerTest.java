@@ -21,10 +21,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class AgentControllerTest {
     @Autowired MockMvc mockMvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.BeforeEach
+    void currentActorFacts() {
+        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "enterprise-admin",
+                (handler, path, method) -> path.startsWith("/api/v1/enterprises/{enterpriseId}/agents") || path.startsWith("/api/v1/enterprises/{enterpriseId}/agent-instances"));
+
+    }
+
 
     @Test void nativeAccessDenialsKeepTheirOriginalMessageAndCause() throws Exception {
+        managed.reachServiceWithoutDelegation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "agent-native-no-cap", (handler,path,method) -> handler.getBeanType().getName().endsWith(".AgentController") && method.equals("GET") && path.startsWith("/api/v1/enterprises/{enterpriseId}/"));
         String path = "/api/v1/enterprises/ent-acme/agents";
         MvcResult result = mockMvc.perform(get(path).with(jwt().jwt(t -> t.subject("agent-native-no-cap").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))).header("X-Request-Id", "native-denied"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
@@ -116,6 +127,10 @@ class AgentControllerTest {
 
     @Test
     void requiresActiveMembershipCapabilityAndOauthScope() throws Exception {
+        var domain=com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
+        for (String subject : List.of("alice", "disabled")) managed.grantHandlers(domain,subject,
+                (handler,path,method)->path.equals("/api/v1/enterprises/{enterpriseId}/agents") && method.equals("GET"));
+        jdbc.update("update summer_enterprise_member set status='DISABLED' where enterprise_id=? and subject=?", "ent-acme", "disabled");
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/agents")
                         .with(jwt().jwt(token -> token.claim("scope", "enterprise.agents.other").subject("alice")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))

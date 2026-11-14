@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.delegation;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +27,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:delegation-error-contract;MODE=MySQL;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class DelegationErrorContractHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.delegation.DelegationController")
+                && java.util.Set.of("create POST /api/v1/enterprises/{e}/agents/{a}/delegations",
+                        "list GET /api/v1/enterprises/{e}/agents/{a}/delegations",
+                        "revoke POST /api/v1/enterprises/{e}/delegations/{id}:revoke",
+                        "approval POST /internal/v1/mcp/approvals",
+                        "approve POST /api/v1/mcp/approvals/{id}:approve",
+                        "reject POST /api/v1/mcp/approvals/{id}:reject",
+                        "withdraw POST /api/v1/mcp/approvals/{id}:withdraw",
+                        "recheck POST /api/v1/mcp/approvals/{id}:recheck",
+                        "audit GET /api/v1/mcp/approvals/{id}/audit")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     private static final String GRANTS = "/api/v1/enterprises/ent-acme/agents/agent-1/delegations";
     private static final String APPROVALS = "/internal/v1/mcp/approvals";
     private static final String GRANT = "{\"scopeType\":\"MCP_TOOL\",\"mcpServerId\":\"server-1\",\"toolPatterns\":[\"customers.read\"]}";
@@ -99,7 +122,7 @@ class DelegationErrorContractHttpTest {
                 "enterprise.mcp.approvals.write", "enterprise.mcp.approvals.approve");
         return jwt().jwt(token -> token.claim("scope", String.join(" ", capabilities)).subject("admin")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", capabilities)))
+                        )
                 .authorities(capabilities.stream().map(capability -> new SimpleGrantedAuthority("SCOPE_" + capability)).toArray(SimpleGrantedAuthority[]::new));
     }
 }

@@ -16,9 +16,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-/** Explicit LEGACY fixture, current persisted grants, and real MVC dispatch. */
+/** Current persisted management grants and raw delegation through real MVC dispatch. */
 @SpringBootTest(properties = {
-    "summer.sample.authorization.managed-bootstrap-domains=",
+    "summer.sample.authorization.managed-bootstrap-domains=PLATFORM:platform,ENTERPRISE:ent-acme",
     "summer.sample.authorization.legacy-scope-compatibility=false",
     "spring.datasource.url=jdbc:h2:mem:perm09_legacy_operations;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
 })
@@ -30,7 +30,7 @@ class LegacyManagementOperationsHttpTest {
   @Autowired com.abluepoint.summer.sample.authorization.AuthorizationChangeEventService events;
   @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
   private static final String TENANT = "/api/v1/enterprises/ent-acme";
-  private static final List<String> SCOPES = List.of("enterprise.menu.write", "platform.menu.write", "enterprise.roles.write");
+  private static final List<String> SCOPES = List.of("enterprise.menu.write", "platform.menu.write", "enterprise.roles.write", "platform.capabilities.write");
 
   private RequestPostProcessor actor(List<String> scopes) {
     return jwt().jwt(j -> j.subject("summer-user").claim("scope", scopes)
@@ -43,17 +43,11 @@ class LegacyManagementOperationsHttpTest {
   }
 
   @Test
-  void explicitLegacyMenuAndEventHintsKeepCurrentGrantsAndOriginalDelegation() throws Exception {
-    for (String key : List.of("PLATFORM:platform", "ENTERPRISE:ent-acme"))
-      db.update("insert into summer_authorization_domain(domain_key,engine_mode,revision) values (?,'LEGACY',0)", key);
-    String caps = "cap-enterprise-menu-write\ncap-platform-menu-write\ncap-enterprise-roles-write";
-    db.update("insert into summer_authorization_role(role_id,enterprise_id,name,code,built_in,status,capability_ids,capability_codes,version,created_at,updated_at) values ('legacy09','ent-acme','Legacy09','legacy09',false,'ACTIVE',?,'',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", caps);
-    db.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values ('legacy09','ent-acme','summer-user','[\"legacy09\"]','[]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-
+  void managedMenuAndEventHintsKeepCurrentGrantsAndOriginalDelegation() throws Exception {
     hints(actor(SCOPES), true, true);
     mvc.perform(get("/api/v1/platform/authorization/operations").param("actions", "menu.manifest.write").with(actor(SCOPES)))
         .andExpect(status().isOk()).andExpect(jsonPath("$.data.actions['menu.manifest.write']").value(true));
-    mvc.perform(put("/api/v1/platform/menu-manifest").with(actor(SCOPES)).with(csrf())
+    mvc.perform(put("/api/v1/platform/menu-manifest").with(actor(SCOPES)).with(csrf()).header("If-Match", "\"0\"")
         .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
         .content("{\"manifestVersion\":1,\"items\":[{\"menuId\":\"menu-manifest\",\"path\":\"/menu-manifest\",\"titleKey\":\"menu.menu-manifest\",\"iconKey\":\"menu\",\"sortOrder\":0}]}"))
         .andExpect(status().isOk());
@@ -69,8 +63,7 @@ class LegacyManagementOperationsHttpTest {
     mvc.perform(post("/api/authorization-events/" + event + "/retry").param("enterpriseId", "ent-acme").with(actor(SCOPES)).with(csrf()))
         .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("PENDING"));
 
-    // The real local token converter also exposes signed business claims as authorities.
-    // Those authorities must never widen the original delegated OAuth scope.
+    // Old claims and explicitly supplied authorities must never widen the raw OAuth scope.
     var claimAuthoritiesOnly = jwt().jwt(j -> j.subject("summer-user").claim("scope", "openid")
         .claim("summer_identity_source", "local-user")
         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
@@ -91,7 +84,7 @@ class LegacyManagementOperationsHttpTest {
         .with(claimAuthoritiesOnly).with(csrf())).andExpect(status().isForbidden());
 
     hints(actor(List.of("openid")), false, false);
-    db.update("update summer_authorization_role set status='DISABLED' where role_id='legacy09'");
+    db.update("update summer_authorization_role set status='DISABLED' where role_id in (select role_id from summer_permission_role where domain_key='ENTERPRISE:ent-acme')");
     hints(actor(SCOPES), false, false);
     mvc.perform(patch(TENANT + "/menu-manifest").param("menuId", "menu-manifest").with(actor(SCOPES)).with(csrf())
         .header("If-Match", "\"2\"").header("Idempotency-Key", UUID.randomUUID().toString())
@@ -105,6 +98,6 @@ class LegacyManagementOperationsHttpTest {
     mvc.perform(get(TENANT + "/authorization/operations").param("actions", "menu.layout.write,authorization.events.retry,roles.create").with(who))
         .andExpect(status().isOk()).andExpect(jsonPath("$.data.actions['menu.layout.write']").value(menu))
         .andExpect(jsonPath("$.data.actions['authorization.events.retry']").value(retry))
-        .andExpect(jsonPath("$.data.actions['roles.create']").value(false));
+        .andExpect(jsonPath("$.data.actions['roles.create']").value(retry));
   }
 }

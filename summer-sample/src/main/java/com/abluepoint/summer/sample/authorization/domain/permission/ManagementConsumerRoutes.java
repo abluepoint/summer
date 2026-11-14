@@ -18,6 +18,8 @@ public final class ManagementConsumerRoutes {
           "identity.AuthUserController",
           "identity.CapabilityController",
           "invitation.InvitationController",
+          "key.KeyCapabilityController",
+          "key.ReferenceKeyCapabilityController",
           "member.MemberController",
           "menu.MenuManifestController",
           "organization.OrganizationController",

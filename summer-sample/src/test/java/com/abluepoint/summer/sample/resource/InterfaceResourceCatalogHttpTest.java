@@ -18,7 +18,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class InterfaceResourceCatalogHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCatalogRead() {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "platform-admin",
+                (handler, path, method) -> handler.getBeanType() == InterfaceResourceCatalogController.class
+                        && method.equals("GET") && java.util.Set.of(
+                                "/api/v1/platform/interface-resources", "/api/v1/platform/interface-resources/history",
+                                "/api/v1/platform/interface-resources/history/{revision}",
+                                "/api/v1/platform/interface-resources/diff").contains(path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -26,7 +38,7 @@ class InterfaceResourceCatalogHttpTest {
     @Test
     void returnsAProtectedCompleteCatalogWithBusinessProtocolAndInfrastructureResources() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/v1/platform/interface-resources")
-                        .with(jwt().jwt(token -> token.subject("platform-admin")
+                        .with(jwt().jwt(token -> token.subject("platform-admin").claim("scope", "platform.interface-resources.read")
                                 .claim("platform_capabilities", List.of("platform.interface-resources.read")))
                                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(
                                         "SCOPE_platform.interface-resources.read"))))
@@ -38,7 +50,7 @@ class InterfaceResourceCatalogHttpTest {
                 .andExpect(jsonPath("$.data.items[0].module").isString())
                 .andExpect(jsonPath("$.data.items[0].resourceType").isString())
                 .andExpect(jsonPath("$.data.items[0].sensitiveLevel").isString())
-                .andExpect(jsonPath("$.data.items[0].permissionCode").isString())
+                .andExpect(jsonPath("$.data.items[0].permissionCode").doesNotExist())
                 .andExpect(jsonPath("$.data.items[0].configurable").isBoolean())
                 .andReturn();
 
@@ -48,7 +60,7 @@ class InterfaceResourceCatalogHttpTest {
                 .containsEntry("httpMethod", "GET")
                 .containsEntry("resourceType", "BUSINESS")
                 .containsEntry("configurable", true)
-                .containsEntry("permissionCode", "GET:/api/customers"));
+                .doesNotContainKey("permissionCode"));
         assertThat(items).filteredOn(item -> "BUSINESS".equals(item.get("resourceType")))
                 .isNotEmpty().allSatisfy(item -> assertThat(item).containsEntry("configurable", true));
         assertThat(items).anySatisfy(item -> assertThat(item)
@@ -60,7 +72,7 @@ class InterfaceResourceCatalogHttpTest {
                 .containsEntry("resourceType", "INFRASTRUCTURE"));
         assertThat(items).anySatisfy(item -> assertThat(item)
                 .containsEntry("normalizedPath", "/api/v1/platform/interface-resources")
-                .containsEntry("permissionCode", "platform.interface-resources.read"));
+                .doesNotContainKey("permissionCode"));
     }
 
     @Test
@@ -76,16 +88,18 @@ class InterfaceResourceCatalogHttpTest {
     }
 
     @Test
-    void explicitPermissionAnnotationOverridesTheGeneratedCode() {
+    void currentDescriptorsContainMappingIdentityWithoutBusinessPermissionCodes() {
         InterfaceResourceCatalog catalog = new InterfaceResourceCatalog(List.of(
                 InterfaceResourceDescriptor.mvc(
                         "POST", "/api/overridden", "ExampleController#post", "example",
-                        ResourceType.BUSINESS, SensitiveLevel.SENSITIVE, "example.special.write", false)
+                        ResourceType.BUSINESS, SensitiveLevel.SENSITIVE, false)
         ));
 
         assertThat(catalog.items()).singleElement()
-                .extracting(InterfaceResourceDescriptor::permissionCode)
-                .isEqualTo("example.special.write");
+                .extracting(InterfaceResourceDescriptor::normalizedPath)
+                .isEqualTo("/api/overridden");
+        assertThat(new tools.jackson.databind.ObjectMapper().writeValueAsString(catalog.items()))
+                .doesNotContain("permissionCode");
     }
 
     @Test
@@ -93,10 +107,10 @@ class InterfaceResourceCatalogHttpTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> new InterfaceResourceCatalog(List.of(
                 InterfaceResourceDescriptor.mvc(
                         "GET", "/api/conflict", "One#read", "one",
-                        ResourceType.BUSINESS, SensitiveLevel.NORMAL, null, false),
+                        ResourceType.BUSINESS, SensitiveLevel.NORMAL, false),
                 InterfaceResourceDescriptor.mvc(
                         "GET", "/api/conflict", "Two#read", "two",
-                        ResourceType.BUSINESS, SensitiveLevel.NORMAL, null, false)
+                        ResourceType.BUSINESS, SensitiveLevel.NORMAL, false)
         ))).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Conflicting interface resource");
     }

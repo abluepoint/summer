@@ -29,9 +29,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "summer.security.storage.keys=memory", "spring.quartz.job-store-type=memory",
         "spring.datasource.hikari.maximum-pool-size=40"})
-@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndPlatform.class)
 @org.springframework.test.annotation.DirtiesContext
 class TaskProgressTcpIntegrationTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.interfaces("ENTERPRISE:ent-acme", "task-progress-tcp", java.util.Set.of("tasks"));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() { managed.close(); }
+
     @Value("${local.server.port}") int port;
     @Autowired JWKSource<SecurityContext> keys;
     private final ObjectMapper json = new ObjectMapper();

@@ -19,6 +19,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionaryVersionHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.configuration("ent-acme", "dictionaries", true, "operator");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() { managed.close(); }
+
     // These legacy fixtures now declare their enterprise; production has no implicit sample tenant.
     private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor jwt() {
         return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
@@ -169,7 +184,7 @@ class DictionaryVersionHttpTest {
                 .andExpect(status().isOk());
         http.perform(get("/public/enterprises/ent-acme/dictionaries/versioned-segment"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Standard"));
-        http.perform(get("/api/dictionaries/versioned-segment/effective").with(jwt().jwt(j -> j.claim("scope", "platform.dictionary.read")
+        http.perform(get("/api/dictionaries/versioned-segment/effective").with(jwt().jwt(j -> j.subject("operator").claim("scope", "platform.dictionary.read")
                 .claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.name").value("Versioned Segment"));

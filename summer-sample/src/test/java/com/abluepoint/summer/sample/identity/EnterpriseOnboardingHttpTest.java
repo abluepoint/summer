@@ -22,15 +22,7 @@ class EnterpriseOnboardingHttpTest extends IdentityHttpSupport {
     @Test void creatorCanManageOnlyTheirNewTenantsAfterFreshLoginAndCreationIsAudited() throws Exception {
         String token = bootstrapLogin();
         var mapper = new tools.jackson.databind.ObjectMapper();
-        var caps = new ArrayList<String>();
-        for (String action : List.of("read", "write")) {
-            var r = mvc.perform(post("/api/v1/enterprises/ent-acme/capabilities").header("Authorization", "Bearer " + token)
-                    .header("Idempotency-Key", UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
-                    .content(mapper.writeValueAsString(Map.of("code", "platform.enterprise." + action, "resource", "enterprise", "action", action, "scope", "PLATFORM"))))
-                    .andExpect(status().isCreated()).andReturn();
-            caps.add(JsonPath.read(r.getResponse().getContentAsString(), "$.data.capabilityId"));
-        }
-        token = authorizeSelf(token, caps);
+        token = authorizeSelf(token, List.of("platform.enterprise.read", "platform.enterprise.write"));
         var tenants = new ArrayList<String>();
         for (int index = 0; index < 2; index++) {
             String rid = "creator-onboarding-" + index;
@@ -40,9 +32,9 @@ class EnterpriseOnboardingHttpTest extends IdentityHttpSupport {
                     .andExpect(status().isCreated()).andReturn();
             String tenant = JsonPath.read(created.getResponse().getContentAsString(), "$.data.enterpriseId");
             tenants.add(tenant);
-            // Existing signed tokens do not acquire a new tenant membership implicitly.
+            // Current persisted creator membership and role apply to the same already-issued Token.
             mvc.perform(get("/api/v1/enterprises/{tenant}/members", tenant).header("Authorization", "Bearer " + token))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1));
             token = bootstrapLogin();
             mvc.perform(post("/api/v1/enterprises/{tenant}/org-units", tenant).header("Authorization", "Bearer " + token)
                     .header("Idempotency-Key", UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
@@ -51,7 +43,7 @@ class EnterpriseOnboardingHttpTest extends IdentityHttpSupport {
             mvc.perform(get("/api/v1/enterprises/{tenant}/members", tenant).header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1));
             mvc.perform(get("/api/v1/enterprises/{tenant}/roles", tenant).header("Authorization", "Bearer " + token))
-                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1));
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1)).andExpect(jsonPath("$.data.total").value(1));
             mvc.perform(get("/api/v1/platform/enterprises/{tenant}/audit", tenant).header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].action").value("ENTERPRISE_CREATED"))
                     .andExpect(jsonPath("$.data[0].requestId").value(rid));

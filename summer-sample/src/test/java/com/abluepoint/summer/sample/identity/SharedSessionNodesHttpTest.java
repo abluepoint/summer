@@ -46,7 +46,7 @@ class SharedSessionNodesHttpTest {
         properties.put("spring.data.redis.port", Integer.toString(redisPort));
         properties.put("spring.data.redis.connect-timeout", "250ms");
         properties.put("spring.data.redis.timeout", "250ms");
-        properties.put("spring.data.redis.database", "15");
+        properties.put("spring.data.redis.database", System.getenv().getOrDefault("SUMMER_TEST_REDIS_DATABASE", "15"));
         properties.put("spring.data.redis.username", System.getenv().getOrDefault("SUMMER_REDIS_USERNAME", "default"));
         properties.put("spring.data.redis.password", System.getenv().getOrDefault("SUMMER_REDIS_PASSWORD", ""));
         properties.put("spring.session.data.redis.namespace", namespace + ":servlet");

@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -16,15 +20,30 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {"spring.datasource.url=jdbc:h2:mem:organization-read-boundary;MODE=MySQL;DB_CLOSE_DELAY=-1", "logging.level.root=ERROR"})
+@SpringBootTest(properties = {"spring.datasource.url=jdbc:h2:mem:organization-read-boundary;MODE=MySQL;DB_CLOSE_DELAY=0", "logging.level.root=ERROR"})
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class OrganizationReadBoundaryHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "alice", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("tree GET /api/v1/enterprises/{enterpriseId}/org-tree",
+                        "list GET /api/v1/enterprises/{enterpriseId}/org-units",
+                        "detail GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "members GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members",
+                        "audit GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/audit")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
     @Autowired com.abluepoint.summer.sample.member.MemberDirectory members;
     private JwtRequestPostProcessor reader() {
-        return jwt().jwt(j -> j.subject("alice").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.read"))))
+        return jwt().jwt(j -> j.subject("alice").claim("scope", "enterprise.organization.read").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"));
     }
     @Test void readerOnlySeesAssignedOrganizationsAcrossEveryDirectoryReadSurface() throws Exception {
@@ -43,8 +62,12 @@ class OrganizationReadBoundaryHttpTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
     }
     @Test void subjectNameMatchingAnOrganizationIdDoesNotExposeThatOrganizationsAudit() throws Exception {
-        var admin = jwt().jwt(j -> j.subject("alice").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.read", "enterprise.organization.write"))))
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "alice", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("update PATCH /api/v1/enterprises/{enterpriseId}/org-units/{unitId}")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        var admin = jwt().jwt(j -> j.subject("alice").claim("scope", "enterprise.organization.read enterprise.organization.write").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                )
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"), new SimpleGrantedAuthority("SCOPE_enterprise.organization.write"));
         String etag = mvc.perform(get("/api/v1/enterprises/ent-acme/org-units/org-operations").with(admin))
                 .andExpect(status().isOk()).andReturn().getResponse().getHeader("ETag");
@@ -53,8 +76,12 @@ class OrganizationReadBoundaryHttpTest {
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content("{\"name\":\"Private operations\"}"))
                 .andExpect(status().isOk());
         members.provision("ent-acme", "collision-member", "org-operations", "Reader", "reader@example.test");
-        var reader = jwt().jwt(j -> j.subject("org-operations").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.read"))))
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "org-operations", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("audit GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/audit")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        var reader = jwt().jwt(j -> j.subject("org-operations").claim("scope", "enterprise.organization.read").claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                )
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"));
         mvc.perform(get("/api/v1/enterprises/ent-acme/org-units/org-operations/audit").with(reader))
                 .andExpect(status().isNotFound());

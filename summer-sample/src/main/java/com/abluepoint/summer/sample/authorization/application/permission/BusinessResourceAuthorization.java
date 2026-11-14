@@ -41,7 +41,8 @@ public class BusinessResourceAuthorization implements BusinessResourceAccess {
   }
 
   private boolean legacy(Domain domain) {
-    return !versions.managed(domain);
+    if (!versions.managed(domain)) throw denied();
+    return false;
   }
 
   @Override public boolean requireCurrent(Authentication actor, String... delegatedScopes) {
@@ -97,38 +98,7 @@ public class BusinessResourceAuthorization implements BusinessResourceAccess {
   @Override public boolean requirePublicConfigurationRead(Domain domain, Authentication actor,
       String resource, String... delegatedScopes) {
     if (!java.util.Set.of("dictionaries", "system-parameters").contains(resource)) throw denied();
-    if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes context)
-        || !(context.getRequest().getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE)
-            instanceof HandlerMethod handler)
-        || !"system-parameters".equals(resource)
-        || !handler.getBeanType().getName().equals(
-            "com.abluepoint.summer.sample.systemparameter.PublicSystemParameterController"))
-      return require(domain, actor, delegatedScopes);
-    return current(() -> {
-      if (!ManagedConsumerAccess.delegated(actor, delegatedScopes)) throw denied();
-      if (legacy(domain)) return false;
-      var request = context.getRequest();
-      String path = String.valueOf(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE));
-      if (!"ENTERPRISE".equals(domain.kind()) || !"GET".equals(request.getMethod())
-          || !java.util.Set.of("/public/system-parameters/{key}",
-              "/public/enterprises/{enterpriseId}/system-parameters/{key}").contains(path)
-          || !domain.id().equals(com.abluepoint.summer.sample.authorization.EnterpriseRequestContext.resolve(actor))
-          || !(Objects.equals(actor, SecurityContextHolder.getContext().getAuthentication())
-              || actor == null && SecurityContextHolder.getContext().getAuthentication()
-                  instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) throw denied();
-      var installed = mappings.orderedStream().flatMap(mapping -> mapping.getHandlerMethods().entrySet().stream())
-          .filter(entry -> entry.getKey().getPatternValues().contains(path)
-              && entry.getKey().getMethodsCondition().getMethods().contains(org.springframework.web.bind.annotation.RequestMethod.GET)
-              && entry.getKey().getMatchingCondition(request) != null
-              && entry.getValue().createWithResolvedBean().equals(handler.createWithResolvedBean())).toList();
-      if (installed.size() != 1 || installed.getFirst().getKey().getCustomCondition() != null) throw denied();
-      var mapping = ManagedInterfaceResources.mvc("GET", path,
-          installed.getFirst().getValue(), installed.getFirst().getKey());
-      if (mapping.configurable() || !"COMPONENT".equals(mapping.domainKind())) throw denied();
-      // This fixed transport grants no interface access. Its caller still executes the current
-      // DATA predicate AND the original published/public/status predicates before returning a value.
-      return true;
-    });
+    return require(domain, actor, delegatedScopes);
   }
 
   @Override public boolean requireHttp(Domain domain, Authentication actor, String method, String path,

@@ -21,8 +21,41 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "summer.sample.parameter-events.scheduling-enabled=false")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionaryNotificationSseHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    private String readerRole;
+    private String operatorRole;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.configuration("ent-acme", "dictionaries", false, "writer");
+        readerRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "reader",
+                (handler, path, method) -> handler.getBeanType().equals(DictionaryNotificationController.class)
+                        && handler.getMethod().getName().equals("subscribe") && method.equals("GET")
+                        && path.equals("/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events"));
+        managed.data("ent-acme", "reader", "dictionaries", "read", "TENANT_ALL");
+        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+                (handler, path, method) -> handler.getBeanType().equals(DictionaryController.class)
+                        && handler.getMethod().getName().equals("draft") && method.equals("GET")
+                        && path.equals("/api/dictionaries/{code}/draft"));
+        managed.data("ent-acme", "operator", "dictionaries", "read", "TENANT_ALL");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() {
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "reader", readerRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator", operatorRole);
+        managed.close();
+    }
+
     @Autowired MockMvc http;
     @Autowired JdbcTemplate jdbc;
 
@@ -79,7 +112,7 @@ class DictionaryNotificationSseHttpTest {
         var stream=http.perform(get("/api/v1/enterprises/ent-acme/dictionaries/live-segment/events").with(reader()))
                 .andExpect(request().asyncStarted()).andReturn();
         assertThat(stream.getResponse().getContentAsString()).contains("event:DICTIONARY_PUBLISHED");
-        jdbc.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values('revoke-sse','ent-acme','reader','','platform.dictionary.read',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "reader", readerRole);
         http.perform(post("/api/dictionaries/live-segment/publish").with(writer()).contentType(MediaType.APPLICATION_JSON)
                 .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/live-segment/publish", "{\"expectedVersion\":1}"))) .andExpect(status().isOk());
         assertThat(stream.getResponse().getContentAsString().split("event:DICTIONARY_PUBLISHED",-1)).hasSize(2);

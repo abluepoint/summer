@@ -5,7 +5,6 @@ import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
-import com.abluepoint.summer.sample.resource.ResourcePermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -60,12 +59,12 @@ class PluginController {
 
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins")
     @RawResponse
-    @ResourcePermission("enterprise.plugins.read")
+
     ResponseEntity<ApiResponse<PluginPage>> enterpriseList(@PathVariable String enterpriseId, Authentication authentication) { return lifecycle(() -> service.enterpriseList(enterpriseId, authentication)); }
 
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins/customer-insights/summary")
     @RawResponse
-    @ResourcePermission("enterprise.plugins.customer-insights.read")
+
     ResponseEntity<ApiResponse<PluginInsightsView>> customerInsights(@PathVariable String enterpriseId, Authentication authentication) { return lifecycle(() -> service.customerInsights(enterpriseId, authentication)); }
 
     private <T> ResponseEntity<ApiResponse<T>> lifecycle(Supplier<T> call) { return ok(nativeBoundary(call)); }

@@ -29,46 +29,36 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "summer.sample.authorization.legacy-scope-compatibility=false"
 })
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-class AuthorizationBootstrapHttpTest {
-    @Autowired MockMvc mvc;
-    @Autowired com.abluepoint.summer.security.autoconfigure.SummerSecurityProperties properties;
-
+class AuthorizationBootstrapHttpTest extends IdentityHttpSupport {
     @Test
     void bootstrapAdminCanAssignPersistedManagementRightsAndManageAfterFreshPkceLogin() throws Exception {
-        // Bootstrap authority belongs to the configured first administrator, not every ADMIN account.
         String username = properties.getAuthorizationServer().getUser().getUsername();
-        String password = properties.getAuthorizationServer().getUser().getPassword();
-        String bootstrap = login(username, password);
-
-        MvcResult catalog = mvc.perform(get("/api/v1/platform/interface-resources")
-                        .header("Authorization", "Bearer " + bootstrap))
+        String bootstrap = authorizeSelf(bootstrapLogin(), List.of("enterprise.roles.read", "enterprise.roles.write",
+                "platform.interface-resources.read"));
+        var catalog = mvc.perform(get("/api/v1/platform/interface-resources").header("Authorization", "Bearer " + bootstrap))
                 .andExpect(status().isOk()).andReturn();
         List<Map<String, Object>> resources = JsonPath.read(catalog.getResponse().getContentAsString(), "$.data.items");
         assertThat(resources).anySatisfy(resource -> {
             assertThat(resource.get("normalizedPath")).isEqualTo("/api/v1/enterprises/{enterpriseId}/roles");
             assertThat(resource.get("httpMethod")).isEqualTo("GET");
-            assertThat(resource.get("permissionCode")).isEqualTo("enterprise.roles.read");
+            assertThat(resource).doesNotContainKey("permissionCode");
+            assertThat(resource.get("handler")).isNotNull();
         });
         assertBusinessDenied(bootstrap);
-
         String roleId = createManagementRole(bootstrap, "Initial");
+        var binding = mvc.perform(get("/api/v1/enterprises/ent-acme/users/{username}/roles", username)
+                        .header("Authorization", "Bearer " + bootstrap)).andExpect(status().isOk()).andReturn();
         mvc.perform(put("/api/v1/enterprises/ent-acme/users/{username}/roles", username)
-                        .header("Authorization", "Bearer " + bootstrap)
-                        .header("Idempotency-Key", UUID.randomUUID().toString())
-                        .header("If-Match", "\"1\"")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleIds\":[\"" + roleId + "\"],\"deniedCapabilityCodes\":[]}"))
+                        .header("Authorization", "Bearer " + bootstrap).header("Idempotency-Key", UUID.randomUUID())
+                        .header("If-Match", binding.getResponse().getHeader("ETag")).contentType(MediaType.APPLICATION_JSON)
+                        .content(new tools.jackson.databind.ObjectMapper().writeValueAsString(Map.of("roleIds", List.of(roleId)))))
                 .andExpect(status().isOk());
-
-        String managed = login(username, password);
+        String managed = bootstrapLogin();
         Map<String, Object> claims = JsonPath.read(new String(Base64.getUrlDecoder().decode(managed.split("\\.")[1]),
                 StandardCharsets.UTF_8), "$");
         assertThat(claims.get("summer_managed_grants")).isEqualTo(true);
-        assertThat(JsonPath.<List<String>>read(claims, "$.enterprise_capabilities.ent-acme"))
-                .containsExactlyInAnyOrder("enterprise.roles.read", "enterprise.roles.write");
-        assertThat(JsonPath.<List<String>>read(claims, "$.platform_capabilities"))
-                .containsExactly("platform.interface-resources.read");
-
+        assertThat((Map<?, ?>) claims.get("enterprise_capabilities")).isEmpty();
+        assertThat((List<?>) claims.get("platform_capabilities")).isEmpty();
         mvc.perform(get("/api/v1/enterprises/ent-acme/roles").header("Authorization", "Bearer " + managed))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/v1/platform/interface-resources").header("Authorization", "Bearer " + managed))
@@ -81,12 +71,15 @@ class AuthorizationBootstrapHttpTest {
     }
 
     private String createManagementRole(String token, String name) throws Exception {
-        var result = mvc.perform(post("/api/v1/enterprises/ent-acme/roles")
-                        .header("Authorization", "Bearer " + token)
-                        .header("Idempotency-Key", UUID.randomUUID().toString())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"" + name + "\",\"code\":\"management-" + UUID.randomUUID()
-                                + "\",\"capabilityIds\":[\"enterprise.roles.read\",\"enterprise.roles.write\",\"platform.interface-resources.read\"]}"))
+        String permission = identityFacts().grantHandlers(
+                com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"),
+                properties.getAuthorizationServer().getUser().getUsername(),
+                (handler, path, method) -> handler.getBeanType().getName().equals(
+                        "com.abluepoint.summer.sample.authorization.api.permission.RolePermissionController"));
+        var result = mvc.perform(post("/api/v1/enterprises/ent-acme/roles").header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
+                        .content(new tools.jackson.databind.ObjectMapper().writeValueAsString(Map.of("name", name,
+                                "code", "management-" + UUID.randomUUID(), "permissionIds", List.of(permission)))))
                 .andExpect(status().isCreated()).andReturn();
         return JsonPath.read(result.getResponse().getContentAsString(), "$.data.roleId");
     }
@@ -94,34 +87,5 @@ class AuthorizationBootstrapHttpTest {
     private void assertBusinessDenied(String token) throws Exception {
         mvc.perform(get("/api/v1/enterprises/ent-acme/members").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
-    }
-
-    private String login(String username, String password) throws Exception {
-        String verifier = UUID.randomUUID() + "-" + UUID.randomUUID();
-        String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(
-                MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII)));
-        var uri = UriComponentsBuilder.fromPath("/oauth2/authorize")
-                .queryParam("response_type", "code").queryParam("client_id", "summer-ui")
-                .queryParam("redirect_uri", "http://127.0.0.1:5173/oauth2/callback")
-                .queryParam("scope", "openid profile").queryParam("state", UUID.randomUUID())
-                .queryParam("code_challenge", challenge).queryParam("code_challenge_method", "S256")
-                .build().encode().toUri();
-        var initial = mvc.perform(get(uri).header("Accept", "text/html"))
-                .andExpect(status().is3xxRedirection()).andReturn();
-        var session = (MockHttpSession) initial.getRequest().getSession(false);
-        mvc.perform(post("/login").session(session).with(csrf())
-                        .param("username", username).param("password", password))
-                .andExpect(status().is3xxRedirection());
-        var callback = mvc.perform(get(uri).session(session).header("Accept", "text/html"))
-                .andExpect(status().is3xxRedirection()).andReturn();
-        String code = UriComponentsBuilder.fromUriString(callback.getResponse().getHeader("Location"))
-                .build().getQueryParams().getFirst("code");
-        assertThat(code != null).isTrue();
-        var issued = mvc.perform(post("/oauth2/token").param("grant_type", "authorization_code")
-                        .param("client_id", "summer-ui").param("redirect_uri", "http://127.0.0.1:5173/oauth2/callback")
-                        .param("code", code).param("code_verifier", verifier))
-                .andExpect(status().isOk()).andReturn();
-        session.invalidate();
-        return JsonPath.read(issued.getResponse().getContentAsString(), "$.access_token");
     }
 }

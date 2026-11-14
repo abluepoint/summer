@@ -1,6 +1,8 @@
 package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
+import com.abluepoint.summer.sample.authorization.BusinessDataScopes.DictionaryChild;
 import com.abluepoint.summer.sample.configuration.ConfigurationActionAccess;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -37,8 +39,9 @@ class DictionaryGroups {
     private final DictionaryGroupRepository groups;
     private final DictionaryGroupMemberRepository members;
     private final ConfigurationActionAccess actions;
-    DictionaryGroups(DictionaryGroupRepository groups,DictionaryGroupMemberRepository members,ConfigurationActionAccess actions) {
-        this.groups=groups; this.members=members; this.actions=actions;
+    private final BusinessDataScopes scopes;
+    DictionaryGroups(DictionaryGroupRepository groups,DictionaryGroupMemberRepository members,ConfigurationActionAccess actions,BusinessDataScopes scopes) {
+        this.groups=groups; this.members=members; this.actions=actions; this.scopes=scopes;
     }
     List<DictionaryDraftGroup> read(DictionaryTypeEntity type, Set<String> visible, boolean current) {
         var rows=current ? groups.lockAll(type.tenantId(),type.code()) : groups.findAllByTenantIdAndDictionaryCodeOrderByCode(type.tenantId(),type.code());
@@ -78,27 +81,55 @@ class DictionaryGroups {
         }
         return result.stream().sorted(Comparator.comparing(DictionaryDraftGroup::code)).toList();
     }
-    void save(DictionaryTypeEntity type,List<DictionaryDraftGroup> desired,Map<String,String> itemIds) {
-        members.deleteAll(members.lockAll(type.tenantId(),type.code())); members.flush();
-        var old=groups.lockAll(type.tenantId(),type.code());
+    Set<String> mutationActions(DictionaryTypeEntity type,List<DictionaryDraftGroupRequest> requested) {
+        if(requested==null) return Set.of();
+        var result=new HashSet<String>();
+        if(requested.stream().filter(Objects::nonNull).anyMatch(g -> g.id()!=null && g.id().startsWith("new:"))) result.add("create");
+        var keep=requested.stream().filter(Objects::nonNull).map(DictionaryDraftGroupRequest::id).collect(Collectors.toSet());
+        if(groups.findAllByTenantIdAndDictionaryCodeOrderByCode(type.tenantId(),type.code()).stream().anyMatch(g -> !keep.contains(g.id))) result.add("delete");
+        return result;
+    }
+    private String parentId(DictionaryTypeEntity type) { return (String)em.getEntityManagerFactory().getPersistenceUnitUtil().getIdentifier(type); }
+    void save(DictionaryTypeEntity type,List<DictionaryDraftGroup> desired,Map<String,String> itemIds,Map<String,BusinessDataScopes.Filter> ranges) {
+        var update=ranges.get("update");
+        var oldMembers=members.lockAll(type.tenantId(),type.code());oldMembers.forEach(em::detach);
+        scopes.changeDictionaryChildren(update,DictionaryChild.MEMBER,parentId(type),type.tenantId(),type.code(),Map.of(),Map.of());
+        var old=groups.lockAll(type.tenantId(),type.code());old.forEach(em::detach);
         var keep=desired.stream().map(DictionaryDraftGroup::id).collect(Collectors.toSet());
-        groups.deleteAll(old.stream().filter(g -> !keep.contains(g.id)).toList());groups.flush();
+        for(var prior:old) if(!keep.contains(prior.id)) {
+            if(scopes.changeDictionaryChildren(ranges.get("delete"),DictionaryChild.GROUP,parentId(type),type.tenantId(),type.code(),Map.of("id",prior.id),Map.of())!=1)
+                throw new org.springframework.security.access.AccessDeniedException("Dictionary group is outside the delete range");
+        }
         var existing=old.stream().collect(Collectors.toMap(g->g.id,g->g));
         for(var g:desired) {
             var row=existing.get(g.id());
-            if(row==null) row=new DictionaryGroupEntity(type.tenantId(),type.code(),UUID.randomUUID().toString(),g.code(),g.name(),g.enabled());
-            row.code=g.code();row.name=g.name();row.enabled=g.enabled();groups.saveAndFlush(row);
-            for(int i=0;i<g.memberIds().size();i++) members.save(new DictionaryGroupMemberEntity(type.tenantId(),type.code(),row.id,itemIds.get(g.memberIds().get(i)),i));
+            if(row==null) {
+                row=new DictionaryGroupEntity(type.tenantId(),type.code(),UUID.randomUUID().toString(),g.code(),g.name(),g.enabled());
+                scopes.insertDictionaryChild(ranges.get("create"),DictionaryChild.GROUP,parentId(type),type.tenantId(),type.code(),
+                    Map.of("id",row.id,"tenant_id",row.tenantId,"dictionary_code",row.dictionaryCode,"code",g.code(),"name",g.name(),"enabled",g.enabled(),"ever_published",false));
+            } else if(scopes.changeDictionaryChildren(update,DictionaryChild.GROUP,parentId(type),type.tenantId(),type.code(),Map.of("id",row.id),
+                    Map.of("code",g.code(),"name",g.name(),"enabled",g.enabled()))!=1)
+                throw new org.springframework.security.access.AccessDeniedException("Dictionary group is outside the update range");
+            for(int i=0;i<g.memberIds().size();i++) {
+                String item=itemIds.get(g.memberIds().get(i));if(item==null) throw invalid();
+                var link=new DictionaryGroupMemberEntity(type.tenantId(),type.code(),row.id,item,i);
+                scopes.insertDictionaryChild(update,DictionaryChild.MEMBER,parentId(type),type.tenantId(),type.code(),
+                    Map.of("id",link.id,"tenant_id",link.tenantId,"dictionary_code",link.dictionaryCode,"group_id",link.groupId,"item_id",link.itemId,"sort_order",i));
+            }
         }
-        members.flush();
     }
-    void removeItem(String tenant,String code,String id) {
-        members.deleteAll(members.lockAll(tenant,code).stream().filter(m->m.itemId.equals(id)).toList());members.flush();
+    void removeItem(DictionaryTypeEntity type,String id,BusinessDataScopes.Filter scope) {
+        var old=members.lockAll(type.tenantId(),type.code()).stream().filter(m->m.itemId.equals(id)).toList();old.forEach(em::detach);
+        int changed=scopes.changeDictionaryChildren(scope,DictionaryChild.MEMBER,parentId(type),type.tenantId(),type.code(),Map.of("item_id",id),Map.of());
+        if(changed!=old.size()) throw new org.springframework.security.access.AccessDeniedException("Dictionary links are outside the delete range");
     }
     List<DictionarySnapshotGroup> snapshot(DictionaryTypeEntity type,List<DictionaryItemEntity> items) {
         var byId=items.stream().collect(Collectors.toMap(DictionaryItemEntity::id,DictionaryItemEntity::value));
         return read(type,byId.keySet(),true).stream().map(g->new DictionarySnapshotGroup(g.id(),g.code(),g.name(),g.enabled(),g.memberIds().stream().map(byId::get).toList())).toList();
     }
-    void markPublished(DictionaryTypeEntity type) { groups.markPublished(type.tenantId(),type.code()); }
+    void markPublished(DictionaryTypeEntity type,BusinessDataScopes.Filter scope) {
+        groups.lockAll(type.tenantId(),type.code()).forEach(em::detach);
+        scopes.changeDictionaryChildren(scope,DictionaryChild.GROUP,parentId(type),type.tenantId(),type.code(),Map.of(),Map.of("ever_published",true));
+    }
     private static SummerException invalid() { return new SummerException(DictionaryErrorCode.INVALID,List.of(new SummerException.Violation("groups","is invalid"))); }
 }

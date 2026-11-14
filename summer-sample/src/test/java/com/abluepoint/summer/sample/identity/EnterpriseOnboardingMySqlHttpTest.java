@@ -20,8 +20,9 @@ class EnterpriseOnboardingMySqlHttpTest extends EnterpriseOnboardingHttpTest {
     private static Connection connect(String schema) throws SQLException {
         return DriverManager.getConnection(URL + schema, "root", System.getenv("T19_MYSQL_PASSWORD"));
     }
+    private static boolean schemaCreated;
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) throws SQLException {
-        try (var c = connect(""); var statement = c.createStatement()) { statement.executeUpdate("CREATE DATABASE " + SCHEMA); }
+        try (var c = connect(""); var statement = c.createStatement()) { statement.executeUpdate("CREATE DATABASE " + SCHEMA); schemaCreated = true; com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.created(EnterpriseOnboardingMySqlHttpTest.class, SCHEMA); }
         org.flywaydb.core.Flyway.configure().dataSource(URL + SCHEMA, "root", System.getenv("T19_MYSQL_PASSWORD"))
                 .locations("classpath:db/migration/mysql").target("36").load().migrate();
         registry.add("spring.datasource.url", () -> URL + SCHEMA);
@@ -30,6 +31,7 @@ class EnterpriseOnboardingMySqlHttpTest extends EnterpriseOnboardingHttpTest {
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
     }
     @AfterAll static void cleanup() throws SQLException {
+        if (!schemaCreated) return; // Failed CREATE never authorizes DROP of a pre-existing schema.
         try (var c = connect(""); var statement = c.createStatement()) {
             statement.executeUpdate("DROP DATABASE IF EXISTS " + SCHEMA);
             try (var result = statement.executeQuery("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='" + SCHEMA + "'")) {

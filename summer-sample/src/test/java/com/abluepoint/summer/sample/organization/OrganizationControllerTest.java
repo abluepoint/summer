@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -26,7 +30,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class OrganizationControllerTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("tree GET /api/v1/enterprises/{enterpriseId}/org-tree",
+                        "list GET /api/v1/enterprises/{enterpriseId}/org-units",
+                        "detail GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "members GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members",
+                        "audit GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/audit",
+                        "create POST /api/v1/enterprises/{enterpriseId}/org-units",
+                        "update PATCH /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "delete DELETE /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "assignBatch PUT /api/v1/enterprises/{enterpriseId}/org-assignments:batch")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+        managed.activeUser(Domain.enterprise("ent-acme"), "ungranted-org-reader");
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -95,9 +119,9 @@ class OrganizationControllerTest {
     void deniesAnOrganizationReadWhenEnterpriseCapabilityIsMissing() throws Exception {
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/org-tree", "ent-acme")
                         .with(jwt().jwt(token -> token
-                                .subject("admin")
+                                .subject("ungranted-org-reader").claim("scope", "enterprise.organization.read")
                                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                                .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.members.read"))))
+                                )
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
@@ -290,18 +314,17 @@ class OrganizationControllerTest {
     // Full-directory assertions use an explicit organization administrator; member-only reads have a separate boundary suite.
     private static org.springframework.test.web.servlet.request.RequestPostProcessor administratorReadToken(String enterpriseId) {
         return jwt().jwt(token -> token
-                        .subject("admin")
+                        .subject("admin").claim("scope", "enterprise.organization.read enterprise.organization.write")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterpriseId, "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of(enterpriseId, List.of("enterprise.organization.read", "enterprise.organization.write"))))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"));
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor enterpriseWriteToken(String enterpriseId) {
         return jwt().jwt(token -> token
-                        .subject("admin")
+                        .subject("admin").claim("scope", "enterprise.organization.read enterprise.organization.write")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", enterpriseId, "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of(enterpriseId, List.of(
-                                "enterprise.organization.read", "enterprise.organization.write"))))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.write"));
     }
 }

@@ -41,20 +41,27 @@ class ConfigurationMySqlHttpTest {
     }
     @Autowired MockMvc mvc;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
     @Test void migratesAndEnforcesScopesAndOverridesThroughHttp() throws Exception {
         assertThat(jdbc.queryForObject("select count(*) from flyway_schema_history where version in ('29','30') and success=1",Integer.class)).isEqualTo(2);
-        var actor=jwt().jwt(j->j.subject("mysql-user").claim("organization_id","org-engineering")
-                .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
-                .claim("enterprise_capabilities",Map.of("ent-acme",List.of("enterprise.data-scope.write","enterprise.data-scope.read"))))
-                .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"),new SimpleGrantedAuthority("SCOPE_system.parameter.read"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.write"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.read"));
-        mvc.perform(post("/api/system-parameters").with(actor).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"key\":\"mysql.scope\",\"type\":\"STRING\",\"value\":\"base\",\"public\":true}")) .andExpect(status().isCreated());
-        mvc.perform(put("/api/system-parameters/mysql.scope/overrides/org-engineering").with(actor).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\":\"org\",\"publicReadable\":true}")) .andExpect(status().isOk());
-        mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("org"));
-        mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/system-parameters/bindings/USER/mysql-user").with(actor).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"rules\":[{\"type\":\"TENANT\"}]}")) .andExpect(status().isOk());
-        mvc.perform(get("/api/system-parameters").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
-        mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isNotFound());
+        try (var managed = new BusinessManagedAuthorizationTestFixture(jdbc, managedTransactions, managedInterfaces)) {
+            managed.interfaces("ENTERPRISE:ent-acme", "mysql-user", Set.of("system-parameters"));
+            for (String action : List.of("create", "read", "update"))
+                managed.data("ent-acme", "mysql-user", "system-parameters", action, "TENANT_ALL");
+            var actor=jwt().jwt(j->j.subject("mysql-user").claim("scope","system.parameter.write system.parameter.read").claim("organization_id","org-engineering")
+                    .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE")))
+                    .claim("enterprise_capabilities",Map.of("ent-acme",List.of("enterprise.data-scope.write","enterprise.data-scope.read"))))
+                    .authorities(new SimpleGrantedAuthority("SCOPE_system.parameter.write"),new SimpleGrantedAuthority("SCOPE_system.parameter.read"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.write"),new SimpleGrantedAuthority("SCOPE_enterprise.data-scope.read"));
+            mvc.perform(post("/api/system-parameters").with(actor).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"key\":\"mysql.scope\",\"type\":\"STRING\",\"value\":\"base\",\"public\":true}")) .andExpect(status().isCreated());
+            mvc.perform(put("/api/system-parameters/mysql.scope/overrides/org-engineering").with(actor).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"value\":\"org\",\"publicReadable\":true}")) .andExpect(status().isOk());
+            mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("org"));
+            // MANAGED reads consume current DATA permissions, not legacy direct bindings.
+            managed.revokeRead("ent-acme", "mysql-user", "system-parameters");
+            mvc.perform(get("/api/system-parameters").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
+            mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isNotFound());
+        }
     }
 }

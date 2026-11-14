@@ -2,6 +2,8 @@
 
 本票是 #200 的兼容 expand，父规格 #199、ADR0039。旧授权、特殊申请人入口、自身会话、菜单和协议策略继续生效；本票没有生产切换入口。共享文档 CONTEXT 和 ADR 索引由总控维护。
 
+下文保留 #200 交付时的兼容阶段契约，包括当时缺 mode 的 LEGACY 缺省和旧权限码桥接；不作为当前目标程序的启动或鉴权说明。当前显式域状态、首次安装、登记与恢复统一见[受控操作指南](permission-213-controlled-upgrade.md)，当前权限模型见 [ADR0039](../adr/0039-manage-permissions-independently-of-resources.md)。
+
 ## 实际接入
 
 Summer Security 的 `ResourceAuthorization` 是窄判定契约，输入 Domain、真实 Authentication（可为空）、Resource 和 requestId，输出允许/拒绝、理由、权威 revision 及相同域/资源。Resource 只携带稳定身份、类型、来源；没有 permissionCode 或 accessMode。`AuthorizationPolicy` 是服务端实现端口，按持久域模式选取唯一实现，重复实现阻止启动、缺失实现拒绝；请求不能提供引擎选择。

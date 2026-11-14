@@ -8,7 +8,7 @@ public final class DraftRevisionFixture {
         String base = path.contains("/items") ? path.substring(0, path.indexOf("/items")) : path;
         var response = http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(base + "/draft")
             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                .jwt(j -> j.subject("operator").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId",tenant,"status","ACTIVE"))))
+                .jwt(j -> j.subject("operator").claim("scope", "platform.dictionary.read").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId",tenant,"status","ACTIVE"))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.dictionary.read"))))
             .andReturn().getResponse();
         if (response.getStatus() != 200) return body;
@@ -30,7 +30,7 @@ public final class DraftRevisionFixture {
         String tenant = path.contains("/enterprises/") ? path.split("/enterprises/")[1].split("/")[0] : "ent-acme";
         var response = http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(base + "/draft")
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("operator").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId",tenant,"status","ACTIVE"))))
+                    .jwt(j -> j.subject("operator").claim("scope", "platform.dictionary.read").claim("enterprise_memberships", java.util.List.of(java.util.Map.of("enterpriseId",tenant,"status","ACTIVE"))))
                     .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.dictionary.read"))))
                 .andReturn().getResponse();
         if (response.getStatus() != 200) return body;

@@ -22,7 +22,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class ReleaseGateControllerTest {
+
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void currentReleaseResources() {
+        for (String subject : java.util.List.of("release-operator"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType() == ReleaseGateController.class
+                            && java.util.Set.of("/internal/v1/release/performance-budgets", "/internal/v1/release/readiness", "/internal/v1/release/performance-benchmarks", "/internal/v1/release/gates:validate", "/internal/v1/release/rollback:dry-run", "/internal/v1/release/failure-drills").contains(path));
+    }
+
 
     @Autowired
     MockMvc mockMvc;
@@ -228,7 +239,7 @@ class ReleaseGateControllerTest {
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor operator(String scope) {
         return jwt().jwt(token -> token.subject("release-operator")
-                        .claim("release_operator", true)
+                        .claim("scope", scope).claim("release_operator", true)
                         .claim("service_trust_verified", true))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + scope));
     }

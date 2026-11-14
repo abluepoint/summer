@@ -39,7 +39,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class SessionErrorContractHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("reader", "user"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                            && java.util.Set.of("/api/v1/sessions", "/api/v1/sessions/{reference}").contains(path));
+    }
+
     private static final String REFERENCE = "a".repeat(64);
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
@@ -107,7 +117,7 @@ class SessionErrorContractHttpTest {
     @Test void aTransientTechnicalFailureCanRecoverWithinTheExistingRetryBudget() throws Exception {
         when(values.get(anyString())).thenThrow(new RedisConnectionFailureException("transient"))
                 .thenThrow(new RedisConnectionFailureException("transient")) .thenReturn(null);
-        mvc.perform(get("/api/v1/session").session(new MockHttpSession()).with(jwt().jwt(token -> token.subject("reader"))))
+        mvc.perform(get("/api/v1/session").session(new MockHttpSession()).with(jwt().jwt(token -> token.subject("reader").claim("scope", "platform.capabilities.read platform.capabilities.write"))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.principal.subject").value("reader"));
     }
 
@@ -117,7 +127,7 @@ class SessionErrorContractHttpTest {
     }
 
     private ResultActions error(MockHttpServletRequestBuilder request, int expectedStatus, String code, String message) throws Exception {
-        return mvc.perform(request.with(jwt().jwt(token -> token.subject("reader"))
+        return mvc.perform(request.with(jwt().jwt(token -> token.subject("reader").claim("scope", "platform.capabilities.read platform.capabilities.write"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.capabilities.read"),
                                         new SimpleGrantedAuthority("SCOPE_platform.capabilities.write")))
                         .header("X-Request-Id", "session-contract").header("Accept-Language", "zh-CN"))

@@ -27,7 +27,7 @@ class MemberController {
     MemberController(MemberService service, RequestIdAccessor requestId) { this.service = service; this.requestId = requestId; }
 
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/members", consumes = "application/json")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.write")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> create(@PathVariable String enterpriseId,
@@ -39,7 +39,7 @@ class MemberController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/members")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.read")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.read')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberPage>> list(@PathVariable String enterpriseId, @RequestParam(defaultValue = "0") int page, @RequestParam(required = false) Integer size, @RequestParam(required = false) Integer pageSize, @RequestParam(required = false) String q, @RequestParam(required = false) String search, @RequestParam(required = false) String status, Authentication auth, HttpServletRequest request) {
@@ -51,7 +51,7 @@ class MemberController {
     }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.read")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.read')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> detail(@PathVariable String enterpriseId, @PathVariable String memberId, Authentication auth, HttpServletRequest request) {
@@ -63,31 +63,31 @@ class MemberController {
     }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:disable")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.write")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> disable(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth, HttpServletRequest request) { return change(enterpriseId, memberId, "DISABLED", ifMatch, idempotencyKey, auth); }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:enable")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.write")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> enable(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth, HttpServletRequest request) { return change(enterpriseId, memberId, "ACTIVE", ifMatch, idempotencyKey, auth); }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:leave")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.write")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> leave(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth) { return change(enterpriseId, memberId, "RESIGNED", ifMatch, idempotencyKey, auth); }
 
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:resign")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.write")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> resign(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth) { return change(enterpriseId, memberId, "RESIGNED", ifMatch, idempotencyKey, auth); }
 
     @GetMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}/audit")
-    @com.abluepoint.summer.sample.resource.ResourcePermission("enterprise.members.read")
+
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.read')")
     @RawResponse
     ResponseEntity<ApiResponse<List<MemberService.AuditEvent>>> audit(@PathVariable String enterpriseId, @PathVariable String memberId, Authentication auth) {

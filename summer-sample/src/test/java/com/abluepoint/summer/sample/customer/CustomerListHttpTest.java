@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
+@org.springframework.test.annotation.DirtiesContext
 class CustomerListHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(Domain.platform(), "summer-client", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
+                        && java.util.Set.of(
+                                "POST /api/customers",
+                                "GET /api/customers",
+                                "PATCH /api/customers/{username}")
+                        .contains(method + " " + path));
+    }
+
 
     private static final String CLIENT_ID = "summer-client";
     private static final String CLIENT_SECRET = "summer-client-demo-only";

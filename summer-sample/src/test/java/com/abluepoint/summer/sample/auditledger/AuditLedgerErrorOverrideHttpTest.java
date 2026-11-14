@@ -22,16 +22,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(AuditLedgerErrorOverrideHttpTest.StatusOverride.class)
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, AuditLedgerErrorOverrideHttpTest.StatusOverride.class})
 class AuditLedgerErrorOverrideHttpTest {
     @Autowired MockMvc mvc;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture fixture;
+    @org.junit.jupiter.api.BeforeEach void authorizeExactValidationHandler() {
+        fixture.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"),
+            "audit-admin", (handler, path, method) -> method.equals("GET") && path.equals("/api/v1/enterprises/{enterpriseId}/audit-events:query"));
+    }
 
     @Test
     void auditValidationUsesTheApplicationStatusPolicyAndKeepsItsLiteralMessage() throws Exception {
         mvc.perform(get("/api/v1/enterprises/ent-acme/audit-events:query")
                         .queryParam("page", "-1")
                         .header("X-Request-Id", "audit-policy")
-                        .with(jwt().jwt(token -> token.subject("audit-admin")
+                        .with(jwt().jwt(token -> token.subject("audit-admin").claim("scope", "enterprise.audit.read")
                                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.audit.read"))))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"))))

@@ -19,14 +19,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {"management.endpoints.web.base-path=/ops", "management.endpoints.web.exposure.include=health,info"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-@Import(InterfaceResourceDiscoveryHttpTest.Settings.class)
+@Import({InterfaceResourceDiscoveryHttpTest.Settings.class, com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 class InterfaceResourceDiscoveryHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCatalogRead() {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "catalog-reader",
+                (handler, path, method) -> handler.getBeanType() == InterfaceResourceCatalogController.class
+                        && method.equals("GET") && java.util.Set.of(
+                                "/api/v1/platform/interface-resources", "/api/v1/platform/interface-resources/history",
+                                "/api/v1/platform/interface-resources/history/{revision}",
+                                "/api/v1/platform/interface-resources/diff").contains(path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test
     void discoversConfiguredProtocolActuatorAndNonMvcMappingsWithoutInventedDefaults() throws Exception {
         var response = mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
-                        .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+                        .jwt(token -> token.subject("catalog-reader").claim("scope", "platform.interface-resources.read").claim("platform_capabilities", List.of("platform.interface-resources.read")))
                         .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"))))
                 .andExpect(status().isOk()).andReturn();
         List<Map<String, Object>> items = JsonPath.read(response.getResponse().getContentAsString(), "$.data.items");
@@ -41,7 +52,7 @@ class InterfaceResourceDiscoveryHttpTest {
     @Test
     void preservesDistinctRequestConditionsAndDoesNotTreatNewBusinessPackagesAsStatic() throws Exception {
         var response = mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
-                        .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+                        .jwt(token -> token.subject("catalog-reader").claim("scope", "platform.interface-resources.read").claim("platform_capabilities", List.of("platform.interface-resources.read")))
                         .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"))))
                 .andExpect(status().isOk()).andReturn();
         List<Map<String, Object>> items = JsonPath.read(response.getResponse().getContentAsString(), "$.data.items");
@@ -49,14 +60,16 @@ class InterfaceResourceDiscoveryHttpTest {
         assertThat(variants).hasSize(2);
         assertThat(items.stream().filter(row -> "/api/catalog-any".equals(row.get("normalizedPath"))).map(row -> row.get("httpMethod")).toList())
                 .contains("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD").doesNotContain("ANY");
-        assertThat(variants).allSatisfy(row -> assertThat(row).containsEntry("resourceType", "BUSINESS").containsEntry("permissionCode", "GET:/api/catalog-extension").containsKey("conditions"));
+        assertThat(variants).allSatisfy(row -> assertThat(row).containsEntry("resourceType", "BUSINESS")
+                .containsEntry("configurationPolicy", "MANAGED_ROLE").containsEntry("configurable", true)
+                .containsKeys("handler", "conditions").doesNotContainKey("permissionCode"));
         assertThat(variants.get(0).get("conditions")).isNotEqualTo(variants.get(1).get("conditions"));
     }
 
     @Test
     void discoversInstalledMetadataFiltersAndFunctionalRoutes() throws Exception {
         var response = mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
-                        .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+                        .jwt(token -> token.subject("catalog-reader").claim("scope", "platform.interface-resources.read").claim("platform_capabilities", List.of("platform.interface-resources.read")))
                         .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"))))
                 .andExpect(status().isOk()).andReturn();
         List<Map<String,Object>> items = JsonPath.read(response.getResponse().getContentAsString(), "$.data.items");
@@ -68,7 +81,7 @@ class InterfaceResourceDiscoveryHttpTest {
     @Test
     void protocolAndInfrastructureMetadataAreConfigurableWithoutBypassingTheirOwnProtection() throws Exception {
         var response = mvc.perform(get("/api/v1/platform/interface-resources").with(jwt()
-                .jwt(token -> token.subject("catalog-reader").claim("platform_capabilities", List.of("platform.interface-resources.read")))
+                .jwt(token -> token.subject("catalog-reader").claim("scope", "platform.interface-resources.read").claim("platform_capabilities", List.of("platform.interface-resources.read")))
                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.interface-resources.read"))))
                 .andExpect(status().isOk()).andReturn();
         List<Map<String,Object>> items = JsonPath.read(response.getResponse().getContentAsString(), "$.data.items");

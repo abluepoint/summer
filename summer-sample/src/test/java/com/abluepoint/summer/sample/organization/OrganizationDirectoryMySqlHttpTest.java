@@ -17,9 +17,10 @@ class OrganizationDirectoryMySqlHttpTest extends OrganizationContextHttpTest {
     private static final String URL="jdbc:mysql://127.0.0.1:3306/";
     private static Connection connect(String schema) throws SQLException { return DriverManager.getConnection(URL+schema,"root",System.getenv("T19_MYSQL_PASSWORD")); }
     private static boolean initialized;
+    private static boolean schemaCreated;
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) throws SQLException {
         if (!initialized) {
-            try(var c=connect("");var st=c.createStatement()) { st.executeUpdate("CREATE DATABASE "+SCHEMA); }
+            try(var c=connect("");var st=c.createStatement()) { st.executeUpdate("CREATE DATABASE "+SCHEMA); schemaCreated=true; com.abluepoint.summer.sample.testsupport.NativeDatabaseEvidence.created(OrganizationDirectoryMySqlHttpTest.class,SCHEMA); }
             org.flywaydb.core.Flyway.configure().dataSource(URL+SCHEMA,"root",System.getenv("T19_MYSQL_PASSWORD"))
                     .locations("classpath:db/migration/mysql").target("35").load().migrate();
             try(var c=connect(SCHEMA);var st=c.createStatement()) {
@@ -39,6 +40,7 @@ class OrganizationDirectoryMySqlHttpTest extends OrganizationContextHttpTest {
         }
     }
     @AfterAll static void cleanup() throws SQLException {
+        if (!schemaCreated) return; // Failed CREATE never authorizes DROP of a pre-existing schema.
         try(var c=connect("");var st=c.createStatement()) {
             st.executeUpdate("DROP DATABASE IF EXISTS "+SCHEMA);
             try(var rs=st.executeQuery("select count(*) from information_schema.schemata where schema_name='"+SCHEMA+"'")) {rs.next();assertThat(rs.getInt(1)).isZero();}

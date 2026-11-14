@@ -28,9 +28,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "summer.security.storage.keys=mysql")
 @AutoConfigureMockMvc
-@Import(KeyRotationFailureHttpTest.AuditConfiguration.class)
+@Import({KeyRotationFailureHttpTest.AuditConfiguration.class, com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class KeyRotationFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("user", "key-admin"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.key.KeyCapabilityController")
+                            && java.util.Set.of("/api/security/keys", "/api/security/keys:rotate").contains(path));
+    }
+
     @DynamicPropertySource
     static void keyProperties(DynamicPropertyRegistry properties) {
         String material = java.util.UUID.randomUUID().toString();
@@ -50,7 +59,7 @@ class KeyRotationFailureHttpTest {
             mvc.perform(post("/api/security/keys:rotate")
                             .contentType("application/json").content("{\"retentionDays\":" + example[0] + "}")
                             .header("If-Match", example[1]).header("X-Request-Id", "rotation-error")
-                            .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
+                            .with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(new SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
                     .andExpect(status().is(Integer.parseInt(example[2])))
                     .andExpect(jsonPath("$.error.code").value(example[3]))
                     .andExpect(jsonPath("$.error.message").value(example[4]))
@@ -68,7 +77,7 @@ class KeyRotationFailureHttpTest {
         try {
             mvc.perform(post("/api/security/keys:rotate").contentType("application/json")
                             .content("{\"retentionDays\":30}").header("If-Match", "1")
-                            .with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
+                            .with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(new SimpleGrantedAuthority("SCOPE_security.key.rotate"))))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.error.code").value("SUMMER_INTERNAL_ERROR"))
                     .andExpect(jsonPath("$.error.message").value("Key rotation failed"))
@@ -81,7 +90,7 @@ class KeyRotationFailureHttpTest {
     }
 
     private void assertCurrentVersion() throws Exception {
-        mvc.perform(get("/api/security/keys").with(jwt().authorities(new SimpleGrantedAuthority("SCOPE_security.key.read"))))
+        mvc.perform(get("/api/security/keys").with(jwt().jwt(keyClaims -> keyClaims.claim("scope", "security.key.read security.key.rotate")).authorities(new SimpleGrantedAuthority("SCOPE_security.key.read"))))
                 .andExpect(status().isOk()).andExpect(header().string("ETag", "\"1\""))
                 .andExpect(jsonPath("$.data.items.length()").value(1))
                 .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"));

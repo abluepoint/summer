@@ -18,8 +18,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DictionarySelectedItemHttpTest {
+    @Autowired org.springframework.jdbc.core.JdbcTemplate managedDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager managedTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources managedInterfaces;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture managed;
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    private String operatorRole;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentManagedAuthorization() {
+        managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
+                managedDb, managedTransactions, managedInterfaces);
+        managed.configuration("ent-acme", "dictionaries", true, "dictionary-operator");
+        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+                (handler, path, method) -> handler.getBeanType().equals(DictionaryController.class)
+                        && handler.getMethod().getName().equals("draft") && method.equals("GET")
+                        && path.equals("/api/dictionaries/{code}/draft"));
+        managed.data("ent-acme", "operator", "dictionaries", "read", "TENANT_ALL");
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseManagedAuthorization() {
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator", operatorRole);
+        managed.close();
+    }
+
     private static final String PUBLIC = "/public/enterprises/ent-acme/dictionaries/selected-item";
     @Autowired MockMvc http;
 
@@ -118,7 +144,6 @@ class DictionarySelectedItemHttpTest {
     }
     private static RequestPostProcessor identity(String subject, String authority) {
         return jwt().jwt(token -> token.claim("scope", authority.replaceFirst("^SCOPE_", "")).subject(subject)
-                .claim("summer_managed_grants", !"dictionary-operator".equals(subject))
                 .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority(authority));
     }

@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,14 +25,61 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties="summer.sample.parameter-events.scheduling-enabled=false")
 @AutoConfigureMockMvc
-@org.springframework.context.annotation.Import({com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.AcmeAndOther.class,
-        com.abluepoint.summer.sample.authorization.ExplicitLegacyBusinessDomains.Platform.class})
+@org.springframework.context.annotation.Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 @org.springframework.test.annotation.DirtiesContext
 class SystemParameterFailureHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate grantDb;
+    @Autowired org.springframework.transaction.PlatformTransactionManager grantTransactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources grantResources;
+    private com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture dataGrants;
+
+    @org.junit.jupiter.api.AfterEach
+    void releaseCurrentDataGrants() {
+        if (publishedReadRole != null) current.revoke(Domain.enterprise("ent-acme"), "operator", publishedReadRole);
+        if (dataGrants != null) dataGrants.close();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        dataGrants = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(grantDb, grantTransactions, grantResources);
+        dataGrants.data("ent-acme", "operator", "system-parameters", "create", "TENANT_ALL");
+        dataGrants.data("ent-acme", "operator", "system-parameters", "read", "TENANT_ALL");
+        dataGrants.data("ent-acme", "operator", "system-parameters", "update", "TENANT_ALL");
+        current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterController")
+                        && java.util.Set.of(
+                                "POST /api/system-parameters",
+                                "GET /api/system-parameters/{key}",
+                                "GET /api/system-parameters/{key}/versions",
+                                "PATCH /api/system-parameters/{key}",
+                                "PUT /api/system-parameters/{key}/overrides/{organization}",
+                                "POST /api/system-parameters/{key}/draft",
+                                "POST /api/system-parameters/{key}/publish",
+                                "POST /api/system-parameters/{key}/rollback",
+                                "POST /api/system-parameters/{key}/deactivate",
+                                "POST /api/system-parameters/{key}/enable",
+                                "POST /api/system-parameters/{key}/disable")
+                        .contains(method + " " + path));
+        current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterEventController")
+                        && java.util.Set.of(
+                                "GET /api/system-parameter-events",
+                                "POST /api/system-parameter-events/{eventId}/retry")
+                        .contains(method + " " + path));
+        publishedReadRole = current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.PublicSystemParameterController")
+                        && java.util.Set.of("GET /public/enterprises/{enterpriseId}/system-parameters/{key}").contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired PublishedParameterReader published;
+    private String publishedReadRole;
     @MockitoBean StringRedisTemplate redis;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+    com.abluepoint.summer.sample.authorization.BusinessDataScopes statusScopes;
     private static final String ROOT = "/api/system-parameters/";
 
     @BeforeEach
@@ -162,6 +210,11 @@ class SystemParameterFailureHttpTest {
 
     @Test
     void missingAndOtherTenantEventRetryStayNotFoundWithoutMutatingTheEvent() throws Exception {
+        dataGrants.identity("ENTERPRISE:ent-other", "operator");
+        current.grantHandlers(Domain.enterprise("ent-other"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.SystemParameterEventController")
+                        && method.equals("POST")
+                        && path.equals("/api/v1/enterprises/{enterpriseId}/system-parameter-events/{eventId}/retry"));
         failure(post("/api/system-parameter-events/unknown-event/retry"), 404,
                 "SUMMER_NOT_FOUND", "System parameter event not found: unknown-event");
         create("contract.event", false);
@@ -169,6 +222,7 @@ class SystemParameterFailureHttpTest {
                 .andExpect(status().isOk()).andReturn();
         var before = json.readTree(events.getResponse().getContentAsString()).path("data").path("items").get(0);
         String id = before.path("eventId").asString();
+        var storedBefore = eventState(id);
         mvc.perform(post("/api/v1/enterprises/ent-other/system-parameter-events/" + id + "/retry")
                         .header("X-Request-Id", "other-event").with(actor("ent-other", "SCOPE_system.parameter.write")))
                 .andExpect(status().isNotFound())
@@ -176,6 +230,7 @@ class SystemParameterFailureHttpTest {
                 .andExpect(jsonPath("$.error.message").value("System parameter event not found: " + id))
                 .andExpect(jsonPath("$.requestId").value("other-event"))
                 .andExpect(header().string("X-Request-Id", "other-event"));
+        org.assertj.core.api.Assertions.assertThat(eventState(id)).isEqualTo(storedBefore);
         mvc.perform(get("/api/system-parameter-events").queryParam("key", "contract.event").with(reader()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].status").value(before.path("status").asString()))
@@ -194,6 +249,23 @@ class SystemParameterFailureHttpTest {
         org.assertj.core.api.Assertions.assertThat(published.read("contract.reader-absent", auth)).isEmpty();
         org.assertj.core.api.Assertions.assertThat(published.read("contract.reader-private", auth)).isEmpty();
         org.assertj.core.api.Assertions.assertThat(published.read("contract.reader-public", auth)).hasValue(new PublishedParameterReader.Value(25, 0));
+        var rawScopeMissing = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("reader-no-delegation")
+                .header("alg", "RS256").subject("operator").claim("scope", "openid")
+                .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))).build();
+        var authorityOnly = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(
+                rawScopeMissing, List.of(new SimpleGrantedAuthority("SCOPE_system.parameter.read")));
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> published.read("ent-acme", "contract.reader-public", authorityOnly))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        current.revoke(Domain.enterprise("ent-acme"), "operator", publishedReadRole);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> published.read("ent-acme", "contract.reader-public", auth))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        publishedReadRole = current.grantHandlers(Domain.enterprise("ent-acme"), "operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.PublicSystemParameterController")
+                        && method.equals("GET") && path.equals("/public/enterprises/{enterpriseId}/system-parameters/{key}"));
+        org.assertj.core.api.Assertions.assertThat(published.read("contract.reader-public", auth))
+                .hasValue(new PublishedParameterReader.Value(25, 0));
         var deniedToken = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("denied-contract")
                 .header("alg", "RS256").subject("unrelated-reader").claim("enterprise_memberships", List.of()).build();
         var denied = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(deniedToken, List.of());
@@ -206,45 +278,73 @@ class SystemParameterFailureHttpTest {
         for (String operation : List.of("enable", "disable")) {
             String key = "contract.concurrent-" + operation;
             create(key, false);
-            int successful = 0;
-            int conflicts = 0;
-            try (var executor = java.util.concurrent.Executors.newFixedThreadPool(8)) {
-                for (int attempt = 0; attempt < 3 && conflicts == 0; attempt++) {
-                    var start = new java.util.concurrent.CountDownLatch(1);
-                    var futures = new java.util.ArrayList<java.util.concurrent.Future<org.springframework.mock.web.MockHttpServletResponse>>();
-                    for (int index = 0; index < 8; index++) {
-                        String correlation = "status-" + operation + "-" + attempt + "-" + index;
-                        futures.add(executor.submit(() -> {
-                            start.await();
-                            return mvc.perform(post(ROOT + key + "/" + operation).with(writer())
-                                    .header("X-Request-Id", correlation)).andReturn().getResponse();
-                        }));
+            var readPair = new java.util.concurrent.CyclicBarrier(2);
+            var readCount = new java.util.concurrent.atomic.AtomicInteger();
+            var observedVersions = new java.util.concurrent.ConcurrentLinkedQueue<Long>();
+            try {
+                org.mockito.Mockito.doAnswer(invocation -> {
+                    // Complete the actual current DATA authorization and SQL version read first.
+                    Object value = invocation.callRealMethod();
+                    if (value instanceof Long version && readCount.getAndIncrement() < 2) {
+                        observedVersions.add(version);
+                        readPair.await(10, java.util.concurrent.TimeUnit.SECONDS);
                     }
-                    start.countDown();
-                    for (var future : futures) {
-                        var response = future.get(20, java.util.concurrent.TimeUnit.SECONDS);
-                        org.assertj.core.api.Assertions.assertThat(response.getStatus()).isIn(200, 409);
-                        var body = json.readTree(response.getContentAsString());
-                        org.assertj.core.api.Assertions.assertThat(body.path("requestId").asString())
-                                .isNotBlank().startsWith("status-" + operation + "-").isEqualTo(response.getHeader("X-Request-Id"));
-                        if (response.getStatus() == 200) successful++;
-                        else {
-                            conflicts++;
-                            org.assertj.core.api.Assertions.assertThat(body.path("error").path("code").asString())
-                                    .isEqualTo("SUMMER_PARAMETER_VERSION_CONFLICT");
-                            org.assertj.core.api.Assertions.assertThat(body.path("error").path("message").asString())
-                                    .isEqualTo("The system parameter was changed by another request");
-                            org.assertj.core.api.Assertions.assertThat(body.path("error").path("violations").size()).isZero();
+                    return value;
+                }).when(statusScopes).read(org.mockito.ArgumentMatchers.eq("ent-acme"),
+                        org.mockito.ArgumentMatchers.eq("system-parameters"), org.mockito.ArgumentMatchers.eq("update"),
+                        org.mockito.ArgumentMatchers.any(org.springframework.security.core.Authentication.class),
+                        org.mockito.ArgumentMatchers.any());
+                int successful = 0;
+                int conflicts = 0;
+                try (var executor = java.util.concurrent.Executors.newFixedThreadPool(8)) {
+                    for (int attempt = 0; attempt < 3 && conflicts == 0; attempt++) {
+                        var start = new java.util.concurrent.CountDownLatch(1);
+                        var futures = new java.util.ArrayList<java.util.concurrent.Future<org.springframework.mock.web.MockHttpServletResponse>>();
+                        for (int index = 0; index < 8; index++) {
+                            String correlation = "status-" + operation + "-" + attempt + "-" + index;
+                            futures.add(executor.submit(() -> {
+                                start.await();
+                                return mvc.perform(post(ROOT + key + "/" + operation).with(writer())
+                                        .header("X-Request-Id", correlation)).andReturn().getResponse();
+                            }));
+                        }
+                        start.countDown();
+                        for (var future : futures) {
+                            var response = future.get(20, java.util.concurrent.TimeUnit.SECONDS);
+                            org.assertj.core.api.Assertions.assertThat(response.getStatus()).isIn(200, 409);
+                            var body = json.readTree(response.getContentAsString());
+                            org.assertj.core.api.Assertions.assertThat(body.path("requestId").asString())
+                                    .isNotBlank().startsWith("status-" + operation + "-").isEqualTo(response.getHeader("X-Request-Id"));
+                            if (response.getStatus() == 200) successful++;
+                            else {
+                                conflicts++;
+                                org.assertj.core.api.Assertions.assertThat(body.path("error").path("code").asString())
+                                        .isEqualTo("SUMMER_PARAMETER_VERSION_CONFLICT");
+                                org.assertj.core.api.Assertions.assertThat(body.path("error").path("message").asString())
+                                        .isEqualTo("The system parameter was changed by another request");
+                                org.assertj.core.api.Assertions.assertThat(body.path("error").path("violations").size()).isZero();
+                            }
                         }
                     }
                 }
+                org.assertj.core.api.Assertions.assertThat(observedVersions).hasSize(2).containsOnly(0L);
+                org.assertj.core.api.Assertions.assertThat(conflicts).as(operation + " produces a real optimistic conflict").isPositive();
+                mvc.perform(get(ROOT + key).with(reader())).andExpect(status().isOk())
+                        .andExpect(jsonPath("$.data.value").value(25))
+                        .andExpect(jsonPath("$.data.version").value(successful))
+                        .andExpect(jsonPath("$.data.status").value(operation.equals("enable") ? "ACTIVE" : "INACTIVE"));
+            } finally {
+                org.mockito.Mockito.reset(statusScopes);
             }
-            org.assertj.core.api.Assertions.assertThat(conflicts).as(operation + " produces a real optimistic conflict").isPositive();
-            mvc.perform(get(ROOT + key).with(reader())).andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.value").value(25))
-                    .andExpect(jsonPath("$.data.version").value(successful))
-                    .andExpect(jsonPath("$.data.status").value(operation.equals("enable") ? "ACTIVE" : "INACTIVE"));
         }
+    }
+
+    private List<String> eventState(String eventId) {
+        return grantDb.queryForObject("select * from summer_system_parameter_outbox where event_id=?", (row, number) -> {
+            var values = new java.util.ArrayList<String>();
+            for (int column = 1; column <= row.getMetaData().getColumnCount(); column++) values.add(row.getString(column));
+            return values;
+        }, eventId);
     }
 
     private ResultActions failure(MockHttpServletRequestBuilder request, int status, String code, String message) throws Exception {

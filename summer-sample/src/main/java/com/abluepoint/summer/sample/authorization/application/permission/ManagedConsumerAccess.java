@@ -43,7 +43,7 @@ public class ManagedConsumerAccess
     fresh.setReadOnly(true);
   }
 
-  /** False selects only a confirmed explicit LEGACY adapter. Unconfirmed state always throws. */
+  /** Only current managed resources authorize target service calls. */
   public boolean require(Domain domain, Authentication actor, String... scopes) {
     try { return Boolean.TRUE.equals(fresh.execute(status -> current(domain, actor, scopes))); }
     catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException e) {
@@ -52,7 +52,7 @@ public class ManagedConsumerAccess
   }
 
   private boolean current(Domain domain, Authentication actor, String... scopes) {
-    if (!access.managed(domain)) return false;
+    if (!access.managed(domain)) throw denied();
     if (!access.active(domain, actor)
         || !delegated(actor, scopes)
         || !(RequestContextHolder.getRequestAttributes()

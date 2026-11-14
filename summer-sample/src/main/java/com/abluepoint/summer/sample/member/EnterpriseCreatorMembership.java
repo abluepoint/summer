@@ -16,6 +16,7 @@ class EnterpriseCreatorMembership {
         this.journal = journal;
     }
     @EventListener
+    @org.springframework.core.annotation.Order(0)
     @Transactional(propagation = Propagation.MANDATORY)
     public void create(EnterpriseCreated event) {
         // This event is emitted only when a new enterprise is inserted, never by role binding.

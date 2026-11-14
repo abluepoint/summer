@@ -20,6 +20,13 @@ import static com.abluepoint.summer.sample.authorization.MultiTenantConfiguratio
 class MultiTenantConfigurationFallbackHttpTest {
     @Autowired MockMvc mvc; @Autowired JdbcTemplate jdbc;
     @MockitoSpyBean VersionedTwoLevelCache cache;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources interfaces;
+    private BusinessManagedAuthorizationTestFixture managed;
+    @org.junit.jupiter.api.BeforeEach void prepareCurrentBusinessFixture() {
+        managed = new BusinessManagedAuthorizationTestFixture(jdbc, transactions, interfaces);
+    }
+    @org.junit.jupiter.api.AfterEach void releaseCurrentBusinessFixture() { managed.close(); }
     @Test void identicalKeysAndSubjectNeverReuseAnotherTenantsFallback() throws Exception {
         for(String tenant:List.of("ent-alpha","ent-beta")) {
             policy(tenant,"system-parameters");
@@ -33,7 +40,7 @@ class MultiTenantConfigurationFallbackHttpTest {
         jdbc.update("update summer_system_parameter set version=version+1, value_json='\"changed\"' where tenant_id='ent-alpha' and parameter_key='cache.key'");
         mvc.perform(get(base("ent-alpha")+"/cache.key").with(member("cache-user"))).andExpect(status().isServiceUnavailable());
         mvc.perform(get(base("ent-beta")+"/cache.key").with(member("cache-user"))).andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("ent-beta"));
-        jdbc.update("insert into summer_authorization_user_binding(binding_id,enterprise_id,username,role_ids,denied_capability_codes,version,created_at,updated_at) values('cache-revoke','ent-alpha','cache-user','[]','[\"system.parameter.read\"]',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        managed.revokeInterfaces("ENTERPRISE:ent-alpha", "cache-user");
         mvc.perform(get(base("ent-alpha")+"/cache.key").with(member("cache-user"))).andExpect(status().isForbidden());
         mvc.perform(get(base("ent-beta")+"/cache.key").with(member("cache-user"))).andExpect(status().isOk());
     }
@@ -53,7 +60,9 @@ class MultiTenantConfigurationFallbackHttpTest {
         mvc.perform(get(publicDictionary("ent-alpha")).with(member())).andExpect(status().isNotFound());
         mvc.perform(get(publicDictionary("ent-beta")).with(member())).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("ent-beta"));
     }
-    private void policy(String tenant,String resource) throws Exception { mvc.perform(put("/api/v1/enterprises/"+tenant+"/data-scopes/"+resource).with(member()).contentType(MediaType.APPLICATION_JSON).content("{\"rules\":[{\"type\":\"TENANT\"}]}")) .andExpect(status().isOk()); }
+    private void policy(String tenant, String resource) {
+        managed.configuration(tenant, resource, true, "same-user", "cache-user", "operator");
+    }
     private void failCache() { doThrow(new IllegalStateException("simulated dependency outage")).when(cache).get(anyString(),anyString(),anyString(),any(),any()); }
     private static String base(String tenant) { return "/api/v1/enterprises/"+tenant+"/system-parameters"; }
     private static String publicDictionary(String tenant) { return "/public/enterprises/"+tenant+"/dictionaries/cache-dict"; }

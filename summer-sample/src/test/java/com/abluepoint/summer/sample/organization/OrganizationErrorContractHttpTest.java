@@ -1,5 +1,9 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +27,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:organization-error-contract;MODE=MySQL;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.context.annotation.Import(CurrentManagedAuthorizationTestFixture.class)
 class OrganizationErrorContractHttpTest {
+    @Autowired CurrentManagedAuthorizationTestFixture managed;
+
+    @BeforeEach
+    void prepareCurrentAuthorization() throws Exception {
+        managed.grantHandlers(Domain.enterprise("ent-acme"), "admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.organization.OrganizationController")
+                && java.util.Set.of("tree GET /api/v1/enterprises/{enterpriseId}/org-tree",
+                        "detail GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "members GET /api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members",
+                        "create POST /api/v1/enterprises/{enterpriseId}/org-units",
+                        "update PATCH /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "delete DELETE /api/v1/enterprises/{enterpriseId}/org-units/{unitId}",
+                        "assignBatch PUT /api/v1/enterprises/{enterpriseId}/org-assignments:batch")
+                        .contains(handler.getMethod().getName() + " " + method + " " + path));
+    }
+
     private static final String BASE = "/api/v1/enterprises/ent-acme";
     private static final String ASSIGN = "{\"memberIds\":[\"member-alice\"],\"organizationIds\":[\"org-operations\"],\"primaryOrganizationId\":\"org-operations\"}";
     @Autowired MockMvc mvc;
@@ -112,9 +133,9 @@ class OrganizationErrorContractHttpTest {
         return mvc.perform(get(BASE + path).with(admin())).andExpect(status().isOk()).andReturn().getResponse().getHeader("ETag");
     }
     private static RequestPostProcessor admin() {
-        return jwt().jwt(token -> token.subject("admin")
+        return jwt().jwt(token -> token.subject("admin").claim("scope", "enterprise.organization.read enterprise.organization.write")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.organization.read", "enterprise.organization.write"))))
+                        )
                 .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.organization.read"), new SimpleGrantedAuthority("SCOPE_enterprise.organization.write"));
     }
 }

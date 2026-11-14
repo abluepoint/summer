@@ -113,7 +113,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
                             ? ResourceType.PROTOCOL : handler instanceof org.springframework.web.servlet.mvc.ParameterizableViewController
                             ? classify(path) : ResourceType.BUSINESS;
                     descriptors.add(new InterfaceResourceDescriptor("ANY", path, handler.getClass().isSynthetic() ? handler.getClass().getNestHost().getName() + "#urlHandler" : handler.getClass().getName(),
-                            module(handler.getClass()), type, SensitiveLevel.SENSITIVE, null,
+                            module(handler.getClass()), type, SensitiveLevel.SENSITIVE,
                             type == ResourceType.PROTOCOL || type == ResourceType.INFRASTRUCTURE,
                             contextId, "URL_MAPPING", Map.of(), type == ResourceType.STATIC ? "STATIC_MAPPING" : type == ResourceType.BUSINESS ? "MANAGED_ADAPTER_REQUIRED" : "COMPONENT_OWNED"));
                 });
@@ -143,7 +143,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
             }
         }
         return descriptors.stream().map(item -> new InterfaceResourceDescriptor(item.httpMethod(), item.normalizedPath(),
-                item.handler(), item.module(), item.resourceType(), item.sensitiveLevel(), item.permissionCode(), item.configurable(),
+                item.handler(), item.module(), item.resourceType(), item.sensitiveLevel(), item.configurable(),
                 contextId, item.source(), item.conditions(), item.configurationPolicy())).toList();
     }
 
@@ -168,6 +168,18 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         return current;
     }
 
+    InterfaceResourceCatalogPage readPage(Authentication authentication, int page, int size, Long revision, boolean rescan) {
+        requireRead(authentication);
+        InterfaceResourceCatalogPage.validate(page, size);
+        if (revision != null && revision < 1) throw new IllegalArgumentException("revision must be positive");
+        if (rescan && revision != null) throw new IllegalArgumentException("a fresh scan cannot select a historical revision");
+        // Lifecycle events keep this immutable snapshot current. Paging must not
+        // rediscover mappings or deserialize every stored revision on each click.
+        InterfaceResourceCatalogView view = rescan ? read(authentication) : current;
+        if (revision != null && revision != view.revision()) view = history.read(revision);
+        return InterfaceResourceCatalogPage.of(view, page, size);
+    }
+
     InterfaceResourceCatalog snapshot() {
         return catalog;
     }
@@ -175,10 +187,6 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
     private static InterfaceResourceDescriptor descriptor(String path, RequestMethod method, HandlerMethod handler, RequestMappingInfo mapping) {
         String httpMethod = method == null ? "ANY" : method.name();
         Method methodRef = handler.getMethod();
-        ResourcePermission explicit = AnnotatedElementUtils.findMergedAnnotation(methodRef, ResourcePermission.class);
-        if (explicit == null) {
-            explicit = AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(), ResourcePermission.class);
-        }
         ResourceType type = handler.getBeanType().getName().startsWith("org.springframework.boot.")
                 ? ResourceType.INFRASTRUCTURE : classify(path);
         SensitiveLevel sensitivity = sensitivity(path, httpMethod, type);
@@ -193,7 +201,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         if (mapping.getCustomCondition() != null) conditions.put("custom", List.of(mapping.getCustomCondition().getClass().getName()));
         return new InterfaceResourceDescriptor(httpMethod, path,
                 handlerIdentity(handler),
-                module, type, sensitivity, explicit == null ? null : explicit.value(), true,
+                module, type, sensitivity, true,
                 "application", "MVC", conditions, type == ResourceType.BUSINESS ? "MANAGED_ROLE" : "COMPONENT_OWNED");
     }
 
@@ -255,7 +263,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
                 method = ((org.springframework.http.HttpMethod) org.springframework.util.ReflectionUtils.getField(methodField, methodMatcher)).name();
             }
             descriptors.add(new InterfaceResourceDescriptor(method, path.getPatternString(), handler, "security",
-                    ResourceType.PROTOCOL, SensitiveLevel.CRITICAL, null, true,
+                    ResourceType.PROTOCOL, SensitiveLevel.CRITICAL, true,
                     "application", "SECURITY_FILTER", Map.of(), "PROTOCOL_OWNED"));
         } else if (matcher instanceof org.springframework.security.web.util.matcher.OrRequestMatcher
                 || matcher instanceof org.springframework.security.web.util.matcher.AndRequestMatcher) {

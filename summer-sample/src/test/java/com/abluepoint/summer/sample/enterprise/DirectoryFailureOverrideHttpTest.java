@@ -1,5 +1,6 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
@@ -20,16 +21,37 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(DirectoryFailureOverrideHttpTest.Policy.class)
+@Import({com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class, DirectoryFailureOverrideHttpTest.Policy.class})
+@org.springframework.test.annotation.DirtiesContext
 class DirectoryFailureOverrideHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void currentAuthorization() throws Exception {
+        current.grantHandlers(Domain.platform(), "directory-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.PlatformEnterpriseDirectoryController")
+                        && java.util.Set.of("POST /api/v1/platform/enterprises/{id}:freeze").contains(method + " " + path));
+        current.grantHandlers(Domain.platform(), "directory-operator", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.enterprise.EnterpriseReviewController")
+                        && java.util.Set.of("POST /api/v1/platform/enterprise-reviews/{id}:approve").contains(method + " " + path));
+        current.grantHandlers(Domain.enterprise("ent-acme"), "directory-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.member.MemberController")
+                        && java.util.Set.of("POST /api/v1/enterprises/{enterpriseId}/members/{memberId}:disable").contains(method + " " + path));
+        current.grantHandlers(Domain.enterprise("ent-acme"), "directory-admin", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.invitation.InvitationController")
+                        && java.util.Set.of(
+                                "POST /api/v1/enterprises/{enterpriseId}/invitations",
+                                "POST /api/v1/enterprises/{enterpriseId}/invitations/{invitationId}:resend")
+                        .contains(method + " " + path));
+    }
+
     @Autowired MockMvc mvc;
 
     @Test void conditionalEnterpriseFailureUsesTheApplicationsTypedStatusPolicy() throws Exception {
         mvc.perform(post("/api/v1/platform/enterprises/ent-acme:freeze")
                         .header("If-Match", "\"stale\"").header("Idempotency-Key", "directory-policy")
                         .header("X-Request-Id", "directory-policy-request")
-                        .with(jwt().jwt(token -> token.subject("directory-operator")
-                                        .claim("platform_capabilities", List.of("platform.enterprise.write")))
+                        .with(jwt().jwt(token -> token.claim("scope", "platform.enterprise.write").subject("directory-operator"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise.write"))))
                 .andExpect(status().is(422))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"))
@@ -40,8 +62,7 @@ class DirectoryFailureOverrideHttpTest {
     @Test void conditionalReviewFailureUsesTheApplicationsTypedStatusPolicy() throws Exception {
         mvc.perform(post("/api/v1/platform/enterprise-reviews/application-acme:approve")
                         .header("If-Match", "\"stale\"").header("Idempotency-Key", "review-policy")
-                        .with(jwt().jwt(token -> token.subject("directory-operator")
-                                        .claim("platform_capabilities", List.of("platform.enterprise-review.write")))
+                        .with(jwt().jwt(token -> token.claim("scope", "platform.enterprise-review.write").subject("directory-operator"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_platform.enterprise-review.write"))))
                 .andExpect(status().is(422))
                 .andExpect(jsonPath("$.error.code").value("SUMMER_PRECONDITION_FAILED"))
@@ -73,9 +94,8 @@ class DirectoryFailureOverrideHttpTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor tenant(String capability) {
-        return jwt().jwt(token -> token.subject("directory-admin")
-                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of(capability))))
+        return jwt().jwt(token -> token.claim("scope", capability).subject("directory-admin")
+                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + capability));
     }
 

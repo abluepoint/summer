@@ -48,20 +48,11 @@ public class BusinessDataScopes {
       for (int attempt = 0; attempt < 2; attempt++) {
         var result = current.execute(tx -> {
           var before = state(enterprise);
+          legacy.organization(enterprise, actor);
           T value;
-          if ("LEGACY".equals(before.get("engine_mode"))) {
-            try {
-              value = query.apply(filter(legacy.filter(enterprise, resource, actor), null, false));
-            } catch (org.springframework.dao.DataAccessException | org.springframework.transaction.TransactionException failure) {
-              // An explicit legacy business query retains its original native internal-error contract.
-              // Current mode/revision failures remain outside this adapter and fail unavailable.
-              throw new com.abluepoint.summer.common.error.SummerException(
-                  com.abluepoint.summer.common.error.CommonErrorCode.INTERNAL_ERROR, failure);
-            }
-          }
-          else if ("MANAGED".equals(before.get("engine_mode")))
+          if ("MANAGED".equals(before.get("engine_mode")))
             value = reads.read(Domain.enterprise(enterprise), resource, action, actor,
-                scope -> query.apply(filter(null, registry.configurationProjection(scope), false)));
+                scope -> query.apply(filter(registry.configurationProjection(scope), false)));
           else throw new AccessDeniedException("Unsupported data domain mode");
           return before.equals(state(enterprise)) ? new ReadResult<T>(value) : null;
         });
@@ -78,7 +69,7 @@ public class BusinessDataScopes {
     if (rows.size() != 1) throw new AccessDeniedException("Explicit data domain mode required");
     var state = rows.getFirst();
     if (!(state.get("revision") instanceof Number revision) || revision.longValue() < 0
-        || !java.util.Set.of("LEGACY", "MANAGED").contains(state.get("engine_mode")))
+        || !"MANAGED".equals(state.get("engine_mode")))
       throw new AccessDeniedException("Unconfirmed data domain state");
     return state;
   }
@@ -103,34 +94,27 @@ public class BusinessDataScopes {
       if (parent != null) {
         if (!parent.domain().equals(domain) || parent.transaction() != transactionResource())
           throw new AccessDeniedException("Same domain and business transaction required for nested write");
+        legacy.organization(enterprise, actor);
         var filters = new java.util.TreeMap<String, Filter>();
         var actions = resolveActions.get();
         if (actions == null || actions.isEmpty() || !java.util.Set.of("create", "update", "delete").containsAll(actions))
           throw new AccessDeniedException("Registered nested write actions required");
         for (String action : actions) {
-          var filter = parent.managed()
-              ? reads.read(domain, resource, action, actor, scope -> filter(null, registry.configurationProjection(scope), true))
-              : filter(legacy.filter(enterprise, resource, actor), null, true);
+          var filter = reads.read(domain, resource, action, actor,
+              scope -> filter(registry.configurationProjection(scope), true));
           filters.put(action, filter);
         }
         return mutation.apply(java.util.Collections.unmodifiableMap(filters));
       }
       return operations.writeResolved(domain, resource, resolveActions, actor, scopes -> {
+        legacy.organization(enterprise, actor);
         writing.set(new WriteContext(domain, true, transactionResource()));
         try {
           var projected = new java.util.TreeMap<String, Filter>();
-          scopes.forEach((action, scope) -> projected.put(action, filter(null, registry.configurationProjection(scope), true)));
+          scopes.forEach((action, scope) -> projected.put(action, filter(registry.configurationProjection(scope), true)));
           return mutation.apply(java.util.Collections.unmodifiableMap(projected));
         } finally { writing.remove(); }
-      }, actions -> {
-        writing.set(new WriteContext(domain, false, transactionResource()));
-        try {
-          var filter = filter(legacy.filter(enterprise, resource, actor), null, true);
-          var filters = new java.util.TreeMap<String, Filter>();
-          actions.forEach(action -> filters.put(action, filter));
-          return mutation.apply(java.util.Collections.unmodifiableMap(filters));
-        } finally { writing.remove(); }
-      });
+      }, actions -> { throw new AccessDeniedException("Current managed DATA permission required"); });
     });
   }
 
@@ -280,8 +264,8 @@ public class BusinessDataScopes {
     return org.springframework.transaction.support.TransactionSynchronizationManager.getResource(entities.getEntityManagerFactory());
   }
 
-  private Filter filter(DataScopeService.ScopeFilter legacy, RegisteredScopeProjection projection, boolean writable) {
-    return new Filter(legacy,projection,writable,writable ? writing.get() : null);
+  private Filter filter(RegisteredScopeProjection projection, boolean writable) {
+    return new Filter(projection,writable,writable ? writing.get() : null);
   }
 
   private void writable(Filter scope) {
@@ -375,19 +359,19 @@ public class BusinessDataScopes {
   }
 
   public static final class Filter {
-    private final DataScopeService.ScopeFilter legacy;
     private final RegisteredScopeProjection projection;
     private final boolean writable;
     private final WriteContext owner;
-    private Filter(DataScopeService.ScopeFilter legacy, RegisteredScopeProjection projection, boolean writable, WriteContext owner) {
-      this.legacy = legacy; this.projection = projection; this.writable = writable; this.owner = owner;
+    private Filter(RegisteredScopeProjection projection, boolean writable, WriteContext owner) {
+      if(projection==null)throw new AccessDeniedException("Current managed DATA projection required");
+      this.projection=projection; this.writable=writable; this.owner=owner;
     }
     public boolean allows(String organization, String creator, String owner, String subject) {
-      return projection == null ? legacy.allows(organization, creator, owner, subject) : projection.allows(organization, owner);
+      return projection.allows(organization, owner);
     }
-    public <T> Specification<T> specification() { return projection == null ? legacy.specification() : projection.specification(); }
-    public String sqlPredicate() { return projection == null ? legacy.sqlPredicate() : projection.predicate(); }
-    public Map<String, Object> sqlBindings() { return projection == null ? legacy.sqlBindings() : projection.bindings(); }
-    public String fingerprint() { return projection == null ? legacy.fingerprint() : projection.fingerprint(); }
+    public <T> Specification<T> specification() { return projection.specification(); }
+    public String sqlPredicate() { return projection.predicate(); }
+    public Map<String, Object> sqlBindings() { return projection.bindings(); }
+    public String fingerprint() { return projection.fingerprint(); }
   }
 }

@@ -25,13 +25,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.data.redis.port=${SUMMER_REDIS_PORT:6379}",
         "spring.data.redis.username=${SUMMER_REDIS_USERNAME:default}",
         "spring.data.redis.password=${SUMMER_REDIS_PASSWORD:}",
-        "spring.data.redis.database=15",
+        "spring.data.redis.database=${SUMMER_TEST_REDIS_DATABASE:15}",
         "summer.sample.session-index.timeout-ms=2000",
         "summer.sample.session-index.retries=1",
         "summer.sample.session-index.failure-threshold=3",
         "summer.sample.session-index.open-duration-ms=1000"
 })
+@org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
 class SharedSessionHttpTest {
+    @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+    @org.junit.jupiter.api.BeforeEach
+    void grantExactCurrentOperations() {
+        for (String subject : java.util.List.of("operator", "owner", "other"))
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                            && java.util.Set.of("sessions GET /api/v1/sessions", "revoke DELETE /api/v1/sessions/{reference}")
+                                    .contains(handler.getMethod().getName() + " " + method + " " + path));
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "reader",
+                (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                        && handler.getMethod().getName().equals("sessions") && method.equals("GET")
+                        && path.equals("/api/v1/sessions"));
+    }
+
 
     private static final String TEST_NAMESPACE = "summer:test:shared-session:" + java.util.UUID.randomUUID();
 
@@ -112,9 +127,27 @@ class SharedSessionHttpTest {
                 .andExpect(status().isOk()).andReturn();
         String reference = JsonPath.read(listed.getResponse().getContentAsString(), "$.data.items[0].sessionRef");
 
-        mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).session(session))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+        // Isolate the native delegated-write refusal after real current interface authorization.
+        var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform();
+        String role = current.grantHandlers(domain, "reader", (handler, path, method) ->
+                handler.getBeanType().getName().equals("com.abluepoint.summer.sample.identity.SessionController")
+                        && handler.getMethod().getName().equals("revoke") && method.equals("DELETE")
+                        && path.equals("/api/v1/sessions/{reference}"));
+        try {
+            mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).session(session))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                    .andExpect(jsonPath("$.error.message").value("Session write capability denied"))
+                    .andExpect(result -> {
+                        var failure = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                                com.abluepoint.summer.common.error.SummerException.class, result.getResolvedException());
+                        var cause = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                                org.springframework.security.access.AccessDeniedException.class, failure.getCause());
+                        org.junit.jupiter.api.Assertions.assertEquals("Session write capability denied", cause.getMessage());
+                    });
+        } finally {
+            current.revoke(domain, "reader", role);
+        }
     }
 
     @Test
@@ -125,16 +158,26 @@ class SharedSessionHttpTest {
         MvcResult listed = mockMvc.perform(get("/api/v1/sessions").session(ownerSession)).andExpect(status().isOk()).andReturn();
         String reference = JsonPath.read(listed.getResponse().getContentAsString(), "$.data.items[0].sessionRef");
 
-        var other = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("other"))
+        var other = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("other").claim("scope", "platform.capabilities.read platform.capabilities.write"))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"), new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.write"));
         mockMvc.perform(delete("/api/v1/sessions/{reference}", reference).with(other))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
+                .andExpect(jsonPath("$.error.message").value("Session belongs to another principal"))
+                .andExpect(result -> {
+                    var failure = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                            com.abluepoint.summer.common.error.SummerException.class, result.getResolvedException());
+                    var cause = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                            org.springframework.security.access.AccessDeniedException.class, failure.getCause());
+                    org.junit.jupiter.api.Assertions.assertEquals("Session belongs to another principal", cause.getMessage());
+                });
+        org.assertj.core.api.Assertions.assertThat(sessionIndex.load(ownerSession.getId()).status()).isEqualTo("ACTIVE");
+        mockMvc.perform(get("/api/v1/session").session(ownerSession)).andExpect(status().isOk());
     }
 
     @Test
     void rejectsMalformedSessionReferencesBeforeRedisAccess() throws Exception {
-        var operator = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("operator")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"), new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.write"));
+        var operator = SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("operator").claim("scope", "platform.capabilities.read platform.capabilities.write")).authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.read"), new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_platform.capabilities.write"));
         mockMvc.perform(delete("/api/v1/sessions/not-a-session-reference").with(operator))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_SESSION_REFERENCE_INVALID"))
@@ -144,7 +187,10 @@ class SharedSessionHttpTest {
     private MockHttpSession authenticatedSession(String principal, String... authorities) {
         MockHttpSession session = new MockHttpSession(null, java.util.UUID.randomUUID().toString());
         var jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("test-session-context")
-                .header("alg", "none").subject(principal).build();
+                .header("alg", "none").subject(principal)
+                .claim("scope", java.util.Arrays.stream(authorities).filter(value -> value.startsWith("SCOPE_"))
+                        .map(value -> value.substring("SCOPE_".length())).collect(java.util.stream.Collectors.joining(" ")))
+                .build();
         var authentication = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(
                 jwt, java.util.Arrays.stream(authorities)
                         .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new).toList());

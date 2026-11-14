@@ -30,6 +30,7 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
   private final com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources resources;
   private final ObjectProvider<HandlerMapping> allMappings;
   private static final String MATCH_ATTRIBUTE = ManagedRequestAuthorization.class.getName()+".matchedResource";
+  private static final String ADAPTER_ATTRIBUTE = ManagedRequestAuthorization.class.getName()+".matchedAdapter";
 
   ManagedRequestAuthorization(
       ManagedPermissionAccess access,
@@ -85,6 +86,19 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
       for (var mapping : allMappings.orderedStream().toList()) {
         var chain = mapping.getHandler(r);
         if (chain == null) continue;
+        var installedAdapter = resources.extension(r, chain.getHandler());
+        if (installedAdapter.isPresent()) {
+          var match = installedAdapter.get();
+          if (!access.managed(match.domain())) return new AuthorizationDecision(false);
+          var resource = resources.registered(match.mapping());
+          r.setAttribute(MATCH_ATTRIBUTE, resource.id());
+          r.setAttribute(ADAPTER_ATTRIBUTE, true);
+          r.setAttribute(ManagedPermissionAccess.RESOURCE_ATTRIBUTE, resource.id());
+          r.setAttribute(com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.DOMAIN_ATTRIBUTE, match.domain());
+          r.setAttribute(com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess.DECISION_RESOURCE_ATTRIBUTE, resource);
+          return new AuthorizationDecision(unified.decide(new ResourceAuthorization.Request(
+              match.domain(), a, resource, com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(r))).allowed());
+        }
         if (chain.getHandler() instanceof HandlerMethod handler) {
           if (handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.AuthorizationChangeEventController")) {
             String[] values = r.getParameterValues("enterpriseId");
@@ -98,19 +112,14 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
           return new AuthorizationDecision(
               d != null && access.managed(d)
                   ? evaluate(r, handler, a, d)
-                  : access.authenticated(a));
+                  : d == null && access.authenticated(a)
+                      && com.abluepoint.summer.sample.authorization.domain.permission.InterfaceComponentPolicy
+                          .componentOwned(handler.getBeanType().getName(), handler.getMethod().getName(),
+                              r.getMethod(), String.valueOf(r.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE))));
         }
         // This installed transport retains its native JWT, scope, tenant and cursor handshake.
         if (realtimeHandshake(r, mapping, chain.getHandler()))
           return new AuthorizationDecision(access.authenticated(a));
-        var match = resources.extension(r, chain.getHandler());
-        if (match.isPresent() && access.managed(match.get().domain())) {
-          var resource = resources.registered(match.get().mapping());
-          r.setAttribute(MATCH_ATTRIBUTE, resource.id());
-          var decision=unified.decide(new ResourceAuthorization.Request(
-              match.get().domain(), a, resource, com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(r)));
-          return new AuthorizationDecision(decision.allowed());
-        }
         // Unknown business extension mappings require explicit runtime adapters.
         if (!(chain.getHandler() instanceof org.springframework.web.servlet.resource.ResourceHttpRequestHandler))
           return new AuthorizationDecision(false);
@@ -155,8 +164,15 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
 
   public boolean finalHandler(HttpServletRequest r, HandlerMethod handler, Authentication a) {
     try {
+    if (resources.extension(r, handler).isPresent()) {
+      finalExtension(r, handler, a);
+      return true;
+    }
+    if (Boolean.TRUE.equals(r.getAttribute(ADAPTER_ATTRIBUTE)))
+      throw new org.springframework.security.access.AccessDeniedException("Final extension adapter changed");
     var d = domain(r, handler);
-    if (d == null || !access.managed(d)) return false;
+    if (d == null) return false;
+    if (!access.managed(d)) throw new org.springframework.security.access.AccessDeniedException("Controlled managed upgrade required");
     if (applicant(r,handler)) return false;
     if (!evaluate(r, handler, a, d))
       throw new org.springframework.security.access.AccessDeniedException(
@@ -177,7 +193,6 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
 
   public void finalExtension(HttpServletRequest request, Object handler, Authentication actor) {
     try {
-    if (handler instanceof HandlerMethod) return;
     var matched = resources.extension(request, handler);
     if (matched.isEmpty()) {
       if (request.getAttribute(MATCH_ATTRIBUTE) != null)
@@ -185,7 +200,7 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
       return;
     }
     var match = matched.get();
-    if (!access.managed(match.domain())) return;
+    if (!access.managed(match.domain())) throw new org.springframework.security.access.AccessDeniedException("Controlled managed upgrade required");
     var resource = resources.registered(match.mapping());
     if (!resource.id().equals(request.getAttribute(MATCH_ATTRIBUTE))
         || !unified.decide(new ResourceAuthorization.Request(match.domain(), actor, resource,

@@ -2,8 +2,8 @@ package com.abluepoint.summer.sample.release;
 
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.error.CommonErrorCode;
-import com.abluepoint.summer.sample.authorization.AuthorizationService;
-import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.sample.resource.ManagedConsumerAuthorization;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -18,13 +18,11 @@ final class ReleaseGateService {
     private final Map<String, Object> receipts = new HashMap<>();
     private final RuntimeReleaseChecks runtimeChecks;
 
-    private final AuthorizationService authorization;
-    private final RequestIdAccessor requestId;
+    private final ManagedConsumerAuthorization authorization;
 
-    ReleaseGateService(RuntimeReleaseChecks runtimeChecks, AuthorizationService authorization, RequestIdAccessor requestId) {
+    ReleaseGateService(RuntimeReleaseChecks runtimeChecks, ManagedConsumerAuthorization authorization) {
         this.runtimeChecks = runtimeChecks;
         this.authorization = authorization;
-        this.requestId = requestId;
     }
 
     synchronized PerformanceBudgetView budgets(Authentication auth) {
@@ -98,23 +96,15 @@ final class ReleaseGateService {
 
     private void require(Authentication auth, String scope) {
         if (!(auth instanceof JwtAuthenticationToken jwt)
-                || !Boolean.TRUE.equals(jwt.getToken().getClaimAsBoolean("release_operator"))
                 || jwt.getAuthorities().stream().noneMatch(a -> ("SCOPE_" + scope).equals(a.getAuthority()))) {
             throw new AccessDeniedException("Release operator denied");
         }
-        // Local and managed grants can change after token issuance. Reuse the same
-        // persistent role, explicit-deny and membership decision as business APIs.
-        if (Boolean.TRUE.equals(jwt.getToken().getClaims().get("summer_managed_grants"))
-                || "local-user".equals(jwt.getToken().getClaimAsString("summer_identity_source"))) {
-            if (!persistedGrant(jwt, "internal.release.read")
-                    || (!"internal.release.read".equals(scope) && !persistedGrant(jwt, scope))) {
+        try {
+            if (!authorization.require(Domain.platform(), jwt, scope))
                 throw new AccessDeniedException("Release operator denied");
-            }
+        } catch (AccessDeniedException denied) {
+            throw new AccessDeniedException("Release operator denied", denied);
         }
-    }
-
-    private boolean persistedGrant(JwtAuthenticationToken jwt, String permission) {
-        return authorization.platformDecision(jwt, permission, requestId.currentRequestId()).allowed();
     }
 
     private static void requireKey(String key) { if (key == null || key.isBlank()) throw SummerException.withMessage(ReleaseErrorCode.INVALID, "Idempotency-Key is required"); }

@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @ActiveProfiles("bff-runtime")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@Import(SameOriginBffSummerContractTest.LocalContractConfiguration.class)
+@Import({SameOriginBffSummerContractTest.LocalContractConfiguration.class, com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class})
 class SameOriginBffSummerContractTest {
 
     private static final String ORIGIN = "https://console.example.test";
@@ -49,6 +49,17 @@ class SameOriginBffSummerContractTest {
 
     @Autowired
     InMemoryProductSessionStore sessions;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
+
+    @org.junit.jupiter.api.BeforeEach
+    void grantCurrentInterfaces() throws Exception {
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "audit-admin",
+                (handler, path, method) -> handler.getBeanType().getName().equals(
+                        "com.abluepoint.summer.sample.auditledger.AuditLedgerController")
+                        && method.equals("GET") && path.equals("/api/v1/enterprises/{enterpriseId}/mcp-invocations/{invocationId}"));
+    }
 
     @Test
     void humanProductSessionInvokesSummerAndReturnsPhysicalExecutionEvidence() throws Exception {
@@ -102,7 +113,7 @@ class SameOriginBffSummerContractTest {
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
         return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
-                .jwt(token -> token.subject("audit-admin")
+                .jwt(token -> token.subject("audit-admin").claim("scope", "enterprise.audit.read")
                         .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
                         .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.audit.read"))))
                 .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));
