@@ -17,8 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "summer.security.storage.keys=mysql",
-        "summer.sample.security.master-key=test-only-runtime-master-key-32-bytes",
-        "summer.sample.resilience.timeout=750ms"
+        "summer.sample.security.master-key=test-only-runtime-master-key-32-bytes"
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)

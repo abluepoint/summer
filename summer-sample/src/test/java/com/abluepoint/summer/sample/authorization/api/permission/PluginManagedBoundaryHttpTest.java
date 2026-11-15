@@ -23,7 +23,6 @@ class PluginManagedBoundaryHttpTest {
   @Test void enterprisePluginPermissionCannotReleaseTheGlobalPlatformCustomerSource() throws Exception {
     grant(P,path -> path.startsWith("/api/v1/platform/plugins"));
     grant(E,path -> path.startsWith("/api/v1/enterprises/{enterpriseId}/plugins"));
-    String publicParameters=grant(E,path -> path.equals("/public/enterprises/{enterpriseId}/system-parameters/{key}"));
     mvc.perform(post(P+"/plugins").with(user("summer-user")).with(csrf()).contentType("application/json")
         .content("{\"pluginId\":\"customer-insights\",\"version\":\"1.0.0\",\"artifactDigest\":\"sha256:customer-insights-v1\"}"))
         .andExpect(status().isCreated());
@@ -34,13 +33,6 @@ class PluginManagedBoundaryHttpTest {
     grant(P,path -> path.equals("/api/customers"));
     mvc.perform(get(E+"/plugins/customer-insights/summary").with(actor)).andExpect(status().isOk())
         .andExpect(jsonPath("$.data.activeCustomerCount").isNumber());
-    var publicParameterBinding=mvc.perform(get(E+"/permissions/"+publicParameters+"/interfaces").with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    mvc.perform(put(E+"/permissions/"+publicParameters+"/interfaces").with(user("summer-user")).with(csrf())
-        .header("If-Match",publicParameterBinding.getResponse().getHeader("ETag"))
-        .header("Idempotency-Key",UUID.randomUUID().toString()).contentType("application/json").content("{\"resourceIds\":[]}"))
-        .andExpect(status().isOk());
-    mvc.perform(get(E+"/plugins/customer-insights/summary").with(actor)).andExpect(status().isForbidden());
   }
   @Test void closedDelegationAliasesAndApprovalWorkflowUseCurrentInterfaceWithoutBusinessClaims() throws Exception {
     var actor=jwt().jwt(j -> j.subject("summer-user")

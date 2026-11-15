@@ -81,8 +81,10 @@ final class InterfaceResourceCatalogController {
 
     @GetMapping("/api/v1/platform/interface-resources/history/{revision}")
     @RawResponse
-    ResponseEntity<?> revision(Authentication authentication, @PathVariable long revision) {
-        return historyResponse(authentication, () -> history.read(revision));
+    ResponseEntity<?> revision(Authentication authentication, @PathVariable long revision,
+                               @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
+        return historyResponse(authentication, () -> page == null && size == null ? history.read(revision)
+                : InterfaceResourceCatalogPage.of(history.read(revision), page == null ? 0 : page, size == null ? 10 : size));
     }
 
     @GetMapping("/api/v1/platform/interface-resources/diff")

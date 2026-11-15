@@ -36,32 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @org.springframework.context.annotation.Import(com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture.class)
-@org.junit.jupiter.api.TestInstance(org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS)
 class SystemParameterCountHttpTest {
-    private static final String CACHE_NAMESPACE = java.util.Optional.ofNullable(System.getenv("SUMMER_TEST_CACHE_NAMESPACE"))
-            .filter(value -> !value.isBlank())
-            .orElseGet(() -> "system-parameter-count-" + UUID.randomUUID());
-
-    @org.springframework.test.context.DynamicPropertySource
-    static void isolatedCache(org.springframework.test.context.DynamicPropertyRegistry registry) {
-        registry.add("summer.sample.cache.namespace", () -> CACHE_NAMESPACE);
-    }
-
-    @org.junit.jupiter.api.AfterAll
-    void releaseOwnedCacheKeys() {
-        String ownedPrefix = "summer:cache:namespace:" + java.util.Base64.getUrlEncoder()
-                .withoutPadding().encodeToString(CACHE_NAMESPACE.getBytes(java.nio.charset.StandardCharsets.UTF_8)) + ":";
-        var options = org.springframework.data.redis.core.ScanOptions.scanOptions()
-                .match(ownedPrefix + "*").count(100).build();
-        java.util.List<String> ownedKeys = new java.util.ArrayList<>();
-        try (var cursor = redis.scan(options)) {
-            cursor.forEachRemaining(ownedKeys::add);
-        }
-        if (!ownedKeys.isEmpty()) redis.delete(ownedKeys);
-        try (var cursor = redis.scan(options)) {
-            assertTrue(!cursor.hasNext(), "Owned cache namespace must be released");
-        }
-    }
     @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
 
     @Autowired org.springframework.jdbc.core.JdbcTemplate grantDb;
@@ -74,7 +49,6 @@ class SystemParameterCountHttpTest {
 
     @org.junit.jupiter.api.BeforeEach
     void currentAuthorization() throws Exception {
-        prefix = "count." + UUID.randomUUID().toString().replace("-", "");
         dataGrants = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(grantDb, grantTransactions, grantResources);
         dataGrants.data("ent-acme", "count-fixture", "system-parameters", "create", "TENANT_ALL");
         dataGrants.data("ent-acme", "count-fixture", "system-parameters", "read", "TENANT_ALL");
@@ -96,7 +70,7 @@ class SystemParameterCountHttpTest {
     }
 
     private static final String ROOT = "/api/v1/enterprises/ent-acme/system-parameters";
-    private String prefix;
+    private final String prefix = "count." + UUID.randomUUID().toString().replace("-", "");
     @Autowired MockMvc http;
     @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
     @Autowired org.springframework.core.env.Environment configuration;

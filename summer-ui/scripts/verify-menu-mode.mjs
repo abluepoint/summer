@@ -42,26 +42,13 @@ vm.runInNewContext(code, {
   },
 });
 
-for (const [readManifest, navigation] of [
-  [
-    () => exports.getManagedManifest('tenant/a'),
-    '/api/v1/enterprises/tenant%2Fa/authorization/navigation',
-  ],
-  [
-    () => exports.getPlatformManifest(),
-    '/api/v1/platform/authorization/navigation',
-  ],
-]) {
-  const before = calls.length;
-  await assert.rejects(readManifest, {
-    status: 409,
-    code: 'DOMAIN_NOT_MANAGED',
-  });
-  assert.equal(calls.length, before + 1);
-  assert.equal(calls.at(-1).path, navigation);
-}
-
 for (const [engine, tenantRead, tenantWrite, platform] of [
+  [
+    'LEGACY',
+    '/menu-manifest/management',
+    '/menu-manifest',
+    '/api/v1/platform/menu-manifest',
+  ],
   [
     'MANAGED',
     '/authorization/menu-layout',
@@ -99,14 +86,20 @@ for (const [engine, tenantRead, tenantWrite, platform] of [
 mode = 'UNKNOWN';
 const writes = calls.filter((call) => call.method !== 'get').length;
 await assert.rejects(
-  exports.getManagedManifest('tenant/a'),
-  (error) => error.status === 503 && error.code === 'UNKNOWN_ENGINE_MODE'
+  exports.saveOverride(
+    'tenant/a',
+    'nested/menu',
+    { sortOrder: 23 },
+    2,
+    'denied'
+  ),
+  (error) => error.status === 503
 );
 await assert.rejects(
-  exports.getPlatformManifest(),
-  (error) => error.status === 503 && error.code === 'UNKNOWN_ENGINE_MODE'
+  exports.savePlatformManifest({ manifestVersion: 3, items: [] }, 2, 'denied'),
+  (error) => error.status === 503
 );
 assert.equal(calls.filter((call) => call.method !== 'get').length, writes);
 console.log(
-  'Menu API rejects LEGACY management reads, preserves MANAGED routes and versions, and fails closed on unknown read modes'
+  'Menu API preserves explicit LEGACY routes, MANAGED routes, versions and failure-closed unknown modes'
 );

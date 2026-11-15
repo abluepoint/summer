@@ -1,3 +1,4 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -6,7 +7,6 @@ import {
   Message,
   Modal,
   Space,
-  Spin,
   Typography,
 } from '@arco-design/web-react';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -209,7 +209,7 @@ function CustomerRouteForm() {
       style={{ maxWidth: 760, width: '100%', margin: '0 auto' }}
     >
       <Space direction="vertical" style={{ width: '100%' }}>
-        {loading && <Spin />}
+        {loading && <AppLoading fullScreen={false} />}
         {error && (
           <Alert
             type="error"

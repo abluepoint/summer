@@ -1,7 +1,6 @@
 import React from 'react';
 import loadable from '@loadable/component';
-import { Spin } from '@arco-design/web-react';
-import styles from '../style/layout.module.less';
+import AppLoading from '@/components/AppLoading';
 
 // https://github.com/gregberge/loadable-components/pull/226
 function load(fn, options) {
@@ -21,11 +20,7 @@ function LoadingComponent(props: {
     console.error(props.error);
     return null;
   }
-  return (
-    <div className={styles.spin}>
-      <Spin />
-    </div>
-  );
+  return <AppLoading fullScreen={false} />;
 }
 
 export default (loader) =>

@@ -1,5 +1,6 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Space, Spin, Table, Tag, Typography } from '@arco-design/web-react';
+import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { getResilienceDiagnostics, ResilienceDiagnostics, ResilienceDiagnosticsError } from './api';
 
@@ -15,7 +16,7 @@ export default function ResilienceDiagnosticsPage() {
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => load(), [load]);
-  if (loading && !data) return <Spin />;
+  if (loading && !data) return <AppLoading fullScreen={false} />;
   if (error) return <Alert type="error" title={error.status === 403 ? t['diagnostics.resilience.forbidden'] : t['diagnostics.resilience.error']} content={<Space direction="vertical"><Typography.Text>{error.message}</Typography.Text>{error.requestId && <Typography.Text>requestId: {error.requestId}</Typography.Text>}<Button size="mini" onClick={load}>{t['diagnostics.resilience.retry']}</Button></Space>} />;
   if (!data) return null;
   return <Card title={t['diagnostics.resilience.title']} extra={<Button size="small" loading={loading} onClick={load}>{t['diagnostics.resilience.refresh']}</Button>}>

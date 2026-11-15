@@ -1,3 +1,4 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -6,7 +7,6 @@ import {
   InputNumber,
   Message,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
@@ -73,7 +73,7 @@ export default function SecurityKeysPage() {
       setRotating(false);
     }
   };
-  if (loading) return <Spin />;
+  if (loading) return <AppLoading fullScreen={false} />;
   if (error)
     return (
       <Alert

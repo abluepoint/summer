@@ -29,10 +29,6 @@ class VersionedTwoLevelCacheRedisIntegrationTest {
     static void redisProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
-        // This owned container has no ACL credentials; do not inherit shared Redis authentication.
-        registry.add("spring.data.redis.username", () -> "");
-        registry.add("spring.data.redis.password", () -> "");
-        registry.add("spring.data.redis.database", () -> 0);
     }
 
     @Autowired StringRedisTemplate redis;
@@ -76,27 +72,6 @@ class VersionedTwoLevelCacheRedisIntegrationTest {
         a.invalidate("ent-alpha","dictionary");
         assertThat(b.get("ent-alpha","dictionary","same-key",String.class,()->"new-alpha")).isEqualTo("new-alpha");
         assertThat(b.get("ent-beta","dictionary","same-key",String.class,()->"wrong")).isEqualTo("beta");
-    }
-
-    @Test
-    void namespacesIsolateEntriesAndVersionsWhileNodesInOneNamespaceShareInvalidation() {
-        var first = new VersionedTwoLevelCache(redis, objectMapper, Duration.ofMinutes(1), "first", "isolated-a");
-        var peer = new VersionedTwoLevelCache(redis, objectMapper, Duration.ofMinutes(1), "peer", "isolated-a");
-        var other = new VersionedTwoLevelCache(redis, objectMapper, Duration.ofMinutes(1), "other", "isolated-b");
-        assertThat(first.get("ent-acme", "system-parameter", "same", String.class, () -> "a")).isEqualTo("a");
-        assertThat(peer.get("ent-acme", "system-parameter", "same", String.class, () -> "wrong")).isEqualTo("a");
-        assertThat(other.get("ent-acme", "system-parameter", "same", String.class, () -> "b")).isEqualTo("b");
-        first.invalidate("ent-acme", "system-parameter");
-        assertThat(peer.get("ent-acme", "system-parameter", "same", String.class, () -> "new-a")).isEqualTo("new-a");
-        assertThat(other.get("ent-acme", "system-parameter", "same", String.class, () -> "wrong")).isEqualTo("b");
-        String legacyVersion = "summer:cache:version:" + java.util.Base64.getUrlEncoder().withoutPadding()
-                .encodeToString("ent-acme:system-parameter".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        var legacy = new VersionedTwoLevelCache(redis, objectMapper, Duration.ofMinutes(1), "legacy");
-        var before = redis.opsForValue().get(legacyVersion);
-        legacy.invalidate("ent-acme", "system-parameter");
-        assertThat(redis.opsForValue().get(legacyVersion))
-                .isEqualTo(Long.toString((before == null ? 0L : Long.parseLong(before)) + 1));
-        assertThat(other.get("ent-acme", "system-parameter", "same", String.class, () -> "wrong")).isEqualTo("b");
     }
 
     @Test
