@@ -11,12 +11,14 @@ import {
   Typography,
 } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
+import AppLoading from '@/components/AppLoading';
 import {
   CatalogDifference,
   CatalogHistory,
   InterfaceResource,
   InterfaceResourceApiError,
   InterfaceResourceCatalog,
+  InterfaceResourcePage,
   listInterfaceResources,
   listInterfaceResourceHistory,
   getInterfaceResourceRevision,
@@ -33,11 +35,9 @@ type Change = {
 const emptyHistory: CatalogHistory = { items: [], total: 0, page: 0, size: 20 };
 export default function InterfaceResourcesPage() {
   const t = { ...useLocale(), ...useLocale(locale) };
-  const [catalog, setCatalog] = useState<InterfaceResourceCatalog | null>(null);
+  const [catalog, setCatalog] = useState<InterfaceResourcePage | null>(null);
   const [history, setHistory] = useState<CatalogHistory>(emptyHistory);
-  const [snapshot, setSnapshot] = useState<InterfaceResourceCatalog | null>(
-    null
-  );
+  const [snapshot, setSnapshot] = useState<InterfaceResourcePage | null>(null);
   const [difference, setDifference] = useState<CatalogDifference | null>(null);
   const [error, setError] = useState<InterfaceResourceApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,9 +48,11 @@ export default function InterfaceResourcesPage() {
   const [to, setTo] = useState<number>();
   const generation = useRef(0),
     historyGeneration = useRef(0),
-    compareGeneration = useRef(0);
-  const comparePending = useRef(false),
-    viewPending = useRef(false);
+    compareGeneration = useRef(0),
+    snapshotGeneration = useRef(0);
+  const comparePending = useRef(false);
+  const catalogRevision = useRef<number>();
+  const historyValue = useRef<CatalogHistory>();
   const fail = useCallback((failure: unknown) => {
     const next =
       failure instanceof InterfaceResourceApiError
@@ -58,47 +60,99 @@ export default function InterfaceResourcesPage() {
         : new InterfaceResourceApiError(0, '', 'Catalog request failed', '');
     setError(next);
     if (next.status === 401 || next.status === 403) {
+      generation.current++;
+      historyGeneration.current++;
+      compareGeneration.current++;
+      snapshotGeneration.current++;
+      catalogRevision.current = undefined;
+      historyValue.current = undefined;
+      setLoading(false);
+      setHistoryLoading(false);
+      setComparing(false);
+      setViewing(null);
       setCatalog(null);
       setHistory(emptyHistory);
       setDifference(null);
       setSnapshot(null);
     }
   }, []);
-  const load = useCallback(async () => {
-    const current = ++generation.current;
-    historyGeneration.current++;
-    compareGeneration.current++;
-    setLoading(true);
-    setError(null);
-    try {
-      const [next, revisions] = await Promise.all([
-        listInterfaceResources(),
-        listInterfaceResourceHistory(),
-      ]);
-      if (current !== generation.current) return;
-      setCatalog(next);
-      setHistory(revisions);
-      setSnapshot(null);
-      setDifference(null);
-      setTo(next.revision);
-      setFrom(
-        revisions.items.find((row) => row.revision !== next.revision)
-          ?.revision || next.revision
-      );
-    } catch (failure) {
-      if (current === generation.current) fail(failure);
-    } finally {
-      if (current === generation.current) setLoading(false);
-    }
-  }, [fail]);
+  const load = useCallback(
+    async (page = 0, size = 10, refresh = false) => {
+      const current = ++generation.current;
+      setLoading(true);
+      setError(null);
+      try {
+        const next = await listInterfaceResources(
+          page,
+          size,
+          refresh ? { refresh: true } : { revision: catalogRevision.current }
+        );
+        if (current !== generation.current) return;
+        const initialize = catalogRevision.current == null || refresh;
+        catalogRevision.current = next.revision;
+        setCatalog(next);
+        if (initialize) {
+          compareGeneration.current++;
+          snapshotGeneration.current++;
+          setSnapshot(null);
+          setDifference(null);
+          setTo(next.revision);
+          setFrom(
+            historyValue.current
+              ? historyValue.current.items.find(
+                  (row) => row.revision !== next.revision
+                )?.revision || next.revision
+              : undefined
+          );
+        }
+      } catch (failure) {
+        if (current === generation.current) fail(failure);
+      } finally {
+        if (current === generation.current) setLoading(false);
+      }
+    },
+    [fail]
+  );
+  const historyPage = useCallback(
+    async (page = 1, size = 20) => {
+      const current = ++historyGeneration.current;
+      setHistoryLoading(true);
+      try {
+        const next = await listInterfaceResourceHistory(page - 1, size);
+        if (current !== historyGeneration.current) return;
+        historyValue.current = next;
+        setHistory(next);
+        if (catalogRevision.current != null)
+          setFrom(
+            (previous) =>
+              previous ??
+              next.items.find((row) => row.revision !== catalogRevision.current)
+                ?.revision ??
+              catalogRevision.current
+          );
+      } catch (failure) {
+        if (current === historyGeneration.current) fail(failure);
+      } finally {
+        if (current === historyGeneration.current) setHistoryLoading(false);
+      }
+    },
+    [fail]
+  );
   useEffect(() => {
+    const requests = [
+      generation,
+      historyGeneration,
+      compareGeneration,
+      snapshotGeneration,
+    ];
     void load();
+    void historyPage();
     return () => {
-      generation.current++;
-      historyGeneration.current++;
-      compareGeneration.current++;
+      requests.forEach((request) => {
+        request.current++;
+      });
     };
-  }, [load]);
+  }, [load, historyPage]);
   const compare = async () => {
     if (comparePending.current || from == null || to == null || from === to)
       return;
@@ -116,32 +170,17 @@ export default function InterfaceResourcesPage() {
       setComparing(false);
     }
   };
-  const showRevision = async (revision: number) => {
-    if (viewPending.current) return;
-    viewPending.current = true;
+  const showRevision = async (revision: number, page = 0, size = 10) => {
     setViewing(revision);
     setError(null);
-    const current = generation.current;
+    const current = ++snapshotGeneration.current;
     try {
-      const next = await getInterfaceResourceRevision(revision);
-      if (current === generation.current) setSnapshot(next);
+      const next = await getInterfaceResourceRevision(revision, page, size);
+      if (current === snapshotGeneration.current) setSnapshot(next);
     } catch (failure) {
-      if (current === generation.current) fail(failure);
+      if (current === snapshotGeneration.current) fail(failure);
     } finally {
-      viewPending.current = false;
-      setViewing(null);
-    }
-  };
-  const historyPage = async (page: number) => {
-    const current = ++historyGeneration.current;
-    setHistoryLoading(true);
-    try {
-      const next = await listInterfaceResourceHistory(page - 1);
-      if (current === historyGeneration.current) setHistory(next);
-    } catch (failure) {
-      if (current === historyGeneration.current) fail(failure);
-    } finally {
-      if (current === historyGeneration.current) setHistoryLoading(false);
+      if (current === snapshotGeneration.current) setViewing(null);
     }
   };
   const incomplete = (value: InterfaceResourceCatalog) =>
@@ -162,15 +201,28 @@ export default function InterfaceResourcesPage() {
         style={{ marginBottom: 16 }}
       />
     );
-  const resourceTable = (items: InterfaceResource[]) => (
+  const resourceTable = (
+    value: InterfaceResourcePage,
+    onChange: (page: number, size: number) => void,
+    busy: boolean
+  ) => (
     <Table<InterfaceResource>
       rowKey={(row) =>
         `${row.contextId}:${row.httpMethod}:${
           row.normalizedPath
         }:${JSON.stringify(row.conditions)}:${row.handler}`
       }
-      data={items}
-      pagination={{ pageSize: 10 }}
+      data={value.items}
+      loading={busy}
+      pagination={{
+        current: (value.page || 0) + 1,
+        pageSize: value.size || 10,
+        total: value.total ?? value.items.length,
+        showTotal: true,
+        sizeCanChange: true,
+        sizeOptions: [10, 20, 50, 100],
+        onChange,
+      }}
       scroll={{ x: 1500 }}
       columns={[
         {
@@ -260,7 +312,14 @@ export default function InterfaceResourcesPage() {
     <Card
       title={t['interfaceResources.title']}
       extra={
-        <Button size="small" loading={loading} onClick={() => void load()}>
+        <Button
+          size="small"
+          loading={loading}
+          onClick={() => {
+            void load(0, catalog?.size || 10, true);
+            void historyPage();
+          }}
+        >
           {t['interfaceResources.refresh']}
         </Button>
       }
@@ -287,9 +346,14 @@ export default function InterfaceResourcesPage() {
           <Typography.Paragraph>
             {t['catalog.current']}: {catalog.revision}
           </Typography.Paragraph>
-          {resourceTable(catalog.items)}
+          {resourceTable(
+            catalog,
+            (page, size) => void load(page - 1, size),
+            loading
+          )}
         </>
       )}
+      {!catalog && loading && <AppLoading fullScreen={false} />}
       {catalog && (
         <>
           <Typography.Title heading={5}>
@@ -397,7 +461,7 @@ export default function InterfaceResourcesPage() {
               current: (history.page || 0) + 1,
               pageSize: history.size || 20,
               total: history.total ?? history.items.length,
-              onChange: (page) => void historyPage(page),
+              onChange: (page, size) => void historyPage(page, size),
             }}
             columns={[
               { title: t['catalog.revision'], dataIndex: 'revision' },
@@ -424,13 +488,22 @@ export default function InterfaceResourcesPage() {
         title={`${t['catalog.view']} ${snapshot?.revision || ''}`}
         visible={!!snapshot}
         footer={null}
-        onCancel={() => setSnapshot(null)}
+        onCancel={() => {
+          snapshotGeneration.current++;
+          setSnapshot(null);
+          setViewing(null);
+        }}
         style={{ width: '90vw' }}
       >
         {snapshot && (
           <>
             {incomplete(snapshot)}
-            {resourceTable(snapshot.items)}
+            {resourceTable(
+              snapshot,
+              (page, size) =>
+                void showRevision(snapshot.revision, page - 1, size),
+              viewing != null
+            )}
           </>
         )}
       </Modal>

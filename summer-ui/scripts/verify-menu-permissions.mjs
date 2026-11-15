@@ -101,11 +101,11 @@ for (const failure of [new Error('403'), new Error('503'), { engineMode: 'UNKNOW
 console.log('Menu navigation: directory, explicit-owner, engine-mode and fail-closed contracts passed');
 const managedEditorApi = evaluateModule('../src/pages/menu-manifest/api.ts', { axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
 calls = [];modeResponse = { engineMode: 'LEGACY', items: [] };
-await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'), { status: 409, code: 'DOMAIN_NOT_MANAGED' });
-assert.equal(calls.length, 1, 'explicit legacy mode rejects without reading management data');
-assert.equal(calls[0], '/api/v1/enterprises/ent-acme/authorization/navigation');
+await managedEditorApi.getManagedManifest('ent-acme');
+assert.equal(calls.length, 2);
+assert.equal(calls[1], '/api/v1/enterprises/ent-acme/menu-manifest/management', 'explicit legacy mode retains the original management read');
 calls = [];modeResponse = { engineMode: 'MANAGED', items: [] };
 await managedEditorApi.getManagedManifest('ent-acme');assert.equal(calls[1], '/api/v1/enterprises/ent-acme/authorization/menu-layout');
 calls = [];modeResponse = new Error('503');
 await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'));assert.equal(calls.length, 1);
-console.log('Menu editor requires MANAGED and never falls back on LEGACY or dependency failure');
+console.log('Menu editor selects explicit LEGACY or MANAGED and never falls back on dependency failure');

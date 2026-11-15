@@ -1,3 +1,4 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -12,7 +13,6 @@ import {
   Pagination,
   Select,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
@@ -648,7 +648,7 @@ export default function CustomerScreen({ mode, sourceUrl }: { mode: Mode; source
           {t['customer.back']}
         </Button>
       )}
-      {loading && <Spin />}
+      {loading && <AppLoading fullScreen={false} />}
       {!loading && error && (
         <ErrorNotice
           error={error}

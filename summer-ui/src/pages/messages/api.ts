@@ -38,40 +38,70 @@ export function connectRealtime(enterpriseId: string, after: number, onEvent: (e
   let retry = 0;
   let cursor = after;
   let heartbeat: number | undefined;
+  let reconnect: number | undefined;
+  const detach = (connection: WebSocket) => {
+    connection.onopen = null;
+    connection.onmessage = null;
+    connection.onclose = null;
+    connection.onerror = null;
+  };
+  const stopHeartbeat = () => {
+    if (heartbeat !== undefined) window.clearInterval(heartbeat);
+    heartbeat = undefined;
+  };
   const open = () => {
+    reconnect = undefined;
     if (closed) return;
     onState(retry ? 'RECONNECTING' : 'CONNECTING');
+    if (closed) return;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    socket = new WebSocket(`${protocol}//${window.location.host}/ws/v1/messages?enterpriseId=${encodeURIComponent(enterpriseId)}&after=${cursor}`);
-    socket.onopen = () => {
+    const connection = new WebSocket(`${protocol}//${window.location.host}/ws/v1/messages?enterpriseId=${encodeURIComponent(enterpriseId)}&after=${cursor}`);
+    socket = connection;
+    const active = () => !closed && socket === connection;
+    connection.onopen = () => {
+      if (!active()) return;
       retry = 0; onState('OPEN');
+      if (!active()) return;
+      stopHeartbeat();
       heartbeat = window.setInterval(() => {
-        if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' }));
+        if (active() && connection.readyState === WebSocket.OPEN) connection.send(JSON.stringify({ type: 'ping' }));
       }, 15000);
     };
-    socket.onmessage = (event) => {
+    connection.onmessage = (event) => {
+      if (!active()) return;
       try {
         const parsed = JSON.parse(event.data) as RealtimeSocketEvent;
         if (parsed.message?.sequence) cursor = Math.max(cursor, parsed.message.sequence);
         onEvent(parsed);
       } catch { onEvent({ type: 'error', code: 'SUMMER_MESSAGE_INVALID' }); }
     };
-    socket.onclose = (event) => {
-      if (heartbeat !== undefined) window.clearInterval(heartbeat);
-      if (closed) { onState('CLOSED'); return; }
+    connection.onclose = (event) => {
+      if (!active()) return;
+      detach(connection);
+      socket = undefined;
+      stopHeartbeat();
       onEvent({ type: 'error', code: event.code === 1008 ? 'SUMMER_ACCESS_DENIED' : 'SUMMER_MESSAGE_CONNECTION_LOST' });
+      if (closed) return;
       if (event.code === 1008) { closed = true; onState('CLOSED'); return; }
       retry += 1;
-      window.setTimeout(open, Math.min(8000, 250 * 2 ** Math.min(retry - 1, 5)));
+      reconnect = window.setTimeout(open, Math.min(8000, 250 * 2 ** Math.min(retry - 1, 5)));
     };
-    socket.onerror = () => socket?.close();
+    connection.onerror = () => { if (active()) connection.close(); };
   };
   open();
   return {
     send: (payload) => {
-      if (socket?.readyState !== WebSocket.OPEN) return false;
+      if (closed || socket?.readyState !== WebSocket.OPEN) return false;
       socket.send(JSON.stringify(payload)); return true;
     },
-    close: () => { closed = true; if (heartbeat !== undefined) window.clearInterval(heartbeat); socket?.close(); },
+    close: () => {
+      closed = true;
+      stopHeartbeat();
+      if (reconnect !== undefined) window.clearTimeout(reconnect);
+      reconnect = undefined;
+      const connection = socket;
+      socket = undefined;
+      if (connection) { detach(connection); connection.close(); }
+    },
   };
 }

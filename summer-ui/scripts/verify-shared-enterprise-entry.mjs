@@ -53,11 +53,10 @@ const user = (memberships = ['company-a', 'company-b'], extra = {}, subject = 'c
 // Real React 17, its installed host reconciler, and the actual shell controller.
 // Host widgets and the routed-page output are controlled render boundaries: this
 // tests shell lifecycle/transport races, not Arco pixels, routing, or real OIDC.
-function shellFixture(identity) {
+function shellFixture(identity, { retryLogin = async () => true } = {}) {
   let batch = (fn) => fn();
   let pageTenant;
-  const f = fixture(identity, undefined, (fn) => batch(fn)), reads = [], focus = new Set(), commits = [];
-  const intervals = new Map();
+  const f = fixture(identity, undefined, (fn) => batch(fn)), reads = [], focus = new Set(), commits = [], intervals = new Map();
   const menuContext = React.createContext([]);
   const redux = { state: { userInfo: { permissions: {} } }, dispatch(action) { this.state = { ...this.state, ...action.payload }; }, getState() { return this.state; } };
   const permissionsSource = readFileSync(new URL('../src/menu/permissions.ts', import.meta.url), 'utf8');
@@ -84,6 +83,7 @@ function shellFixture(identity) {
     useActiveEnterprise: f.useEnterprise, activeEnterpriseSelection: f.selection,
     getAuthenticatedUser: f.getUser, authenticationStatus: async () => 'missing',
     startLoginForUnavailable: async () => false, isAuthRedirecting: () => false,
+    restartLoginManually: retryLogin, Button: 'button',
     consumeAuthNotice: () => null, authText: (key) => key, useLocale: () => ({}),
     store: redux, menuManifest: { manifestVersion: 1, items: [] },
     loadMenuPermissions: permissionExports.loadMenuPermissions,
@@ -95,7 +95,7 @@ function shellFixture(identity) {
     useInterfaceOperations: () => ({}),
     InterfaceOperationHints: React.createContext({ actions: {} }),
     PageLayout: RoutedPage, MenuAccessContext: menuContext,
-    Spin: 'spinner', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },
+    Spin: 'spinner', AppLoading: 'app-loading', Alert: 'alert', Card: 'card', Select: 'enterprise-select', Message: { info() {} },
     window: { setInterval: (fn, delay) => { const id = Symbol(); intervals.set(id, { fn, delay }); return id; }, clearInterval: id => intervals.delete(id), addEventListener: (type, fn) => { if (type === 'focus') focus.add(fn); if (type === refreshExports.MENU_REFRESH_EVENT) menuRefresh.add(fn); }, removeEventListener: (type, fn) => { if (type === 'focus') focus.delete(fn); if (type === refreshExports.MENU_REFRESH_EVENT) menuRefresh.delete(fn); } },
     document: { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} },
   });
@@ -126,6 +126,25 @@ function shellFixture(identity) {
   };
 }
 const manifest = (id) => ({ manifestVersion: 1, items: [{ menuId: id, enabled: true, actions: ['read'] }] });
+
+test('startup keeps one loading surface until menus settle and does not return to it on background reads', async () => {
+  const f = shellFixture(user(['company-a']));
+  try {
+    assert.ok(f.find('app-loading'), 'Identity bootstrap must use the same surface as the callback');
+    await f.flush();
+    assert.equal(f.reads.length, 1);
+    assert.ok(f.find('app-loading'), 'Menu bootstrap must retain the startup surface');
+    assert.equal(f.find('routed-page'), undefined);
+    f.reads[0].resolve(manifest('messages')); await f.flush();
+    assert.equal(f.find('app-loading'), undefined);
+    const page = f.find('routed-page');
+    f.focus(); await f.flush();
+    assert.equal(f.find('routed-page'), page, 'Background permission refresh must retain the mounted page');
+    assert.equal(f.find('app-loading'), undefined);
+    f.reads[1].resolve(manifest('messages')); await f.flush();
+    assert.equal(f.find('routed-page'), page);
+  } finally { f.close(); }
+});
 
 test('the authenticated shell offers explicit enterprise selection before any tenant menu is available', async () => {
   const f = shellFixture(user());
@@ -263,6 +282,26 @@ test('unmounted hook consumers release only their own guard and ignore delayed s
     assert.equal(f.selection.getSnapshot().busy, false, 'Late callbacks cannot recreate an unmounted page guard');
     assert.equal(f.selection.getSnapshot().dirty, true);
   } finally { f.selection.releaseGuard(other); keep(); f.close(); }
+});
+
+
+test('an exhausted login cycle renders a usable manual retry and keeps it usable after failure', async () => {
+  let attempts = 0;
+  const f = shellFixture(null, { retryLogin: async () => { attempts++; throw new Error('offline'); } });
+  try {
+    await f.flush();
+    assert.equal(attempts, 0, 'exhaustion must not create an automatic redirect loop');
+    let retry = f.find('alert')?.props.action;
+    assert.equal(retry?.type, 'button', 'the blocked shell must offer a sign-in action');
+    await retry.props.onClick();
+    await f.flush();
+    assert.equal(attempts, 1);
+    retry = f.find('alert')?.props.action;
+    assert.equal(retry?.type, 'button', 'a failed redirect must not strand the shell on a spinner');
+    assert.equal(retry.props.loading, false);
+    await retry.props.onClick();
+    assert.equal(attempts, 2, 'each explicit click may retry once');
+  } finally { f.close(); }
 });
 
 

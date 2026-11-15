@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import useLocale from '@/utils/useLocale';
 import locale from './locale';
 import styles from './style/index.module.less';
+import { prepareManualLogin } from '@/auth/oidc';
 
 type CsrfToken = { parameterName: string; token: string };
 
@@ -40,6 +41,7 @@ export default function LoginForm() {
     setLoading(true);
     setErrorMessage('');
     try {
+      prepareManualLogin();
       const csrf = await readCsrfToken();
       // Native navigation preserves Spring Security's saved authorization request.
       const form = document.createElement('form');

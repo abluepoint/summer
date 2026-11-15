@@ -35,17 +35,25 @@ Flyway `V34__interface_resource_history.sql` 创建 `summer_interface_resource_r
 
 所有读取要求现有 `platform.interface-resources.read` 权限、scope 和平台声明：
 
-- `GET /api/v1/platform/interface-resources`：当前 items、revision、issues、complete，保持 ETag/304 与 X-Request-Id。
+- `GET /api/v1/platform/interface-resources?page=0&size=10`：按页返回 items、total、page、size、revision、issues、complete。page 从 0 开始，size 为 1–100；负页码或越界 size 返回 400，超出末页返回空 items。
+- 后续翻页携带 `revision` 固定目录版本，避免扫描期间增删导致跨页重复或遗漏；版本已经变化时读取对应的不可变历史。当前版本直接复用生命周期事件构建的目录，不在每次翻页重新扫描。`refresh=true` 显式重新扫描并返回首页；不可与 revision 同用。
+- 当前目录的 ETag 包含 revision、page、size，保留 304 和 X-Request-Id。不带 page/size 的旧客户端继续取得完整目录和旧 ETag，并保持重新扫描行为。
 - `GET .../history?page=0&size=20`：分页历史；size 为 1–100。
-- `GET .../history/{revision}`：不可变快照。
+- `GET .../history/{revision}?page=0&size=10`：按页读取不可变快照，返回相同分页字段；不带分页参数时兼容完整快照。
 - `GET .../diff?from=1&to=2`：added、removed、changed；handler 替换标为 REPLACED。
 
-非法参数返回 400，缺失历史返回 404，无权限返回 403；错误响应保留 requestId。当前目录读取会扫描并按内容变化追加历史，因此不是不产生持久化副作用的纯查询。
+非法参数返回 400，缺失历史返回 404，无权限返回 403；错误响应保留 requestId。生命周期扫描、显式刷新及旧版完整目录读取按内容变化追加历史；普通分页读取不触发扫描或追加历史。分页切片来自内存目录或历史 JSON 快照，不是对快照内部行执行数据库 LIMIT。
 
-管理页提供当前目录、发现不完整提示、历史分页、快照详情、版本比较和替换保护说明。比较失败保留当前目录并显示 requestId；401/403 清除受保护结果，允许刷新重试。
+管理页默认仅请求当前 10 条，支持 10/20/50/100 条及翻页；当前目录和快照详情都由服务端分页。历史列表单独加载，不再阻塞当前目录首屏。手动刷新重新扫描并回到首页。管理页同时提供发现不完整提示、历史分页、版本比较和替换保护说明。比较失败保留当前目录并显示 requestId；401/403 清除受保护结果，允许刷新重试。
 
 ## 验证和发布边界
 
 本地测试覆盖：实际 Spring 上下文及 MockMvc 请求、独立 management HTTP 上下文、动态增删/替换映射、持久化历史恢复、业务扩展包的角色授权与显式拒绝。浏览器组件测试运行真实 Chrome/React，HTTP 响应使用夹具。它们不代表真实登录浏览器验收或真实 MySQL / 双节点验收。
 
 最终集成由主任务使用同一份候选 JAR/UI 和独立 MySQL schema 完成：V34 首次/升级迁移、重启后历史与旧绑定保护、双节点相同快照收敛、真实主体的目录/历史/差异允许与拒绝、页面错误恢复及协议端点原有安全约束。测试计数、源码摘要和未执行项见交接证据，不用组件测试代替上述结果。
+
+## 2026-10-19 分页验证
+
+修改前真实请求即使携带 page/size 仍返回 483 条，JSON 约 290 KB，两个请求耗时 1432/1159 ms。源码通过 Gradle bootRun 重启后，前两页均仅返回 10 条，JSON 为 5734/7176 字节，耗时 74.9/45.3 ms；这是本地本次采样，不是延迟 SLA。末页为 3 条，非法页码返回 400，历史快照第二页返回 10 条。真实 Edge 页面确认第二页、末页和手动刷新恢复首页。
+
+接口资源模块 10 个测试类共 27 项全部通过；新增前端组件测试覆盖首屏不等待历史、页大小、版本固定、快速翻页旧响应、403 清除以及关闭快照后迟到响应。完整前端测试、类型检查和构建通过。权限检查、旧版完整读取和协议保护维持原有约定。

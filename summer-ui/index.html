@@ -8,11 +8,19 @@
       href="https://unpkg.byted-static.com/latest/byted/arco-config/assets/favicon.ico"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/style/startup.css" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Summer UI</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="summer-startup" role="status">
+        <div class="summer-startup-content">
+          <span class="summer-startup-spinner" aria-hidden="true"></span>
+          <span>正在加载…</span>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -8,11 +8,6 @@ import java.time.Duration;
 public class VersionedTwoLevelCacheProperties {
     private Duration ttl = Duration.ofMinutes(5);
     private String nodeId = "summer-sample";
-    private String namespace = "";
-
-    public String getNamespace() { return namespace; }
-
-    public void setNamespace(String namespace) { this.namespace = namespace; }
 
     public Duration getTtl() {
         return ttl;

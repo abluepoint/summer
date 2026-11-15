@@ -1,5 +1,6 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Space, Spin, Table, Tag, Typography } from '@arco-design/web-react';
+import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
 import { CheckName, getReleaseReadiness, ReleaseReadiness, ReleaseReadinessError } from './api';
 import locale from './locale';
@@ -27,7 +28,7 @@ export default function ReleaseReadinessPage() {
   return <Card title={t.title} extra={<Button loading={loading} onClick={() => setAttempt((value) => value + 1)}>{t.refresh}</Button>}>
     <Space direction="vertical" style={{ width: '100%' }}>
       <Alert type="info" content={t.boundary} />
-      {loading && <Spin tip={t.checking} />}
+      {loading && <AppLoading fullScreen={false} tip={t.checking} />}
       {!loading && error && <Alert type="error" title={error.status === 403 ? t.forbidden : t.error} content={
         <Space direction="vertical">
           {error.code && <Typography.Text>{error.code}</Typography.Text>}

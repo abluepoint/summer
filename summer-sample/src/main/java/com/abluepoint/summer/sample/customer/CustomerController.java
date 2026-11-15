@@ -36,12 +36,16 @@ class CustomerController {
     CustomerView create(FieldValues values, @Valid @RequestBody CreateCustomerRequest request, Authentication authentication) { return service.create(new CreateCustomerCommand(values.get("username",String.class),values.get("email",String.class),values.get("displayName",String.class)), requestId.currentRequestId(), authentication); }
 
     @PatchMapping("/{username}") @PreAuthorize("@businessMethodAccess.require(authentication, 'customer.write') or (hasAuthority('SCOPE_customer.write'))") @FieldContract
-    @Field(param="username", required=true, style="customerUsernameStyle") @Field(param="email", required=false, style="customerEmailStyle") @Field(param="displayName", required=false, style="customerDisplayNameStyle") @Field(param="active", required=false, style="booleanStyle")
+    @Field(param="username", required=true, style="customerUsernameStyle")
+    @Field(param="email", required=false, style="customerEmailStyle")
+    @Field(param="displayName", required=false, style="customerDisplayNameStyle")
+    @Field(param="active", required=false, style="booleanStyle")
     CustomerView update(FieldValues values, @Valid @RequestBody UpdateCustomerRequest request, Authentication authentication) {
         Boolean active=values.get("active",Boolean.class);
         return service.update(values.get("username",String.class),new UpdateCustomerCommand(values.contains("email"),values.get("email",String.class),values.contains("displayName"),values.get("displayName",String.class),values.contains("active"),Boolean.TRUE.equals(active)), requestId.currentRequestId(), authentication);
     }
-    @DeleteMapping("/{username}") @RawResponse @PreAuthorize("@businessMethodAccess.require(authentication, 'customer.write') or (hasAuthority('SCOPE_customer.write'))") @Field(param="username", required=true, style="customerUsernameStyle")
+    @DeleteMapping("/{username}") @RawResponse @PreAuthorize("@businessMethodAccess.require(authentication, 'customer.write') or (hasAuthority('SCOPE_customer.write'))")
+    @Field(param="username", required=true, style="customerUsernameStyle")
     ResponseEntity<Void> delete(FieldValues values, Authentication authentication) { service.delete(values.get("username",String.class), requestId.currentRequestId(), authentication); return ResponseEntity.noContent().header("X-Request-Id", requestId.currentRequestId()).build(); }
     private static CustomerListQuery.SortField sortField(String value) { return switch(value==null?"username":value){case "username"->CustomerListQuery.SortField.USERNAME; case "email"->CustomerListQuery.SortField.EMAIL; case "displayName"->CustomerListQuery.SortField.DISPLAY_NAME; case "active"->CustomerListQuery.SortField.ACTIVE; default->CustomerListQuery.SortField.USERNAME;}; }
 }

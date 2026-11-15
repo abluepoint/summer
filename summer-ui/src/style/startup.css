@@ -1,0 +1,69 @@
+.summer-startup,
+.summer-loading-section {
+  display: grid;
+  place-items: center;
+  color: var(--color-text-2, #4e5969);
+  font: 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.summer-startup {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg-1, #fff);
+}
+
+.summer-loading-section {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 160px;
+  padding: 24px;
+}
+
+.summer-startup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.summer-startup-spinner,
+.arco-icon.arco-icon-loading {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 1em;
+  height: 1em;
+  border: 0.1em solid var(--color-fill-3, #e5e6eb);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: summer-startup-turn 0.8s linear infinite;
+}
+
+.summer-startup-spinner {
+  color: rgb(var(--primary-6, 22, 93, 255));
+  font-size: 28px;
+}
+
+/* Retain Arco's loading state, sizing and interaction guards. Only its glyph
+   changes, so tables, charts, switches and buttons share the startup ring. */
+.arco-icon.arco-icon-loading > path {
+  display: none;
+}
+
+.arco-spin .arco-spin-tip {
+  margin-top: 16px;
+  color: var(--color-text-2, #4e5969);
+  font-weight: 400;
+}
+
+@keyframes summer-startup-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summer-startup-spinner,
+  .arco-icon.arco-icon-loading {
+    animation: none;
+  }
+}

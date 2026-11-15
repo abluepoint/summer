@@ -1,3 +1,4 @@
+import AppLoading from '@/components/AppLoading';
 import React, { useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
@@ -7,7 +8,6 @@ import {
   Card,
   Form,
   Select,
-  Spin,
   Tag,
   Input,
   InputNumber,
@@ -182,7 +182,7 @@ function DictionaryContent({
         </span>
       }
     >
-      {loading && <Spin />}
+      {loading && <AppLoading fullScreen={false} />}
       <Form layout="vertical" style={{ maxWidth: 520 }}>
         <Alert
           type="info"
