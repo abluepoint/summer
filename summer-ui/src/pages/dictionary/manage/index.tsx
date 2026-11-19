@@ -3,91 +3,61 @@ import {
   Alert,
   Button,
   Card,
+  Form,
   Input,
   Modal,
-  Select,
   Space,
   Switch,
   Table,
-  Tabs,
   Tag,
 } from '@arco-design/web-react';
-import { Link, Prompt } from 'react-router-dom';
+import { Prompt } from 'react-router-dom';
 import useActiveEnterprise from '../../data-scopes/useActiveEnterprise';
 import {
-  DictionaryDraft,
-  DictionaryHistory,
-  getDictionaryHistory,
-  getDictionaryHistoryDetail,
-  changeDictionaryVersion,
-  DictionaryDraftItem,
-  DictionaryDraftGroup,
-  DictionarySnapshotGroup,
-  EffectiveDictionary,
-  getDictionaryDraft,
+  CreateDictionary,
+  DictionaryType,
+  createDictionary,
   getDictionaryDraftList,
-  getEffectiveDictionary,
-  saveDictionaryDraft,
 } from '../api';
+import DictionaryDetail from './detail';
 
 export default function DictionaryManagementPage() {
   const tenant = useActiveEnterprise();
-  const dirty = useRef(false);
-  return (
-    <>
-      <Select
-        aria-label="活动租户"
-        value={tenant.enterpriseId || undefined}
-        options={tenant.options}
-        onChange={(id) => {
-          if (!dirty.current || window.confirm('有未保存修改，是否放弃？')) {
-            dirty.current = false;
-            tenant.change(id);
-          }
-        }}
-        style={{ width: 240, marginBottom: 16 }}
-      />
-      {tenant.enterpriseId ? (
-        <Content
-          key={tenant.enterpriseId}
-          enterpriseId={tenant.enterpriseId}
-          onDirty={(value) => {
-            dirty.current = value;
-          }}
-        />
-      ) : (
-        <Alert content="请选择一个活动成员租户" />
-      )}
-    </>
+  return tenant.enterpriseId ? (
+    <DictionaryList
+      key={tenant.enterpriseId}
+      enterpriseId={tenant.enterpriseId}
+      onDirty={tenant.setDirty}
+      onBusy={tenant.setBusy}
+    />
+  ) : (
+    <Alert content="请先在系统导航栏选择活动企业" />
   );
 }
 
-function Content({
+function DictionaryList({
   enterpriseId,
   onDirty,
+  onBusy,
 }: {
   enterpriseId: string;
   onDirty: (value: boolean) => void;
+  onBusy: (value: boolean) => void;
 }) {
-  const [codes, setCodes] = useState<string[]>([]);
-  const [code, setCode] = useState('');
-  const [tab, setTab] = useState('effective');
+  const [rows, setRows] = useState<DictionaryType[]>([]);
+  const [selected, setSelected] = useState<{ code: string; tab: string }>();
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
   const [reload, setReload] = useState(0);
-  const [value, setValue] = useState<EffectiveDictionary>();
-  const [draft, setDraft] = useState<DictionaryDraft>();
-  const [history, setHistory] = useState<DictionaryHistory[]>([]);
-  const [historical, setHistorical] = useState<DictionaryHistory>();
-  const [preview, setPreview] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'disable' | 'rollback'>();
-  const [selectedVersion, setSelectedVersion] = useState<number>();
-  const [dirty, setDirty] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const alive = useRef(true);
+  const [createError, setCreateError] = useState('');
+  const [form] = Form.useForm<CreateDictionary>();
   const writing = useRef(false);
-  const dragged = useRef('');
-  const draggedMember = useRef({ group: '', item: '' });
+  const alive = useRef(true);
   useEffect(
     () => () => {
       alive.current = false;
@@ -95,674 +65,276 @@ function Content({
     []
   );
   useEffect(() => {
-    onDirty(dirty || preview || !!pendingAction);
-  }, [dirty, preview, pendingAction, onDirty]);
+    if (selected) return;
+    onDirty(dirty);
+    return () => onDirty(false);
+  }, [dirty, selected, onDirty]);
+  useEffect(() => {
+    if (selected) return;
+    onBusy(saving);
+    return () => onBusy(false);
+  }, [saving, selected, onBusy]);
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
-      if (dirty) {
+      if (dirty || saving) {
         event.preventDefault();
         event.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', leave);
     return () => window.removeEventListener('beforeunload', leave);
-  }, [dirty]);
+  }, [dirty, saving]);
   useEffect(() => {
+    if (selected) return;
     let active = true;
+    setLoading(true);
+    setError('');
     getDictionaryDraftList(enterpriseId)
-      .then((rows) => {
-        if (active) {
-          setCodes(rows.map((row) => row.code));
-          setCode(rows[0]?.code || '');
-        }
+      .then((result) => {
+        if (active) setRows(result);
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) {
+          setRows([]);
+          setError(`${e.message}${e.requestId ? ` (${e.requestId})` : ''}`);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [enterpriseId]);
-  useEffect(() => {
-    let active = true;
-    setValue(undefined);
-    setHistory([]);
-    setHistorical(undefined);
-    setSelectedVersion(undefined);
-    setPreview(false);
-    setPendingAction(undefined);
-    setDraft(undefined);
-    setError('');
-    if (code) {
-      setLoading(true);
-      Promise.all([
-        getEffectiveDictionary(enterpriseId, code),
-        getDictionaryDraft(enterpriseId, code),
-        getDictionaryHistory(enterpriseId, code),
-      ])
-        .then(([effective, edit, versions]) => {
-          if (active) {
-            setValue(effective);
-            setDraft(edit);
-            setHistory(versions);
-          }
-        })
-        .catch((e) => {
-          if (active)
-            setError(`${e.message}${e.requestId ? ` (${e.requestId})` : ''}`);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }
-    return () => {
-      active = false;
-    };
-  }, [enterpriseId, code, tab, reload]);
-  useEffect(() => {
-    let active = true;
-    setHistorical(undefined);
-    if (selectedVersion !== undefined && code) {
-      getDictionaryHistoryDetail(enterpriseId, code, selectedVersion)
-        .then((result) => {
-          if (active) setHistorical(result);
-        })
-        .catch((e) => {
-          if (active)
-            setError(`${e.message}${e.requestId ? ` (${e.requestId})` : ''}`);
-        });
-    }
-    return () => {
-      active = false;
-    };
-  }, [enterpriseId, code, selectedVersion]);
-  const transition = async (action: 'publish' | 'disable' | 'rollback') => {
-    if (!draft || !value || loading || writing.current || dirty) return;
-    if (action === 'rollback' && !historical) return;
-    writing.current = true;
-    setSaving(true);
-    setError('');
+  }, [enterpriseId, reload, selected]);
+
+  const create = async () => {
+    if (writing.current) return;
+    let input: CreateDictionary;
     try {
-      await changeDictionaryVersion(enterpriseId, code, action, {
-        expectedVersion: value.publishedVersion,
-        expectedEffectiveRevision: value.effectiveRevision,
-        ...(action === 'publish'
-          ? { expectedDraftRevision: draft.draftRevision }
-          : {}),
-        ...(action === 'rollback' ? { targetVersion: historical.version } : {}),
-        idempotencyKey: Array.from(
-          window.crypto.getRandomValues(new Uint8Array(16)),
-          (byte) => byte.toString(16).padStart(2, '0')
-        ).join(''),
-      });
-      if (alive.current) {
-        setPreview(false);
-        setPendingAction(undefined);
-        setLoading(true);
-        setReload((n) => n + 1);
-      }
-    } catch (e) {
-      if (alive.current)
-        setError(
-          `${
-            e.status === 409
-              ? '版本或草稿已变化，请刷新后重新核对；当前输入已保留。'
-              : e.message
-          }${e.requestId ? ` (${e.requestId})` : ''}`
-        );
-    } finally {
-      writing.current = false;
-      if (alive.current) setSaving(false);
-    }
-  };
-  const readOnlyItems = (
-    items: EffectiveDictionary['items'],
-    orderTitle = '默认顺序'
-  ) => (
-    <Table
-      rowKey="value"
-      pagination={false}
-      data={items}
-      columns={[
-        { title: '值', dataIndex: 'value' },
-        { title: '显示名称', dataIndex: 'label' },
-        { title: '说明', dataIndex: 'description' },
-        { title: orderTitle, dataIndex: 'sortOrder' },
-        {
-          title: '状态',
-          render: (_, item) => (item.enabled ? '启用' : '停用'),
-        },
-      ]}
-    />
-  );
-  const readOnlyGroups = (
-    groups: DictionarySnapshotGroup[],
-    items: EffectiveDictionary['items']
-  ) => (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      {!groups.length && <p>暂无分组</p>}
-      {groups.map((group) => (
-        <Card
-          key={group.id}
-          title={`${group.name} (${group.code}) · ${
-            group.enabled ? '启用' : '停用'
-          }`}
-        >
-          {readOnlyItems(
-            group.memberValues.map((member, index) => ({
-              ...items.find((i) => i.value === member),
-              sortOrder: index,
-            })),
-            '组内顺序'
-          )}
-        </Card>
-      ))}
-    </Space>
-  );
-  const editGroup = (id: string, patch: Partial<DictionaryDraftGroup>) =>
-    edit({
-      groups: draft.groups.map((g) => (g.id === id ? { ...g, ...patch } : g)),
-    });
-  const draftSnapshotGroups = () =>
-    draft.groups.map((g) => ({
-      id: g.id,
-      code: g.code,
-      name: g.name,
-      enabled: g.enabled,
-      memberValues: g.memberIds.map(
-        (id) => draft.items.find((i) => i.id === id).value
-      ),
-    }));
-  const proceed = () => !dirty || window.confirm('有未保存修改，是否放弃？');
-  const edit = (patch: Partial<DictionaryDraft>) => {
-    setDraft((old) => ({ ...old, ...patch }));
-    setDirty(true);
-  };
-  const editItem = (id: string, patch: Partial<DictionaryDraftItem>) =>
-    edit({
-      items: draft.items.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-    });
-  const reorder = (from: string, to: string) => {
-    if (!from || from === to) return;
-    const order = draft.itemOrder.filter((id) => id !== from);
-    order.splice(order.indexOf(to), 0, from);
-    edit({ itemOrder: order });
-  };
-  const save = async () => {
-    if (!draft || loading || writing.current) return;
-    const invalid =
-      draft.groups.some(
-        (g) =>
-          !/^[a-z][a-z0-9-]{1,78}[a-z0-9]$/.test(g.code) ||
-          !g.name.trim() ||
-          g.name.length > 200
-      ) ||
-      new Set(draft.groups.map((g) => g.code)).size !== draft.groups.length ||
-      !draft.name.trim() ||
-      draft.name.length > 200 ||
-      draft.items.some(
-        (i) =>
-          !/^[a-z0-9](?:[a-z0-9._-]{0,78}[a-z0-9])?$/.test(i.value) ||
-          !i.label.trim() ||
-          i.label.length > 200 ||
-          (i.description || '').length > 2000
-      );
-    if (invalid) {
-      setError(
-        '请检查名称、项值、说明和组编码；组编码为3–80位小写字母、数字、连字符且以字母开头，编码不可重复。'
-      );
+      input = await form.validate();
+    } catch {
       return;
     }
+    if (writing.current || !alive.current) return;
     writing.current = true;
     setSaving(true);
-    setError('');
+    setCreateError('');
     try {
-      const result = await saveDictionaryDraft(enterpriseId, draft);
+      const result = await createDictionary(enterpriseId, {
+        ...input,
+        name: input.name.trim(),
+      });
       if (alive.current) {
-        setDraft(result);
+        setCreating(false);
         setDirty(false);
+        setSelected({ code: result.code, tab: 'draft' });
       }
     } catch (e) {
       if (alive.current)
-        setError(
+        setCreateError(
           `${
             e.status === 409
-              ? '草稿已被其他客户端修改，请刷新后处理；当前编辑内容已保留。'
+              ? '字典编码已存在，请更换编码后重试。'
               : e.status === 403
-              ? '无权保存这些修改'
+              ? '无权新建字典，请联系管理员。'
               : e.message
           }${e.requestId ? ` (${e.requestId})` : ''}`
         );
     } finally {
       writing.current = false;
-      if (alive.current) setSaving(false);
+      if (alive.current) {
+        setSaving(false);
+        onBusy(false);
+      }
     }
   };
+
+  if (selected)
+    return (
+      <DictionaryDetail
+        enterpriseId={enterpriseId}
+        code={selected.code}
+        initialTab={selected.tab}
+        onBack={() => setSelected(undefined)}
+        onDirty={onDirty}
+        onBusy={onBusy}
+      />
+    );
+
+  const filtered = rows.filter((row) =>
+    `${row.code} ${row.name}`.toLowerCase().includes(query.trim().toLowerCase())
+  );
   return (
     <Card
       title="字典管理"
-      extra={<Link to="/dictionary/form">原字典表单</Link>}
+      extra={
+        <Button
+          type="primary"
+          onClick={() => {
+            form.resetFields();
+            setCreateError('');
+            setDirty(false);
+            setCreating(true);
+          }}
+        >
+          新建字典
+        </Button>
+      }
     >
-      <Prompt when={dirty} message="有未保存修改，是否放弃？" />
-      <Select
-        aria-label="字典编码"
-        disabled={saving || preview || !!pendingAction}
-        value={code || undefined}
-        options={codes}
-        onChange={(next) => {
-          if (next === code) return;
-          if (proceed()) {
-            setDirty(false);
-            setLoading(true);
-            setCode(next);
-          }
-        }}
-        style={{ width: 280 }}
+      <Prompt
+        when={dirty || saving}
+        message={() => (saving ? false : '有未保存修改，是否放弃？')}
       />
-      {error && <Alert type="error" content={error} />}
-      <Tabs
-        activeTab={tab}
-        onChange={(next) => {
-          if (next === tab) return;
-          if (!saving && proceed()) {
+      <Space style={{ marginBottom: 16 }}>
+        <Input.Search
+          aria-label="搜索字典"
+          placeholder="搜索字典名称或编码"
+          allowClear
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          style={{ width: 280 }}
+        />
+        <Button
+          loading={loading}
+          onClick={() => setReload((value) => value + 1)}
+        >
+          刷新列表
+        </Button>
+      </Space>
+      {error && (
+        <Alert type="error" content={error} style={{ marginBottom: 16 }} />
+      )}
+      <Table<DictionaryType>
+        rowKey="code"
+        loading={loading}
+        data={filtered}
+        noDataElement={
+          error
+            ? '字典列表加载失败，请重试'
+            : query
+            ? '没有匹配的字典'
+            : '暂无字典，点击“新建字典”开始创建'
+        }
+        pagination={{
+          current: page,
+          pageSize: 10,
+          total: filtered.length,
+          onChange: setPage,
+        }}
+        columns={[
+          { title: '字典名称', dataIndex: 'name' },
+          { title: '字典编码', dataIndex: 'code' },
+          {
+            title: '发布状态',
+            render: (_, row) => (
+              <Tag color={row.published ? 'green' : 'gray'}>
+                {row.published
+                  ? '已发布'
+                  : row.publishedVersion
+                  ? '已停用'
+                  : '未发布'}
+              </Tag>
+            ),
+          },
+          {
+            title: '当前发布版本',
+            render: (_, row) => row.publishedVersion || '—',
+          },
+          {
+            title: '操作',
+            render: (_, row) => (
+              <Button
+                type="text"
+                onClick={() =>
+                  setSelected({ code: row.code, tab: 'effective' })
+                }
+              >
+                详情
+              </Button>
+            ),
+          },
+        ]}
+      />
+      <Modal
+        title="新建字典"
+        visible={creating}
+        confirmLoading={saving}
+        okText="创建并编辑字典值"
+        cancelText="取消"
+        maskClosable={false}
+        onOk={create}
+        onCancel={() => {
+          if (
+            !saving &&
+            (!dirty || window.confirm('有未保存修改，是否放弃？'))
+          ) {
+            setCreating(false);
             setDirty(false);
-            setLoading(true);
-            setTab(next);
           }
         }}
       >
-        <Tabs.TabPane key="effective" title="生效版本">
-          <Alert content="基础生效版本（只读）；业务表单根据访问组织应用覆盖。" />
-          {value?.status === 'UNPUBLISHED' && <Alert content="尚未发布" />}
-          {value?.status === 'PUBLISHED' && (
-            <>
-              <h3>{value.name}</h3>
-              <Tag>基础发布版本 {value.publishedVersion}</Tag>
-              <Button
-                disabled={loading || saving}
-                onClick={() => setPendingAction('disable')}
-              >
-                停用字典
-              </Button>
-              <Table
-                loading={loading}
-                rowKey="value"
-                pagination={false}
-                data={value.items}
-                columns={[
-                  { title: '值', dataIndex: 'value' },
-                  { title: '显示名称', dataIndex: 'label' },
-                  { title: '说明', dataIndex: 'description' },
-                  { title: '默认顺序', dataIndex: 'sortOrder' },
-                  {
-                    title: '状态',
-                    render: (_, item) => (item.enabled ? '启用' : '停用'),
-                  },
-                ]}
-              />
-              {readOnlyGroups(value.groups, value.items)}
-            </>
-          )}
-        </Tabs.TabPane>
-        <Tabs.TabPane key="draft" title="草稿">
-          <Alert content="保存仅修改草稿，专用发布操作后才影响业务。拖拽行调整默认顺序。" />
-          {draft && (
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Tag>草稿修订 {draft.draftRevision}</Tag>
-              <Input
-                aria-label="字典名称"
-                value={draft.name}
-                maxLength={200}
-                disabled={saving || loading}
-                onChange={(name) => edit({ name })}
-              />
-              <Space>
-                公开读取
-                <Switch
-                  aria-label="公开读取"
-                  checked={draft.publicReadable}
-                  disabled={saving || loading}
-                  onChange={(publicReadable) => edit({ publicReadable })}
-                />
-                启用字典
-                <Switch
-                  aria-label="启用字典"
-                  checked={draft.enabled}
-                  disabled={saving || loading}
-                  onChange={(enabled) => edit({ enabled })}
-                />
-              </Space>
-              {draft.itemOrder.map((id, index) => {
-                const item = draft.items.find((i) => i.id === id);
-                return (
-                  <Card
-                    key={id}
-                    aria-label={`默认项 ${index + 1}`}
-                    size="small"
-                    draggable={!saving && !loading}
-                    onDragStart={() => {
-                      dragged.current = id;
-                      draggedMember.current = { group: '', item: '' };
-                    }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (!saving && !loading) reorder(dragged.current, id);
-                    }}
-                    title={`↕ ${index + 1}`}
-                  >
-                    <Space wrap>
-                      <Input
-                        aria-label={`值 ${index + 1}`}
-                        value={item.value}
-                        maxLength={80}
-                        disabled={saving || loading || item.everPublished}
-                        onChange={(value) => editItem(id, { value })}
-                      />
-                      <Input
-                        aria-label={`显示名称 ${index + 1}`}
-                        value={item.label}
-                        maxLength={200}
-                        disabled={saving || loading}
-                        onChange={(label) => editItem(id, { label })}
-                      />
-                      <Switch
-                        aria-label={`启用项 ${index + 1}`}
-                        checked={item.enabled}
-                        disabled={saving || loading}
-                        onChange={(enabled) => editItem(id, { enabled })}
-                      />
-                      <Button
-                        disabled={saving || loading || item.everPublished}
-                        onClick={() =>
-                          edit({
-                            items: draft.items.filter((i) => i.id !== id),
-                            groups: draft.groups.map((g) => ({
-                              ...g,
-                              memberIds: g.memberIds.filter(
-                                (key) => key !== id
-                              ),
-                            })),
-                            itemOrder: draft.itemOrder.filter(
-                              (key) => key !== id
-                            ),
-                          })
-                        }
-                      >
-                        删除
-                      </Button>
-                      {item.everPublished && <Tag>曾发布，值不可改删</Tag>}
-                    </Space>
-                    <Input.TextArea
-                      aria-label={`说明 ${index + 1}`}
-                      value={item.description || ''}
-                      maxLength={2000}
-                      disabled={saving || loading}
-                      onChange={(description) => editItem(id, { description })}
-                    />
-                  </Card>
-                );
-              })}
-              <h3>字典组 · 拖拽成员调整组内顺序</h3>
-              <Alert content="新组首次保存按默认顺序初始化；保存后可独立拖拽调整，后续新增成员追加到组尾。" />
-              {draft.groups.map((group, groupIndex) => (
-                <Card key={group.id} title={`组 ${groupIndex + 1}`}>
-                  <Space wrap>
-                    <Input
-                      aria-label={`组编码 ${groupIndex + 1}`}
-                      value={group.code}
-                      maxLength={80}
-                      disabled={saving || loading || group.everPublished}
-                      onChange={(groupCode) =>
-                        editGroup(group.id, { code: groupCode })
-                      }
-                    />
-                    <Input
-                      aria-label={`组名称 ${groupIndex + 1}`}
-                      value={group.name}
-                      maxLength={200}
-                      disabled={saving || loading}
-                      onChange={(name) => editGroup(group.id, { name })}
-                    />
-                    <Switch
-                      aria-label={`启用组 ${groupIndex + 1}`}
-                      checked={group.enabled}
-                      disabled={saving || loading}
-                      onChange={(enabled) => editGroup(group.id, { enabled })}
-                    />
-                    <Button
-                      disabled={saving || loading || group.everPublished}
-                      onClick={() =>
-                        edit({
-                          groups: draft.groups.filter((g) => g.id !== group.id),
-                        })
-                      }
-                    >
-                      删除组
-                    </Button>
-                    {group.everPublished && <Tag>曾发布，编码不可改删</Tag>}
-                  </Space>
-                  <Select
-                    mode="multiple"
-                    aria-label={`组成员 ${groupIndex + 1}`}
-                    value={group.memberIds}
-                    disabled={saving || loading}
-                    style={{ width: '100%', margin: '12px 0' }}
-                    options={draft.itemOrder.map((id) => ({
-                      value: id,
-                      label: `${draft.items.find((i) => i.id === id).label} (${
-                        draft.items.find((i) => i.id === id).value
-                      })`,
-                    }))}
-                    onChange={(ids: string[]) =>
-                      editGroup(group.id, {
-                        memberIds: [
-                          ...group.memberIds.filter((id) => ids.includes(id)),
-                          ...ids.filter((id) => !group.memberIds.includes(id)),
-                        ],
-                      })
-                    }
-                  />
-                  {group.memberIds.map((id, index) => {
-                    const item = draft.items.find((i) => i.id === id);
-                    return (
-                      <Card
-                        key={id}
-                        size="small"
-                        aria-label={`组 ${groupIndex + 1} 成员 ${index + 1}`}
-                        draggable={
-                          !saving && !loading && !group.id.startsWith('new:')
-                        }
-                        onDragStart={() => {
-                          draggedMember.current = { group: group.id, item: id };
-                        }}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          const from = draggedMember.current;
-                          if (
-                            saving ||
-                            loading ||
-                            from.group !== group.id ||
-                            from.item === id
-                          )
-                            return;
-                          const ids = group.memberIds.filter(
-                            (key) => key !== from.item
-                          );
-                          ids.splice(ids.indexOf(id), 0, from.item);
-                          editGroup(group.id, { memberIds: ids });
-                        }}
-                      >
-                        ↕ {index + 1} · {item.value} · {item.label} ·{' '}
-                        {item.description || ''} ·{' '}
-                        {item.enabled ? '启用' : '停用'}
-                      </Card>
-                    );
-                  })}
-                </Card>
-              ))}
-              <Button
-                disabled={saving || loading}
-                onClick={() =>
-                  edit({
-                    groups: [
-                      ...draft.groups,
-                      {
-                        id: `new:${Array.from(
-                          window.crypto.getRandomValues(new Uint8Array(16)),
-                          (byte) => byte.toString(16).padStart(2, '0')
-                        ).join('')}`,
-                        code: '',
-                        name: '',
-                        enabled: true,
-                        everPublished: false,
-                        memberIds: [],
-                      },
-                    ],
-                  })
-                }
-              >
-                新增组
-              </Button>
-              <Space>
-                <Button
-                  disabled={saving || loading}
-                  onClick={() => {
-                    const id = `new:${Date.now()}`;
-                    edit({
-                      items: [
-                        ...draft.items,
-                        {
-                          id,
-                          value: '',
-                          label: '',
-                          description: '',
-                          enabled: true,
-                          everPublished: false,
-                          sortOrder: draft.items.length,
-                        },
-                      ],
-                      itemOrder: [...draft.itemOrder, id],
-                    });
-                  }}
-                >
-                  新增项
-                </Button>
-                <Button
-                  type="primary"
-                  disabled={!dirty || loading}
-                  loading={saving}
-                  onClick={save}
-                >
-                  保存草稿
-                </Button>
-                <Button
-                  disabled={dirty || saving || loading}
-                  onClick={() => setPreview(true)}
-                >
-                  核对并发布
-                </Button>
-                <Button
-                  disabled={saving || loading}
-                  onClick={() => {
-                    if (proceed()) {
-                      setDirty(false);
-                      setLoading(true);
-                      setReload((revision) => revision + 1);
-                    }
-                  }}
-                >
-                  刷新草稿
-                </Button>
-              </Space>
-            </Space>
-          )}
-        </Tabs.TabPane>
-        <Tabs.TabPane key="history" title="历史版本">
-          <Alert content="历史发布内容（只读），回滚保留当前草稿。" />
-          <Select
-            aria-label="历史版本号"
-            value={selectedVersion}
-            disabled={saving || loading}
-            options={history.map((row) => ({
-              value: row.version,
-              label: `版本 ${row.version} · ${row.createdAt}`,
-            }))}
-            onChange={setSelectedVersion}
-          />
-          {historical?.snapshot && (
-            <>
-              <h3>{historical.snapshot.name}</h3>
-              <p>
-                公开读取：{historical.snapshot.publicReadable ? '是' : '否'}
-                ；启用字典：{historical.snapshot.enabled ? '是' : '否'}
-              </p>
-              {readOnlyItems(historical.snapshot.items)}
-              {readOnlyGroups(
-                historical.snapshot.groups,
-                historical.snapshot.items
-              )}
-              <Button
-                disabled={
-                  saving ||
-                  loading ||
-                  historical.version === value?.publishedVersion
-                }
-                onClick={() => setPendingAction('rollback')}
-              >
-                回滚此版本
-              </Button>
-            </>
-          )}
-        </Tabs.TabPane>
-      </Tabs>
-      <Modal
-        title={
-          pendingAction === 'disable'
-            ? '停用当前字典？'
-            : `回滚至版本 ${historical?.version}？`
-        }
-        visible={!!pendingAction}
-        confirmLoading={saving}
-        onCancel={() => {
-          if (!saving) setPendingAction(undefined);
-        }}
-        onOk={() => transition(pendingAction)}
-      >
-        {pendingAction === 'disable'
-          ? '停用后业务将无法读取此字典。'
-          : '完整切换生效内容，草稿保持当前内容。'}
-      </Modal>
-      <Modal
-        title="核对完整草稿后发布"
-        visible={preview}
-        onCancel={() => {
-          if (!saving) setPreview(false);
-        }}
-        confirmLoading={saving}
-        onOk={() => transition('publish')}
-        okText="确认发布"
-      >
-        {draft && (
-          <>
-            <h3>{draft.name}</h3>
-            <p>
-              草稿修订 {draft.draftRevision}；当前发布版本{' '}
-              {value?.publishedVersion}；生效修订 {value?.effectiveRevision}
-            </p>
-            <p>
-              公开读取：{draft.publicReadable ? '是' : '否'}；启用字典：
-              {draft.enabled ? '是' : '否'}
-            </p>
-            {readOnlyItems(
-              draft.itemOrder.map((id, index) => ({
-                ...draft.items.find((i) => i.id === id),
-                sortOrder: index,
-              }))
-            )}
-            {readOnlyGroups(draftSnapshotGroups(), draft.items)}
-          </>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ publicReadable: false, enabled: true }}
+          onValuesChange={() => setDirty(true)}
+        >
+          <Form.Item
+            label="字典名称"
+            field="name"
+            rules={[
+              { required: true, message: '请输入字典名称' },
+              {
+                validator: (value, callback) => {
+                  if (!value?.trim()) callback('字典名称不能为空白');
+                },
+              },
+              { maxLength: 200, message: '字典名称最多200个字符' },
+            ]}
+          >
+            <Input
+              aria-label="新字典名称"
+              maxLength={200}
+              disabled={saving}
+              placeholder="例如：客户类型"
+            />
+          </Form.Item>
+          <Form.Item
+            label="字典编码"
+            field="code"
+            extra="3–80位小写字母、数字或连字符，以字母开头、字母或数字结尾。创建后不可修改。"
+            rules={[
+              { required: true, message: '请输入字典编码' },
+              {
+                match: /^[a-z][a-z0-9-]{1,78}[a-z0-9]$/,
+                message: '请输入符合规则的字典编码',
+              },
+            ]}
+          >
+            <Input
+              aria-label="新字典编码"
+              maxLength={80}
+              disabled={saving}
+              placeholder="例如：customer-type"
+            />
+          </Form.Item>
+          <Form.Item
+            label="公开读取"
+            field="publicReadable"
+            triggerPropName="checked"
+          >
+            <Switch aria-label="新字典公开读取" disabled={saving} />
+          </Form.Item>
+          <Form.Item label="启用字典" field="enabled" triggerPropName="checked">
+            <Switch aria-label="新字典启用" disabled={saving} />
+          </Form.Item>
+        </Form>
+        <Alert content="创建后进入字典详情维护字典值，保存草稿并发布后供业务使用。" />
+        {createError && (
+          <Alert type="error" content={createError} style={{ marginTop: 16 }} />
         )}
       </Modal>
     </Card>

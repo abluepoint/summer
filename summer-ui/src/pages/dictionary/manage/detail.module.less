@@ -1,0 +1,168 @@
+.detailHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0 0 8px;
+  color: var(--color-text-1);
+  font-size: 20px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.metadata {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-radius: 4px;
+  background: var(--color-fill-1);
+}
+
+.hint {
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  margin: 20px 0 12px;
+  color: var(--color-text-1);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.dangerAction {
+  color: rgb(var(--danger-6));
+}
+
+.editorSectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.editorTitle {
+  margin: 0;
+  color: var(--color-text-1);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.draftMetadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px 40px;
+  margin-bottom: 28px;
+  padding: 20px;
+  border-radius: 4px;
+  background: var(--color-fill-1);
+}
+
+.nameField {
+  flex: 1 1 240px;
+  max-width: 480px;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text-2);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.editorHelp {
+  margin: 6px 0 0;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.valueTable {
+  :global(.arco-table-th),
+  :global(.arco-table-td) {
+    padding: 12px;
+  }
+
+  :global(.arco-table-th) {
+    color: var(--color-text-2);
+    font-weight: 500;
+  }
+
+  :global(.arco-textarea) {
+    resize: none;
+    vertical-align: middle;
+  }
+}
+
+.orderCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.dragHandle:global(.arco-btn) {
+  color: var(--color-text-3);
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.dropTarget :global(.arco-table-td) {
+  background: var(--color-primary-light-1);
+}
+
+.editorFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.saveHint {
+  color: var(--color-text-3);
+  font-size: 13px;
+}
+
+.itemToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.itemSearch {
+  width: 320px;
+  max-width: 100%;
+}
+
+.itemPagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+
+  :global(.arco-pagination) {
+    flex-wrap: wrap;
+    gap: 8px 0;
+  }
+}

@@ -167,10 +167,49 @@ export type EffectiveDictionary = {
   groups: DictionarySnapshotGroup[];
   effectiveRevision: number;
 };
+export type DictionaryType = {
+  code: string;
+  name: string;
+  published: boolean;
+  publicReadable: boolean;
+  enabled: boolean;
+  publishedVersion: number | null;
+  draftRevision: number;
+  effectiveRevision: number;
+  items: DictionaryOption[];
+};
+export type CreateDictionary = {
+  code: string;
+  name: string;
+  publicReadable: boolean;
+  enabled: boolean;
+};
 export const getDictionaryDraftList = (enterpriseId: string) =>
-  readPublicDictionary<{ code: string }[]>(
+  readPublicDictionary<DictionaryType[]>(
     `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries`
   );
+export async function createDictionary(
+  enterpriseId: string,
+  input: CreateDictionary
+): Promise<DictionaryType> {
+  try {
+    const response = await axios.post(
+      `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries`,
+      input
+    );
+    return readEnvelope(response.data, response.status) as DictionaryType;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    const failure = readFailure(
+      error.response?.data,
+      error.response?.status || 0,
+      String(error.response?.headers?.['x-request-id'] || '')
+    );
+    throw Object.assign(new Error(failure.message), failure, {
+      status: error.response?.status || 0,
+    });
+  }
+}
 export const getEffectiveDictionary = (enterpriseId: string, code: string) =>
   readPublicDictionary<EffectiveDictionary>(
     `/api/v1/enterprises/${encodeURIComponent(
@@ -220,6 +259,7 @@ export async function saveDictionaryDraft(
   draft: DictionaryDraft
 ): Promise<DictionaryDraft> {
   try {
+    const itemIds = new Set(draft.items.map((item) => item.id));
     const response = await axios.put(draftPath(enterpriseId, draft.code), {
       expectedDraftRevision: draft.draftRevision,
       name: draft.name,
@@ -233,14 +273,18 @@ export async function saveDictionaryDraft(
         enabled,
       })),
       itemOrder: draft.itemOrder,
-      groups: draft.groups.map(({ id, code, name, enabled, memberIds }) => ({
-        id,
-        code,
-        name,
-        enabled,
-        memberIds,
-        memberOrder: memberIds,
-      })),
+      // Preserve legacy groups in aggregate saves, pruning only deleted items.
+      groups: draft.groups.map(({ id, code, name, enabled, memberIds }) => {
+        const members = memberIds.filter((id) => itemIds.has(id));
+        return {
+          id,
+          code,
+          name,
+          enabled,
+          memberIds: members,
+          memberOrder: members,
+        };
+      }),
     });
     return readEnvelope(response.data, response.status) as DictionaryDraft;
   } catch (error) {
