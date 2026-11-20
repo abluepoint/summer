@@ -71,7 +71,7 @@ after(async () => {
   await vite?.close();
   assert.deepEqual(errors, []);
 });
-async function setup(initial = [makeRow('customer-type', '客户类型')]) {
+async function setup(initial = [makeRow('customer-type', '客户类型')], groupsOnly = false) {
   const rows = structuredClone(initial);
   const drafts = new Map(
     rows.map((row) => [
@@ -162,8 +162,8 @@ async function setup(initial = [makeRow('customer-type', '客户类型')]) {
       );
     throw new Error(`Unexpected fixture endpoint: ${method} ${path}`);
   });
-  await page.goto(origin + '/__t18-t19/dictionary-manage');
-  await page.getByRole('button', { name: '新建字典', exact: true }).waitFor();
+  await page.goto(origin + '/__t18-t19/dictionary-manage' + (groupsOnly ? '?groups' : ''));
+  await page.getByRole('button', { name: groupsOnly ? '管理字典组' : '新建字典', exact: true }).first().waitFor();
   await page.waitForFunction(
     () => !document.querySelector('.arco-spin-loading')
   );
@@ -862,6 +862,50 @@ test('the disable menu requires confirmation, cancellation sends no write and fa
         .isEnabled(),
       true
     );
+  } finally {
+    await page.close();
+  }
+});
+
+test('group entry edits groups independently, preserves values, rejects invalid codes and keeps conflicts editable', async () => {
+  const { page, drafts, writes, state } = await setup(undefined, true);
+  const draft = drafts.get('customer-type');
+  draft.items = [{ id: 'item-a', value: 'alpha', label: '甲', description: '保留说明', enabled: true, everPublished: true, sortOrder: 0 }, { id: 'item-b', value: 'beta', label: '乙', enabled: true, everPublished: true, sortOrder: 1 }];
+  draft.itemOrder = ['item-a', 'item-b'];
+  draft.groups = [{ id: 'group-one', code: 'one', name: '旧组', enabled: true, everPublished: true, memberIds: ['item-a', 'item-b'] }];
+  try {
+    assert.equal(await page.getByRole('button', { name: '新建字典', exact: true }).count(), 0);
+    await page.getByRole('button', { name: '管理字典组', exact: true }).click();
+    await page.getByRole('button', { name: '编辑字典组', exact: true }).click();
+    await page.getByLabel('组名称（必填）').fill('常用组');
+    assert.equal(await page.getByLabel('组编码（必填）').isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: '删除字典组', exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: '新增字典值', exact: true }).count(), 0);
+    await page.getByRole('button', { name: '下移', exact: true }).first().click();
+    await page.getByRole('button', { name: '新增字典组', exact: true }).click();
+    await page.getByLabel('组编码（必填）').nth(1).fill('BAD');
+    await page.getByLabel('组名称（必填）').nth(1).fill('新组');
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('请检查字典组：', { exact: false }).waitFor();
+    assert.equal(writes.length, 0);
+    await page.getByLabel('组编码（必填）').nth(1).fill('new-group');
+    state.saveStatus = 409;
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('草稿已被其他客户端修改', { exact: false }).waitFor();
+    assert.equal(await page.getByLabel('组名称（必填）').first().inputValue(), '常用组');
+    state.saveStatus = 200;
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('字典组已保存为草稿，发布后生效', { exact: true }).waitFor();
+    assert.deepEqual(writes[1].body.groups[0].memberOrder, ['item-b', 'item-a']);
+    assert.equal(writes[1].body.groups[1].code, 'new-group');
+    assert.equal(writes[1].body.items[0].description, '保留说明');
+    assert.deepEqual(writes[1].body.itemOrder, ['item-a', 'item-b']);
+    await page.screenshot({ path: '../.scratch/dictionary-groups-editor.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '../.scratch/dictionary-groups-narrow.png', fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole('button', { name: '核对并发布', exact: true }).click();
+    await page.getByText('字典组随所属字典整体发布，以下字典值及所有字典组将一同生效。', { exact: true }).waitFor();
   } finally {
     await page.close();
   }

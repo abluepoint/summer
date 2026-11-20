@@ -300,6 +300,14 @@ export const routes: IRoute[] = [
         ],
       },
       {
+        name: 'menu.dictionary.groups',
+        key: 'dictionary/groups',
+        capabilityCode: 'platform.dictionary.read',
+        requiredPermissions: [
+          { resource: 'platform.dictionary', actions: ['read'] },
+        ],
+      },
+      {
         name: 'menu.dictionary.form',
         key: 'dictionary/form',
       },

@@ -46,7 +46,11 @@ const routes = evaluateModule('../src/routes.ts', {
   '@/menu/access': access,
   react: {},
 });
-assert.equal(routes.menuManifest.manifestVersion, 8, 'changed metadata must have a new version');
+assert.equal(routes.menuManifest.manifestVersion, 9, 'changed metadata must have a new version');
+const dictionaryGroups = routes.menuManifest.items.find(item => item.menuId === 'dictionary/groups');
+assert.equal(dictionaryGroups.parentMenuId, 'dictionary');
+assert.equal(dictionaryGroups.path, '/dictionary/groups');
+assert.equal(dictionaryGroups.capabilityCode, 'platform.dictionary.read');
 const bootstrapCodes = {
   'diagnostics/release': 'internal.release.read',
   'plugins/customer-insights': 'enterprise.plugins.customer-insights.read',

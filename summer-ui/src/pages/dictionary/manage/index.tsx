@@ -21,10 +21,15 @@ import {
 } from '../api';
 import DictionaryDetail from './detail';
 
-export default function DictionaryManagementPage() {
+export default function DictionaryManagementPage({
+  groupsOnly = false,
+}: {
+  groupsOnly?: boolean;
+}) {
   const tenant = useActiveEnterprise();
   return tenant.enterpriseId ? (
     <DictionaryList
+      groupsOnly={groupsOnly}
       key={tenant.enterpriseId}
       enterpriseId={tenant.enterpriseId}
       onDirty={tenant.setDirty}
@@ -36,10 +41,12 @@ export default function DictionaryManagementPage() {
 }
 
 function DictionaryList({
+  groupsOnly,
   enterpriseId,
   onDirty,
   onBusy,
 }: {
+  groupsOnly: boolean;
   enterpriseId: string;
   onDirty: (value: boolean) => void;
   onBusy: (value: boolean) => void;
@@ -152,6 +159,7 @@ function DictionaryList({
   if (selected)
     return (
       <DictionaryDetail
+        groupsOnly={groupsOnly}
         enterpriseId={enterpriseId}
         code={selected.code}
         initialTab={selected.tab}
@@ -166,19 +174,21 @@ function DictionaryList({
   );
   return (
     <Card
-      title="字典管理"
+      title={groupsOnly ? '字典组管理' : '字典管理'}
       extra={
-        <Button
-          type="primary"
-          onClick={() => {
-            form.resetFields();
-            setCreateError('');
-            setDirty(false);
-            setCreating(true);
-          }}
-        >
-          新建字典
-        </Button>
+        !groupsOnly && (
+          <Button
+            type="primary"
+            onClick={() => {
+              form.resetFields();
+              setCreateError('');
+              setDirty(false);
+              setCreating(true);
+            }}
+          >
+            新建字典
+          </Button>
+        )
       }
     >
       <Prompt
@@ -216,6 +226,8 @@ function DictionaryList({
             ? '字典列表加载失败，请重试'
             : query
             ? '没有匹配的字典'
+            : groupsOnly
+            ? '暂无字典，请先在字典管理中创建字典'
             : '暂无字典，点击“新建字典”开始创建'
         }
         pagination={{
@@ -252,7 +264,7 @@ function DictionaryList({
                   setSelected({ code: row.code, tab: 'effective' })
                 }
               >
-                详情
+                {groupsOnly ? '管理字典组' : '详情'}
               </Button>
             ),
           },

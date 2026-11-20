@@ -19,7 +19,7 @@ function DictionaryManagementFixture() {
   const tenant = useActiveEnterprise();
   return <>
     <Select aria-label="全局活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} />
-    <DictionaryManagementPage />
+    <DictionaryManagementPage groupsOnly={new URLSearchParams(location.search).has("groups")} />
   </>;
 }
 

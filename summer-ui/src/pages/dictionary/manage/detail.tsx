@@ -29,6 +29,9 @@ import {
 } from '@arco-design/web-react/icon';
 import { Prompt } from 'react-router-dom';
 import styles from './detail.module.less';
+import DictionaryGroupsEditor, {
+  DictionaryGroupsTable,
+} from '../groups/editor';
 import DictionaryItemsTable, { matchesDictionaryItem } from './items-table';
 import {
   DictionaryDraft,
@@ -49,6 +52,7 @@ export default function DictionaryDetail({
   enterpriseId,
   code,
   initialTab = 'effective',
+  groupsOnly = false,
   onBack,
   onDirty,
   onBusy,
@@ -56,6 +60,7 @@ export default function DictionaryDetail({
   enterpriseId: string;
   code: string;
   initialTab?: string;
+  groupsOnly?: boolean;
   onBack: () => void;
   onDirty: (value: boolean) => void;
   onBusy: (value: boolean) => void;
@@ -254,6 +259,33 @@ export default function DictionaryDetail({
   };
   const save = async () => {
     if (!draft || loading || writing.current) return;
+    if (groupsOnly) {
+      const codes = new Set<string>();
+      const invalid = draft.groups.find((group) => {
+        const bad =
+          !/^[a-z][a-z0-9-]{1,78}[a-z0-9]$/.test(group.code) ||
+          codes.has(group.code) ||
+          !group.name.trim() ||
+          group.name.length > 200;
+        codes.add(group.code);
+        return bad;
+      });
+      if (invalid) {
+        setError(
+          '请检查字典组：编码须为3–80位小写字母、数字或连字符，以字母开头、字母或数字结尾且不重复；名称必填且不超过200字。'
+        );
+        document
+          .getElementById(
+            `group-${
+              !invalid.name.trim() || invalid.name.length > 200
+                ? 'name'
+                : 'code'
+            }-${invalid.id}`
+          )
+          ?.focus();
+        return;
+      }
+    }
     const seen = new Set<string>();
     const invalidItem = orderedItems.find((item) => {
       const invalid =
@@ -284,7 +316,9 @@ export default function DictionaryDetail({
         setDraft(result);
         setEditingMatches(new Set());
         setDirty(false);
-        Message.success('字典值已保存为草稿，发布后生效');
+        Message.success(
+          `${groupsOnly ? '字典组' : '字典值'}已保存为草稿，发布后生效`
+        );
       }
     } catch (e) {
       if (alive.current)
@@ -304,7 +338,7 @@ export default function DictionaryDetail({
   };
   return (
     <Card
-      title={`字典详情 · ${code}`}
+      title={`${groupsOnly ? '字典组管理' : '字典详情'} · ${code}`}
       extra={
         <Button
           disabled={saving || preview || !!pendingAction}
@@ -356,9 +390,9 @@ export default function DictionaryDetail({
                 disabled={loading || saving || !draft}
                 onClick={() => setTab('draft')}
               >
-                编辑字典值
+                {groupsOnly ? '编辑字典组' : '编辑字典值'}
               </Button>
-              {value?.status === 'PUBLISHED' && (
+              {!groupsOnly && value?.status === 'PUBLISHED' && (
                 <Dropdown
                   trigger="click"
                   position="br"
@@ -412,22 +446,37 @@ export default function DictionaryDetail({
           {value?.status === 'PUBLISHED' && (
             <Alert
               className={styles.hint}
-              content="当前展示生效版本。修改字典值需先保存草稿，再发布生效。"
+              content={
+                groupsOnly
+                  ? '当前展示生效字典组。修改需先保存草稿，再随所属字典整体发布生效。'
+                  : '当前展示生效版本。修改字典值需先保存草稿，再发布生效。'
+              }
             />
           )}
           {value && value.status !== 'PUBLISHED' && (
             <Alert
               content={
                 value.status === 'UNPUBLISHED'
-                  ? '尚未发布，请编辑字典值并发布。'
+                  ? groupsOnly
+                    ? '尚未发布，请编辑字典组并随字典发布。'
+                    : '尚未发布，请编辑字典值并发布。'
                   : '字典已停用，可在草稿中编辑后重新发布。'
               }
             />
           )}
           {value?.status === 'PUBLISHED' && (
             <>
-              <h3 className={styles.sectionTitle}>字典值</h3>
-              <DictionaryItemsTable items={value.items} />
+              <h3 className={styles.sectionTitle}>
+                {groupsOnly ? '字典组' : '字典值'}
+              </h3>
+              {groupsOnly ? (
+                <DictionaryGroupsTable
+                  groups={value.groups}
+                  items={value.items}
+                />
+              ) : (
+                <DictionaryItemsTable items={value.items} />
+              )}
             </>
           )}
         </Tabs.TabPane>
@@ -438,300 +487,325 @@ export default function DictionaryDetail({
           />
           {draft && (
             <>
-              <div className={styles.editorSectionHeader}>
-                <h3 className={styles.editorTitle}>基本信息</h3>
-                <Tag>草稿修订 {draft.draftRevision}</Tag>
-              </div>
-              <div className={styles.draftMetadata}>
-                <div className={styles.nameField}>
-                  <label
-                    className={styles.fieldLabel}
-                    htmlFor="dictionary-name"
-                  >
-                    字典名称
-                  </label>
-                  <Input
-                    id="dictionary-name"
-                    aria-label="字典名称"
-                    value={draft.name}
-                    maxLength={200}
-                    disabled={saving || loading}
-                    onChange={(name) => edit({ name })}
-                  />
-                </div>
-                <div>
-                  <div className={styles.fieldLabel}>公开读取</div>
-                  <Switch
-                    aria-label="公开读取"
-                    checked={draft.publicReadable}
-                    checkedText="是"
-                    uncheckedText="否"
-                    disabled={saving || loading}
-                    onChange={(publicReadable) => edit({ publicReadable })}
-                  />
-                </div>
-                <div>
-                  <div className={styles.fieldLabel}>字典状态</div>
-                  <Switch
-                    aria-label="启用字典"
-                    checked={draft.enabled}
-                    checkedText="启用"
-                    uncheckedText="停用"
-                    disabled={saving || loading}
-                    onChange={(enabled) => edit({ enabled })}
-                  />
-                </div>
-              </div>
-              <div className={styles.editorSectionHeader}>
-                <div>
-                  <Space size={8}>
-                    <h3 className={styles.editorTitle}>字典值</h3>
-                    <Tag>{draft.items.length} 项</Tag>
-                  </Space>
-                  <p className={styles.editorHelp}>
-                    {isFiltering
-                      ? '搜索结果中暂不支持排序，清空搜索后可调整顺序。'
-                      : '拖拽左侧手柄或使用方向键调整顺序；已发布的值不可修改或删除。'}
-                  </p>
-                </div>
-                <Button
-                  icon={<IconPlus />}
+              {groupsOnly ? (
+                <DictionaryGroupsEditor
+                  draft={draft}
                   disabled={saving || loading}
-                  onClick={() => {
-                    const id = `new:${Array.from(
-                      window.crypto.getRandomValues(new Uint8Array(16)),
-                      (byte) => byte.toString(16).padStart(2, '0')
-                    ).join('')}`;
-                    edit({
-                      items: [
-                        ...draft.items,
-                        {
-                          id,
-                          value: '',
-                          label: '',
-                          description: '',
-                          enabled: true,
-                          everPublished: false,
-                          sortOrder: draft.items.length,
-                        },
-                      ],
-                      itemOrder: [...draft.itemOrder, id],
-                    });
-                    searchItems('');
-                    setItemPage(
-                      Math.floor(draft.items.length / itemPageSize) + 1
-                    );
-                  }}
-                >
-                  新增字典值
-                </Button>
-              </div>
-              <div className={styles.itemToolbar}>
-                <div className={styles.itemSearch}>
-                  <Input.Search
-                    aria-label="搜索草稿字典值"
-                    placeholder="搜索字典值、显示名称或说明"
-                    allowClear
-                    value={itemQuery}
-                    disabled={saving || loading}
-                    onChange={searchItems}
-                  />
-                </div>
-                <span className={styles.saveHint}>
-                  {isFiltering
-                    ? `找到 ${filteredItems.length} 项，共 ${draft.items.length} 项`
-                    : '切换分页或搜索会保留未保存的修改'}
-                </span>
-              </div>
-              <Table<OrderedDraftItem>
-                className={styles.valueTable}
-                rowKey="id"
-                size="middle"
-                border={{ wrapper: true }}
-                pagination={false}
-                scroll={{ x: 960 }}
-                data={filteredItems.slice(
-                  (currentItemPage - 1) * itemPageSize,
-                  currentItemPage * itemPageSize
-                )}
-                noDataElement={
-                  isFiltering
-                    ? '没有匹配的字典值，请调整搜索条件。'
-                    : '暂无字典值，点击“新增字典值”开始编辑。'
-                }
-                rowClassName={(item) =>
-                  item.id === dropTarget ? styles.dropTarget : ''
-                }
-                onRow={(item) => ({
-                  'aria-label': `默认项 ${item.position}`,
-                  onDragOver: (event) => {
-                    if (!dragged.current || saving || loading || isFiltering)
-                      return;
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = 'move';
-                    setDropTarget(item.id);
-                  },
-                  onDrop: (event) => {
-                    event.preventDefault();
-                    if (!saving && !loading) reorder(dragged.current, item.id);
-                    dragged.current = '';
-                    setDropTarget('');
-                  },
-                })}
-                columns={[
-                  {
-                    title: '排序',
-                    width: 88,
-                    render: (_, item) => (
-                      <div className={styles.orderCell}>
-                        <Tooltip content="拖拽排序，也可聚焦后按 ↑ / ↓ 键调整">
-                          <Button
-                            className={styles.dragHandle}
-                            type="text"
-                            size="mini"
-                            icon={<IconDragDotVertical />}
-                            aria-label={`排序第 ${item.position} 项`}
-                            disabled={saving || loading || isFiltering}
-                            draggable={!saving && !loading && !isFiltering}
-                            onDragStart={(event) => {
-                              dragged.current = item.id;
-                              event.dataTransfer.effectAllowed = 'move';
-                              event.dataTransfer.setData('text/plain', item.id);
-                            }}
-                            onDragEnd={() => {
-                              dragged.current = '';
-                              setDropTarget('');
-                            }}
-                            onKeyDown={(event) => {
-                              if (
-                                event.key !== 'ArrowUp' &&
-                                event.key !== 'ArrowDown'
-                              )
-                                return;
-                              event.preventDefault();
-                              const target =
-                                draft.itemOrder[
-                                  item.position -
-                                    1 +
-                                    (event.key === 'ArrowUp' ? -1 : 1)
-                                ];
-                              if (target) reorder(item.id, target);
-                            }}
-                          />
-                        </Tooltip>
-                        <span>{item.position}</span>
-                      </div>
-                    ),
-                  },
-                  {
-                    title: '字典值',
-                    width: 190,
-                    render: (_, item) => (
+                  onChange={(groups) => edit({ groups })}
+                />
+              ) : (
+                <>
+                  <div className={styles.editorSectionHeader}>
+                    <h3 className={styles.editorTitle}>基本信息</h3>
+                    <Tag>草稿修订 {draft.draftRevision}</Tag>
+                  </div>
+                  <div className={styles.draftMetadata}>
+                    <div className={styles.nameField}>
+                      <label
+                        className={styles.fieldLabel}
+                        htmlFor="dictionary-name"
+                      >
+                        字典名称
+                      </label>
                       <Input
-                        aria-label={`值 ${item.position}`}
-                        placeholder="如 standard"
-                        value={item.value}
-                        prefix={item.everPublished ? <IconLock /> : undefined}
-                        maxLength={80}
-                        disabled={saving || loading || item.everPublished}
-                        onChange={(value) => editItem(item.id, { value })}
-                      />
-                    ),
-                  },
-                  {
-                    title: '显示名称',
-                    width: 190,
-                    render: (_, item) => (
-                      <Input
-                        aria-label={`显示名称 ${item.position}`}
-                        placeholder="如 普通客户"
-                        value={item.label}
+                        id="dictionary-name"
+                        aria-label="字典名称"
+                        value={draft.name}
                         maxLength={200}
                         disabled={saving || loading}
-                        onChange={(label) => editItem(item.id, { label })}
+                        onChange={(name) => edit({ name })}
                       />
-                    ),
-                  },
-                  {
-                    title: '说明（选填）',
-                    render: (_, item) => (
-                      <Input.TextArea
-                        aria-label={`说明 ${item.position}`}
-                        placeholder="补充说明"
-                        value={item.description || ''}
-                        autoSize={{ minRows: 1, maxRows: 3 }}
-                        maxLength={2000}
-                        disabled={saving || loading}
-                        onChange={(description) =>
-                          editItem(item.id, { description })
-                        }
-                      />
-                    ),
-                  },
-                  {
-                    title: '状态',
-                    width: 100,
-                    render: (_, item) => (
+                    </div>
+                    <div>
+                      <div className={styles.fieldLabel}>公开读取</div>
                       <Switch
-                        aria-label={`启用项 ${item.position}`}
-                        checked={item.enabled}
+                        aria-label="公开读取"
+                        checked={draft.publicReadable}
+                        checkedText="是"
+                        uncheckedText="否"
+                        disabled={saving || loading}
+                        onChange={(publicReadable) => edit({ publicReadable })}
+                      />
+                    </div>
+                    <div>
+                      <div className={styles.fieldLabel}>字典状态</div>
+                      <Switch
+                        aria-label="启用字典"
+                        checked={draft.enabled}
                         checkedText="启用"
                         uncheckedText="停用"
                         disabled={saving || loading}
-                        onChange={(enabled) => editItem(item.id, { enabled })}
+                        onChange={(enabled) => edit({ enabled })}
                       />
-                    ),
-                  },
-                  {
-                    title: '操作',
-                    width: 100,
-                    fixed: 'right',
-                    render: (_, item) => (
-                      <Button
-                        type="text"
-                        status="danger"
-                        size="small"
-                        icon={<IconDelete />}
-                        disabled={saving || loading || item.everPublished}
-                        onClick={() =>
-                          edit({
-                            items: draft.items.filter((i) => i.id !== item.id),
-                            itemOrder: draft.itemOrder.filter(
-                              (id) => id !== item.id
-                            ),
-                          })
-                        }
-                      >
-                        删除
-                      </Button>
-                    ),
-                  },
-                ]}
-              />
-              <div
-                className={styles.itemPagination}
-                role="navigation"
-                aria-label="草稿字典值分页"
-              >
-                <Pagination
-                  current={currentItemPage}
-                  pageSize={itemPageSize}
-                  total={filteredItems.length}
-                  disabled={saving || loading}
-                  sizeCanChange
-                  sizeOptions={[10, 20, 50, 100]}
-                  showTotal={(total) => `共 ${total} 项`}
-                  onChange={(page) => {
-                    setItemPage(page);
-                    dragged.current = '';
-                    setDropTarget('');
-                  }}
-                  onPageSizeChange={(size) => {
-                    setItemPageSize(size);
-                    setItemPage(1);
-                  }}
-                />
-              </div>
+                    </div>
+                  </div>
+                  <div className={styles.editorSectionHeader}>
+                    <div>
+                      <Space size={8}>
+                        <h3 className={styles.editorTitle}>字典值</h3>
+                        <Tag>{draft.items.length} 项</Tag>
+                      </Space>
+                      <p className={styles.editorHelp}>
+                        {isFiltering
+                          ? '搜索结果中暂不支持排序，清空搜索后可调整顺序。'
+                          : '拖拽左侧手柄或使用方向键调整顺序；已发布的值不可修改或删除。'}
+                      </p>
+                    </div>
+                    <Button
+                      icon={<IconPlus />}
+                      disabled={saving || loading}
+                      onClick={() => {
+                        const id = `new:${Array.from(
+                          window.crypto.getRandomValues(new Uint8Array(16)),
+                          (byte) => byte.toString(16).padStart(2, '0')
+                        ).join('')}`;
+                        edit({
+                          items: [
+                            ...draft.items,
+                            {
+                              id,
+                              value: '',
+                              label: '',
+                              description: '',
+                              enabled: true,
+                              everPublished: false,
+                              sortOrder: draft.items.length,
+                            },
+                          ],
+                          itemOrder: [...draft.itemOrder, id],
+                        });
+                        searchItems('');
+                        setItemPage(
+                          Math.floor(draft.items.length / itemPageSize) + 1
+                        );
+                      }}
+                    >
+                      新增字典值
+                    </Button>
+                  </div>
+                  <div className={styles.itemToolbar}>
+                    <div className={styles.itemSearch}>
+                      <Input.Search
+                        aria-label="搜索草稿字典值"
+                        placeholder="搜索字典值、显示名称或说明"
+                        allowClear
+                        value={itemQuery}
+                        disabled={saving || loading}
+                        onChange={searchItems}
+                      />
+                    </div>
+                    <span className={styles.saveHint}>
+                      {isFiltering
+                        ? `找到 ${filteredItems.length} 项，共 ${draft.items.length} 项`
+                        : '切换分页或搜索会保留未保存的修改'}
+                    </span>
+                  </div>
+                  <Table<OrderedDraftItem>
+                    className={styles.valueTable}
+                    rowKey="id"
+                    size="middle"
+                    border={{ wrapper: true }}
+                    pagination={false}
+                    scroll={{ x: 960 }}
+                    data={filteredItems.slice(
+                      (currentItemPage - 1) * itemPageSize,
+                      currentItemPage * itemPageSize
+                    )}
+                    noDataElement={
+                      isFiltering
+                        ? '没有匹配的字典值，请调整搜索条件。'
+                        : '暂无字典值，点击“新增字典值”开始编辑。'
+                    }
+                    rowClassName={(item) =>
+                      item.id === dropTarget ? styles.dropTarget : ''
+                    }
+                    onRow={(item) => ({
+                      'aria-label': `默认项 ${item.position}`,
+                      onDragOver: (event) => {
+                        if (
+                          !dragged.current ||
+                          saving ||
+                          loading ||
+                          isFiltering
+                        )
+                          return;
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'move';
+                        setDropTarget(item.id);
+                      },
+                      onDrop: (event) => {
+                        event.preventDefault();
+                        if (!saving && !loading)
+                          reorder(dragged.current, item.id);
+                        dragged.current = '';
+                        setDropTarget('');
+                      },
+                    })}
+                    columns={[
+                      {
+                        title: '排序',
+                        width: 88,
+                        render: (_, item) => (
+                          <div className={styles.orderCell}>
+                            <Tooltip content="拖拽排序，也可聚焦后按 ↑ / ↓ 键调整">
+                              <Button
+                                className={styles.dragHandle}
+                                type="text"
+                                size="mini"
+                                icon={<IconDragDotVertical />}
+                                aria-label={`排序第 ${item.position} 项`}
+                                disabled={saving || loading || isFiltering}
+                                draggable={!saving && !loading && !isFiltering}
+                                onDragStart={(event) => {
+                                  dragged.current = item.id;
+                                  event.dataTransfer.effectAllowed = 'move';
+                                  event.dataTransfer.setData(
+                                    'text/plain',
+                                    item.id
+                                  );
+                                }}
+                                onDragEnd={() => {
+                                  dragged.current = '';
+                                  setDropTarget('');
+                                }}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key !== 'ArrowUp' &&
+                                    event.key !== 'ArrowDown'
+                                  )
+                                    return;
+                                  event.preventDefault();
+                                  const target =
+                                    draft.itemOrder[
+                                      item.position -
+                                        1 +
+                                        (event.key === 'ArrowUp' ? -1 : 1)
+                                    ];
+                                  if (target) reorder(item.id, target);
+                                }}
+                              />
+                            </Tooltip>
+                            <span>{item.position}</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: '字典值',
+                        width: 190,
+                        render: (_, item) => (
+                          <Input
+                            aria-label={`值 ${item.position}`}
+                            placeholder="如 standard"
+                            value={item.value}
+                            prefix={
+                              item.everPublished ? <IconLock /> : undefined
+                            }
+                            maxLength={80}
+                            disabled={saving || loading || item.everPublished}
+                            onChange={(value) => editItem(item.id, { value })}
+                          />
+                        ),
+                      },
+                      {
+                        title: '显示名称',
+                        width: 190,
+                        render: (_, item) => (
+                          <Input
+                            aria-label={`显示名称 ${item.position}`}
+                            placeholder="如 普通客户"
+                            value={item.label}
+                            maxLength={200}
+                            disabled={saving || loading}
+                            onChange={(label) => editItem(item.id, { label })}
+                          />
+                        ),
+                      },
+                      {
+                        title: '说明（选填）',
+                        render: (_, item) => (
+                          <Input.TextArea
+                            aria-label={`说明 ${item.position}`}
+                            placeholder="补充说明"
+                            value={item.description || ''}
+                            autoSize={{ minRows: 1, maxRows: 3 }}
+                            maxLength={2000}
+                            disabled={saving || loading}
+                            onChange={(description) =>
+                              editItem(item.id, { description })
+                            }
+                          />
+                        ),
+                      },
+                      {
+                        title: '状态',
+                        width: 100,
+                        render: (_, item) => (
+                          <Switch
+                            aria-label={`启用项 ${item.position}`}
+                            checked={item.enabled}
+                            checkedText="启用"
+                            uncheckedText="停用"
+                            disabled={saving || loading}
+                            onChange={(enabled) =>
+                              editItem(item.id, { enabled })
+                            }
+                          />
+                        ),
+                      },
+                      {
+                        title: '操作',
+                        width: 100,
+                        fixed: 'right',
+                        render: (_, item) => (
+                          <Button
+                            type="text"
+                            status="danger"
+                            size="small"
+                            icon={<IconDelete />}
+                            disabled={saving || loading || item.everPublished}
+                            onClick={() =>
+                              edit({
+                                items: draft.items.filter(
+                                  (i) => i.id !== item.id
+                                ),
+                                itemOrder: draft.itemOrder.filter(
+                                  (id) => id !== item.id
+                                ),
+                              })
+                            }
+                          >
+                            删除
+                          </Button>
+                        ),
+                      },
+                    ]}
+                  />
+                  <div
+                    className={styles.itemPagination}
+                    role="navigation"
+                    aria-label="草稿字典值分页"
+                  >
+                    <Pagination
+                      current={currentItemPage}
+                      pageSize={itemPageSize}
+                      total={filteredItems.length}
+                      disabled={saving || loading}
+                      sizeCanChange
+                      sizeOptions={[10, 20, 50, 100]}
+                      showTotal={(total) => `共 ${total} 项`}
+                      onChange={(page) => {
+                        setItemPage(page);
+                        dragged.current = '';
+                        setDropTarget('');
+                      }}
+                      onPageSizeChange={(size) => {
+                        setItemPageSize(size);
+                        setItemPage(1);
+                      }}
+                    />
+                  </div>
+                </>
+              )}
               <div className={styles.editorFooter}>
                 <span className={styles.saveHint} role="status">
                   {dirty ? '有未保存的修改' : '暂无未保存修改'}
@@ -788,10 +862,17 @@ export default function DictionaryDetail({
                 公开读取：{historical.snapshot.publicReadable ? '是' : '否'}
                 ；启用字典：{historical.snapshot.enabled ? '是' : '否'}
               </p>
-              <DictionaryItemsTable
-                key={historical.version}
-                items={historical.snapshot.items}
-              />
+              {groupsOnly ? (
+                <DictionaryGroupsTable
+                  groups={historical.snapshot.groups}
+                  items={historical.snapshot.items}
+                />
+              ) : (
+                <DictionaryItemsTable
+                  key={historical.version}
+                  items={historical.snapshot.items}
+                />
+              )}
               <Button
                 disabled={
                   saving ||
@@ -855,6 +936,21 @@ export default function DictionaryDetail({
               公开读取：{draft.publicReadable ? '是' : '否'}；启用字典：
               {draft.enabled ? '是' : '否'}
             </p>
+            {groupsOnly && (
+              <Alert content="字典组随所属字典整体发布，以下字典值及所有字典组将一同生效。" />
+            )}
+            {groupsOnly && (
+              <DictionaryGroupsTable
+                groups={draft.groups.map((group) => ({
+                  ...group,
+                  memberValues: group.memberIds.map(
+                    (id) =>
+                      draft.items.find((item) => item.id === id)?.value || id
+                  ),
+                }))}
+                items={draft.items}
+              />
+            )}
             <DictionaryItemsTable
               items={orderedItems.map((item) => ({
                 ...item,
