@@ -1,0 +1,32 @@
+{
+  "pages": 2,
+  "tables": 9,
+  "columns": 93,
+  "database_foreign_keys": 5,
+  "logical_references": 4,
+  "structural_errors": 0,
+  "structural_warnings": 0,
+  "IR_semantic_errors": 0,
+  "IR_semantic_warnings": 0,
+  "visual_inspection": "both pages checked after one repair round",
+  "exports": [
+    {
+      "file": "dictionary-core.png",
+      "dimensions": [
+        3522,
+        2982
+      ],
+      "editable_xml": true,
+      "png_crc_valid": true
+    },
+    {
+      "file": "dictionary-supporting.png",
+      "dimensions": [
+        3522,
+        2982
+      ],
+      "editable_xml": true,
+      "png_crc_valid": true
+    }
+  ]
+}

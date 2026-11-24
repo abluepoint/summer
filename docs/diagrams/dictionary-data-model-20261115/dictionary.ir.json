@@ -1,0 +1,1067 @@
+{
+  "schema": "drawio-skill/diagram-ir/v1",
+  "metadata": {
+    "title": "字典管理数据模型",
+    "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d",
+    "source": "schema-only metadata; no business rows"
+  },
+  "nodes": [
+    {
+      "id": "summer_dictionary_type",
+      "label": "字典定义 · 草稿控制",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_type",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_type",
+        "columns": [
+          [
+            "summer_dictionary_type",
+            "id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "name",
+            "varchar(200)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "published",
+            "tinyint(1)",
+            "NO",
+            "0",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "public_readable",
+            "tinyint(1)",
+            "NO",
+            "0",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "enabled",
+            "tinyint(1)",
+            "NO",
+            "1",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "ent-acme",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "organization_id",
+            "varchar(64)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "created_by",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "owner_id",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "published_version",
+            "bigint",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "draft_revision",
+            "bigint",
+            "NO",
+            "0",
+            ""
+          ],
+          [
+            "summer_dictionary_type",
+            "effective_revision",
+            "bigint",
+            "NO",
+            "0",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uq_summer_dictionary_tenant_code"
+        ]
+      }
+    },
+    {
+      "id": "summer_dictionary_item",
+      "label": "字典项",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_item",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_item",
+        "columns": [
+          [
+            "summer_dictionary_item",
+            "id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "dictionary_code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "item_value",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "label",
+            "varchar(200)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "sort_order",
+            "int",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "enabled",
+            "tinyint(1)",
+            "NO",
+            "1",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "ent-acme",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "organization_id",
+            "varchar(64)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "created_by",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "owner_id",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "description",
+            "varchar(2000)",
+            "NO",
+            "",
+            ""
+          ],
+          [
+            "summer_dictionary_item",
+            "ever_published",
+            "tinyint(1)",
+            "NO",
+            "0",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uk_dictionary_item_identity",
+          "uq_summer_dictionary_tenant_value"
+        ]
+      }
+    },
+    {
+      "id": "summer_dictionary_group",
+      "label": "字典分组 · 项的子集",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_group",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_group",
+        "columns": [
+          [
+            "summer_dictionary_group",
+            "id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group",
+            "dictionary_code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group",
+            "code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group",
+            "name",
+            "varchar(200)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group",
+            "enabled",
+            "tinyint(1)",
+            "NO",
+            "1",
+            ""
+          ],
+          [
+            "summer_dictionary_group",
+            "ever_published",
+            "tinyint(1)",
+            "NO",
+            "0",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uk_dictionary_group_code",
+          "uk_dictionary_group_identity"
+        ]
+      }
+    },
+    {
+      "id": "summer_dictionary_group_member",
+      "label": "分组成员 · 多对多关联",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_group_member",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_group_member",
+        "columns": [
+          [
+            "summer_dictionary_group_member",
+            "id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group_member",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group_member",
+            "dictionary_code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group_member",
+            "group_id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group_member",
+            "item_id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_group_member",
+            "sort_order",
+            "int",
+            "NO",
+            "<NULL>",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uk_dictionary_group_member"
+        ]
+      }
+    },
+    {
+      "id": "summer_dictionary_version",
+      "label": "不可变发布版本",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_version",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_version",
+        "columns": [
+          [
+            "summer_dictionary_version",
+            "version_id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "dictionary_code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "version_number",
+            "bigint",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "status",
+            "varchar(20)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "snapshot_json",
+            "longtext",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "created_by",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "request_id",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_version",
+            "created_at",
+            "timestamp(6)",
+            "NO",
+            "<NULL>",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uk_summer_dictionary_version_number"
+        ]
+      }
+    },
+    {
+      "id": "summer_dictionary_outbox",
+      "label": "发布事务事件 · Outbox",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_outbox",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_outbox",
+        "columns": [
+          [
+            "summer_dictionary_outbox",
+            "event_id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "dictionary_code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "event_type",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "version_number",
+            "bigint",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "request_id",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "payload_json",
+            "text",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "idempotency_key",
+            "varchar(255)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "status",
+            "varchar(20)",
+            "NO",
+            "PENDING",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "created_at",
+            "timestamp(6)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "request_fingerprint",
+            "varchar(64)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_outbox",
+            "result_json",
+            "longtext",
+            "YES",
+            "<NULL>",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uk_summer_dictionary_outbox_idempotency"
+        ]
+      }
+    },
+    {
+      "id": "summer_dictionary_notification_event",
+      "label": "通知事件 · 增量游标",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_dictionary_notification_event",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_dictionary_notification_event",
+        "columns": [
+          [
+            "summer_dictionary_notification_event",
+            "event_id",
+            "bigint",
+            "NO",
+            "<NULL>",
+            "auto_increment"
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "dictionary_code",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "event_type",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "version_number",
+            "bigint",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "request_id",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "payload_json",
+            "text",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_dictionary_notification_event",
+            "created_at",
+            "timestamp(6)",
+            "NO",
+            "<NULL>",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY"
+        ]
+      }
+    },
+    {
+      "id": "summer_configuration_override",
+      "label": "企业 / 组织配置覆盖",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_configuration_override",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_configuration_override",
+        "columns": [
+          [
+            "summer_configuration_override",
+            "id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "resource",
+            "varchar(160)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "config_key",
+            "varchar(160)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "scope_id",
+            "varchar(64)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "organization_id",
+            "varchar(64)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "created_by",
+            "varchar(128)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "owner_id",
+            "varchar(128)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "value_json",
+            "text",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "public_readable",
+            "tinyint(1)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "enabled",
+            "tinyint(1)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "version",
+            "bigint",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "updated_at",
+            "timestamp(6)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "latest_revision",
+            "bigint",
+            "NO",
+            "0",
+            ""
+          ],
+          [
+            "summer_configuration_override",
+            "published_revision",
+            "bigint",
+            "YES",
+            "<NULL>",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uk_configuration_override"
+        ]
+      }
+    },
+    {
+      "id": "summer_configuration_override_revision",
+      "label": "覆盖配置 · 不可变历史",
+      "kind": "database",
+      "provenance": {
+        "path": "schema.sql",
+        "source": "MySQL information_schema + SHOW CREATE TABLE",
+        "table": "summer_configuration_override_revision",
+        "commit": "5734b4a5af285ab83062f45083f7e27d4f529f8d"
+      },
+      "properties": {
+        "table": "summer_configuration_override_revision",
+        "columns": [
+          [
+            "summer_configuration_override_revision",
+            "id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "override_id",
+            "varchar(36)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "tenant_id",
+            "varchar(80)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "revision",
+            "bigint",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "state",
+            "varchar(20)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "value_json",
+            "text",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "public_readable",
+            "tinyint(1)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "enabled",
+            "tinyint(1)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "principal",
+            "varchar(128)",
+            "NO",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "request_id",
+            "varchar(128)",
+            "YES",
+            "<NULL>",
+            ""
+          ],
+          [
+            "summer_configuration_override_revision",
+            "created_at",
+            "timestamp(6)",
+            "NO",
+            "<NULL>",
+            ""
+          ]
+        ],
+        "unique_indexes": [
+          "PRIMARY",
+          "uq_configuration_override_revision"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "fk_configuration_override_revision",
+      "source": "summer_configuration_override",
+      "target": "summer_configuration_override_revision",
+      "kind": "foreign-key",
+      "label": "fk_configuration_override_revision",
+      "properties": {
+        "cardinality": "1 : 0..N",
+        "columns": [
+          "override_id"
+        ],
+        "referenced_columns": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "fk_dictionary_group_type",
+      "source": "summer_dictionary_type",
+      "target": "summer_dictionary_group",
+      "kind": "foreign-key",
+      "label": "fk_dictionary_group_type",
+      "properties": {
+        "cardinality": "1 : 0..N",
+        "columns": [
+          "tenant_id",
+          "dictionary_code"
+        ],
+        "referenced_columns": [
+          "tenant_id",
+          "code"
+        ]
+      }
+    },
+    {
+      "id": "fk_dictionary_member_group",
+      "source": "summer_dictionary_group",
+      "target": "summer_dictionary_group_member",
+      "kind": "foreign-key",
+      "label": "fk_dictionary_member_group",
+      "properties": {
+        "cardinality": "1 : 0..N",
+        "columns": [
+          "tenant_id",
+          "dictionary_code",
+          "group_id"
+        ],
+        "referenced_columns": [
+          "tenant_id",
+          "dictionary_code",
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "fk_dictionary_member_item",
+      "source": "summer_dictionary_item",
+      "target": "summer_dictionary_group_member",
+      "kind": "foreign-key",
+      "label": "fk_dictionary_member_item",
+      "properties": {
+        "cardinality": "1 : 0..N",
+        "columns": [
+          "tenant_id",
+          "dictionary_code",
+          "item_id"
+        ],
+        "referenced_columns": [
+          "tenant_id",
+          "dictionary_code",
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "fk_summer_dictionary_tenant_type",
+      "source": "summer_dictionary_type",
+      "target": "summer_dictionary_item",
+      "kind": "foreign-key",
+      "label": "fk_summer_dictionary_tenant_type",
+      "properties": {
+        "cardinality": "1 : 0..N",
+        "columns": [
+          "tenant_id",
+          "dictionary_code"
+        ],
+        "referenced_columns": [
+          "tenant_id",
+          "code"
+        ]
+      }
+    },
+    {
+      "id": "logical-versions",
+      "source": "summer_dictionary_type",
+      "target": "summer_dictionary_version",
+      "kind": "logical-reference",
+      "label": "tenant_id + code；逻辑版本归属"
+    },
+    {
+      "id": "logical-overrides",
+      "source": "summer_dictionary_type",
+      "target": "summer_configuration_override",
+      "kind": "logical-reference",
+      "label": "resource=dictionaries；tenant_id + config_key=code"
+    },
+    {
+      "id": "logical-outbox",
+      "source": "summer_dictionary_type",
+      "target": "summer_dictionary_outbox",
+      "kind": "logical-reference",
+      "label": "tenant_id + dictionary_code；版本操作写入"
+    },
+    {
+      "id": "logical-notifications",
+      "source": "summer_dictionary_type",
+      "target": "summer_dictionary_notification_event",
+      "kind": "logical-reference",
+      "label": "tenant_id + dictionary_code；版本操作或覆盖事件写入"
+    }
+  ],
+  "views": [
+    {
+      "id": "core",
+      "title": "字典核心模型"
+    },
+    {
+      "id": "supporting",
+      "title": "覆盖配置与发布事件"
+    }
+  ]
+}

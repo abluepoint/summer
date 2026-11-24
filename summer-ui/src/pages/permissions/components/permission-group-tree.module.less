@@ -1,0 +1,251 @@
+.workspace {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 24px;
+  row-gap: 16px;
+  margin-top: 20px;
+  /* stylelint-disable-next-line property-no-unknown -- supported CSS container query property */
+  container-type: inline-size;
+}
+
+.permissionTables {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 24px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tableHeading {
+  margin: 0 0 10px;
+  color: var(--color-text-1);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.panel {
+  position: relative;
+  flex: none;
+  min-width: 0;
+  align-self: flex-start;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+}
+
+.header,
+.footer,
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.header {
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.treeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.tree {
+  max-height: min(58vh, 560px);
+  overflow: auto;
+  margin-top: 10px;
+}
+
+.branch {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rootBranches,
+.branch .branch {
+  margin-left: 10px;
+  padding-left: 7px;
+  border-left: 1px solid var(--color-border-2);
+}
+
+.row,
+.all {
+  color: var(--color-text-2);
+  border-radius: 4px;
+}
+
+.row:hover,
+.all:hover {
+  background: var(--color-fill-2);
+}
+
+.row[data-selected='true'],
+.all[aria-pressed='true'] {
+  background: var(--color-primary-light-1);
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+}
+
+.panel button:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: -2px;
+}
+
+.name,
+.toggle,
+.all {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.groupCheck {
+  display: grid;
+  flex: 0 0 44px;
+  min-height: 44px;
+  place-items: center;
+}
+
+.groupCheck input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: rgb(var(--primary-6));
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  flex: none;
+  padding: 6px 8px;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.all {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 3px;
+}
+
+.empty {
+  padding: 12px 4px;
+  color: var(--color-text-3);
+}
+
+.footer {
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.footer span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer > span {
+  flex: 1;
+}
+
+.name mark {
+  background: var(--color-primary-light-1);
+  color: rgb(var(--primary-6));
+  font-weight: 600;
+}
+
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(100% + 1px);
+  width: 24px;
+  color: var(--color-text-3);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.divider::before {
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--color-border-2);
+}
+
+.divider::after {
+  top: 50%;
+  width: 8px;
+  height: 32px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--color-border-3);
+  background: radial-gradient(circle at 50% 10px, currentColor 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 15px, currentColor 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 20px, currentColor 1px, transparent 1.5px)
+    var(--color-bg-2);
+}
+
+.divider:hover,
+.divider:active,
+.divider:focus-visible {
+  color: rgb(var(--primary-6));
+}
+
+.divider:is(:hover, :active, :focus-visible)::before {
+  background: currentColor;
+}
+
+.divider:is(:hover, :active, :focus-visible)::after {
+  border-color: currentColor;
+  background-color: var(--color-primary-light-1);
+}
+
+.divider:active::before {
+  width: 2px;
+}
+
+.divider:focus-visible {
+  outline: none;
+}
+
+.divider:focus-visible::after {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown -- component breakpoint */
+@container (max-width: 719px) {
+  .panel,
+  .permissionTables {
+    flex: 0 0 100%;
+  }
+
+  .divider {
+    display: none;
+  }
+}
