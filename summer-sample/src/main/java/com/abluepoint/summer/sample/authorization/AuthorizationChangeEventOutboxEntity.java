@@ -57,7 +57,6 @@ class AuthorizationChangeEventOutboxEntity {
     void markPublished(Instant now) { status = AuthorizationChangeEventStatus.PUBLISHED; lastError = null; updatedAt = now; }
     void markRetry(Instant next, String error) { status = AuthorizationChangeEventStatus.PENDING; attempts++; nextAttemptAt = next; lastError = safe(error); updatedAt = Instant.now(); }
     void markDeadLetter(String error) { status = AuthorizationChangeEventStatus.DEAD_LETTER; attempts++; lastError = safe(error); updatedAt = Instant.now(); }
-    void resetForRetry(Instant now) { status = AuthorizationChangeEventStatus.PENDING; nextAttemptAt = now; lastError = null; updatedAt = now; }
     private static String safe(String error) { if (error == null || error.isBlank()) return "delivery_failed"; return error.length() <= 500 ? error : error.substring(0, 500); }
 }
 

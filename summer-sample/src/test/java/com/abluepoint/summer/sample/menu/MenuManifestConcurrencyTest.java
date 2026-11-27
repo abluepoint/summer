@@ -24,7 +24,7 @@ class MenuManifestConcurrencyTest {
     @Autowired tools.jackson.databind.ObjectMapper json;
     @Autowired com.abluepoint.summer.sample.authorization.infrastructure.permission.ManagedInterfaceResources interfaces;
     private BusinessManagedAuthorizationTestFixture managed;
-    private static final Domain DOMAIN = Domain.enterprise("ent-acme");
+    private static final Domain DOMAIN = Domain.platform();
 
     @org.junit.jupiter.api.BeforeEach void managedDomain() {
         managed = new BusinessManagedAuthorizationTestFixture(menuDb, transactions, interfaces);
@@ -35,12 +35,13 @@ class MenuManifestConcurrencyTest {
     @Autowired com.abluepoint.summer.sample.authorization.application.permission.MenuPublicationState publication;
 
     // The HTTP adapter owns authorization. Race the current transactional catalog seam on two nodes.
+    @Autowired com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions dictionaries;
     private MenuCatalogService node() {
-        return new MenuCatalogService(menuDb, json, audit, events, publication);
+        return new MenuCatalogService(menuDb, json, audit, events, publication, dictionaries);
     }
     private String menu() {
         String id = "race-" + UUID.randomUUID();
-        manifests.saveAndFlush(new MenuManifestEntity(new MenuManifestItemRequest(id, null, "/" + id, "menu.race", "race", 0, null), 1));
+        manifests.saveAndFlush(new MenuManifestEntity(new MenuManifestItemRequest(id, null, "/" + id, "menu.race", "race", 0, null, "web"), 1));
         menuDb.update("update summer_menu_publication set published=true,manifest_version=1 where publication_id='global'");
         return id;
     }

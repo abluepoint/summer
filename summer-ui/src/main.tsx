@@ -39,7 +39,7 @@ import { MenuAccessContext } from './menu/access';
 import { VisibleMenuItem } from './menu/api';
 import useActiveEnterprise, {
   activeEnterpriseSelection,
-} from './pages/data-scopes/useActiveEnterprise';
+} from '@/hooks/useActiveEnterprise';
 import useLocale from './utils/useLocale';
 import changeTheme from './utils/changeTheme';
 import useStorage from './utils/useStorage';
@@ -166,6 +166,7 @@ function AuthenticatedLayout() {
             type: 'update-userInfo',
             payload: {
               userInfo: {
+                subject: profile.sub,
                 name: String(
                   profile.name || profile.preferred_username || profile.sub
                 ),
@@ -197,6 +198,7 @@ function AuthenticatedLayout() {
           type: 'update-userInfo',
           payload: {
             userInfo: {
+              subject: profile.sub,
               name: String(
                 profile.name || profile.preferred_username || profile.sub
               ),

@@ -18,11 +18,13 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import tools.jackson.databind.ObjectMapper;
 
 /** Formal HTTP/JPA/JDBC consumer contract. Native MySQL/Redis tests are separate. */
+@org.springframework.test.context.jdbc.Sql("/fixtures/menu-client-dictionary.sql")
 @SpringBootTest(properties="summer.sample.authorization.managed-bootstrap-domains=ENTERPRISE:ent-acme,PLATFORM:platform")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import({RolePermissionHttpTest.Schema.class, DepartmentDataScopeHttpTest.DataSchema.class})
 @org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ConfigurationDataHttpTest {
+  @Autowired HistoricalTenantPermissions historical;
   private static final String BASE = "/api/v1/enterprises/ent-acme";
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate db;
@@ -70,11 +72,7 @@ class ConfigurationDataHttpTest {
     mvc.perform(post(BASE + "/system-parameters/scope10.public/enable").with(actor()).with(csrf().asHeader()))
         .andExpect(status().isOk());
     mvc.perform(get(publicPath)).andExpect(status().isOk());
-    var beforeDelete = mvc.perform(get(BASE + "/permissions/" + readPermission).with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    mvc.perform(delete(BASE + "/permissions/" + readPermission).with(user("summer-user")).with(csrf())
-        .header("If-Match", beforeDelete.getResponse().getHeader("ETag"))
-        .header("Idempotency-Key", UUID.randomUUID().toString())).andExpect(status().isOk());
+    historical.deletePermission(readPermission, historical.permissionEtag(readPermission));
     mvc.perform(get(publicPath)).andExpect(status().isNotFound());
   }
 
@@ -102,18 +100,10 @@ class ConfigurationDataHttpTest {
     // Existing management MENU identities retain AUTHORIZED mode; no conflicting PUBLIC grant.
     String permission = permission(Map.of("type", "MENU", "accessMode", "AUTHORIZED"));
     String bindingPath = BASE + "/permissions/" + permission + "/menus";
-    var binding = mvc.perform(get(bindingPath).with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    mvc.perform(put(bindingPath).with(user("summer-user")).with(csrf().asHeader())
-        .header("If-Match", binding.getResponse().getHeader("ETag"))
-        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content(json.writeValueAsString(Map.of("menuIds", selected))))
-        .andExpect(status().isOk());
-    var role = mvc.perform(post(BASE + "/roles").with(user("summer-user")).with(csrf().asHeader())
-        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content(json.writeValueAsString(Map.of("name", "Browser pages", "code", "browser10-pages", "permissionIds", List.of(permission)))))
-        .andExpect(status().isCreated()).andReturn();
-    String roleId = json.readTree(role.getResponse().getContentAsString()).path("data").path("roleId").asText();
+    var binding = historical.readBindings(permission, "MENU");
+    historical.replace(bindingPath, Map.of("menuIds", selected), binding.etag());
+    String roleId = historical.seedRole(Map.of("name", "Browser pages", "code", "browser10-pages",
+        "permissionIds", List.of(permission))).path("roleId").asText();
     String userRoles = BASE + "/users/summer-user/roles";
     var before = mvc.perform(get(userRoles).with(user("summer-user"))).andExpect(status().isOk()).andReturn();
     var roleIds = new java.util.ArrayList<String>();
@@ -149,21 +139,17 @@ class ConfigurationDataHttpTest {
         () -> business.requireHttp(domain, convertedActor, "GET", "/api/v1/enterprises/{enterpriseId}/system-parameters", "system.parameter.read"));
     assertThrows(org.springframework.security.access.AccessDeniedException.class,
         () -> business.requireHttp(domain, rawActor, "GET", "/uninstalled10", "system.parameter.read"));
-    var enterpriseCatalog = mvc.perform(get(BASE + "/data-resources").with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    assertTrue(enterpriseCatalog.getResponse().getContentAsString().contains("system-parameters"));
-    var platformCatalog = mvc.perform(get("/api/v1/platform/data-resources").with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    assertFalse(platformCatalog.getResponse().getContentAsString().contains("system-parameters"));
+    mvc.perform(get(BASE + "/data-resources").with(user("summer-user"))).andExpect(status().isNotFound());
+    mvc.perform(get("/api/v1/platform/data-resources").with(user("summer-user"))).andExpect(status().isNotFound());
     var group = mvc.perform(post("/api/v1/platform/permission-groups").with(user("summer-user")).with(csrf())
         .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content("{\"name\":\"Platform resource rejection\"}")).andExpect(status().isCreated()).andReturn();
+        .content("{\"name\":\"Platform tenant resource catalog\"}")).andExpect(status().isCreated()).andReturn();
     mvc.perform(post("/api/v1/platform/permissions").with(user("summer-user")).with(csrf())
         .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content(json.writeValueAsString(Map.of("code", UUID.randomUUID().toString(), "name", "Wrong domain",
+        .content(json.writeValueAsString(Map.of("code", UUID.randomUUID().toString(), "name", "Shared tenant data",
             "groupId", json.readTree(group.getResponse().getContentAsString()).path("data").path("groupId").asText(),
-            "type", "DATA", "accessMode", "PUBLIC", "dataScope", Map.of("dataResourceKey", "system-parameters", "action", "read", "scopePreset", "TENANT_ALL")))))
-        .andExpect(status().isBadRequest());
+            "type", "DATA", "accessMode", "AUTHORIZED", "dataScope", Map.of("interfacePermissionIds", List.of(db.queryForObject("select min(permission_id) from summer_permission where domain_key='PLATFORM:platform' and type='INTERFACE'", String.class)), "scopePreset", "TENANT_ALL")))))
+        .andExpect(status().isCreated());
     // Interface-only callers see no DATA rows and cannot create a candidate.
     mvc.perform(get(BASE + "/system-parameters").with(actor())).andExpect(status().isOk())
         .andExpect(jsonPath("$.data.totalElements").value(0));
@@ -232,11 +218,7 @@ class ConfigurationDataHttpTest {
         .andExpect(status().isOk());
     assertEquals("\"release\"", db.queryForObject("select value_json from summer_system_parameter where parameter_key='scope10.mine'", String.class));
     assertEquals(currentVersion + 1, db.queryForObject("select version from summer_system_parameter where parameter_key='scope10.mine'", Long.class));
-    var beforeDelete = mvc.perform(get(BASE + "/permissions/" + readPermission).with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    mvc.perform(delete(BASE + "/permissions/" + readPermission).with(user("summer-user")).with(csrf())
-        .header("If-Match", beforeDelete.getResponse().getHeader("ETag"))
-        .header("Idempotency-Key", UUID.randomUUID().toString())).andExpect(status().isOk());
+    historical.deletePermission(readPermission, historical.permissionEtag(readPermission));
     mvc.perform(get(BASE + "/system-parameters").with(actor())).andExpect(status().isOk())
         .andExpect(jsonPath("$.data.totalElements").value(0));
     // A write consumes its own action range and must not accidentally require a READ grant.
@@ -254,16 +236,13 @@ class ConfigurationDataHttpTest {
   }
 
   private String permission(Map<String, Object> extra) throws Exception {
-    var group = mvc.perform(post(BASE + "/permission-groups").with(user("summer-user")).with(csrf())
-        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content("{\"name\":\"Configuration10\"}")).andExpect(status().isCreated()).andReturn();
+    var group = historical.create(BASE + "/permission-groups", Map.of("name", "Configuration10"));
     var body = new java.util.HashMap<String, Object>(extra);
-    body.put("code", UUID.randomUUID().toString()); body.put("name", "Configuration10"); body.putIfAbsent("accessMode", "PUBLIC");
-    body.put("groupId", json.readTree(group.getResponse().getContentAsString()).path("data").path("groupId").asText());
-    var result = mvc.perform(post(BASE + "/permissions").with(user("summer-user")).with(csrf())
-        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content(json.writeValueAsString(body))).andExpect(status().isCreated()).andReturn();
-    return json.readTree(result.getResponse().getContentAsString()).path("data").path("permissionId").asText();
+    body.put("code", UUID.randomUUID().toString());
+    body.put("name", "Configuration10");
+    body.putIfAbsent("accessMode", "PUBLIC");
+    body.put("groupId", group.path("groupId").asText());
+    return historical.create(BASE + "/permissions", body).path("permissionId").asText();
   }
 
   private String data(String action, String preset) throws Exception {
@@ -273,7 +252,7 @@ class ConfigurationDataHttpTest {
   private void bindBusinessInterfaces() throws Exception {
     var ids = new java.util.ArrayList<String>();
     for (int page = 0; page < 10; page++) {
-      var response = mvc.perform(get(BASE + "/authorization/interface-directory").param("size", "200").param("page", "" + page)
+      var response = mvc.perform(get("/api/v1/platform/authorization/interface-directory").param("size", "200").param("page", "" + page)
           .with(user("summer-user"))).andExpect(status().isOk()).andReturn();
       var data = json.readTree(response.getResponse().getContentAsString()).path("data");
       for (var row : data.path("items"))
@@ -290,7 +269,7 @@ class ConfigurationDataHttpTest {
     var found = new java.util.HashSet<String>();
     var ids = new java.util.ArrayList<String>();
     for (int page = 0; page < 10; page++) {
-      var response = mvc.perform(get(BASE + "/authorization/interface-directory").param("size", "200").param("page", "" + page)
+      var response = mvc.perform(get("/api/v1/platform/authorization/interface-directory").param("size", "200").param("page", "" + page)
           .with(user("summer-user"))).andExpect(status().isOk()).andReturn();
       var data = json.readTree(response.getResponse().getContentAsString()).path("data");
       for (var row : data.path("items")) {
@@ -309,12 +288,9 @@ class ConfigurationDataHttpTest {
 
   private void bindInterfaces(java.util.List<String> ids) throws Exception {
     String id = permission(Map.of("type", "INTERFACE"));
-    var collection = mvc.perform(get(BASE + "/permissions/" + id + "/interfaces").with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn();
-    mvc.perform(put(BASE + "/permissions/" + id + "/interfaces").with(user("summer-user")).with(csrf())
-        .header("If-Match", collection.getResponse().getHeader("ETag"))
-        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
-        .content(json.writeValueAsString(Map.of("resourceIds", ids)))).andExpect(status().isOk());
+    var collection = historical.readInterfaces(id);
+    historical.replace(BASE + "/permissions/" + id + "/interfaces", Map.of("resourceIds", ids),
+        collection.etag());
   }
 
   @Test
@@ -350,6 +326,9 @@ class ConfigurationDataHttpTest {
   }
 
   private tools.jackson.databind.JsonNode causalCreate(String path, Map<String, Object> body) throws Exception {
+    if (path.equals(BASE + "/roles")) return historical.seedRole(body);
+    if (path.equals(BASE + "/permissions") || path.equals(BASE + "/permission-groups"))
+      return historical.create(path, body);
     var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path)
             .with(user("summer-user"))
             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
@@ -360,6 +339,10 @@ class ConfigurationDataHttpTest {
   }
 
   private tools.jackson.databind.JsonNode causalReplace(String path, Map<String, Object> body) throws Exception {
+    if (path.startsWith(BASE + "/permissions/") && path.endsWith("/menus")) {
+      String id = path.substring((BASE + "/permissions/").length(), path.length() - "/menus".length());
+      return historical.replace(path, body, historical.readBindings(id, "MENU").etag()).body();
+    }
     var before = mvc.perform(get(path).with(user("summer-user")))
         .andExpect(status().isOk()).andReturn();
     assertNotNull(before.getResponse().getHeader("ETag"));

@@ -33,7 +33,7 @@ class DictionarySelectedItemHttpTest {
         managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
                 managedDb, managedTransactions, managedInterfaces);
         managed.configuration("ent-acme", "dictionaries", true, "dictionary-operator");
-        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator",
                 (handler, path, method) -> handler.getBeanType().equals(DictionaryController.class)
                         && handler.getMethod().getName().equals("draft") && method.equals("GET")
                         && path.equals("/api/dictionaries/{code}/draft"));
@@ -42,7 +42,7 @@ class DictionarySelectedItemHttpTest {
 
     @org.junit.jupiter.api.AfterEach
     void releaseManagedAuthorization() {
-        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator", operatorRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator", operatorRole);
         managed.close();
     }
 
@@ -85,7 +85,7 @@ class DictionarySelectedItemHttpTest {
         http.perform(get(PUBLIC + "/items/selected").with(identity("dictionary-reader", "SCOPE_customer.read")))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
         http.perform(get("/public/enterprises/ent-other/dictionaries/selected-item/items/selected"))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("selected"));
     }
 
     @Test

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping({"/api/v1/enterprises/{enterpriseId}", "/api/v1/platform"})
 public class RolePermissionController {
   private final ManagedRoleService roles;
+  private final PermissionService catalog;
   private final ManagedPermissionAccess access;
   private final PermissionManagementGuard guard;
   private final AuthorizationService legacy;
@@ -24,11 +25,13 @@ public class RolePermissionController {
 
   public RolePermissionController(
       ManagedRoleService roles,
+      PermissionService catalog,
       ManagedPermissionAccess access,
       PermissionManagementGuard guard,
       AuthorizationService legacy,
       RequestIdAccessor rid) {
     this.roles = roles;
+    this.catalog = catalog;
     this.access = access;
     this.guard = guard;
     this.legacy = legacy;
@@ -110,6 +113,17 @@ public class RolePermissionController {
             : path.endsWith("/permissions") && id != null
                 ? "permissions"
                 : path.endsWith("/capabilities") ? "capabilities" : "role";
+    if (read && path.equals("/api/v1/enterprises/{enterpriseId}/roles") && r.getParameter("catalog") != null) {
+      guard.require(d, a, false);
+      var filters = query(r);
+      String choice = filters.remove("catalog");
+      if (!Set.of("permissions", "permission-groups").contains(choice))
+        throw com.abluepoint.summer.common.error.SummerException.withMessage(
+            com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
+            "Unknown role catalog");
+      return ApiResponse.success(catalog.list(Domain.platform(), choice.equals("permission-groups"), filters),
+          rid.currentRequestId());
+    }
     if (!access.managed(d)) {
       if (d.kind().equals("PLATFORM") || target.equals("permissions")) {
         guard.require(d, a, !read);

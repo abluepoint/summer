@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.menu;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import org.springframework.security.access.AccessDeniedException;
@@ -54,6 +56,7 @@ final class MenuManifestController {
                 java.util.Map<String,Object> row = new java.util.LinkedHashMap<>();
                 row.put("menuId",item.menuId()); row.put("parentMenuId",item.parentMenuId()); row.put("path",item.path());
                 row.put("titleKey",item.titleKey()); row.put("iconKey",item.iconKey()); row.put("sortOrder",item.sortOrder());
+                if (item.clientCode() != null) row.put("clientCode", item.clientCode());
                 return row;
             }).toList();
             return managedResult(preserveAccessDenied(() -> managed.mutate(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), authentication, null,
@@ -62,6 +65,7 @@ final class MenuManifestController {
          MenuManifestView view = preserveAccessDenied(() -> service.sync(body, key, authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/v1/enterprises/{enterpriseId}/menu-manifest")
     @RawResponse
     ResponseEntity<?> visible(@PathVariable String enterpriseId, Authentication authentication) {
@@ -71,54 +75,6 @@ final class MenuManifestController {
             return result(HttpStatus.OK,view,((Number)view.get("manifestVersion")).longValue());
         }
          MenuManifestView view = preserveAccessDenied(() -> service.visible(enterpriseId, authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
-    }
-
-    @GetMapping("/v1/enterprises/{enterpriseId}/menu-manifest/management")
-    @RawResponse
-
-    ResponseEntity<?> management(@PathVariable String enterpriseId, Authentication authentication) {
-        var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId);
-        if (managed != null && managed.managed(domain)) {
-            var view=preserveAccessDenied(() -> managed.read(domain,authentication,false));
-            return result(HttpStatus.OK,view,((Number)view.get("manifestVersion")).longValue());
-        }
-         MenuManifestView view = preserveAccessDenied(() -> service.management(enterpriseId, authentication)); return result(HttpStatus.OK, view, view.manifestVersion());
-    }
-
-    @PatchMapping(value = "/v1/enterprises/{enterpriseId}/menu-manifest/{menuId}", consumes = "application/json")
-    @RawResponse
-
-    ResponseEntity<?> override(@PathVariable String enterpriseId, @PathVariable String menuId,
-                                                                 @RequestBody MenuManifestOverrideRequest body,
-                                                                 @RequestHeader(value = "If-Match", required = false) String ifMatch,
-                                                                 @RequestHeader(value = "Idempotency-Key", required = false) String key,
-                                                                 Authentication authentication) {
-        var domain = com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId);
-        if (managed != null && managed.managed(domain)) {
-            requireManaged(domain, authentication);
-            if (body == null || body.capabilityCode() != null)
-                throw SummerException.withMessage(MenuManifestErrorCode.INVALID, "Only menu metadata is accepted in managed mode");
-            java.util.Map<String,Object> metadata = new java.util.LinkedHashMap<>();
-            if (body.enabled() != null) metadata.put("enabled",body.enabled());
-            if (body.parentMenuId() != null) metadata.put("parentMenuId",body.parentMenuId());
-            if (body.sortOrder() != null) metadata.put("sortOrder",body.sortOrder());
-            return managedResult(preserveAccessDenied(() -> managed.mutate(domain,authentication,menuId,metadata,ifMatch,key,rid())));
-        }
-         MenuManifestItemView view = preserveAccessDenied(() -> service.override(enterpriseId, menuId, body, ifMatch, key, authentication)); return result(HttpStatus.OK, view, view.version());
-    }
-
-    // Nested frontend route IDs contain '/', which must not be encoded into a
-    // path segment or require weakening the HTTP firewall's encoded-slash rule.
-    @PatchMapping(value = "/v1/enterprises/{enterpriseId}/menu-manifest", consumes = "application/json")
-    @RawResponse
-
-    ResponseEntity<?> overrideById(@PathVariable String enterpriseId,
-                                                                  @RequestParam String menuId,
-                                                                  @RequestBody MenuManifestOverrideRequest body,
-                                                                  @RequestHeader(value = "If-Match", required = false) String ifMatch,
-                                                                  @RequestHeader(value = "Idempotency-Key", required = false) String key,
-                                                                  Authentication authentication) {
-        return override(enterpriseId, menuId, body, ifMatch, key, authentication);
     }
 
     private void requireManaged(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain, Authentication actor) {

@@ -141,6 +141,9 @@ test('401 restart is single-use until a successful business response', () => {
 test('business API failures distinguish 401, 403, and network errors', () => {
   assert.equal(isBusinessApi('/api/customers'), true);
   assert.equal(isBusinessApi('/api/customers?size=20'), true);
+  assert.equal(isBusinessApi('/internal/v1/release/readiness'), true);
+  assert.equal(isBusinessApi('/internal/v1/release/rollback:dry-run'), false);
+  assert.equal(isBusinessApi('https://elsewhere.invalid/internal/v1/release/readiness'), false);
   assert.equal(isBusinessApi('/oauth2/token'), false);
   assert.equal(isBusinessApi('/apiary'), false);
   assert.equal(classifyBusinessFailure(401, true), 'unauthorized');

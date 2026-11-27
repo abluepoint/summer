@@ -34,10 +34,16 @@ import Settings from '../Settings';
 import styles from './style/index.module.less';
 import defaultLocale from '@/locale';
 import { signOut } from '@/auth/oidc';
-import useActiveEnterprise from '@/pages/data-scopes/useActiveEnterprise';
+import { matchPath, useLocation } from 'react-router-dom';
+import { platformManagementPaths } from '@/menu/managementNavigation';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 
 function Navbar({ show }: { show: boolean }) {
   const tenant = useActiveEnterprise();
+  const { pathname } = useLocation();
+  const platformPage =
+    pathname.startsWith('/platform/') ||
+    Boolean(matchPath(pathname, { path: platformManagementPaths, exact: true }));
   const t = useLocale();
   const { userInfo, userLoading } = useSelector((state: GlobalState) => state);
 
@@ -62,7 +68,7 @@ function Navbar({ show }: { show: boolean }) {
   if (!show) {
     return (
       <div className={styles['fixed-settings']}>
-        <Select aria-label="全局活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 180 }} />
+        {!platformPage && <Select aria-label="全局活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 180 }} />}
         <Settings
           trigger={
             <Button icon={<IconSettings />} type="primary" size="large" />
@@ -119,7 +125,7 @@ function Navbar({ show }: { show: boolean }) {
       </div>
       <ul className={styles.right}>
         <li>
-          <Select aria-label="全局活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 180 }} />
+          {!platformPage && <Select aria-label="全局活动租户" placeholder="选择活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} style={{ width: 180 }} />}
         </li>
         <li>
           <Input.Search

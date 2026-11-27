@@ -67,6 +67,13 @@ class SystemParameterReleaseHttpTest {
     MockMvc mockMvc;
 
     @Test
+    void versionHistoryValidatesTheKeyBeforeLookup() throws Exception {
+        mockMvc.perform(get("/api/system-parameters/BAD/versions").with(reader()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.violations[0].field").value("key"));
+    }
+
+    @Test
     void draftsDoNotChangeRuntimeAndPublishRollbackAreVersionedAndIdempotent() throws Exception {
         mockMvc.perform(post("/api/system-parameters")
                         .contentType(MediaType.APPLICATION_JSON)

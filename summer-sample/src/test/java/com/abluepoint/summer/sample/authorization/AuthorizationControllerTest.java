@@ -66,13 +66,16 @@ class AuthorizationControllerTest {
   }
   @Test void disabledPermissionRetainsIdentityAndRolePermissionHasNoEffectField() throws Exception {
     String permission=fixture.grantHandlers(DOMAIN,"alice",(h,p,m)->p.equals("/api/v1/enterprises/{enterpriseId}/agents") && m.equals("GET"));
-    var result=create("{\"name\":\"Auditor\",\"code\":\"auditor\",\"permissionIds\":[\""+permission+"\"]}","auditor");
-    String id=JsonPath.read(result.getResponse().getContentAsString(),"$.data.roleId");
+    // The fixture already assigned this tenant-local permission; new roles select from the platform catalog.
+    String id=db.queryForObject("select role_id from summer_role_permission where domain_key=? and permission_id=?",
+        String.class,DOMAIN.key(),permission);
     mockMvc.perform(get(BASE+"/"+id).with(admin("enterprise.roles.read"))).andExpect(status().isOk())
         .andExpect(jsonPath("$.data.permissionIds[0]").value(permission)).andExpect(jsonPath("$.data.effect").doesNotExist());
-    db.update("update summer_permission set status='DISABLED' where domain_key=? and permission_id=?",DOMAIN.key(),permission);
     String resource=db.queryForObject("select resource_id from summer_permission_resource where domain_key=? and permission_id=?",String.class,DOMAIN.key(),permission);
-    var actor=new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(org.springframework.security.oauth2.jwt.Jwt.withTokenValue("test").header("alg","none").subject("alice").build());
+    var jwt=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("test").header("alg","none").subject("alice").build();
+    var actor=new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt,List.of());
+    assertThat(access.allows(DOMAIN,actor,"INTERFACE",resource)).isTrue();
+    db.update("update summer_permission set status='DISABLED' where domain_key=? and permission_id=?",DOMAIN.key(),permission);
     assertThat(access.allows(DOMAIN,actor,"INTERFACE",resource)).isFalse();
     // Current roles retain explicit IDs even while a permission is disabled; lifecycle affects access.
     assertThat(db.queryForObject("select permission_id from summer_role_permission where domain_key=? and role_id=?",String.class,DOMAIN.key(),id)).isEqualTo(permission);

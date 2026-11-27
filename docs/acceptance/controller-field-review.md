@@ -169,11 +169,12 @@
 
 ### PlatformRoleDeletionController
 
-[源码](../../summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/api/permission/PlatformRoleDeletionController.java) · 1 个映射方法
+[源码](../../summer-sample/src/main/java/com/abluepoint/summer/sample/authorization/api/permission/PlatformRoleDeletionController.java) · 2 个映射方法
 
 | 方法 | HTTP 与路径 | 查询参数 / 正文 | 判断 | 说明 |
 |---|---|---|---|---|
 | `delete` | `DELETE /api/v1/platform/roles/{id}` | — | 已声明 | id |
+| `deleteTenantRole` | `DELETE /api/v1/enterprises/{enterpriseId}/roles/{id}` | — | 已声明 | enterpriseId、id |
 
 ### RolePermissionController
 

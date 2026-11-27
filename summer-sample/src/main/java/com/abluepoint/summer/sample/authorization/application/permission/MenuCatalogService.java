@@ -6,6 +6,8 @@ import com.abluepoint.summer.sample.authorization.AuthorizationChangeEventServic
 import com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode;
 import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions;
+import com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
@@ -23,12 +25,15 @@ public class MenuCatalogService {
   private final AuthorizationChangeEventService events;
   private final MenuPublicationState publication;
 
+  private final PlatformDictionaryOptions dictionaries;
+
   public MenuCatalogService(
       JdbcTemplate db,
       ObjectMapper json,
       AuthorizationAuditStore audit,
       AuthorizationChangeEventService events,
-      MenuPublicationState publication) {
+      MenuPublicationState publication, PlatformDictionaryOptions dictionaries) {
+    this.dictionaries = dictionaries;
     this.publication = publication;
     this.db = db;
     this.json = json;
@@ -52,6 +57,7 @@ public class MenuCatalogService {
                 + " manifest_version from summer_menu_publication where publication_id='global')"
                 + " order by sort_order,menu_id")) {
       var item = new LinkedHashMap<String, Object>();
+      item.put("clientCode", row.get("client_code"));
       item.put("menuId", row.get("menu_id"));
       item.put("parentMenuId", row.get("parent_menu_id"));
       item.put("path", row.get("path"));
@@ -63,12 +69,33 @@ public class MenuCatalogService {
       item.put("actions", List.of());
       items.add(item);
     }
-    if (!publication.read().published())
-      for (var page : com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.PAGES) {
+    if (!publication.read().published()) {
+      var pages = new ArrayList<>(ManagementConsumerMenus.PAGES);
+      if (db.queryForObject("select count(*) from summer_permission where domain_key=? and permission_id=?",
+          Integer.class, Domain.platform().key(), "platform-directory-roster") == 1)
+        pages.addAll(ManagementConsumerMenus.PLATFORM_DIRECTORY_PAGES);
+      if (db.queryForObject("select count(*) from summer_permission where domain_key=? and permission_id=?",
+          Integer.class, Domain.platform().key(), "file-repositories-menu") == 1) {
+        pages.add(ManagementConsumerMenus.FILE_REPOSITORIES);
+      }
+      if (db.queryForObject("select count(*) from summer_permission where domain_key=? and permission_id=?",
+          Integer.class, Domain.platform().key(), "files-menu") == 1) {
+        pages.add(ManagementConsumerMenus.FILE_MANAGER);
+      }
+      if (pages.contains(ManagementConsumerMenus.FILE_REPOSITORIES) || pages.contains(ManagementConsumerMenus.FILE_MANAGER))
+        pages.add(ManagementConsumerMenus.FILE_DIRECTORY);
+      if (db.queryForObject("select count(*) from summer_permission where domain_key=? and permission_id=?",
+          Integer.class, Domain.platform().key(), "user-groups-menu") == 1) {
+        if (pages.stream().noneMatch(page -> page.id().equals("platform-management")))
+          pages.add(new ManagementConsumerMenus.Page("platform-management", "平台管理"));
+        pages.add(new ManagementConsumerMenus.Page("platform/user-groups", "平台用户组管理"));
+      }
+      for (var page : pages) {
         String id = page.id();
         var item = new LinkedHashMap<String, Object>();
+        item.put("clientCode", PlatformDictionaryOptions.WEB_CLIENT);
         item.put("menuId", id);
-        item.put("parentMenuId", null);
+        item.put("parentMenuId", ManagementConsumerMenus.platformParent(id));
         item.put("path", "/" + id);
         item.put("titleKey", page.title());
         item.put("iconKey", id);
@@ -78,47 +105,59 @@ public class MenuCatalogService {
         item.put("actions", List.of());
         items.add(item);
       }
+    }
     return items;
   }
 
   @Transactional(readOnly = true)
   public Map<String, Object> read(Domain d, boolean platformManifest) {
-    var items = catalog();
-    if (!platformManifest) {
-      // Existing enterprise layout remains compatible; new writes use explicit domain keys.
-      if (d.kind().equals("ENTERPRISE"))
-        overlay(
-            items,
-            db.queryForList(
-                "select * from summer_menu_manifest_override where enterprise_id=?", d.id()));
-      overlay(
-          items,
-          db.queryForList("select * from summer_menu_domain_layout where domain_key=?", d.key()));
-    }
+    var items = effectiveCatalog();
     items.sort(Comparator.<Map<String, Object>>comparingInt(item -> ((Number) item.get("sortOrder")).intValue())
         .thenComparing(item -> item.get("menuId").toString()));
+    if (platformManifest && d.equals(Domain.platform()))
+      return Map.of("manifestVersion", version(), "items", items,
+          "clientOptions", dictionaries.published(PlatformDictionaryOptions.MENU_CLIENT));
     return Map.of("manifestVersion", version(), "items", items);
   }
 
+  List<Map<String, Object>> effectiveCatalog() {
+    var items = catalog();
+    overlay(items, db.queryForList("select * from summer_menu_domain_layout where domain_key=?", Domain.platform().key()));
+    return items;
+  }
+
+  // A layout PATCH has its own revision. Check the complete editor snapshot, including deleted rows.
+  private void checkLayoutVersions(Object expected, Map<String, Map<String,Object>> existing) {
+    if (!(expected instanceof Map<?,?> versions)) throw invalid("Expected menu layout versions");
+    var current = new TreeMap<String,Object>();
+    existing.forEach((id, item) -> current.put(id, item.get("version")));
+    if (!json.writeValueAsString(current).equals(json.writeValueAsString(canonicalMetadata(versions))))
+      throw SummerException.withMessage(SampleTransportErrorCode.PERMISSION_STALE, "Menu layout has changed");
+  }
+
+  private void publishLayout(Domain domain, Map<String,Object> item, Map<String,Object> previous) {
+    String id = (String) item.get("menuId");
+    // Parent and sort order have just been written to the manifest. Release old overrides
+    // when this editor changes the layout so navigation uses those values immediately.
+    if (previous != null && Objects.equals(previous.get("enabled"), item.get("enabled"))
+        && Objects.equals(previous.get("parentMenuId"), item.get("parentMenuId"))
+        && Objects.equals(previous.get("sortOrder"), item.get("sortOrder"))) return;
+    db.update("insert into summer_menu_domain_layout(layout_id,domain_key,menu_id,enabled,version) values (?,?,?,?,2)"
+        + " on duplicate key update enabled=values(enabled),parent_menu_id=null,sort_order=null,version=version+1",
+        domain.key() + ":" + id, domain.key(), id, item.get("enabled"));
+  }
+
   private static void overlay(List<Map<String, Object>> items, List<Map<String, Object>> rows) {
-    for (var row : rows)
-      for (var item : items)
-        if (item.get("menuId").equals(row.get("menu_id"))) {
-          for (var field :
-              Map.of(
-                      "enabled",
-                      "enabled",
-                      "parentMenuId",
-                      "parent_menu_id",
-                      "sortOrder",
-                      "sort_order",
-                      "version",
-                      "version")
-                  .entrySet())
-            if (row.get(field.getValue()) != null)
-              item.put(field.getKey(), field.getKey().equals("parentMenuId")
-                  ? parent(row.get(field.getValue())) : row.get(field.getValue()));
-        }
+    var byId = new HashMap<Object, Map<String,Object>>();
+    for (var item : items) byId.put(item.get("menuId"), item);
+    for (var row : rows) {
+      var item = byId.get(row.get("menu_id"));
+      if (item == null) continue;
+      if (row.get("enabled") != null) item.put("enabled", row.get("enabled"));
+      if (row.get("parent_menu_id") != null) item.put("parentMenuId", parent(row.get("parent_menu_id")));
+      if (row.get("sort_order") != null) item.put("sortOrder", row.get("sort_order"));
+      item.put("version", row.get("version"));
+    }
   }
 
   private static void condition(String header, long version) {
@@ -191,6 +230,8 @@ public class MenuCatalogService {
       String etag,
       String key,
       String requestId) {
+    if (!d.equals(Domain.platform()))
+      throw new org.springframework.security.access.AccessDeniedException("Menus are managed by the platform");
     if (key == null || !key.matches("[A-Za-z0-9._:-]{1,128}"))
       throw invalid("Idempotency-Key required");
     var mode =
@@ -237,7 +278,8 @@ public class MenuCatalogService {
     long next;
     Map<String, Object> result;
     if (publish) {
-      if (!body.keySet().equals(Set.of("manifestVersion", "items"))
+      boolean editor = body.containsKey("layoutVersions");
+      if (!body.keySet().equals(editor ? Set.of("manifestVersion", "items", "layoutVersions") : Set.of("manifestVersion", "items"))
           || !(body.get("items") instanceof List<?> raw)
           || raw.size() > 1000) throw invalid("Explicit menu items required");
       long current = version();
@@ -249,14 +291,29 @@ public class MenuCatalogService {
         throw SummerException.withMessage(PermissionErrorCode.CONFLICT, "Manifest version must increase");
       next = requested.longValue();
       var items = new ArrayList<Map<String, Object>>();
+      var clients = dictionaries.published(PlatformDictionaryOptions.MENU_CLIENT);
+      var existing = new HashMap<String, Map<String,Object>>();
+      for (var item : effectiveCatalog()) existing.put((String) item.get("menuId"), item);
+      if (editor) checkLayoutVersions(body.get("layoutVersions"), existing);
+      var allowedFields = new HashSet<>(Set.of("menuId", "parentMenuId", "path", "titleKey", "iconKey", "sortOrder", "clientCode"));
+      if (editor) allowedFields.add("enabled");
       for (Object value : raw) {
         if (!(value instanceof Map<?, ?> fields)
-            || !Set.of("menuId", "parentMenuId", "path", "titleKey", "iconKey", "sortOrder")
-                .containsAll(fields.keySet())) throw invalid("Only menu metadata accepted");
+            || !allowedFields.containsAll(fields.keySet())) throw invalid("Only menu metadata accepted");
         var item = new LinkedHashMap<String, Object>();
         String id = text(fields.get("menuId"), 160, false);
         if (!id.matches("[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)*")) throw invalid("Invalid menuId");
         item.put("menuId", id);
+        if (editor) {
+          if (!(fields.get("enabled") instanceof Boolean)) throw invalid("Boolean enabled required");
+          item.put("enabled", fields.get("enabled"));
+        }
+        String previous = (String) existing.getOrDefault(id, Map.of()).get("clientCode");
+        String client = fields.containsKey("clientCode") ? text(fields.get("clientCode"), 80, false)
+            : Objects.requireNonNullElse(previous, PlatformDictionaryOptions.WEB_CLIENT);
+        if (!client.equals(previous) && clients.stream().noneMatch(option -> option.enabled() && client.equals(option.value())))
+          throw invalid("请选择已发布且启用的所属客户端");
+        item.put("clientCode", client);
         item.put("parentMenuId", parent(fields.get("parentMenuId")));
         String path = text(fields.get("path"), 500, false);
         if (!path.equals("/" + item.get("menuId"))
@@ -277,17 +334,19 @@ public class MenuCatalogService {
           items.stream().sorted(Comparator.comparing(x -> x.get("menuId").toString())).toList())
         db.update(
             "insert into"
-                + " summer_menu_manifest_item(menu_id,parent_menu_id,path,title_key,icon_key,sort_order,capability_code,manifest_version,created_at,updated_at)"
-                + " values (?,?,?,?,?,?,null,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)) on"
+                + " summer_menu_manifest_item(menu_id,parent_menu_id,path,title_key,icon_key,sort_order,client_code,capability_code,manifest_version,created_at,updated_at)"
+                + " values (?,?,?,?,?,?,?,null,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)) on"
                 + " duplicate key update"
-                + " parent_menu_id=values(parent_menu_id),path=values(path),title_key=values(title_key),icon_key=values(icon_key),sort_order=values(sort_order),capability_code=null,manifest_version=values(manifest_version),updated_at=CURRENT_TIMESTAMP(6)",
+                + " parent_menu_id=values(parent_menu_id),path=values(path),title_key=values(title_key),icon_key=values(icon_key),sort_order=values(sort_order),client_code=values(client_code),capability_code=null,manifest_version=values(manifest_version),updated_at=CURRENT_TIMESTAMP(6)",
             item.get("menuId"),
             item.get("parentMenuId"),
             item.get("path"),
             item.get("titleKey"),
             item.get("iconKey"),
             item.get("sortOrder"),
+            item.get("clientCode"),
             next);
+      if (editor) for (var item : items) publishLayout(d, item, existing.get(item.get("menuId")));
       publication.published(next);
       result = read(d, true);
     } else {

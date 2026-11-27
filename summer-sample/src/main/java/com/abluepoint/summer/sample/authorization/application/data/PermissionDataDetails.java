@@ -19,6 +19,16 @@ public class PermissionDataDetails {
   }
 
   public Map<String, Object> get(Domain d, String id) {
+    var scope = stored(d, id);
+    if (scope != null && !scope.containsKey("interfacePermissionIds")) {
+      scope.remove("dataResourceKey");
+      scope.remove("action");
+      scope.put("interfacePermissionIds", List.of());
+    }
+    return scope;
+  }
+
+  public Map<String, Object> stored(Domain d, String id) {
     var rows =
         db.queryForList(
             "select data_resource_key,action,scope_preset from"
@@ -28,16 +38,18 @@ public class PermissionDataDetails {
             id);
     if (rows.isEmpty()) return null;
     var r = rows.getFirst();
-    var result =
-        new LinkedHashMap<String, Object>(
-            Map.of(
-                "dataResourceKey",
-                r.get("data_resource_key"),
-                "action",
-                r.get("action"),
-                "scopePreset",
-                r.get("scope_preset")));
-    if ("SPECIFIED_DEPARTMENTS".equals(r.get("scope_preset")))
+    var result = new LinkedHashMap<String, Object>();
+    result.put("scopePreset", r.get("scope_preset"));
+    if (r.get("data_resource_key") == null) {
+      result.put("interfacePermissionIds", db.queryForList(
+          "select interface_permission_id from summer_permission_data_interface"
+              + " where domain_key=? and permission_id=? order by interface_permission_id",
+          String.class, d.key(), id));
+    } else {
+      result.put("dataResourceKey", r.get("data_resource_key"));
+      result.put("action", r.get("action"));
+    }
+    if (selectedDepartments(r.get("scope_preset")))
       result.put(
           "departmentIds",
           db.queryForList(
@@ -49,28 +61,46 @@ public class PermissionDataDetails {
     return result;
   }
 
-  public Map<String, Object> validate(Object value) {
+  public Map<String, Object> validate(Domain d, Object value) {
     if (!(value instanceof Map<?, ?> r)
-        || !Set.of("dataResourceKey", "action", "scopePreset", "departmentIds")
-            .containsAll(r.keySet())
-        || !(r.get("dataResourceKey") instanceof String key)
-        || !(r.get("action") instanceof String action)
-        || !(r.get("scopePreset") instanceof String preset)
-        || !Set.of(
-                "SELF",
-                "TENANT_ALL",
-                "DEPARTMENT",
-                "DEPARTMENT_AND_DESCENDANTS",
-                "SPECIFIED_DEPARTMENTS")
-            .contains(preset))
-      throw SummerException.withMessage(
-          PermissionErrorCode.INVALID,
-          "One registered resource/action and one supported scope preset are required");
+        || !Set.of("scopePreset", "departmentIds", "interfacePermissionIds").containsAll(r.keySet())
+        || !(r.get("interfacePermissionIds") instanceof List<?> ids) || ids.isEmpty())
+      throw invalidInterfaces();
+    var selected = new TreeSet<String>();
+    for (Object id : ids) {
+      if (!(id instanceof String key) || key.isBlank() || key.length() > 96) throw invalidInterfaces();
+      selected.add(key);
+    }
+    var catalog = db.queryForList(
+        "select permission_id from summer_permission where domain_key=? and type='INTERFACE'",
+        String.class, d.key());
+    if (!new HashSet<>(catalog).containsAll(selected)) throw invalidInterfaces();
+    var result = preset(r);
+    result.put("interfacePermissionIds", List.copyOf(selected));
+    return result;
+  }
+
+  /** Used only to restore a verified historical grant during migration. */
+  public Map<String, Object> historical(Object value) {
+    if (!(value instanceof Map<?, ?> r)
+        || !Set.of("scopePreset", "departmentIds", "dataResourceKey", "action").containsAll(r.keySet())
+        || !(r.get("dataResourceKey") instanceof String key) || !(r.get("action") instanceof String action))
+      throw invalid();
     registry.require(key, action);
-    var result =
-        new LinkedHashMap<String, Object>(
-            Map.of("dataResourceKey", key, "action", action, "scopePreset", preset));
-    if (preset.equals("SPECIFIED_DEPARTMENTS")) {
+    var result = preset(r);
+    result.put("dataResourceKey", key);
+    result.put("action", action);
+    return result;
+  }
+
+  private Map<String, Object> preset(Map<?, ?> r) {
+    if (!(r.get("scopePreset") instanceof String preset)
+        || !Set.of("SELF", "TENANT_ALL", "DEPARTMENT", "DEPARTMENT_AND_DESCENDANTS", "SPECIFIED_DEPARTMENTS",
+            "PLATFORM_ALL_DEPARTMENTS","PLATFORM_PRIMARY_SUBTREE","PLATFORM_SPECIFIED_SUBTREES").contains(preset))
+      throw SummerException.withMessage(PermissionErrorCode.INVALID, "A supported record scope is required");
+    var result = new LinkedHashMap<String, Object>();
+    result.put("scopePreset", preset);
+    if (selectedDepartments(preset)) {
       if (!(r.get("departmentIds") instanceof List<?> ids)
           || ids.isEmpty()
           || ids.stream()
@@ -86,19 +116,17 @@ public class PermissionDataDetails {
   @org.springframework.transaction.annotation.Transactional(
       propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
   public void replace(Domain d, String id, Map<String, Object> r) {
-    registry.require(d, (String) r.get("dataResourceKey"), (String) r.get("action"));
+    db.update("delete from summer_permission_data_interface where domain_key=? and permission_id=?", d.key(), id);
     String preset = (String) r.get("scopePreset");
-    if (!Set.of("SELF", "TENANT_ALL").contains(preset) && !d.kind().equals("ENTERPRISE"))
-      throw invalid();
-    if (preset.equals("SPECIFIED_DEPARTMENTS"))
+    if (preset.equals("SPECIFIED_DEPARTMENTS") && Domain.platform().equals(d)
+        || preset.startsWith("PLATFORM_") && !Domain.platform().equals(d)) throw invalid();
+    if (selectedDepartments(preset))
       for (Object department : (List<?>) r.get("departmentIds")) {
-        if (db.queryForObject(
-                "select count(*) from summer_organization_unit where enterprise_id=? and unit_id=?"
-                    + " and status='ACTIVE'",
-                Integer.class,
-                d.id(),
-                department)
-            != 1) throw invalid();
+        int found = Domain.platform().equals(d)
+            ? db.queryForObject("select count(*) from summer_platform_department where id=?", Integer.class, department)
+            : db.queryForObject("select count(*) from summer_organization_unit where enterprise_id=? and unit_id=? and status='ACTIVE'",
+                Integer.class, d.id(), department);
+        if (found != 1) throw invalid();
       }
     db.update(
         "delete from summer_permission_data_scope where domain_key=? and permission_id=?",
@@ -113,7 +141,15 @@ public class PermissionDataDetails {
         r.get("dataResourceKey"),
         r.get("action"),
         r.get("scopePreset"));
-    if (preset.equals("SPECIFIED_DEPARTMENTS"))
+    if (r.get("interfacePermissionIds") instanceof List<?> ids)
+      db.batchUpdate("insert into summer_permission_data_interface"
+              + " (domain_key,permission_id,interface_permission_id) values(?,?,?)",
+          ids, 200, (statement, target) -> {
+            statement.setString(1, d.key());
+            statement.setString(2, id);
+            statement.setString(3, (String) target);
+          });
+    if (selectedDepartments(preset))
       for (Object department : (List<?>) r.get("departmentIds"))
         db.update(
             "insert into"
@@ -122,6 +158,15 @@ public class PermissionDataDetails {
             d.key(),
             id,
             department);
+  }
+
+  private static boolean selectedDepartments(Object preset) {
+    return "SPECIFIED_DEPARTMENTS".equals(preset) || "PLATFORM_SPECIFIED_SUBTREES".equals(preset);
+  }
+
+  private static SummerException invalidInterfaces() {
+    return SummerException.withMessage(PermissionErrorCode.INVALID,
+        "Select one or more interface permissions from this permission catalog");
   }
 
   private static SummerException invalid() {

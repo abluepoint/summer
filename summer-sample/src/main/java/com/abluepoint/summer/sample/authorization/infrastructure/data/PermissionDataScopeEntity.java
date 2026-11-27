@@ -15,10 +15,10 @@ class PermissionDataScopeEntity {
     @Column(name = "domain_key", nullable = false, length = 96)
     private String domainKey;
 
-    @Column(name = "data_resource_key", nullable = false, length = 96)
+    @Column(name = "data_resource_key", length = 96)
     private String dataResourceKey;
 
-    @Column(name = "action", nullable = false, length = 64)
+    @Column(name = "action", length = 64)
     private String action;
 
     @Column(name = "scope_preset", nullable = false, length = 32)

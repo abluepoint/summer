@@ -61,19 +61,15 @@ export type PermissionAssociationProps = {
   disabled?: boolean;
 };
 export type DataScopeDetail = {
-  dataResourceKey: string;
-  action: string;
+  interfacePermissionIds: string[];
   scopePreset:
     | 'SELF'
     | 'TENANT_ALL'
     | 'DEPARTMENT'
     | 'DEPARTMENT_AND_DESCENDANTS'
-    | 'SPECIFIED_DEPARTMENTS';
+    | 'SPECIFIED_DEPARTMENTS'
+    | 'PLATFORM_ALL_DEPARTMENTS'
+    | 'PLATFORM_PRIMARY_SUBTREE'
+    | 'PLATFORM_SPECIFIED_SUBTREES';
   departmentIds?: string[];
-};
-export type DataResource = {
-  key: string;
-  name: string;
-  selfMeaning: string;
-  actions: string[];
 };

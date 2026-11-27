@@ -42,19 +42,28 @@ public class BusinessDataScopes {
     current.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
   }
 
+  private static Domain configurationDomain(String enterprise, String resource) {
+    if ("dictionaries".equals(resource)) {
+      if (!Domain.platform().id().equals(enterprise)) throw new AccessDeniedException("Platform dictionary required");
+      return Domain.platform();
+    }
+    return Domain.enterprise(enterprise);
+  }
+
   public <T> T read(String enterprise, String resource, String action, Authentication actor,
       Function<Filter, T> query) {
     return available(() -> {
       for (int attempt = 0; attempt < 2; attempt++) {
         var result = current.execute(tx -> {
-          var before = state(enterprise);
-          legacy.organization(enterprise, actor);
+          var domain = configurationDomain(enterprise, resource);
+          var before = state(domain);
+          if (!domain.equals(Domain.platform())) legacy.organization(enterprise, actor);
           T value;
           if ("MANAGED".equals(before.get("engine_mode")))
-            value = reads.read(Domain.enterprise(enterprise), resource, action, actor,
+            value = reads.read(domain, resource, action, actor,
                 scope -> query.apply(filter(registry.configurationProjection(scope), false)));
           else throw new AccessDeniedException("Unsupported data domain mode");
-          return before.equals(state(enterprise)) ? new ReadResult<T>(value) : null;
+          return before.equals(state(domain)) ? new ReadResult<T>(value) : null;
         });
         if (result != null) return result.value();
       }
@@ -63,9 +72,9 @@ public class BusinessDataScopes {
   }
 
   private record ReadResult<T>(T value) {}
-  private Map<String, Object> state(String enterprise) {
+  private Map<String, Object> state(Domain domain) {
     var rows = db.queryForList("select engine_mode,revision from summer_authorization_domain where domain_key=?",
-        Domain.enterprise(enterprise).key());
+        domain.key());
     if (rows.size() != 1) throw new AccessDeniedException("Explicit data domain mode required");
     var state = rows.getFirst();
     if (!(state.get("revision") instanceof Number revision) || revision.longValue() < 0
@@ -89,12 +98,12 @@ public class BusinessDataScopes {
       java.util.function.Supplier<java.util.Set<String>> resolveActions,
       Authentication actor, Function<Map<String, Filter>, T> mutation) {
     return available(() -> {
-      var domain = Domain.enterprise(enterprise);
+      var domain = configurationDomain(enterprise, resource);
       var parent = writing.get();
       if (parent != null) {
         if (!parent.domain().equals(domain) || parent.transaction() != transactionResource())
           throw new AccessDeniedException("Same domain and business transaction required for nested write");
-        legacy.organization(enterprise, actor);
+        if (!domain.equals(Domain.platform())) legacy.organization(enterprise, actor);
         var filters = new java.util.TreeMap<String, Filter>();
         var actions = resolveActions.get();
         if (actions == null || actions.isEmpty() || !java.util.Set.of("create", "update", "delete").containsAll(actions))
@@ -107,7 +116,7 @@ public class BusinessDataScopes {
         return mutation.apply(java.util.Collections.unmodifiableMap(filters));
       }
       return operations.writeResolved(domain, resource, resolveActions, actor, scopes -> {
-        legacy.organization(enterprise, actor);
+        if (!domain.equals(Domain.platform())) legacy.organization(enterprise, actor);
         writing.set(new WriteContext(domain, true, transactionResource()));
         try {
           var projected = new java.util.TreeMap<String, Filter>();

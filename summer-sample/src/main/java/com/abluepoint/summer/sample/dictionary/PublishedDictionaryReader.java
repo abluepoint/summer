@@ -23,11 +23,14 @@ public class PublishedDictionaryReader {
                 .filter(item -> item.enabled() && value.equals(item.value()))
                 .findFirst().orElseThrow(() -> new SummerException(CommonErrorCode.NOT_FOUND));
     }
-    public List<Map<String, Object>> read(String code, Authentication auth) { return read(com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve(auth), code, auth); }
+    public List<Map<String, Object>> read(String code, Authentication auth) { return options(code, auth); }
     public List<Map<String, Object>> read(String tenant, String code, Authentication auth) {
         com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(tenant, auth);
+        return options(code, auth);
+    }
+    private List<Map<String,Object>> options(String code, Authentication auth) {
         try {
-            return dictionaries.publicRead(tenant, code, auth).items().stream()
+            return dictionaries.publishedRead(code, auth).items().stream()
                     .map(item -> Map.<String, Object>of("value", item.value(), "label", item.label(), "sortOrder", item.sortOrder()))
                     .toList();
         } catch (SummerException failure) {

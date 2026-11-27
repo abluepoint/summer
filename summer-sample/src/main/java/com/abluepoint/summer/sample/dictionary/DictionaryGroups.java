@@ -11,9 +11,13 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.stream.Collectors;
 
-record DictionaryDraftGroup(String id, String code, String name, boolean enabled, Boolean everPublished, List<String> memberIds) {}
-record DictionaryDraftGroupRequest(String id, String code, String name, boolean enabled, List<String> memberIds, List<String> memberOrder) {}
-record DictionarySnapshotGroup(String id, String code, String name, boolean enabled, List<String> memberValues) {}
+record DictionaryDraftGroup(String id, String code, String name, boolean enabled, Boolean everPublished, List<String> memberIds, Map<String,Integer> memberSortOrders) {}
+record DictionaryDraftGroupRequest(String id, String code, String name, boolean enabled, List<String> memberIds, List<String> memberOrder, Map<String,java.math.BigDecimal> memberSortOrders) {}
+record DictionarySnapshotGroup(String id, String code, String name, boolean enabled, List<String> memberValues, Map<String,Integer> memberSortOrders) {
+    DictionarySnapshotGroup {
+        memberSortOrders = DictionaryGroups.rankMap(memberValues, memberSortOrders);
+    }
+}
 
 interface DictionaryGroupRepository extends JpaRepository<DictionaryGroupEntity,String> {
     List<DictionaryGroupEntity> findAllByTenantIdAndDictionaryCodeOrderByCode(String tenant, String code);
@@ -43,13 +47,20 @@ class DictionaryGroups {
     DictionaryGroups(DictionaryGroupRepository groups,DictionaryGroupMemberRepository members,ConfigurationActionAccess actions,BusinessDataScopes scopes) {
         this.groups=groups; this.members=members; this.actions=actions; this.scopes=scopes;
     }
+    static Map<String,Integer> rankMap(List<String> ids, Map<String,Integer> supplied) {
+        var result = new LinkedHashMap<String,Integer>();
+        for (int i=0;i<ids.size();i++) result.put(ids.get(i), supplied == null ? i+1 : supplied.getOrDefault(ids.get(i), i+1));
+        return Collections.unmodifiableMap(result);
+    }
     List<DictionaryDraftGroup> read(DictionaryTypeEntity type, Set<String> visible, boolean current) {
         var rows=current ? groups.lockAll(type.tenantId(),type.code()) : groups.findAllByTenantIdAndDictionaryCodeOrderByCode(type.tenantId(),type.code());
         var links=current ? members.lockAll(type.tenantId(),type.code()) : members.findAllByTenantIdAndDictionaryCodeOrderBySortOrder(type.tenantId(),type.code());
         if(current) { rows.forEach(g -> em.refresh(g,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)); links.forEach(m -> em.refresh(m,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)); }
         var published=current ? new HashSet<>(groups.publishedIds(type.tenantId(),type.code())) : Set.<String>of();
+        links.sort(Comparator.comparingInt((DictionaryGroupMemberEntity m) -> m.sortOrder).thenComparing(m -> m.itemId));
         return rows.stream().map(g -> new DictionaryDraftGroup(g.id,g.code,g.name,g.enabled,current ? published.contains(g.id) : g.everPublished,
-            links.stream().filter(m -> m.groupId.equals(g.id) && visible.contains(m.itemId)).map(m -> m.itemId).toList())).toList();
+            links.stream().filter(m -> m.groupId.equals(g.id) && visible.contains(m.itemId)).map(m -> m.itemId).toList(),
+            links.stream().filter(m -> m.groupId.equals(g.id) && visible.contains(m.itemId)).collect(Collectors.toMap(m -> m.itemId,m -> m.sortOrder+1)))).toList();
     }
     List<DictionaryDraftGroup> prepare(DictionaryTypeEntity type,List<DictionaryDraftGroupRequest> requested,List<String> order,Authentication auth) {
         var old=read(type,new HashSet<>(order),true);
@@ -73,7 +84,24 @@ class DictionaryGroups {
                 if(!prior.code().equals(g.code()) || !prior.name().equals(g.name()) || !prior.memberIds().equals(next)) actions.require("dictionaries","update",auth);
                 if(prior.enabled()!=g.enabled()) actions.require("dictionaries",g.enabled()?"publish":"disable",auth);
             }
-            result.add(new DictionaryDraftGroup(g.id(),g.code(),g.name(),g.enabled(),prior!=null && Boolean.TRUE.equals(prior.everPublished()),List.copyOf(next)));
+            var ranks = new LinkedHashMap<String,Integer>();
+            var previousRanks = prior == null ? List.<Integer>of() : prior.memberSortOrders().values().stream().sorted().toList();
+            for (int i=0;i<next.size();i++) {
+                long fallback = i < previousRanks.size() ? previousRanks.get(i) : (previousRanks.isEmpty() ? i+1L : (long)previousRanks.getLast()+i-previousRanks.size()+1);
+                ranks.put(next.get(i), (int)Math.min(fallback, Integer.MAX_VALUE));
+            }
+            if (g.memberSortOrders()!=null) {
+                for (var entry:g.memberSortOrders().entrySet()) {
+                    if (!order.contains(entry.getKey()) || entry.getValue()==null) throw invalid();
+                    int rank;
+                    try { rank=entry.getValue().intValueExact(); } catch (ArithmeticException failure) { throw invalid(); }
+                    if (rank<1) throw invalid();
+                    if (ranks.containsKey(entry.getKey())) ranks.put(entry.getKey(),rank);
+                }
+                next = next.stream().sorted(Comparator.comparingInt((String id) -> ranks.get(id)).thenComparing(id -> id)).toList();
+            }
+            if (prior!=null && !prior.memberSortOrders().equals(ranks)) actions.require("dictionaries","update",auth);
+            result.add(new DictionaryDraftGroup(g.id(),g.code(),g.name(),g.enabled(),prior!=null && Boolean.TRUE.equals(prior.everPublished()),List.copyOf(next),Map.copyOf(ranks)));
         }
         for(var prior:old) if(!ids.contains(prior.id())) {
             actions.require("dictionaries","update",auth);
@@ -112,9 +140,9 @@ class DictionaryGroups {
                 throw new org.springframework.security.access.AccessDeniedException("Dictionary group is outside the update range");
             for(int i=0;i<g.memberIds().size();i++) {
                 String item=itemIds.get(g.memberIds().get(i));if(item==null) throw invalid();
-                var link=new DictionaryGroupMemberEntity(type.tenantId(),type.code(),row.id,item,i);
+                var link=new DictionaryGroupMemberEntity(type.tenantId(),type.code(),row.id,item,g.memberSortOrders().get(g.memberIds().get(i))-1);
                 scopes.insertDictionaryChild(update,DictionaryChild.MEMBER,parentId(type),type.tenantId(),type.code(),
-                    Map.of("id",link.id,"tenant_id",link.tenantId,"dictionary_code",link.dictionaryCode,"group_id",link.groupId,"item_id",link.itemId,"sort_order",i));
+                    Map.of("id",link.id,"tenant_id",link.tenantId,"dictionary_code",link.dictionaryCode,"group_id",link.groupId,"item_id",link.itemId,"sort_order",link.sortOrder));
             }
         }
     }
@@ -125,7 +153,7 @@ class DictionaryGroups {
     }
     List<DictionarySnapshotGroup> snapshot(DictionaryTypeEntity type,List<DictionaryItemEntity> items) {
         var byId=items.stream().collect(Collectors.toMap(DictionaryItemEntity::id,DictionaryItemEntity::value));
-        return read(type,byId.keySet(),true).stream().map(g->new DictionarySnapshotGroup(g.id(),g.code(),g.name(),g.enabled(),g.memberIds().stream().map(byId::get).toList())).toList();
+        return read(type,byId.keySet(),true).stream().map(g->new DictionarySnapshotGroup(g.id(),g.code(),g.name(),g.enabled(),g.memberIds().stream().map(byId::get).toList(),g.memberIds().stream().collect(Collectors.toMap(byId::get,id -> g.memberSortOrders().get(id))))).toList();
     }
     void markPublished(DictionaryTypeEntity type,BusinessDataScopes.Filter scope) {
         groups.lockAll(type.tenantId(),type.code()).forEach(em::detach);

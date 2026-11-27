@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Descriptions } from '@arco-design/web-react';
 import { useLocation } from 'react-router-dom';
 import useLocale from '@/utils/useLocale';
-import useActiveEnterprise from '@/pages/data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import { getCustomerInsights, listEnterprisePlugins, PluginApiError, PluginInsights } from '../api';
 
 const pluginPath = '/plugins/customer-insights';

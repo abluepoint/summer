@@ -2,6 +2,10 @@ import axios from 'axios';
 import { readEnvelope, readFailure } from '../customer/contract.mjs';
 
 export type InterfaceResource = {
+  serviceCode?: string;
+  serviceName?: string;
+  revision?: number;
+  lastSyncedAt?: string | null;
   httpMethod: string;
   normalizedPath: string;
   handler: string;
@@ -27,6 +31,9 @@ export type InterfaceResourceCatalog = {
   issues: DiscoveryIssue[];
 };
 export type InterfaceResourcePage = InterfaceResourceCatalog & {
+  serviceNames?: string[];
+  services?: { value: string; label: string; enabled: boolean }[];
+  policies?: string[];
   total: number;
   page: number;
   size: number;
@@ -68,10 +75,13 @@ export class InterfaceResourceApiError extends Error {
 const root = '/api/v1/platform/interface-resources';
 async function request<T>(
   path: string,
-  params?: Record<string, number | boolean>
+  params?: Record<string, number | boolean | string>,
+  body?: { serviceCode: string }
 ): Promise<T> {
   try {
-    const response = await axios.get(root + path, { params });
+    const response = body
+      ? await axios.post(root + path, body)
+      : await axios.get(root + path, { params });
     return readEnvelope(response.data, response.status) as T;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
@@ -88,10 +98,28 @@ async function request<T>(
     );
   }
 }
+export type CatalogFilters = {
+  path?: string;
+  policy?: string;
+  serviceCode?: string;
+  serviceName?: string;
+};
+export const refreshInterfaceService = (serviceCode: string) =>
+  request<{ serviceCode: string; serviceName: string; revision: number }>(
+    '/refresh',
+    undefined,
+    {
+      serviceCode,
+    }
+  );
 export const listInterfaceResources = (
   page = 0,
   size = 10,
-  options: { revision?: number; refresh?: boolean } = {}
+  options: CatalogFilters & {
+    revision?: number;
+    refresh?: boolean;
+    directory?: boolean;
+  } = {}
 ) => request<InterfaceResourcePage>('', { page, size, ...options });
 export const listInterfaceResourceHistory = (page = 0, size = 20) =>
   request<CatalogHistory>('/history', { page, size });

@@ -54,14 +54,14 @@ public class DataResourceRegistry {
                 "持久所有者（创建人不自动取得本人归属）", "organizationId", "organization_id",
                 Set.of("read", "create", "update", "delete", "export"), "", "",
                 "各查询保留原状态、发布版本、公共读取及覆盖优先级上限",
-                "Registered ENTERPRISE-only SQL / JPA projection", "Domain-locked business transaction");
+                "Registered SQL / JPA projection", "Domain-locked business transaction");
     }
 
     public RegisteredScopeProjection configurationProjection(DataReadService.Scope scope) {
         if (!Set.of("dictionaries", "system-parameters").contains(scope.resource().key()))
             throw SummerException.withMessage(PermissionErrorCode.INVALID, "Configuration projection required");
         return new RegisteredScopeProjection(scope, new RegisteredScopeProjection.Columns(
-                "ENTERPRISE", null, null, "tenant_id", "tenantId", "owner_id", "ownerId",
+                scope.resource().key().equals("dictionaries") ? "PLATFORM" : "ENTERPRISE", null, null, "tenant_id", "tenantId", "owner_id", "ownerId",
                 "organization_id", "organizationId"));
     }
 
@@ -70,15 +70,19 @@ public class DataResourceRegistry {
     }
 
     public Collection<Resource> list(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain) {
-        return resources.values().stream().filter(resource -> "ENTERPRISE".equals(domain.kind())
-                || "applications".equals(resource.key())).toList();
+        return resources.values().stream().filter(resource -> supports(domain.kind(), resource.key())).toList();
+    }
+
+    private boolean supports(String domainKind, String resource) {
+        return "applications".equals(resource) || ("dictionaries".equals(resource)
+                ? "PLATFORM".equals(domainKind) : "ENTERPRISE".equals(domainKind));
     }
 
     public Resource require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain,
             String key, String action) {
         Resource resource = require(key, action);
-        if (!"applications".equals(key) && !"ENTERPRISE".equals(domain.kind()))
-            throw SummerException.withMessage(PermissionErrorCode.INVALID, "Data resource is ENTERPRISE-only");
+        if (!supports(domain.kind(), key))
+            throw SummerException.withMessage(PermissionErrorCode.INVALID, "Data resource belongs to another domain");
         return resource;
     }
 

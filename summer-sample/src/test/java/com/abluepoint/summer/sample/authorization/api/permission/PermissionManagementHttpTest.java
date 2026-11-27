@@ -17,7 +17,7 @@ class PermissionManagementHttpTest {
     @Test
     void sessionWithoutPersistentMembershipCannotManagePermissions() throws Exception {
         mvc.perform(
-                        get("/api/v1/enterprises/ent-acme/permissions")
+                        get("/api/v1/enterprises/ent-acme/roles?catalog=permissions")
                                 .with(user("no-persisted-grants")))
                 .andExpect(status().isForbidden());
     }

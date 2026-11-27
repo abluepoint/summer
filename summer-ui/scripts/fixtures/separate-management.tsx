@@ -12,7 +12,15 @@ import PlatformRoles from '../../src/pages/platform/roles';
 import PlatformPermissions from '../../src/pages/platform/permissions';
 import PlatformMenus from '../../src/pages/platform/menu-manifest';
 import '@arco-design/web-react/dist/css/arco.css';
+import Administrators from '../../src/pages/platform/administrators';
+import Organization from '../../src/pages/platform/organization';
+import FileRepositories from '../../src/pages/platform/file-repositories';
+import Files from '../../src/pages/platform/files';
 const pages = {
+  'platform/files': Files,
+  'platform/file-repositories': FileRepositories,
+  'platform/administrators': Administrators,
+  'platform/organization': Organization,
   'dictionary/divisions': Divisions,
   roles: Roles,
   'menu-manifest': Menus,

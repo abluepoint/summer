@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { menuClientCode } from '@/menu/client';
 import { readEnvelope, readFailure } from '@/pages/customer/contract.mjs';
-import { MenuManifest, VisibleMenuItem } from '@/menu/api';
+import { MenuManifest } from '@/menu/api';
 import { MenuManifestItem } from '@/menu/manifest';
 export type MenuError = {
   status: number;
@@ -8,13 +9,10 @@ export type MenuError = {
   message: string;
   requestId: string;
 };
-export type MenuOverride = Pick<
-  VisibleMenuItem,
-  'enabled' | 'parentMenuId' | 'sortOrder'
->;
 export type PlatformManifest = {
   manifestVersion: number;
-  items: MenuManifestItem[];
+  items: (MenuManifestItem & { enabled?: boolean })[];
+  layoutVersions?: Record<string, number>;
 };
 async function request<T>(
   call: () => Promise<{ data: unknown; status: number }>
@@ -33,7 +31,10 @@ async function request<T>(
 }
 async function currentMode(base: string) {
   const marker = await request<MenuManifest>(() =>
-    axios.get(`${base}/authorization/navigation`, { expectedAccessProbe: true })
+    axios.get(`${base}/authorization/navigation`, {
+      params: { clientCode: menuClientCode },
+      expectedAccessProbe: true,
+    })
   );
   if (marker.engineMode !== 'MANAGED' && marker.engineMode !== 'LEGACY')
     throw {
@@ -43,19 +44,6 @@ async function currentMode(base: string) {
       requestId: '',
     } as MenuError;
   return marker.engineMode;
-}
-export async function getManagedManifest(enterprise: string) {
-  const base = `/api/v1/enterprises/${encodeURIComponent(enterprise)}`;
-  const mode = await currentMode(base);
-  return request<MenuManifest>(() =>
-    axios.get(
-      `${base}${
-        mode === 'MANAGED'
-          ? '/authorization/menu-layout'
-          : '/menu-manifest/management'
-      }`
-    )
-  );
 }
 export async function getPlatformManifest() {
   const base = '/api/v1/platform';
@@ -71,28 +59,6 @@ export async function getPlatformManifest() {
     )
   );
 }
-export const saveOverride = async (
-  enterprise: string,
-  menu: string,
-  body: MenuOverride,
-  version: number,
-  key: string
-) => {
-  const base = `/api/v1/enterprises/${encodeURIComponent(enterprise)}`;
-  const mode = await currentMode(base);
-  return request<VisibleMenuItem>(() =>
-    axios.patch(
-      `${base}${
-        mode === 'MANAGED' ? '/authorization/menu-layout' : '/menu-manifest'
-      }`,
-      body,
-      {
-        params: { menuId: menu },
-        headers: { 'If-Match': `"${version}"`, 'Idempotency-Key': key },
-      }
-    )
-  );
-};
 export const savePlatformManifest = async (
   body: PlatformManifest,
   version: number,
@@ -100,6 +66,13 @@ export const savePlatformManifest = async (
 ) => {
   const base = '/api/v1/platform';
   const mode = await currentMode(base);
+  if (body.layoutVersions && mode !== 'MANAGED')
+    throw {
+      status: 409,
+      message: '当前授权模式不支持菜单编辑',
+      code: 'DOMAIN_NOT_MANAGED',
+      requestId: '',
+    } as MenuError;
   return request<MenuManifest>(() =>
     axios.put(
       `${base}${

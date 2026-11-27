@@ -28,7 +28,7 @@ public class AuthorizationDomainVersions {
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         return tx;
     }
-    record State(String mode, long revision) {}
+    record State(String mode, long revision, Long catalogRevision) {}
     State current(Domain domain) {
         var rows = jdbc.query("select engine_mode, revision from summer_authorization_domain where domain_key = ?",
                 (rs, n) -> {
@@ -36,10 +36,15 @@ public class AuthorizationDomainVersions {
                     long revision = rs.getLong(2);
                     if (rs.wasNull() || revision < 0 || !("LEGACY".equals(mode) || "MANAGED".equals(mode)))
                         throw new AccessDeniedException("Unconfirmed authorization domain state");
-                    return new State(mode, revision);
+                    return new State(mode, revision, null);
                 }, domain.key());
         if (rows.size() != 1) throw new AccessDeniedException("Unconfirmed authorization domain state");
-        return rows.getFirst();
+        var state = rows.getFirst();
+        if (!Domain.platform().equals(domain) && "MANAGED".equals(state.mode())) {
+            var catalog = jdbc.queryForList("select revision from summer_authorization_domain where domain_key='PLATFORM:platform' and engine_mode='MANAGED'", Long.class);
+            return new State(state.mode(), state.revision(), catalog.isEmpty() ? null : catalog.getFirst());
+        }
+        return state;
     }
     /** False means an explicitly persisted LEGACY mode, never absent or unknown state. */
     public boolean managed(Domain domain) {

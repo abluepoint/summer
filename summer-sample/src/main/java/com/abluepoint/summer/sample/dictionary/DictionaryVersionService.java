@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.resilience.ResilientReadService;
@@ -31,13 +31,12 @@ class DictionaryVersionService {
     private final com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard;
     private final DictionaryNotificationService notifications;
     private final com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions;
-    private final com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides;
 
     DictionaryVersionService(DictionaryTypeRepository types, DictionaryItemRepository items,
                              DictionaryVersionRepository versions, DictionaryOutboxRepository outbox,
                              DictionaryAuditService audit, VersionedTwoLevelCache cache,
                              ObjectMapper objectMapper,
-                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationOverrideService overrides, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective, DictionaryGroups groups, BusinessDataScopes reads) {
+                             ResilientReadService resilientReads, DictionaryNotificationService notifications, com.abluepoint.summer.sample.configuration.ConfigurationActionAccess actions, com.abluepoint.summer.sample.resilience.ConfigurationFallbackGuard fallbackGuard, EffectiveDictionaryReader effective, DictionaryGroups groups, BusinessDataScopes reads) {
         this.reads = reads;
         this.groups = groups;
         this.effective = effective;
@@ -51,7 +50,6 @@ class DictionaryVersionService {
         this.resilientReads = resilientReads;
         this.fallbackGuard = fallbackGuard;
         this.notifications = notifications;
-        this.overrides = overrides;
         this.actions = actions;
     }
 
@@ -60,7 +58,7 @@ class DictionaryVersionService {
                                       Authentication authentication) {
         actions.require("dictionaries", "publish", authentication);
         validateRequest(request);
-        return reads.write(resolve(authentication),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
+        return reads.write(Domain.platform().id(),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
         var scope = ranges.get("update");
         revision(request.expectedDraftRevision());
         DictionaryTypeEntity type = lockedType(code, authentication, scope);
@@ -69,7 +67,7 @@ class DictionaryVersionService {
         requireExpected(request, type);
         if (request.expectedDraftRevision() == null || revision(request.expectedDraftRevision()) != type.draftRevision()) throw new SummerException(DictionaryErrorCode.VERSION_CONFLICT);
 
-        long next = versions.findTopByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code)
+        long next = versions.findTopByTenantIdAndDictionaryCodeOrderByVersionDesc(Domain.platform().id(), code)
                 .map(value -> value.version() + 1).orElse(1L);
         requireFullItems(type, scope);
         String snapshot = snapshot(type, code);
@@ -77,7 +75,7 @@ class DictionaryVersionService {
             reads.replace(scope, DictionaryItemEntity.class,item,item.id(),java.util.Map.of("everPublished",true));
         }
         groups.markPublished(type,scope);
-        DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), resolve(authentication),
+        DictionaryVersionEntity version = new DictionaryVersionEntity(UUID.randomUUID().toString(), Domain.platform().id(),
                 code, next, "PUBLISHED", snapshot, principal(authentication), requestId);
         entityManager.detach(type);
         type.publish(next);
@@ -94,7 +92,7 @@ class DictionaryVersionService {
                                       Authentication authentication) {
         actions.require("dictionaries", "disable", authentication);
         validateRequest(request);
-        return reads.write(resolve(authentication),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
+        return reads.write(Domain.platform().id(),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
         var scope = ranges.get("update");
         DictionaryTypeEntity type = lockedType(code, authentication, scope);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_DISABLED", authentication, scope);
@@ -110,7 +108,7 @@ class DictionaryVersionService {
 
         type = claimEffective(type, request, false,scope);
         evidence(code, current, "DICTIONARY_DISABLED", requestId, request, type, authentication);
-        return view(type, versions.findByTenantIdAndDictionaryCodeAndVersion(resolve(authentication), code, current).orElse(null));
+        return view(type, versions.findByTenantIdAndDictionaryCodeAndVersion(Domain.platform().id(), code, current).orElse(null));
         });
     }
 
@@ -119,7 +117,7 @@ class DictionaryVersionService {
                                        Authentication authentication) {
         actions.require("dictionaries", "rollback", authentication);
         validateRequest(request);
-        return reads.write(resolve(authentication),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
+        return reads.write(Domain.platform().id(),"dictionaries",java.util.Set.of("update"),authentication,ranges -> {
         var scope = ranges.get("update");
         DictionaryTypeEntity type = lockedType(code, authentication, scope);
         DictionaryTypeVersionView replay = replay(code, request, type, "DICTIONARY_ROLLED_BACK", authentication, scope);
@@ -131,7 +129,7 @@ class DictionaryVersionService {
             throw invalidState("Rollback target is not a previous version");
         }
         DictionaryVersionEntity target = versions.findByTenantIdAndDictionaryCodeAndVersion(
-                        resolve(authentication), code, revision(request.targetVersion()))
+                        Domain.platform().id(), code, revision(request.targetVersion()))
                 .orElseThrow(() -> invalidState("Rollback target does not exist"));
         requireSnapshotVisible(type, target, scope);
 
@@ -146,9 +144,9 @@ class DictionaryVersionService {
 
     @Transactional(readOnly = true)
     List<DictionaryVersionView> list(String code, Authentication authentication) {
-        return reads.read(resolve(authentication),"dictionaries","read",authentication,scope -> {
+        return reads.read(Domain.platform().id(),"dictionaries","read",authentication,scope -> {
         scopedType(code, authentication, scope);
-        return versions.findAllByTenantIdAndDictionaryCodeOrderByVersionDesc(resolve(authentication), code).stream()
+        return versions.findAllByTenantIdAndDictionaryCodeOrderByVersionDesc(Domain.platform().id(), code).stream()
                 .map(value -> new DictionaryVersionView(value.version(), value.status(), value.createdAt(), value.createdBy()))
                 .toList();
         });
@@ -156,7 +154,7 @@ class DictionaryVersionService {
 
     @Transactional(readOnly = true)
     DictionaryHistoryView history(String code, long version, Authentication authentication) {
-        return reads.read(resolve(authentication),"dictionaries","read",authentication,scope -> {
+        return reads.read(Domain.platform().id(),"dictionaries","read",authentication,scope -> {
         actions.require("dictionaries", "read", authentication);
         var type = scopedType(code, authentication, scope);
         var stored = versions.findByTenantIdAndDictionaryCodeAndVersion(type.tenantId(), code, version)
@@ -171,47 +169,39 @@ class DictionaryVersionService {
     PublicDictionaryView publicRead(String code) { return publicRead(code, null); }
 
     @Transactional(readOnly = true)
-    PublicDictionaryView publicRead(String code, Authentication authentication) { return publicRead(resolve(authentication), code, authentication); }
+    PublicDictionaryView publicRead(String code, Authentication authentication) {
+        return publicRead(code, authentication, () -> actions.requirePublic("dictionaries", authentication));
+    }
 
     @Transactional(readOnly = true)
-    PublicDictionaryView publicRead(String tenant, String code, Authentication authentication) {
+    PublicDictionaryView publishedRead(String code, Authentication authentication) {
+        return publicRead(code, authentication, () -> actions.requirePublishedDictionary(authentication));
+    }
+
+    private PublicDictionaryView publicRead(String code, Authentication authentication, Runnable authorize) {
+        String tenant = Domain.platform().id();
         return reads.read(tenant,"dictionaries","read",authentication,scope -> {
-        actions.requirePublic(tenant, "dictionaries", authentication);
+        authorize.run();
         var base = effective.read(tenant, code, true, scope);
         var snapshot = base.snapshot();
         var allowedValues = base.visibleValues();
-        var override = overrides.resolve(tenant, "dictionaries", code, authentication);
-        if (override.isPresent()) {
-            var selected = override.get();
-            List<DictionaryItemView> options = objectMapper.readValue(selected.valueJson(), objectMapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class));
-            var selectable = base.selectableValues();
-            return new PublicDictionaryView(code, options.stream().filter(DictionaryItemView::enabled)
-                    .filter(i -> selectable.contains(i.value())).toList(), selected.version(), base.publishedVersion(),
-                    selected.publishedRevision(), "override", token(tenant, code, base.publishedVersion(), selected.sourceId() + ":" + selected.publishedRevision(), base), base.effectiveRevision());
-        }
         String cacheKey = tenant + ":" + code + ":" + (authentication == null ? "" : authentication.getName()) + ":" + base.publishedVersion() + ":" + base.effectiveRevision() + ":" + base.scopeFingerprint() + ":" + new java.util.TreeSet<>(allowedValues);
         return resilientReads.read(ResilientReadService.DICTIONARIES, cacheKey, () -> cache.get(tenant, "dictionary", cacheKey, PublicDictionaryView.class,
                 () -> new PublicDictionaryView(code, snapshot.items().stream().filter(DictionaryItemView::enabled)
                         .filter(i -> allowedValues.contains(i.value())).toList(), base.publishedVersion(), base.publishedVersion(), null,
                         "base", token(tenant, code, base.publishedVersion(), "base", base), base.effectiveRevision())),
-                () -> fallbackGuard.dictionary(tenant, code, base.publishedVersion(), base.effectiveRevision(), base.scopeFingerprint(), allowedValues, authentication));
+                () -> fallbackGuard.dictionary(tenant, code, base.publishedVersion(), base.effectiveRevision(), base.scopeFingerprint(), allowedValues, authentication, authorize));
             });
     }
 
     @Transactional(readOnly = true)
     EffectiveDictionaryView effectiveRead(String code, Authentication authentication) {
-        var base = effective.read(resolve(authentication), code, authentication, false);
+        var base = effective.read(Domain.platform().id(), code, authentication, false);
         var snapshot = base.snapshot();
         return new EffectiveDictionaryView(code, snapshot == null ? null : snapshot.name(), base.publishedVersion(),
                 snapshot == null ? "UNPUBLISHED" : "PUBLISHED", snapshot == null ? false : snapshot.publicReadable(),
                 snapshot == null ? false : snapshot.enabled(), snapshot == null ? List.of() : snapshot.items().stream()
-                .filter(i -> base.visibleValues().contains(i.value())).toList(), snapshot == null ? List.of() : snapshot.groups().stream().map(g -> new DictionarySnapshotGroup(g.id(), g.code(), g.name(), g.enabled(), g.memberValues().stream().filter(base.visibleValues()::contains).toList())).toList(), base.effectiveRevision(), base.draftRevision());
-    }
-
-    @Transactional
-    com.abluepoint.summer.sample.configuration.ConfigurationOverrideView override(String code, String organization,
-            com.abluepoint.summer.sample.configuration.ConfigurationOverrideRequest request, Authentication auth, String requestId) {
-        return overrides.save("dictionaries", code, organization, request, auth, requestId);
+                .filter(i -> base.visibleValues().contains(i.value())).toList(), snapshot == null ? List.of() : snapshot.groups().stream().map(g -> new DictionarySnapshotGroup(g.id(), g.code(), g.name(), g.enabled(), g.memberValues().stream().filter(base.visibleValues()::contains).toList(),g.memberSortOrders())).toList(), base.effectiveRevision(), base.draftRevision());
     }
 
     private DictionaryTypeEntity scopedType(String code, Authentication authentication, BusinessDataScopes.Filter scope) {
@@ -220,7 +210,7 @@ class DictionaryVersionService {
 
     private DictionaryTypeEntity lockedType(String code, Authentication auth, BusinessDataScopes.Filter scope) {
         scopedType(code, auth, scope);
-        var type = types.lock(resolve(auth), code).orElseThrow();
+        var type = types.lock(Domain.platform().id(), code).orElseThrow();
         entityManager.refresh(type, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (types.findScoped(code,scope).isEmpty()) throw new SummerException(com.abluepoint.summer.common.error.CommonErrorCode.NOT_FOUND);
         return type;
@@ -284,13 +274,13 @@ class DictionaryVersionService {
     private void evidence(String code, long version, String eventType, String requestId, DictionaryVersionRequest request, DictionaryTypeEntity type, Authentication authentication) {
         try {
             String eventId = UUID.randomUUID().toString();
-            String payload = objectMapper.writeValueAsString(new DictionaryEvent(eventId, resolve(authentication), code, eventType, version, requestId));
-            var event = new DictionaryOutboxEntity(eventId, resolve(authentication), code, eventType, version, requestId, request.idempotencyKey(), payload);
+            String payload = objectMapper.writeValueAsString(new DictionaryEvent(eventId, Domain.platform().id(), code, eventType, version, requestId));
+            var event = new DictionaryOutboxEntity(eventId, Domain.platform().id(), code, eventType, version, requestId, request.idempotencyKey(), payload);
             event.receipt(fingerprint(code, eventType, request, authentication), objectMapper.writeValueAsString(view(type,
                     versions.findByTenantIdAndDictionaryCodeAndVersion(type.tenantId(), code, version).orElse(null))));
             outbox.saveAndFlush(event);
-            cache.invalidate(resolve(authentication), "dictionary");
-            notifications.record(resolve(authentication), code, eventType, version, requestId);
+            cache.invalidate(Domain.platform().id(), "dictionary");
+            notifications.record(Domain.platform().id(), code, eventType, version, requestId);
             audit.recordSuccess(code, eventType, requestId, authentication);
         } catch (JacksonException exception) {
             throw new IllegalStateException("Dictionary event cannot be serialized", exception);
@@ -298,7 +288,7 @@ class DictionaryVersionService {
     }
 
     private String fingerprint(String code, String action, DictionaryVersionRequest request, Authentication auth) {
-        String semantic = objectMapper.writeValueAsString(java.util.Arrays.asList(principal(auth), resolve(auth), code, action,
+        String semantic = objectMapper.writeValueAsString(java.util.Arrays.asList(principal(auth), Domain.platform().id(), code, action,
                 request.expectedVersion(), request.expectedEffectiveRevision(), request.expectedDraftRevision(), request.targetVersion()));
         try { return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(semantic.getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
         catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }

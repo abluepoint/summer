@@ -13,8 +13,12 @@ export function matchesDictionaryItem(item: DictionaryOption, query: string) {
 // Private to dictionary details: effective, history and publication preview.
 export default function DictionaryItemsTable({
   items,
+  orderLabel = '默认顺序',
+  memberships,
 }: {
   items: DictionaryOption[];
+  orderLabel?: string;
+  memberships?: Map<string, string[]>;
 }) {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -57,14 +61,25 @@ export default function DictionaryItemsTable({
           query.trim() ? '没有匹配的字典值，请调整搜索条件。' : '暂无字典值'
         }
         columns={[
-          { title: '值', dataIndex: 'value' },
+          { title: '字典值', dataIndex: 'value' },
           { title: '显示名称', dataIndex: 'label' },
           {
             title: '说明',
             dataIndex: 'description',
             render: (description) => description || '—',
           },
-          { title: '默认顺序', dataIndex: 'sortOrder', width: 100 },
+          ...(memberships
+            ? [
+                {
+                  title: '所属字典组及组内顺序',
+                  dataIndex: 'value',
+                  key: 'memberships',
+                  render: (value: string) =>
+                    memberships.get(value)?.join('、') || '—',
+                },
+              ]
+            : []),
+          { title: orderLabel, dataIndex: 'sortOrder', width: 100 },
           {
             title: '状态',
             width: 100,

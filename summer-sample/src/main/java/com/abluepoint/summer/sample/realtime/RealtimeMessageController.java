@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.realtime;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.error.CommonErrorCode;
@@ -39,6 +41,8 @@ class RealtimeMessageController {
         catch (AccessDeniedException e) { throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Message capability denied", e); }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "after", required = false, style = "requestTextStyle")
     @GetMapping
     @RawResponse
     @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.read') or (hasAuthority('SCOPE_enterprise.messages.read'))")
@@ -49,6 +53,8 @@ class RealtimeMessageController {
         catch (AccessDeniedException e) { throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Message capability denied", e); }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "messageId", style = "requestTextStyle")
     @GetMapping("/{messageId}")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.read') or (hasAuthority('SCOPE_enterprise.messages.read'))")
@@ -58,6 +64,8 @@ class RealtimeMessageController {
         catch (AccessDeniedException e) { throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Message capability denied", e); }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "messageId", style = "requestTextStyle")
     @PostMapping("/{messageId}:ack")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.write') or (hasAuthority('SCOPE_enterprise.messages.write'))")
@@ -71,6 +79,7 @@ class RealtimeMessageController {
         catch (AccessDeniedException e) { throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Message capability denied", e); }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/connections")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.require(authentication, 'enterprise.messages.read') or (hasAuthority('SCOPE_enterprise.messages.read'))")

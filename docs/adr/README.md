@@ -29,7 +29,7 @@
 | [0021](0021-manage-request-body-caching-automatically.md) | MVC 自动管理必要的请求体缓存 | 已移除 cache-request-body 及其专属启动检查，字段校验与 HTTP 日志适配共享完整 MVC 请求体；部分替代 0010、0013 |
 | [0022](0022-define-styles-without-builtin-names.md) | Style 由应用定义，不设框架内置名称 | 框架提供规则构建 API，应用以 Java 公共配置定义具名 Bean；链式定义写法已确认，部分替代 0017，尚未实现 |
 | [0023](0023-consolidate-identity-frontend-in-summer-ui.md) | 身份管理前端统一到 Summer UI | 替代 AICT 规格中的独立 `aict-identity` / Vben 前端选择；服务端安全边界另行明确 |
-| [0026](0026-use-versioned-route-menu-manifest.md) | 前端路由发布版本化菜单 manifest | 服务端只保存元数据、Capability 绑定和租户覆盖，不保存前端组件引用 |
+| [0026](0026-use-versioned-route-menu-manifest.md) | 前端路由发布版本化菜单 manifest | 平台统一维护菜单元数据和布局，所属客户端由平台字典管理 |
 | [0027](0027-versioned-authorization-change-stream.md) | 权限变更使用 outbox 与 Redis Stream 版本化传播 | 节点独立消费组、共享 receipt 幂等、版本/重试/死信和持久化投影恢复 |
 | [0028](0028-enforce-effective-configuration-scopes.md) | 持久化主体数据范围、公共配置授权和组织/租户覆盖优先级 | T18/T19；真实 MySQL 与 HTTP 已验证，浏览器流程单独验收 |
 | [0029](0029-share-servlet-login-context-and-isolate-bearer-authentication.md) | 共享 Servlet 登录上下文并隔离 Bearer 认证 | Cookie CSRF、原子撤销、故障诊断与 JDBC 本地登录身份映射 |
@@ -51,6 +51,8 @@
 | [0038](0038-evolve-existing-dictionaries-through-effective-snapshots.md) | 演进既有业务字典并统一生效读取边界 | 部分替代ADR0027的无快照编辑行读取例外；保留旧公开选项和组织覆盖，写入接入修订保护；演进已实现，迁移、兼容、实际验收及工程检查限制见业务字典技术规格 |
 
 | [0039](0039-manage-permissions-independently-of-resources.md) | 权限独立管理，菜单权限与接口权限分别授权 | 多级混合分组、权限单组归属；只通过角色授予，菜单与接口各自多对多关联并采用OR；访问方式属于权限，数据范围采用五种预设，保存即对后续请求生效；部分替代0026/0030并补充0028/0032；已定稿，技术方案见 [Issue #199](https://github.com/abluepoint/summer/issues/199)，尚未实现 |
+| [0040](0040-retire-legacy-data-scope-management.md) | 移除旧数据权限菜单及策略管理接口 | 当前数据权限继续由权限管理配置；保留数据范围执行和历史迁移数据 |
+| [0041](0041-retire-authorization-event-management.md) | 移除授权事件管理页面及接口 | 移除事件列表、人工重试和授权解释；保留内部变更通知与权限缓存失效 |
 
 ## 来源与适用范围
 
@@ -59,3 +61,8 @@
 AICT 的 IAM、BFF 与独立连接服务仍有各自的服务端职责，但前端不再使用独立 `aict-identity` 或 Vben 工程，见 ADR 0023。AICT 规格中的业务要求不因前端合并而自动取消；其中旧前端技术选型须按 ADR 0023 重新对齐。现有 Summer UI 的 Arco/PKCE 决策也不自动证明 AICT 的 BFF 安全契约已实现。
 
 历史日志只用于定位线索，Issue 关闭状态不能替代代码及测试证据。后续决策冲突必须新增 ADR 并写明替代关系，不删除或重写旧决定来掩盖变更。
+
+- [ADR 0042：平台管理与租户管理采用独立功能入口](0042-separate-platform-and-tenant-management-entries.md)
+- [ADR 0043：权限定义仅由平台维护](0043-platform-only-permission-management.md)
+- [ADR 0044：平台角色管理归入访问控制目录](0044-group-platform-roles-under-access-control.md)
+- [ADR 0045：通过菜单管理配置访问控制目录](0045-publish-access-control-menu.md)

@@ -76,7 +76,7 @@ public class ControlledLegacyEnrollment {
       }
       for (String table : List.of("summer_permission_bootstrap", "summer_permission_identity",
           "summer_permission_group", "summer_permission", "summer_permission_role",
-          "summer_permission_user", "summer_permission_user_role", "summer_role_permission",
+          "summer_permission_user", "summer_permission_user_role", "summer_role_permission", "summer_role_platform_permission",
           "summer_permission_resource", "summer_permission_mutation", "summer_permission_resource_control",
           "summer_authorization_migration_snapshot", "summer_authorization_installation"))
         if (db.queryForObject("select count(*) from " + table + " where domain_key=?", Integer.class, domain.key()) != 0)
@@ -180,10 +180,11 @@ public class ControlledLegacyEnrollment {
           "V182__authorization_runtime_migration_proof.sql", "V183__authorization_writer_fence.sql",
           "V184__authorization_controlled_cutover.sql",
           "V185__authorization_controlled_mode_recovery.sql",
-          "V186__authorization_contract_preparation.sql").contains(script))
+          "V186__authorization_contract_preparation.sql",
+          "V187__tenant_roles_use_platform_permissions.sql").contains(script))
         throw conflict("Unapproved schema expansion blocks enrollment");
       if (version.compareTo(MigrationVersion.fromVersion("180")) == 0) bridgeHead = true;
-      if (version.compareTo(MigrationVersion.fromVersion("186")) > 0)
+      if (version.compareTo(MigrationVersion.fromVersion("187")) > 0)
         throw conflict("Unsupported source schema version");
     }
     if (!bridgeHead || !seen.equals(approved))

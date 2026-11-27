@@ -20,6 +20,11 @@ export const platformManagementPaths = [
 // Tenant business routes (including statistics under Dashboard) keep tenant qualification.
 const sharedPlatformPages = new Set([
   'interface-resources',
+  'platform/administrators',
+  'platform/organization',
+  'platform/file-repositories',
+  'platform/user-groups',
+  'platform/files',
   ...platformDictionaryPages,
   'welcome',
   'dashboard/workplace',
@@ -55,7 +60,15 @@ export function managementNavigation(
       (domain === 'PLATFORM' && item.menuId === 'platform/roles')) &&
     (domain === 'PLATFORM' ||
       (!platformDictionaryPages.includes(item.menuId) &&
-        !['permissions', 'menu-manifest'].includes(item.menuId)));
+        ![
+          'permissions',
+          'menu-manifest',
+          'platform/administrators',
+          'platform/organization',
+          'platform/file-repositories',
+          'platform/user-groups',
+          'platform/files',
+        ].includes(item.menuId)));
   return items.filter(included).map((item) => {
     let parent = item.parentMenuId;
     const seen = new Set<string>();

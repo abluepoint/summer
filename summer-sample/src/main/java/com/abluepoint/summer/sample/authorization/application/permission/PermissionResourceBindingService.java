@@ -57,6 +57,13 @@ public class PermissionResourceBindingService {
   }
 
   @Transactional(readOnly = true)
+  public PermissionService.Result readCatalog(Domain requester, String id, String type) {
+    Domain owner = db.queryForObject("select count(*) from summer_permission where domain_key='PLATFORM:platform' and permission_id=?", Integer.class, id) == 1
+        ? Domain.platform() : requester;
+    return read(owner, id, type);
+  }
+
+  @Transactional(readOnly = true)
   public PermissionService.Result read(Domain d, String id, String type) {
     permission(d, id, type);
     var versions =

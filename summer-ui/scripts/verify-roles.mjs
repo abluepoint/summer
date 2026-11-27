@@ -82,7 +82,10 @@ test('selection loads the entire paged permission catalogue', async () => {
   );
   assert.equal(permissions.length, 201);
   assert.equal(permissions[200].permissionId, 'last');
-  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(([, path]) => path), [
+    '/roles?page=1&size=200&catalog=permissions',
+    '/roles?page=2&size=200&catalog=permissions',
+  ]);
 });
 
 test('role selection loads every page instead of truncating at the first page', async () => {

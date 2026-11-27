@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -19,18 +21,25 @@ class EnterpriseReviewController {
     @GetMapping("/api/v1/platform/enterprise-reviews") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.read')") @RawResponse
     ResponseEntity<ApiResponse<ListResponse>> list(Authentication auth, HttpServletRequest request) { List<EnterpriseReview> items = service.list(auth); return ResponseEntity.ok().eTag(quote(java.util.UUID.nameUUIDFromBytes(items.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString())).header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.success(new ListResponse(items), requestId.currentRequestId())); }
 
+    @Field(param = "id", style = "requestTextStyle")
     @GetMapping("/api/v1/platform/enterprise-reviews/{id}") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.read')") @RawResponse
     ResponseEntity<ApiResponse<EnterpriseReview>> detail(@PathVariable String id, Authentication auth) { EnterpriseReview body = service.detail(id, auth); return ResponseEntity.ok().eTag(quote(body.revision())).body(ApiResponse.success(body, requestId.currentRequestId())); }
 
+    @Field(param = "id", style = "requestTextStyle")
     @GetMapping("/api/v1/platform/enterprise-reviews/{id}/audit") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.read')") @RawResponse
     ResponseEntity<ApiResponse<List<ReviewDecision>>> audit(@PathVariable String id, Authentication auth) { return ResponseEntity.ok(ApiResponse.success(service.audit(id, auth), requestId.currentRequestId())); }
 
+    @Field(param = "id", style = "requestTextStyle")
     @PostMapping("/api/v1/platform/enterprise-reviews/{id}:approve") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.write')") @RawResponse
     ResponseEntity<ApiResponse<EnterpriseReview>> approve(@PathVariable String id, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String key, Authentication auth) { return decide(id, "APPROVE", null, ifMatch, key, auth); }
 
+    @Field(param = "id", style = "requestTextStyle")
+    @Field(param = "reason", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping("/api/v1/platform/enterprise-reviews/{id}:reject") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.write')") @RawResponse
     ResponseEntity<ApiResponse<EnterpriseReview>> reject(@PathVariable String id, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String key, @RequestBody ReviewRequest body, Authentication auth) { return decide(id, "REJECT", body.reason(), ifMatch, key, auth); }
 
+    @Field(param = "id", style = "requestTextStyle")
+    @Field(param = "reason", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping("/api/v1/platform/enterprise-reviews/{id}:request-info") @PreAuthorize("hasAuthority('SCOPE_platform.enterprise-review.write')") @RawResponse
     ResponseEntity<ApiResponse<EnterpriseReview>> requestInfo(@PathVariable String id, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String key, @RequestBody ReviewRequest body, Authentication auth) { return decide(id, "REQUEST_INFO", body.reason(), ifMatch, key, auth); }
     private ResponseEntity<ApiResponse<EnterpriseReview>> decide(String id, String decision, String reason, String ifMatch, String key, Authentication auth) {

@@ -40,7 +40,7 @@ class NativeDenialCompatibilityHttpTest {
     @Autowired org.springframework.jdbc.core.JdbcTemplate db;
     @org.junit.jupiter.api.BeforeEach void exactNativeServiceSeams() {
         var enterprise=com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
-        fixture.reachServiceWithoutDelegation(enterprise,"native-boundary-member",(h,p,m)->p.startsWith("/api/v1/enterprises/{enterpriseId}/policies") || p.startsWith("/api/v1/enterprises/{enterpriseId}/menu-manifest") || p.startsWith("/api/authorization-events") || p.startsWith("/api/v1/enterprises/{e}/mcp-execution-permits"));
+        fixture.reachServiceWithoutDelegation(enterprise,"native-boundary-member",(h,p,m)->p.startsWith("/api/v1/enterprises/{enterpriseId}/policies") || p.startsWith("/api/v1/enterprises/{enterpriseId}/menu-manifest") || p.startsWith("/api/v1/enterprises/{e}/mcp-execution-permits"));
         fixture.reachServiceWithoutDelegation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),"native-boundary-member",(h,p,m)->p.startsWith("/api/v1/platform/menu-manifest"));
         fixture.grantHandlers(enterprise,"native-boundary-member",(h,p,m)->h.getBeanType().getName().endsWith(".AuthorizationController") && p.startsWith("/api/v1/enterprises/{enterpriseId}/"));
         fixture.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),"native-boundary-member",(h,p,m)->h.getBeanType().getName().endsWith(".AuthorizationController") && p.startsWith("/api/v1/platform/"));
@@ -108,11 +108,12 @@ class NativeDenialCompatibilityHttpTest {
         denied(get("/api/v1/platform/menu-manifest"), member(), "Platform menu capability denied");
         denied(endpoint("PUT", "/api/v1/platform/menu-manifest", "{\"manifestVersion\":0}"),
                 member(), "Platform menu capability denied");
-        denied(get("/api/v1/enterprises/ent-acme/menu-manifest/management"), member(), "Authorization capability denied");
-        denied(endpoint("PATCH", "/api/v1/enterprises/ent-acme/menu-manifest/missing", "{}"),
-                member(), "Authorization capability denied");
-        denied(endpoint("PATCH", "/api/v1/enterprises/ent-acme/menu-manifest", "{}").queryParam("menuId", "missing"),
-                member(), "Authorization capability denied");
+        mvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(member()))
+                .andExpect(status().isNotFound());
+        mvc.perform(endpoint("PATCH", "/api/v1/enterprises/ent-acme/menu-manifest/missing", "{}").with(member()))
+                .andExpect(status().isNotFound());
+        mvc.perform(endpoint("PATCH", "/api/v1/enterprises/ent-acme/menu-manifest", "{}").with(member()))
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.clearInvocations(forbidden);
         mvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(user("native-session-principal"))
                         .header("X-Request-Id", "native-session-denial"))
@@ -127,13 +128,6 @@ class NativeDenialCompatibilityHttpTest {
         org.mockito.Mockito.verify(forbidden).handle(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(), denied.capture());
         assertInstanceOf(org.springframework.security.authorization.AuthorizationDeniedException.class, denied.getValue());
-    }
-
-    @Test void authorizationEventListAndRetryKeepTheirOriginalServiceDenial() throws Exception {
-        denied(get("/api/authorization-events").queryParam("enterpriseId", "ent-acme"),
-                member(), "Current management resource permission required");
-        denied(post("/api/authorization-events/missing/retry").queryParam("enterpriseId", "ent-acme"),
-                member(), "Current management resource permission required");
     }
 
     @Test void mcpDecisionKeepsTrustTenantIdentityAndAudienceDenials() throws Exception {
@@ -158,13 +152,11 @@ class NativeDenialCompatibilityHttpTest {
                 member(), "MCP execution capability denied");
     }
 
-    @Test void preControllerTenantManagedGrantAndAmbiguousQueryDenialsRetainTheGlobalMessage() throws Exception {
+    @Test void preControllerTenantManagedGrantDenialsRetainTheGlobalMessage() throws Exception {
         mvc.perform(get("/api/v1/enterprises/ent-acme/capabilities/catalog").with(jwt()))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.message").value("Access is denied"));
         mvc.perform(get("/api/v1/enterprises/ent-acme/roles").with(jwt().jwt(t->t.subject("native-managed-no-role").claim("summer_managed_grants",true))))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.message").value("Access is denied"));
-        priorDenial(get("/api/authorization-events").queryParam("enterpriseId", "ent-acme", "ent-other"),
-                member(), "A single valid enterpriseId is required");
     }
 
     private void denied(MockHttpServletRequestBuilder request, RequestPostProcessor identity, String message) throws Exception {
@@ -188,14 +180,6 @@ class NativeDenialCompatibilityHttpTest {
                         assertEquals("Current management resource permission required", cause.getMessage());
                     }
                 });
-    }
-
-    private void priorDenial(MockHttpServletRequestBuilder request, RequestPostProcessor identity, String message) throws Exception {
-        mvc.perform(request.with(identity).header("X-Request-Id", "prior-denial"))
-                .andExpect(result -> assertEquals(message, assertInstanceOf(AccessDeniedException.class, result.getResolvedException()).getMessage()))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"))
-                .andExpect(jsonPath("$.error.message").value("Access is denied"))
-                .andExpect(jsonPath("$.requestId").value("prior-denial"));
     }
 
     private static AccessDeniedException origin(MvcResult result) {

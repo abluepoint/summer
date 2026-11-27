@@ -52,8 +52,8 @@ test('an anonymous query cannot create an active enterprise choice or load confi
   } finally { await page.close(); }
 });
 
-test('a pending policy or dictionary write blocks duplicate submissions and tenant switching', async () => {
-  for (const kind of ['data-scopes', 'dictionary']) {
+test('a pending dictionary write blocks duplicate submissions and tenant switching', async () => {
+  for (const kind of ['dictionary']) {
     let release, started;
     const pending = new Promise((resolve) => { started = resolve; });
     const deferred = new Promise((resolve) => { release = resolve; });
@@ -65,7 +65,7 @@ test('a pending policy or dictionary write blocks duplicate submissions and tena
       return json(route, success([policy]));
     }, '?multi=1');
     try {
-      const save = page.getByRole('button', { name: kind === 'dictionary' ? '发布字典覆盖' : '保存资源策略', exact: true });
+      const save = page.getByRole('button', { name: '发布字典覆盖', exact: true });
       await save.click(); await pending;
       assert.equal(await save.isDisabled(), true);
       assert.match(await page.getByRole('combobox', { name: '活动租户', exact: true }).getAttribute('class'), /arco-select-disabled/);
@@ -94,27 +94,7 @@ test('a pending parameter override blocks other writes, closing and tenant switc
   } finally { release(); await page.close(); }
 });
 
-test('switching active tenants clears policy previews and ignores a late response from the previous tenant', async () => {
-  let release;
-  let started;
-  const pending = new Promise((resolve) => { started = resolve; });
-  const delayed = new Promise((resolve) => { release = resolve; });
-  const page = await pageFor('data-scopes', async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (route.request().method() === 'POST') { started(); await delayed; return json(route, success({ decision: 'ALLOW', allowed: true, explanation: 'OLD_TENANT_SECRET', policyVersion: 1, effectiveScope: {} })); }
-    return json(route, success([{ ...policy, enterpriseId: path.includes('/tenant-b/') ? 'tenant-b' : 'tenant-a', resource: path.includes('/tenant-b/') ? 'new-tenant-resource' : 'system-parameters' }]));
-  }, '?multi=1');
-  try {
-    await page.getByRole('button', { name: '预览', exact: true }).click(); await pending;
-    await page.getByRole('combobox', { name: '活动租户', exact: true }).click();
-    await page.getByRole('option', { name: 'tenant-b', exact: true }).click();
-    await page.getByRole('textbox', { name: 'new-tenant-resource condition tree', exact: true }).waitFor();
-    release();
-    await page.waitForTimeout(100);
-    assert.equal(await page.getByText('OLD_TENANT_SECRET', { exact: true }).count(), 0);
-    assert.equal(await page.getByRole('textbox', { name: 'system-parameters condition tree', exact: true }).count(), 0);
-  } finally { release(); await page.close(); }
-});
+
 
 const parameter = { id: 'parameter-fixture', key: 'tenant-parameter', type: 'STRING', value: 'tenant-value', public: true, required: false, status: 'ACTIVE', version: 1 };
 const parameterPage = { items: [parameter], page: 0, size: 20, totalElements: 1, totalPages: 1, projection: 'detail' };
@@ -158,21 +138,4 @@ test('dictionary tenant switch rejects old public results and closes the previou
     assert.ok(paths.includes('/public/enterprises/tenant-b/dictionaries/customer-segment'));
     assert.ok(paths.includes('/api/v1/enterprises/tenant-b/dictionaries/customer-segment/events'));
   } finally { release(); await page.close(); }
-});
-
-test('dirty policy confirms tenant switch and inactive memberships are not selectable', async () => {
-  const paths = [];
-  const page = await pageFor('data-scopes', async (route) => { paths.push(new URL(route.request().url()).pathname); return json(route, success([policy])); }, '?multi=1');
-  try {
-    const input = page.getByRole('textbox', { name: 'system-parameters condition tree', exact: true }); await input.fill('{draft');
-    await page.getByRole('combobox', { name: '活动租户', exact: true }).click();
-    assert.equal(await page.getByRole('option', { name: 'inactive', exact: true }).count(), 0);
-    await page.getByRole('option', { name: 'tenant-b', exact: true }).click();
-    await page.getByRole('button', { name: '继续编辑', exact: true }).click();
-    assert.equal(await input.inputValue(), '{draft'); assert.ok(paths.every((path) => !path.includes('/tenant-b/')));
-    await page.getByRole('combobox', { name: '活动租户', exact: true }).click(); await page.getByRole('option', { name: 'tenant-b', exact: true }).click();
-    await page.getByRole('button', { name: '放弃修改', exact: true }).click();
-    await page.waitForFunction(() => !document.querySelector('textarea[aria-label="system-parameters condition tree"]')?.value.includes('{draft'));
-    assert.ok(paths.some((path) => path.includes('/tenant-b/')));
-  } finally { await page.close(); }
 });

@@ -131,7 +131,8 @@ class AuthorizationDataMigrationPlannerTest {
 
   @Test
   void dictionaryDraftDeletionIsARealLegacyActionAndCannotBeDroppedAsNotApplicable() {
-    var plan = restorationPlan(true, true);
+    var plan = restorationPlan(true, true, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform());
+    assertThat(plan.blockers()).contains("PLATFORM_DATA_LIFECYCLE_UNPROVED");
     assertThat(plan.items()).anySatisfy(item -> {
       assertThat(item.subject()).isEqualTo("alice");
       assertThat(item.resource()).isEqualTo("dictionaries");
@@ -149,8 +150,13 @@ class AuthorizationDataMigrationPlannerTest {
 
   private com.abluepoint.summer.sample.authorization.domain.migration.AuthorizationDataMigrationPlan
       restorationPlan(boolean subjectActive, boolean roleActive) {
+    return restorationPlan(subjectActive, roleActive, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("tenant-a"));
+  }
+
+  private com.abluepoint.summer.sample.authorization.domain.migration.AuthorizationDataMigrationPlan
+      restorationPlan(boolean subjectActive, boolean roleActive, com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain) {
     var source = new com.abluepoint.summer.sample.authorization.domain.migration.LegacyAuthorizationSnapshot(
-        "restoration", "ENTERPRISE", "tenant-a", 0, List.of(),
+        "restoration", domain.kind(), domain.id(), 0, List.of(),
         List.of(new com.abluepoint.summer.sample.authorization.domain.migration.LegacyAuthorizationSnapshot.Role(
             "old-role", roleActive, Set.of(), null)),
         List.of(new com.abluepoint.summer.sample.authorization.domain.migration.LegacyAuthorizationSnapshot.User(
@@ -162,7 +168,7 @@ class AuthorizationDataMigrationPlannerTest {
         "policies", List.of(Map.of("policy_id", "upper", "resource", "dictionaries", "operator_name", "AND", "rules_json", rules)),
         "dataBindings", List.of(Map.of("binding_id", "persisted", "resource", "dictionaries", "subject_type", "ROLE", "subject_id", "old-role", "operator_name", "AND", "rules_json", rules))));
     var input = new com.abluepoint.summer.sample.authorization.application.migration.AuthorizationMigrationService.DataInput(
-        source.snapshotId(), com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("tenant-a"),
+        source.snapshotId(), domain,
         0, 0, "f".repeat(64), source, original, evidence);
     return new com.abluepoint.summer.sample.authorization.application.migration.AuthorizationDataMigrationPlanner(
         json, new com.abluepoint.summer.sample.authorization.application.data.DataResourceRegistry()).plan(input);

@@ -37,12 +37,12 @@ class DictionaryNotificationSseHttpTest {
         managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
                 managedDb, managedTransactions, managedInterfaces);
         managed.configuration("ent-acme", "dictionaries", false, "writer");
-        readerRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "reader",
+        readerRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "reader",
                 (handler, path, method) -> handler.getBeanType().equals(DictionaryNotificationController.class)
                         && handler.getMethod().getName().equals("subscribe") && method.equals("GET")
-                        && path.equals("/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events"));
+                        && path.equals("/api/v1/platform/dictionaries/{code}/events"));
         managed.data("ent-acme", "reader", "dictionaries", "read", "TENANT_ALL");
-        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator",
                 (handler, path, method) -> handler.getBeanType().equals(DictionaryController.class)
                         && handler.getMethod().getName().equals("draft") && method.equals("GET")
                         && path.equals("/api/dictionaries/{code}/draft"));
@@ -51,8 +51,8 @@ class DictionaryNotificationSseHttpTest {
 
     @org.junit.jupiter.api.AfterEach
     void releaseManagedAuthorization() {
-        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "reader", readerRole);
-        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator", operatorRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "reader", readerRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator", operatorRole);
         managed.close();
     }
 
@@ -60,18 +60,18 @@ class DictionaryNotificationSseHttpTest {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    void publishCreatesTenantScopedNotificationAndSseUsesRawResumableContract() throws Exception {
+    void publishCreatesPlatformNotificationAndSseUsesRawResumableContract() throws Exception {
         createDictionary();
         publish();
 
         assertThat(jdbc.queryForObject(
-                "select count(*) from summer_dictionary_notification_event where tenant_id = 'ent-acme' and dictionary_code = 'live-segment'",
+                "select count(*) from summer_dictionary_notification_event where tenant_id = 'platform' and dictionary_code = 'live-segment'",
                 Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject(
                 "select payload_json from summer_dictionary_notification_event where dictionary_code = 'live-segment'",
                 String.class)).doesNotContain("items").contains("live-segment").contains("DICTIONARY_PUBLISHED");
 
-        http.perform(get("/api/v1/enterprises/ent-acme/dictionaries/live-segment/events")
+        http.perform(get("/api/v1/platform/dictionaries/live-segment/events")
                         .header("Last-Event-ID", "0")
                         .accept(MediaType.TEXT_EVENT_STREAM)
                         .with(reader()))
@@ -82,24 +82,23 @@ class DictionaryNotificationSseHttpTest {
     }
 
     @Test
-    void dictionaryNotificationRequiresActiveTenantMemberAndReadCapability() throws Exception {
+    void dictionaryNotificationRequiresReadCapabilityAcrossActiveEnterprises() throws Exception {
         createDictionary();
-        http.perform(get("/api/v1/enterprises/ent-acme/dictionaries/live-segment/events")
+        http.perform(get("/api/v1/platform/dictionaries/live-segment/events")
                         .with(jwt().jwt(token -> token.subject("reader").claim("enterprise_memberships", List.of(
                                 Map.of("enterpriseId", "ent-acme", "status", "ACTIVE"))))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
 
-        http.perform(get("/api/v1/enterprises/ent-other/dictionaries/live-segment/events")
+        http.perform(get("/api/v1/platform/dictionaries/live-segment/events")
                         .with(readerFor("ent-other")))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("SUMMER_FORBIDDEN"));
+                .andExpect(request().asyncStarted());
     }
 
     @Test
     void invalidLastEventIdIsAStableBadRequest() throws Exception {
         createDictionary();
-        http.perform(get("/api/v1/enterprises/ent-acme/dictionaries/live-segment/events")
+        http.perform(get("/api/v1/platform/dictionaries/live-segment/events")
                         .header("Last-Event-ID", "not-a-number")
                         .with(reader()))
                 .andExpect(status().isBadRequest())
@@ -109,10 +108,10 @@ class DictionaryNotificationSseHttpTest {
     @Test
     void revokedReaderDoesNotReceiveSubsequentPublication() throws Exception {
         createDictionary();publish();
-        var stream=http.perform(get("/api/v1/enterprises/ent-acme/dictionaries/live-segment/events").with(reader()))
+        var stream=http.perform(get("/api/v1/platform/dictionaries/live-segment/events").with(reader()))
                 .andExpect(request().asyncStarted()).andReturn();
         assertThat(stream.getResponse().getContentAsString()).contains("event:DICTIONARY_PUBLISHED");
-        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "reader", readerRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "reader", readerRole);
         http.perform(post("/api/dictionaries/live-segment/publish").with(writer()).contentType(MediaType.APPLICATION_JSON)
                 .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.lifecycle(http, "/api/dictionaries/live-segment/publish", "{\"expectedVersion\":1}"))) .andExpect(status().isOk());
         assertThat(stream.getResponse().getContentAsString().split("event:DICTIONARY_PUBLISHED",-1)).hasSize(2);

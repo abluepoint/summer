@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -33,6 +35,7 @@ class CapabilityController {
         return response(capabilitySetService.platform(authentication), request);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/capabilities")
     @PreAuthorize("hasAuthority('SCOPE_capabilities.enterprise.read')")
     @RawResponse

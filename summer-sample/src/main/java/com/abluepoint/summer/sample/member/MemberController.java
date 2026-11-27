@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.member;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
@@ -26,6 +28,10 @@ class MemberController {
     private final RequestIdAccessor requestId;
     MemberController(MemberService service, RequestIdAccessor requestId) { this.service = service; this.requestId = requestId; }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "subject", style = "memberSubjectStyle")
+    @Field(param = "displayName", style = "customerDisplayNameStyle")
+    @Field(param = "email", style = "memberEmailStyle")
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/members", consumes = "application/json")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
@@ -50,6 +56,8 @@ class MemberController {
         return ResponseEntity.ok().eTag(quote(body.revision())).header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.success(body, requestId.currentRequestId()));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "memberId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.read')")
@@ -62,30 +70,40 @@ class MemberController {
         return ResponseEntity.ok().eTag(quote(body.revision())).header("X-Request-Id", requestId.currentRequestId()).body(ApiResponse.success(body, requestId.currentRequestId()));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "memberId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:disable")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> disable(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth, HttpServletRequest request) { return change(enterpriseId, memberId, "DISABLED", ifMatch, idempotencyKey, auth); }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "memberId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:enable")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> enable(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth, HttpServletRequest request) { return change(enterpriseId, memberId, "ACTIVE", ifMatch, idempotencyKey, auth); }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "memberId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:leave")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> leave(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth) { return change(enterpriseId, memberId, "RESIGNED", ifMatch, idempotencyKey, auth); }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "memberId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}:resign")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.write')")
     @RawResponse
     ResponseEntity<ApiResponse<MemberDetail>> resign(@PathVariable String enterpriseId, @PathVariable String memberId, @RequestHeader(HttpHeaders.IF_MATCH) String ifMatch, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth) { return change(enterpriseId, memberId, "RESIGNED", ifMatch, idempotencyKey, auth); }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "memberId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/members/{memberId}/audit")
 
     @PreAuthorize("hasAuthority('SCOPE_enterprise.members.read')")

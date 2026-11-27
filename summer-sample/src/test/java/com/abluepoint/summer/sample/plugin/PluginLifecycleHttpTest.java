@@ -36,6 +36,8 @@ class PluginLifecycleHttpTest {
                     (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.systemparameter.PublicSystemParameterController")
                             && method.equals("GET") && path.equals("/public/enterprises/{enterpriseId}/system-parameters/{key}"));
             current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
+                    (handler, path, method) -> method.equals("GET") && path.equals("/public/dictionaries/{code}"));
+            current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), subject,
                     (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.customer.CustomerController")
                             && method.equals("GET") && path.equals("/api/customers"));
         }

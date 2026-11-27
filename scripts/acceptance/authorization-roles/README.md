@@ -1,5 +1,7 @@
 # T15 角色与接口授权真实验收
 
+> 2026-11-20：授权事件页面、列表/重试和授权解释接口已退役，见 [ADR 0041](../../../docs/adr/0041-retire-authorization-event-management.md)。本目录涉及旧页面或 `/api/authorization-events` 的脚本保留为历史验收材料，不能用于当前版本验收；内部事件写入、事务一致性与投递测试继续保留。
+
 固定候选 JAR + 独立 MySQL schema/账号、Redis 容器、真实表单/PKCE 登录、两个 JVM 和 Chrome。所有业务角色、能力选择、用户绑定与显式拒绝通过管理 API 建立；SQL 仅用于基础设施创建/清理和只读证据，脚本拒绝业务 SQL 写入。不加载外部业务 fixture，不拦截网络，不使用合成 JWT。
 
 在仓库根目录执行，并为每次运行使用全新证据目录：

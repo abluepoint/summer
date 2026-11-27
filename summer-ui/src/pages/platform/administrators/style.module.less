@@ -1,0 +1,34 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.groupSearch {
+  flex: 0 0 170px;
+}
+
+.groupOption {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+
+  > [role='option'] {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+.groups {
+  flex: 1 1 auto;
+  min-width: 120px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.actions {
+  flex: none;
+  white-space: nowrap;
+}

@@ -31,7 +31,10 @@ class AuthorizationAssignmentHttpTest {
   @BeforeEach void currentFacts() {
     fixture.grantHandlers(DOMAIN,"security-admin",(h,p,m)->p.startsWith(BASE+"/roles") || p.startsWith(BASE+"/users/"));
     permission=fixture.grantHandlers(DOMAIN,"fixture-holder",(h,p,m)->m.equals("GET") && p.equals("/api/customers"));
-    fixture.activeUser(DOMAIN,"alice"); fixture.activeUser(DOMAIN,"bob");
+    for (String subject : List.of("alice","bob")) {
+      fixture.activeUser(DOMAIN,subject);
+      jdbc.update("insert into summer_platform_administrator(username,display_name) values(?,?)",subject,subject);
+    }
   }
   private org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
     return jwt().jwt(t->t.subject("security-admin").claim("scope","platform.capabilities.read platform.capabilities.write"));

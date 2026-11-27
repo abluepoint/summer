@@ -6,21 +6,15 @@ import { BrowserRouter, Link, Route, Switch } from 'react-router-dom';
 import { User } from 'oidc-client-ts';
 import { GlobalContext } from '../src/context';
 import { oidcManager } from '../src/auth/oidc';
-import DataScopesPage from '../src/pages/data-scopes';
 import SystemParametersPage from '../src/pages/system-parameters';
-import DictionaryPage from '../src/pages/dictionary';
+import DictionaryPage from './fixtures/dictionary-consumer';
+import DictionarySelectFixture from './fixtures/dictionary-select-component';
 import DictionaryManagementPage from '../src/pages/dictionary/manage';
-import { Select } from '@arco-design/web-react';
-import useActiveEnterprise from '../src/pages/data-scopes/useActiveEnterprise';
+import DictionaryGroupsPage from '../src/pages/dictionary/groups';
 import '@arco-design/web-react/dist/css/arco.css';
 
-// The management page consumes the shared selection from the application shell.
 function DictionaryManagementFixture() {
-  const tenant = useActiveEnterprise();
-  return <>
-    <Select aria-label="全局活动租户" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} />
-    <DictionaryManagementPage groupsOnly={new URLSearchParams(location.search).has("groups")} />
-  </>;
+  return new URLSearchParams(location.search).has('groups') ? <DictionaryGroupsPage /> : <DictionaryManagementPage />;
 }
 
 async function render() {
@@ -36,9 +30,9 @@ async function render() {
       <BrowserRouter>
         <Link to="/__t18-t19/away">离开测试页</Link>
         <Switch>
-          <Route path="/__t18-t19/data-scopes" component={DataScopesPage} />
           <Route path="/__t18-t19/system-parameters" component={SystemParametersPage} />
           <Route path="/__t18-t19/dictionary-manage" component={DictionaryManagementFixture} />
+          <Route path="/__t18-t19/dictionary-select" component={DictionarySelectFixture} />
           <Route path="/__t18-t19/dictionary" component={DictionaryPage} />
           <Route><div>已离开</div></Route>
         </Switch>

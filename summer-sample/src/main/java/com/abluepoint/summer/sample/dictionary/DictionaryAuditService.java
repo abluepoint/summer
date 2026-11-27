@@ -1,6 +1,6 @@
 package com.abluepoint.summer.sample.dictionary;
 
-import static com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.resolve;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ class DictionaryAuditService {
                     (event_id, tenant_id, organization_id, principal, resource, action, result, request_id, detail_json, occurred_at)
                 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                UUID.randomUUID().toString(), resolve(authentication), null, principal, "dictionary:" + code,
+                UUID.randomUUID().toString(), Domain.platform().id(), null, principal, "dictionary:" + code,
                 action, "SUCCESS", requestId, "{}", Instant.now());
     }
 }

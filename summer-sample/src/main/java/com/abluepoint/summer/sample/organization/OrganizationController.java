@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.organization;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
@@ -42,6 +44,7 @@ class OrganizationController {
         this.requestId = requestId;
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-tree")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -50,6 +53,9 @@ class OrganizationController {
         return response(service.tree(enterpriseId, authentication), request);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "parentId", required = false, style = "requestTextStyle")
+    @Field(param = "q", required = false, style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -59,6 +65,8 @@ class OrganizationController {
         return response(service.list(enterpriseId, parentId, q, authentication), request);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "unitId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -73,6 +81,8 @@ class OrganizationController {
         }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "unitId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/members")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -86,6 +96,8 @@ class OrganizationController {
         }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "unitId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}/audit")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -96,6 +108,7 @@ class OrganizationController {
                 .body(ApiResponse.success(service.audit(enterpriseId, unitId, authentication), requestId.currentRequestId()));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/context")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -106,6 +119,8 @@ class OrganizationController {
                 .body(ApiResponse.success(service.currentContext(enterpriseId, authentication), requestId.currentRequestId()));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "organizationId", required = false, nullable = true, style = "requestTextStyle")
     @PutMapping(value = "/api/v1/enterprises/{enterpriseId}/context", consumes = MediaType.APPLICATION_JSON_VALUE)
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.read', 'SCOPE_enterprise.organizations.read')")
@@ -143,6 +158,8 @@ class OrganizationController {
         return responseEntity(HttpStatus.OK, result, service.unitRevisionValue(enterpriseId, result.id()), request);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "unitId", style = "requestTextStyle")
     @DeleteMapping("/api/v1/enterprises/{enterpriseId}/org-units/{unitId}")
 
     @PreAuthorize("hasAnyAuthority('SCOPE_enterprise.organization.write', 'SCOPE_enterprise.organizations.write')")

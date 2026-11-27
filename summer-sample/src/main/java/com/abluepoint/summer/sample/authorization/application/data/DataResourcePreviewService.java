@@ -28,30 +28,15 @@ public class DataResourcePreviewService {
   }
 
   public Object preview(Domain domain, String resource, Map<String, Object> body) {
-    return previewCurrent(domain, resource, body, null);
-  }
-
-  /** Server-only diagnostic narrowing; callers cannot replace a registered range or SQL adapter. */
-  public Object previewPermission(Domain domain, String resource, Map<String, Object> body,
-      String permissionId) {
-    if (permissionId == null || permissionId.isBlank())
-      throw SummerException.withMessage(PermissionErrorCode.INVALID, "A current permission identity is required");
-    return previewCurrent(domain, resource, body, permissionId);
-  }
-
-  private Object previewCurrent(Domain domain, String resource, Map<String, Object> body,
-      String permissionId) {
-    if ("applications".equals(resource)) return permissionId == null
-        ? applications.preview(domain, resource, body)
-        : applications.previewPermission(domain, resource, body, permissionId);
+    if ("applications".equals(resource)) return applications.preview(domain, resource, body);
     if (!Set.of("dictionaries", "system-parameters").contains(resource)
-        || !"ENTERPRISE".equals(domain.kind())
         || !body.keySet().equals(Set.of("subject", "recordId", "action"))
         || !(body.get("subject") instanceof String subject) || subject.isBlank()
         || !(body.get("recordId") instanceof String recordId)
         || !(body.get("action") instanceof String action))
       throw SummerException.withMessage(PermissionErrorCode.INVALID,
           "Registered resource, domain and persisted subject/record/action required");
+    registry.require(domain, resource, action);
     var target = UsernamePasswordAuthenticationToken.authenticated(subject, "", List.of());
     // Table and primary key are trusted application registration, never request-provided SQL.
     String table = "dictionaries".equals(resource) ? "summer_dictionary_type" : "summer_system_parameter";
@@ -65,7 +50,6 @@ public class DataResourcePreviewService {
           + " where id=:recordId and (" + range.predicate() + ")", bindings, Long.class) > 0,
           "revision", scope.revision());
     };
-    return permissionId == null ? reads.read(domain, resource, action, target, query)
-        : reads.readPermission(domain, resource, action, target, permissionId, query);
+    return reads.read(domain, resource, action, target, query);
   }
 }

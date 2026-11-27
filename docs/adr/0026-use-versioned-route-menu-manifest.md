@@ -1,5 +1,8 @@
 # ADR 0026: Use a versioned route menu manifest for server-side visibility
 
+2026-11-23 更新：菜单清单和布局统一由平台维护。所属客户端引用平台字典 `menu-client` 中的稳定编码，分配时使用已发布且启用的选项。V195 移除租户专用覆盖表及租户布局记录，平台清单和平台布局仍为可见菜单提供元数据。可见菜单继续按当前用户和授权域计算。
+
+
 ## Status
 
 Accepted for Summer UI and Summer Sample.

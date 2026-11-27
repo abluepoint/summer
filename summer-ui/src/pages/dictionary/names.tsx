@@ -8,7 +8,6 @@ import {
   DictionaryStreamState,
   subscribeDictionaryNotifications,
 } from './api';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 
 export type DictionaryName = {
   value: string;
@@ -49,7 +48,6 @@ type Entry = {
   generation: number;
   scheduled: boolean;
   pendingValues?: Set<string>;
-  enterprise: string;
   code: string;
   selectors: Map<symbol, string>;
   pendingGroups?: Set<string>;
@@ -78,7 +76,6 @@ function subscribeEntry(entry: Entry, key: string): () => void {
   entry.streamError = shared.error;
   if (!shared.stop) {
     shared.stop = subscribeDictionaryNotifications(
-      entry.enterprise,
       entry.code,
       () => {
         shared.error = false;
@@ -196,9 +193,7 @@ function schedule(entry: Entry, refresh = false) {
       const resolutions = await Promise.all(
         requests.map(async (request) => {
           const response = await axios.post(
-            `/api/v1/enterprises/${encodeURIComponent(
-              entry.enterprise
-            )}/dictionaries/${encodeURIComponent(entry.code)}/${
+            `/api/v1/platform/dictionaries/${encodeURIComponent(entry.code)}/${
               groupCodes.length ? 'resolve-selection' : 'resolve-names'
             }`,
             request,
@@ -295,24 +290,14 @@ export function useDictionaryNames(
   groupCode?: string,
   selection = false
 ) {
-  const tenant = useActiveEnterprise();
   const consumer = useRef(Symbol('dictionary-name-consumer')).current;
   const permissions = useSelector(
     (state: { userInfo?: unknown }) => state.userInfo
   );
-  const key = JSON.stringify([
-    tenant.enterpriseId,
-    tenant.contextVersion,
-    code,
-    permissions,
-  ]);
+  const key = JSON.stringify([code, permissions]);
   // Notifications carry metadata only and use the current session cookie.
   // Distinct permission snapshots retain separate authorized reads, not duplicate streams.
-  const streamKey = JSON.stringify([
-    tenant.enterpriseId,
-    tenant.contextVersion,
-    code,
-  ]);
+  const streamKey = key;
   const interested = values.length > 0 || selection;
   const signature = JSON.stringify(Array.from(new Set(values)).sort());
   const [, update] = useState(0);
@@ -325,7 +310,6 @@ export function useDictionaryNames(
       listeners: new Set(),
       generation: 0,
       scheduled: false,
-      enterprise: tenant.enterpriseId,
       code,
       selectors: new Map(),
       streamConsumers: new Set(),
@@ -339,15 +323,11 @@ export function useDictionaryNames(
     const listener = () => update((value) => value + 1);
     current.listeners.add(listener);
     if (interested) current.streamConsumers.add(consumer);
-    if (
-      !current.unsubscribe &&
-      current.enterprise &&
-      current.streamConsumers.size
-    ) {
+    if (!current.unsubscribe && current.streamConsumers.size) {
       current.unsubscribe = subscribeEntry(current, streamKey);
     }
     const refresh = () => {
-      if (current.enterprise) schedule(current, true);
+      schedule(current, true);
     };
     window.addEventListener('focus', refresh);
     return () => {
@@ -379,7 +359,6 @@ export function useDictionaryNames(
       (value) => !current.state.items.has(value)
     );
     if (
-      current.enterprise &&
       (current.values.size > 0 || current.selectors.size > 0) &&
       (missing ||
         current.state.status === 'loading' ||

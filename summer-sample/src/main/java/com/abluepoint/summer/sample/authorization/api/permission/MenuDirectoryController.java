@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RawResponse
-@RequestMapping({"/api/v1/platform", "/api/v1/enterprises/{enterpriseId}"})
+@RequestMapping("/api/v1/platform")
 public class MenuDirectoryController {
   private final MenuCatalogService menus;
   private final PermissionManagementGuard guard;
@@ -31,6 +31,7 @@ public class MenuDirectoryController {
   public Object directory(HttpServletRequest r, Authentication a) {
     var domain = PermissionController.domain(r);
     guard.require(domain, a, false);
+    if (r.getRequestURI().endsWith("/menu-layout")) requirePlatform(domain);
     var body = available(() -> menus.read(domain, false));
     return ResponseEntity.ok()
         .eTag("\"" + body.get("manifestVersion") + "\"")
@@ -40,6 +41,7 @@ public class MenuDirectoryController {
   @GetMapping("/authorization/menu-manifest")
   public Object manifest(HttpServletRequest r, Authentication a) {
     var domain = PermissionController.domain(r);
+    requirePlatform(domain);
     guard.require(domain, a, false);
     var body = available(() -> menus.read(domain, true));
     return ResponseEntity.ok()
@@ -77,6 +79,11 @@ public class MenuDirectoryController {
             () ->
                 menus.mutate(
                     domain, a.getName(), menuId, body, match, key, rid.currentRequestId())));
+  }
+
+  private static void requirePlatform(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain domain) {
+    if (!domain.equals(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform()))
+      throw new org.springframework.security.access.AccessDeniedException("Menus are managed by the platform");
   }
 
   private <T> T available(java.util.function.Supplier<T> operation) {

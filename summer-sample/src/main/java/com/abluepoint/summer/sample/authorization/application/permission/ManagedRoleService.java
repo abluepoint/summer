@@ -85,15 +85,24 @@ public class ManagedRoleService {
     out.put("name", r.get("name"));
     out.put("code", r.get("code").toString().substring(d.kind().length() + 1));
     out.put("status", r.get("status"));
+    out.put("builtIn", r.get("built_in"));
+    if (Domain.platform().equals(d))
+      out.put("defaultPlatformAdministrator", "PLATFORM:permission-administrator".equals(r.get("code")));
     out.put("version", r.get("version"));
     out.put(
         "permissionIds",
         db.queryForList(
-            "select permission_id from summer_role_permission where domain_key=? and role_id=?"
+            "select permission_id from " + RolePermissionGrants.RELATION + " g where domain_key=? and role_id=?"
                 + " order by permission_id",
             String.class,
             d.key(),
             id));
+    if (!Domain.platform().equals(d))
+      out.put("legacyPermissions", db.queryForList(
+          "select p.permission_id as permissionId,p.name from summer_role_permission x join"
+              + " summer_permission p on p.domain_key=x.domain_key and p.permission_id=x.permission_id"
+              + " where x.domain_key=? and x.role_id=? order by p.permission_id", d.key(), id)
+          .stream().map(p -> Map.of("permissionId", p.get("permissionId"), "name", p.get("name"))).toList());
     return out;
   }
 
@@ -114,10 +123,10 @@ public class ManagedRoleService {
     var sources =
         db.queryForList(
             "select p.permission_id as permissionId,p.name as permissionName,r.role_id as"
-                + " roleId,r.name as roleName from summer_permission_user_role u join"
-                + " summer_authorization_role r on r.role_id=u.role_id join summer_role_permission"
+                + " roleId,r.name as roleName from " + PlatformUserGroups.EFFECTIVE_ROLES + " u join"
+                + " summer_authorization_role r on r.role_id=u.role_id join " + RolePermissionGrants.RELATION
                 + " x on x.domain_key=u.domain_key and x.role_id=u.role_id join summer_permission p"
-                + " on p.domain_key=x.domain_key and p.permission_id=x.permission_id where"
+                + " on p.domain_key=x.permission_domain_key and p.permission_id=x.permission_id where"
                 + " u.domain_key=? and u.username=? and r.status='ACTIVE' and p.status='ACTIVE'"
                 + " order by p.permission_id,r.role_id",
             d.key(),
@@ -172,6 +181,9 @@ public class ManagedRoleService {
       String requestId) {
     if (key == null || !key.matches("[A-Za-z0-9._:-]{1,128}"))
       throw fail(PermissionErrorCode.INVALID, "Idempotency-Key required");
+    // Lock the catalog before the tenant role, matching definition and data-operation writers.
+    if (!Domain.platform().equals(d))
+      db.queryForList("select revision from summer_authorization_domain where domain_key='PLATFORM:platform' for update");
     var locked =
         db.queryForList(
             "select engine_mode from summer_authorization_domain where domain_key=? for update",
@@ -222,6 +234,9 @@ public class ManagedRoleService {
                 id)
             == 0) throw fail(PermissionErrorCode.INVALID, "Active login identity required");
         var values = ids(body.get("roleIds"));
+        if (Domain.platform().equals(d) && db.queryForObject(
+            "select count(*) from summer_platform_administrator where username=?", Integer.class, id) == 0)
+          throw fail(PermissionErrorCode.INVALID, "请先将个人用户加入平台管理员名单");
         if (d.kind().equals("ENTERPRISE")
             && db.queryForObject(
                     "select count(*) from summer_enterprise_member where enterprise_id=? and"
@@ -249,6 +264,28 @@ public class ManagedRoleService {
         for (String role : values)
           db.update("insert into summer_permission_user_role values (?,?,?)", d.key(), id, role);
         result = user(d, id);
+      } else if (method.equals("DELETE") && target.equals("role")) {
+        var old = role(d, id);
+        version = ((Number) old.get("version")).longValue();
+        condition(etag, version);
+        if (Boolean.TRUE.equals(old.get("defaultPlatformAdministrator")))
+          throw fail(PermissionErrorCode.CONFLICT, "默认平台管理员角色不能删除");
+        if (!Domain.platform().equals(d) && "permission-administrator".equals(old.get("code")))
+          throw fail(PermissionErrorCode.CONFLICT, "默认租户管理员角色不能删除");
+        db.update(
+            "update summer_permission_user set version=version+1 where domain_key=? and username in"
+                + " (select username from summer_permission_user_role where domain_key=? and role_id=?)",
+            d.key(), d.key(), id);
+        db.update("delete from summer_permission_user_role where domain_key=? and role_id=?", d.key(), id);
+        if (Domain.platform().equals(d)) db.update("delete from summer_platform_group_role where role_id=?", id);
+        db.update("delete from summer_authorization_role_capability where role_id=?", id);
+        db.update("delete from summer_role_permission where domain_key=? and role_id=?", d.key(), id);
+        if (!Domain.platform().equals(d))
+          db.update("delete from summer_role_platform_permission where domain_key=? and role_id=?", d.key(), id);
+        db.update("delete from summer_permission_role where domain_key=? and role_id=?", d.key(), id);
+        db.update("delete from summer_authorization_role where role_id=?", id);
+        version++;
+        result = Map.of("roleId", id, "version", version);
       } else {
         Set<String> allowed =
             target.equals("permissions")
@@ -291,17 +328,32 @@ public class ManagedRoleService {
         }
         if (create || target.equals("permissions")) {
           var values = ids(body.getOrDefault("permissionIds", List.of()));
-          for (String permission : values)
+          var retained = new HashSet<>(db.queryForList(
+              "select permission_id from summer_role_permission where domain_key=? and role_id=?",
+              String.class, d.key(), id));
+          var catalog = new HashSet<String>();
+          for (String permission : values) {
+            // Existing local grants may be kept or removed, never added to another tenant role.
+            if (!Domain.platform().equals(d) && retained.contains(permission)) continue;
             if (db.queryForObject(
-                    "select count(*) from summer_permission where domain_key=? and permission_id=?",
-                    Integer.class,
-                    d.key(),
-                    permission)
-                == 0) throw fail(PermissionErrorCode.INVALID, "Unknown permission in domain");
-          db.update(
-              "delete from summer_role_permission where domain_key=? and role_id=?", d.key(), id);
-          for (String permission : values)
-            db.update("insert into summer_role_permission values (?,?,?)", d.key(), id, permission);
+                    "select count(*) from summer_permission where domain_key='PLATFORM:platform' and permission_id=?",
+                    Integer.class, permission) == 0)
+              throw fail(PermissionErrorCode.INVALID, "Select a permission from the platform catalog");
+            if (!Domain.platform().equals(d) && db.queryForObject(
+                "select count(*) from summer_authorization_domain where domain_key='PLATFORM:platform' and engine_mode='MANAGED'",
+                Integer.class) != 1)
+              throw fail(PermissionErrorCode.CONFLICT, "Managed platform catalog required");
+            catalog.add(permission);
+          }
+          db.update("delete from summer_role_permission where domain_key=? and role_id=?", d.key(), id);
+          db.update("delete from summer_role_platform_permission where domain_key=? and role_id=?", d.key(), id);
+          for (String permission : values) {
+            if (Domain.platform().equals(d) || !catalog.contains(permission))
+              db.update("insert into summer_role_permission values (?,?,?)", d.key(), id, permission);
+            else
+              db.update("insert into summer_role_platform_permission(domain_key,role_id,permission_id,catalog_domain_key)"
+                  + " values (?,?,?,'PLATFORM:platform')", d.key(), id, permission);
+          }
         }
         result = role(d, id);
       }

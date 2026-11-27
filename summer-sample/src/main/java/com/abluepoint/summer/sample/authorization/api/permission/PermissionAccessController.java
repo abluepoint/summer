@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.api.permission;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.sample.authorization.application.permission.ManagedRoleService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,17 +38,20 @@ public class PermissionAccessController {
     this.access = access;
   }
 
+  @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
   @GetMapping("/status")
   public Object status() {
     return ApiResponse.success(Map.of("available", true), null);
   }
 
+  @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
   @GetMapping("/profile")
   public Object profile(HttpServletRequest r, Authentication a) {
     requireIdentity(r, a);
     return ApiResponse.success(Map.of("subject", a.getName()), null);
   }
 
+  @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
   @GetMapping("/access")
   public Object access(HttpServletRequest r, Authentication a) {
     requireIdentity(r, a);
@@ -55,7 +60,9 @@ public class PermissionAccessController {
 
   @GetMapping("/navigation")
   public Object navigation(HttpServletRequest r, Authentication a) {
-    return ApiResponse.success(navigation.visible(PermissionController.domain(r), a), null);
+    // The registered interface identity includes the handler signature.
+    return ApiResponse.success(
+        navigation.visible(PermissionController.domain(r), a, r.getParameter("clientCode")), null);
   }
 
   @GetMapping("/operations")

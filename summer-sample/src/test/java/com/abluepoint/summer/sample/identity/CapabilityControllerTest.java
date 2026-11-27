@@ -32,7 +32,7 @@ class CapabilityControllerTest {
     MockMvc mockMvc;
 
     @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture current;
-    String platformPermission, enterprisePermission;
+    String platformPermission;
 
     @org.junit.jupiter.api.BeforeEach
     void currentProjectionReplacements() {
@@ -44,9 +44,9 @@ class CapabilityControllerTest {
                             || handler.getBeanType().getName().equals("com.abluepoint.summer.sample.resource.InterfaceResourceCatalogController")));
             if (subject.equals("platform-operator")) platformPermission = id;
         }
-        enterprisePermission = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "alice",
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "alice",
                 (handler, path, method) -> method.equals("GET") && (handler.getBeanType() == CapabilityController.class
-                        || handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.api.permission.PermissionController")));
+                        || path.equals("/api/v1/enterprises/{enterpriseId}/roles")));
     }
 
     @Test
@@ -84,8 +84,8 @@ class CapabilityControllerTest {
                 .andExpect(jsonPath("$.error.message").value("Legacy capability projections are unavailable in managed mode; use current permission/role access"))
                 .andExpect(jsonPath("$.requestId").value("enterprise-capabilities-request"))
                 .andExpect(jsonPath("$.data").doesNotExist());
-        mockMvc.perform(get("/api/v1/enterprises/ent-acme/permissions/{id}",enterprisePermission).with(auth))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.permissionId").value(enterprisePermission));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/roles?catalog=permissions").with(auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isArray());
     }
 
     @Test

@@ -30,6 +30,39 @@ class SharedPlatformPermissionsHttpTest {
   @Autowired ManagedPermissionAccess access;
   @Autowired DataReadService reads;
 
+  @Test void tenantRoleDeletionChecksDomainVersionAndRemovesBindingsOnce() throws Exception {
+    String permissionId = permission("MENU", null);
+    String role = create(E + "/roles", Map.of("name", "Temporary", "code", UUID.randomUUID().toString(),
+        "permissionIds", List.of(permissionId))).path("roleId").asText();
+    String path = E + "/roles/" + role;
+    var actor = user("summer-user");
+    mvc.perform(get(E + "/authorization/operations").with(actor).param("actions", "roles.delete"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.actions['roles.delete']").value(true));
+    var admin = read(E + "/users/summer-user/roles");
+    var adminRole = admin.path("roleIds").get(0).asText();
+    replace(E + "/users/summer-user/roles", Map.of("roleIds", List.of(adminRole, role)),
+        "\"" + admin.path("version").asLong() + "\"");
+    var remove = delete(path).with(actor).with(csrf()).header("Idempotency-Key", UUID.randomUUID())
+        .header("If-Match", "\"1\"");
+    mvc.perform(delete(path).with(user("unassigned")).with(csrf())).andExpect(status().isForbidden());
+    mvc.perform(delete(E + "/roles/" + adminRole).with(actor).with(csrf())
+        .header("If-Match", "\"1\"").header("Idempotency-Key", UUID.randomUUID())).andExpect(status().isConflict());
+    String platformRole = read(P + "/users/summer-user/roles").path("roleIds").get(0).asText();
+    mvc.perform(delete(E + "/roles/" + platformRole).with(actor).with(csrf())
+        .header("If-Match", "\"1\"").header("Idempotency-Key", UUID.randomUUID())).andExpect(status().isNotFound());
+    mvc.perform(delete(P + "/roles/" + role).with(actor).with(csrf())
+        .header("If-Match", "\"1\"").header("Idempotency-Key", UUID.randomUUID())).andExpect(status().isNotFound());
+    mvc.perform(delete(path).with(actor).with(csrf()).header("If-Match", "\"0\"")
+        .header("Idempotency-Key", UUID.randomUUID())).andExpect(status().isPreconditionFailed());
+    mvc.perform(remove).andExpect(status().isOk());
+    mvc.perform(remove).andExpect(status().isOk());
+    mvc.perform(get(path).with(actor)).andExpect(status().isNotFound());
+    var current = read(E + "/users/summer-user/roles");
+    assertEquals(admin.path("roleIds"), current.path("roleIds"));
+    assertEquals(admin.path("version").asLong() + 2, current.path("version").asLong());
+    assertEquals(permissionId, read(P + "/permissions/" + permissionId).path("permissionId").asText());
+  }
+
   @Test void tenantChoicesComeOnlyFromThePlatformCatalog() throws Exception {
     String id = permission("MENU", null);
     var tenant = read(E + "/roles?catalog=permissions&size=200");

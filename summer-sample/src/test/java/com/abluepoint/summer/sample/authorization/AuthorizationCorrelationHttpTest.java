@@ -52,10 +52,10 @@ class AuthorizationCorrelationHttpTest {
         String subject = "correlation-" + UUID.randomUUID();
         var domain=com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme");
         fixture.activeUser(domain,subject);
-        if (!denied) fixture.grantHandlers(domain,subject,(handler,path,method)->path.equals("/api/authorization-events") && method.equals("GET"));
+        if (!denied) fixture.grantHandlers(domain,subject,(handler,path,method)->path.equals("/api/v1/enterprises/{enterpriseId}/roles") && method.equals("GET"));
         fixture.grantHandlers(domain,"correlation-auditor",(handler,path,method)->path.equals("/api/v1/enterprises/{enterpriseId}/authorization-audit/{id}") && method.equals("GET"));
         try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()) {
-            var response = get(client, "/api/authorization-events?enterpriseId=ent-acme",
+            var response = get(client, "/api/v1/enterprises/ent-acme/roles",
                     token(subject, denied, "enterprise.roles.read"), suppliedId);
             assertThat(response.statusCode()).isEqualTo(denied ? 403 : 200);
             String correlation = response.headers().firstValue("X-Request-Id").orElseThrow();

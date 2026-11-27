@@ -108,7 +108,7 @@ public class ManagedAuthorizationBootstrap {
       }
       for (String table : List.of("summer_authorization_domain", "summer_permission_bootstrap",
           "summer_permission_identity", "summer_permission_group", "summer_permission_user",
-          "summer_permission", "summer_permission_role", "summer_role_permission",
+          "summer_permission", "summer_permission_role", "summer_role_permission", "summer_role_platform_permission",
           "summer_permission_user_role", "summer_permission_resource", "summer_permission_mutation",
           "summer_permission_resource_control", "summer_authorization_migration_snapshot")) {
         if (db.queryForObject("select count(*) from " + table + " where domain_key=?", Integer.class,
@@ -209,9 +209,12 @@ public class ManagedAuthorizationBootstrap {
             db.update("insert into summer_permission_user values (?,?,1)", d.key(), actor);
             db.update(
                 "insert into summer_permission_user_role values (?,?,?)", d.key(), actor, role);
+            if (Domain.platform().equals(d))
+              db.update("insert into summer_platform_administrator(username,display_name) values (?,?)", actor, actor);
             for (var mapping : mappings.orderedStream().toList())
               for (var entry : mapping.getHandlerMethods().entrySet()) {
                 String owner = entry.getValue().getBeanType().getName();
+                if (owner.endsWith(".PlatformDirectoryController") || owner.endsWith(".FileRepositoryController") || owner.endsWith(".PlatformFileController") || owner.endsWith(".PlatformUserGroupController")) continue;
                 if (!com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes.management(owner))
                   continue;
                 var info = entry.getKey();

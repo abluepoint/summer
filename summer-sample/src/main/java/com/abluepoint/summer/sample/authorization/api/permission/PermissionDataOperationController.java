@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.api.permission;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import com.abluepoint.summer.sample.authorization.application.data.ApplicationOperationService;
@@ -54,6 +56,10 @@ public class PermissionDataOperationController {
                 requests.currentRequestId());
     }
 
+    @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
+    @Field(param = "resource", style = "requestTextStyle")
+    @Field(param = "id", style = "requestTextStyle")
+    @Field(param = "version", style = "requestLongParameterStyle")
     @DeleteMapping("/data-records/{resource}/{id}")
     public Object delete(
             HttpServletRequest request,
@@ -102,6 +108,9 @@ public class PermissionDataOperationController {
                 requests.currentRequestId());
     }
 
+    @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
+    @Field(param = "resource", style = "requestTextStyle")
+    @Field(param = "id", style = "requestTextStyle")
     @GetMapping("/data-records/{resource}/{id}/cached")
     public Object cached(
             HttpServletRequest request,
@@ -114,6 +123,10 @@ public class PermissionDataOperationController {
     }
 
     @com.abluepoint.summer.mvc.api.RawResponse
+    @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
+    @Field(param = "resource", style = "requestTextStyle")
+    @Field(param = "page", required = false, style = "requestIntegerParameterStyle")
+    @Field(param = "size", required = false, style = "requestIntegerParameterStyle")
     @GetMapping(value = "/data-records/{resource}/export", produces = "text/csv")
     public Object export(
             HttpServletRequest request,

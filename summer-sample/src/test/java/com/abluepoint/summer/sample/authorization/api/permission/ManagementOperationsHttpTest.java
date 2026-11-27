@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(RolePermissionHttpTest.Schema.class)
 class ManagementOperationsHttpTest {
+  @Autowired HistoricalTenantPermissions historical;
   @Autowired MockMvc mvc;
   @Autowired org.springframework.jdbc.core.JdbcTemplate db;
   @Autowired tools.jackson.databind.ObjectMapper json;
@@ -56,40 +57,26 @@ class ManagementOperationsHttpTest {
       mvc.perform(get(base + path).with(actor("openid profile customer.read")))
           .andExpect(status().isOk());
     }
-    mvc.perform(get(base + "/permissions").with(actor("openid profile customer.read")))
+    mvc.perform(get(base + "/roles?catalog=permissions").with(actor("openid profile customer.read")))
         .andExpect(status().isForbidden());
     mvc.perform(get(base + "/menu-manifest/management").with(actor("openid profile customer.read")))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isNotFound());
     String permission = db.queryForObject("select permission_id from summer_permission where domain_key='ENTERPRISE:ent-acme' and code='AUTHENTICATED'", String.class);
     String route = base + "/permissions/" + permission + "/interfaces";
-    var initial = mvc.perform(get(route).with(user("summer-user"))).andExpect(status().isOk()).andReturn().getResponse();
+    var initial = historical.readInterfaces(permission);
     java.util.List<String> original = new java.util.ArrayList<>();
-    json.readTree(initial.getContentAsString()).path("data").path("resourceIds").forEach(id -> original.add(id.asText()));
+    initial.body().path("resourceIds").forEach(id -> original.add(id.asText()));
     var targets = db.queryForList("select resource_id from summer_interface_resource where active=true and normalized_path in ('/api/v1/enterprises/{enterpriseId}/authorization/navigation','/api/v1/enterprises/{enterpriseId}/menu-manifest') and http_method='GET'", String.class);
     org.junit.jupiter.api.Assertions.assertEquals(2, targets.size());
-    var changed = replaceOperationBindings(route, original.stream().filter(id -> !targets.contains(id)).toList(), initial.getHeader("ETag"));
+    var changed = replaceOperationBindings(route, original.stream().filter(id -> !targets.contains(id)).toList(), initial.etag());
     try {
       for (String path : java.util.List.of("/authorization/navigation", "/menu-manifest")) {
         mvc.perform(get(base + path).with(actor("openid profile customer.read")))
             .andExpect(status().isForbidden());
       }
     } finally {
-      replaceOperationBindings(route, original, changed.getHeader("ETag"));
+      replaceOperationBindings(route, original, changed);
     }
-  }
-
-  @Test
-  void managedEventRetryIsNotALegacyRoleGrantWrite() throws Exception {
-    mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/authorization-events/missing-event/retry")
-        .param("enterpriseId", "ent-acme")
-        .with(actor("enterprise.roles.write"))
-        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
-        .andExpect(status().isNotFound());
-    mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/authorization-events/missing-event/retry")
-        .param("enterpriseId", "ent-acme")
-        .with(actor("enterprise.roles.read"))
-        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
-        .andExpect(status().isForbidden());
   }
 
   @Test
@@ -110,28 +97,30 @@ class ManagementOperationsHttpTest {
         .andExpect(jsonPath("$.data.items..id").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("org-operations"))));
     String permission = db.queryForObject("select permission_id from summer_permission where domain_key='ENTERPRISE:ent-acme' and code='management-write'", String.class);
     String route = base + "/permissions/" + permission + "/interfaces";
-    var initial = mvc.perform(get(route).with(user("summer-user"))).andExpect(status().isOk()).andReturn().getResponse();
+    var initial = historical.readInterfaces(permission);
     java.util.List<String> original = new java.util.ArrayList<>();
-    json.readTree(initial.getContentAsString()).path("data").path("resourceIds").forEach(id -> original.add(id.asText()));
+    initial.body().path("resourceIds").forEach(id -> original.add(id.asText()));
     var targets = db.queryForList("select resource_id from summer_interface_resource where active=true and ((normalized_path='/api/v1/enterprises/{enterpriseId}/org-units' and http_method='POST') or (normalized_path='/api/v1/enterprises/{enterpriseId}/org-units/{unitId}' and http_method in ('PATCH','DELETE')) or (normalized_path='/api/v1/enterprises/{enterpriseId}/org-assignments:batch' and http_method='PUT'))", String.class);
     org.junit.jupiter.api.Assertions.assertEquals(4, targets.size());
-    var changed = replaceOperationBindings(route, original.stream().filter(id -> !targets.contains(id)).toList(), initial.getHeader("ETag"));
+    var changed = replaceOperationBindings(route, original.stream().filter(id -> !targets.contains(id)).toList(), initial.etag());
     try {
       mvc.perform(get(base + "/org-tree").with(actor(scopes)))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.data.items..id").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("org-operations"))));
     } finally {
-      replaceOperationBindings(route, original, changed.getHeader("ETag"));
+      replaceOperationBindings(route, original, changed);
     }
   }
 
-  private org.springframework.mock.web.MockHttpServletResponse replaceOperationBindings(String route, java.util.List<String> ids, String etag) throws Exception {
+  private String replaceOperationBindings(String route, java.util.List<String> ids, String etag) throws Exception {
+    if (route.startsWith("/api/v1/enterprises/ent-acme/permissions/"))
+      return historical.replace(route, java.util.Map.of("resourceIds", ids), etag).etag();
     return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(route)
         .with(user("summer-user"))
         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
         .header("If-Match", etag).header("Idempotency-Key", java.util.UUID.randomUUID().toString())
         .contentType("application/json").content(json.writeValueAsString(java.util.Map.of("resourceIds", ids))))
-        .andExpect(status().isOk()).andReturn().getResponse();
+        .andExpect(status().isOk()).andReturn().getResponse().getHeader("ETag");
   }
 
   @Test
@@ -213,15 +202,15 @@ class ManagementOperationsHttpTest {
   @Test
   void writeOnlyDelegateCanReadItsOperationHintsWithoutManagementReadScope() throws Exception {
     mvc.perform(
-            get("/api/v1/enterprises/ent-acme/authorization/operations")
+            get("/api/v1/platform/authorization/operations")
                 .param("actions", "menu.layout.write")
-                .with(actor("enterprise.roles.write")))
+                .with(actor("platform.capabilities.write")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.actions['menu.layout.write']").value(true));
     mvc.perform(
-            get("/api/v1/enterprises/ent-acme/authorization/operations")
+            get("/api/v1/platform/authorization/operations")
                 .param("actions", "menu.layout.write")
-                .with(actor("enterprise.roles.read")))
+                .with(actor("platform.capabilities.read")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.actions['menu.layout.write']").value(false));
   }
@@ -274,10 +263,10 @@ class ManagementOperationsHttpTest {
 
   @Test
   void managementReadDoesNotImplyAnUnassociatedMenuWriteOperation() throws Exception {
-    String base = "/api/v1/enterprises/ent-acme";
+    String base = "/api/v1/platform";
     String permission =
         db.queryForObject(
-            "select permission_id from summer_permission where domain_key='ENTERPRISE:ent-acme' and"
+            "select permission_id from summer_permission where domain_key='PLATFORM:platform' and"
                 + " code='management-write'",
             String.class);
     String route = base + "/permissions/" + permission + "/interfaces";
@@ -290,7 +279,7 @@ class ManagementOperationsHttpTest {
     String target =
         db.queryForObject(
             "select resource_id from summer_interface_resource where"
-                + " normalized_path='/api/v1/enterprises/{enterpriseId}/authorization/menu-layout'"
+                + " normalized_path='/api/v1/platform/authorization/menu-layout'"
                 + " and http_method='PATCH' and active=true",
             String.class);
     java.util.List<String> narrowed = new java.util.ArrayList<>();
@@ -298,20 +287,7 @@ class ManagementOperationsHttpTest {
         id -> {
           if (!target.equals(id.asText())) narrowed.add(id.asText());
         });
-    var changed =
-        mvc.perform(
-                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(route)
-                    .with(user("summer-user"))
-                    .with(
-                        org.springframework.security.test.web.servlet.request
-                            .SecurityMockMvcRequestPostProcessors.csrf())
-                    .header("If-Match", initial.getHeader("ETag"))
-                    .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
-                    .contentType("application/json")
-                    .content(json.writeValueAsString(java.util.Map.of("resourceIds", narrowed))))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
+    var changed = replaceOperationBindings(route, narrowed, initial.getHeader("ETag"));
     try {
       mvc.perform(get(base + "/authorization/menu-layout").with(user("summer-user")))
           .andExpect(status().isOk());
@@ -324,17 +300,7 @@ class ManagementOperationsHttpTest {
     } finally {
       java.util.List<String> original = new java.util.ArrayList<>();
       ids.forEach(id -> original.add(id.asText()));
-      mvc.perform(
-              org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(route)
-                  .with(user("summer-user"))
-                  .with(
-                      org.springframework.security.test.web.servlet.request
-                          .SecurityMockMvcRequestPostProcessors.csrf())
-                  .header("If-Match", changed.getHeader("ETag"))
-                  .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
-                  .contentType("application/json")
-                  .content(json.writeValueAsString(java.util.Map.of("resourceIds", original))))
-          .andExpect(status().isOk());
+      replaceOperationBindings(route, original, changed);
     }
     mvc.perform(
             get(base + "/authorization/operations")

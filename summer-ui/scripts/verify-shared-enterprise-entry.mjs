@@ -13,7 +13,7 @@ function fixture(initial, deferredInitial, batch = (fn) => fn()) {
   const loaded = new Set(), unloaded = new Set();
   const confirmations = [];
   const exports = {};
-  const source = readFileSync(new URL('../src/pages/data-scopes/useActiveEnterprise.ts', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../src/hooks/useActiveEnterprise.ts', import.meta.url), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020,
   } }).outputText;

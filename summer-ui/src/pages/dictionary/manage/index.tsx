@@ -12,7 +12,6 @@ import {
   Tag,
 } from '@arco-design/web-react';
 import { Prompt } from 'react-router-dom';
-import useActiveEnterprise from '../../data-scopes/useActiveEnterprise';
 import {
   CreateDictionary,
   DictionaryType,
@@ -25,31 +24,6 @@ export default function DictionaryManagementPage({
   groupsOnly = false,
 }: {
   groupsOnly?: boolean;
-}) {
-  const tenant = useActiveEnterprise();
-  return tenant.enterpriseId ? (
-    <DictionaryList
-      groupsOnly={groupsOnly}
-      key={tenant.enterpriseId}
-      enterpriseId={tenant.enterpriseId}
-      onDirty={tenant.setDirty}
-      onBusy={tenant.setBusy}
-    />
-  ) : (
-    <Alert content="请先在系统导航栏选择活动企业" />
-  );
-}
-
-function DictionaryList({
-  groupsOnly,
-  enterpriseId,
-  onDirty,
-  onBusy,
-}: {
-  groupsOnly: boolean;
-  enterpriseId: string;
-  onDirty: (value: boolean) => void;
-  onBusy: (value: boolean) => void;
 }) {
   const [rows, setRows] = useState<DictionaryType[]>([]);
   const [selected, setSelected] = useState<{ code: string; tab: string }>();
@@ -72,16 +46,6 @@ function DictionaryList({
     []
   );
   useEffect(() => {
-    if (selected) return;
-    onDirty(dirty);
-    return () => onDirty(false);
-  }, [dirty, selected, onDirty]);
-  useEffect(() => {
-    if (selected) return;
-    onBusy(saving);
-    return () => onBusy(false);
-  }, [saving, selected, onBusy]);
-  useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
       if (dirty || saving) {
         event.preventDefault();
@@ -96,7 +60,7 @@ function DictionaryList({
     let active = true;
     setLoading(true);
     setError('');
-    getDictionaryDraftList(enterpriseId)
+    getDictionaryDraftList()
       .then((result) => {
         if (active) setRows(result);
       })
@@ -112,7 +76,7 @@ function DictionaryList({
     return () => {
       active = false;
     };
-  }, [enterpriseId, reload, selected]);
+  }, [reload, selected]);
 
   const create = async () => {
     if (writing.current) return;
@@ -127,7 +91,7 @@ function DictionaryList({
     setSaving(true);
     setCreateError('');
     try {
-      const result = await createDictionary(enterpriseId, {
+      const result = await createDictionary({
         ...input,
         name: input.name.trim(),
       });
@@ -149,10 +113,7 @@ function DictionaryList({
         );
     } finally {
       writing.current = false;
-      if (alive.current) {
-        setSaving(false);
-        onBusy(false);
-      }
+      if (alive.current) setSaving(false);
     }
   };
 
@@ -160,12 +121,9 @@ function DictionaryList({
     return (
       <DictionaryDetail
         groupsOnly={groupsOnly}
-        enterpriseId={enterpriseId}
         code={selected.code}
         initialTab={selected.tab}
         onBack={() => setSelected(undefined)}
-        onDirty={onDirty}
-        onBusy={onBusy}
       />
     );
 
@@ -237,8 +195,14 @@ function DictionaryList({
           onChange: setPage,
         }}
         columns={[
-          { title: '字典名称', dataIndex: 'name' },
-          { title: '字典编码', dataIndex: 'code' },
+          {
+            title: groupsOnly ? '所属字典名称' : '字典名称',
+            dataIndex: 'name',
+          },
+          {
+            title: groupsOnly ? '所属字典编码' : '字典编码',
+            dataIndex: 'code',
+          },
           {
             title: '发布状态',
             render: (_, row) => (
@@ -252,7 +216,7 @@ function DictionaryList({
             ),
           },
           {
-            title: '当前发布版本',
+            title: '当前生效版本',
             render: (_, row) => row.publishedVersion || '—',
           },
           {

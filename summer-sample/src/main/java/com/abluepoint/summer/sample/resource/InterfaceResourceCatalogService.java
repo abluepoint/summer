@@ -61,7 +61,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         }
     }
 
-    private synchronized void refresh() {
+    synchronized InterfaceResourceCatalogView refresh() {
         List<InterfaceResourceDescriptor> descriptors = new ArrayList<>();
         List<InterfaceResourceDiscoveryIssue> issues = new ArrayList<>();
         contexts.forEach((id, active) -> {
@@ -77,6 +77,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
                     difference == null ? current.items().size() : difference.added().size(),
                     difference == null ? 0 : difference.removed().size(), difference == null ? 0 : difference.changed().size(), current.complete());
         }
+        return current;
     }
 
     private List<InterfaceResourceDescriptor> discover(ApplicationContext context, String contextId, List<InterfaceResourceDiscoveryIssue> issues) {
@@ -164,8 +165,7 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
 
     InterfaceResourceCatalogView read(Authentication authentication) {
         requireRead(authentication);
-        refresh();
-        return current;
+        return refresh();
     }
 
     InterfaceResourceCatalogPage readPage(Authentication authentication, int page, int size, Long revision, boolean rescan) {
@@ -175,9 +175,13 @@ final class InterfaceResourceCatalogService implements SmartInitializingSingleto
         if (rescan && revision != null) throw new IllegalArgumentException("a fresh scan cannot select a historical revision");
         // Lifecycle events keep this immutable snapshot current. Paging must not
         // rediscover mappings or deserialize every stored revision on each click.
-        InterfaceResourceCatalogView view = rescan ? read(authentication) : current;
-        if (revision != null && revision != view.revision()) view = history.read(revision);
+        InterfaceResourceCatalogView view = rescan ? read(authentication) : viewAt(revision);
         return InterfaceResourceCatalogPage.of(view, page, size);
+    }
+
+    InterfaceResourceCatalogView viewAt(Long revision) {
+        var latest = current;
+        return revision == null || revision == latest.revision() ? latest : history.read(revision);
     }
 
     InterfaceResourceCatalog snapshot() {

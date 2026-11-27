@@ -27,6 +27,7 @@ class AuthorizationVersionConcurrencyTest {
   @Autowired ObjectMapper json;
   @Autowired AuthorizationAuditStore audit;
   @Autowired AuthorizationChangeEventService events;
+  @Autowired AuthorizationChangeEventOutboxRepository outbox;
   @Autowired PlatformTransactionManager transactions;
   @Autowired CurrentManagedAuthorizationTestFixture fixture;
 
@@ -41,8 +42,8 @@ class AuthorizationVersionConcurrencyTest {
   private List<Map<String,Object>> updates(String id) {
     return audit.read(DOMAIN,id).stream().filter(r -> "ROLE_role_PATCH".equals(r.get("action"))).toList();
   }
-  private List<AuthorizationChangeEventView> changes(String id) {
-    return events.list(DOMAIN,"ROLE").items().stream().filter(e -> e.resourceId().equals(id) && e.version()==2).toList();
+  private List<AuthorizationChangeEventOutboxEntity> changes(String id) {
+    return outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(DOMAIN.key(),"ROLE").stream().filter(e -> e.resourceId().equals(id) && e.resourceVersion()==2).toList();
   }
 
   @Test void twoNodesUpdatingTheSameVersionHaveOneWinnerAndOneMutationRecord() throws Exception {
@@ -57,7 +58,7 @@ class AuthorizationVersionConcurrencyTest {
       assertThat(node().role(DOMAIN,id)).containsEntry("name",winner).containsEntry("version",2L);
       assertThat(left.role(DOMAIN,id)).isEqualTo(right.role(DOMAIN,id));
       assertThat(updates(id)).extracting(r -> r.get("requestId")).containsExactly(winner);
-      assertThat(changes(id)).extracting(AuthorizationChangeEventView::requestId).containsExactly(winner);
+      assertThat(changes(id)).extracting(AuthorizationChangeEventOutboxEntity::requestId).containsExactly(winner);
       assertThat(receipts(id)).isEqualTo(1);
     }
   }
@@ -71,7 +72,7 @@ class AuthorizationVersionConcurrencyTest {
     var retried=tx.execute(s -> node().mutate(DOMAIN,"version-admin","role",id,"PATCH",Map.of("name","Changed"),"\"1\"","retry","committed-retry").body());
     assertThat(node().role(DOMAIN,id)).isEqualTo(retried);
     assertThat(updates(id)).extracting(r -> r.get("requestId")).containsExactly("committed-retry");
-    assertThat(changes(id)).extracting(AuthorizationChangeEventView::requestId).containsExactly("committed-retry");
+    assertThat(changes(id)).extracting(AuthorizationChangeEventOutboxEntity::requestId).containsExactly("committed-retry");
     assertThat(receipts(id)).isEqualTo(1);
   }
 
@@ -90,7 +91,7 @@ class AuthorizationVersionConcurrencyTest {
       String winner=results.stream().filter(x -> !x.equals("STALE")).findFirst().orElseThrow();
       assertThat(node().user(DOMAIN,subject)).containsEntry("version",2L).containsEntry("roleIds",List.of(winner.equals("binding-a")?roleA:roleB));
       assertThat(audit.read(DOMAIN,subject)).extracting(r -> r.get("requestId")).containsExactly("binding-created",winner);
-      assertThat(changes(subject)).extracting(AuthorizationChangeEventView::requestId).containsExactly(winner);
+      assertThat(changes(subject)).extracting(AuthorizationChangeEventOutboxEntity::requestId).containsExactly(winner);
       assertThat(receipts(subject)).isEqualTo(2);
     }
   }

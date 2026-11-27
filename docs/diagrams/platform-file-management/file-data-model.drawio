@@ -1,0 +1,275 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="文件管理数据结构" id="file-schema">
+    <mxGraphModel grid="1" gridSize="10" page="1" pageWidth="1180" pageHeight="720" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="文件管理数据结构" vertex="1" parent="1" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#152F43;fontSize=32;fontStyle=1;">
+          <mxGeometry as="geometry" x="22" y="12" width="600" height="50" />
+        </mxCell>
+        <mxCell id="sub" value="MySQL 表结构与存储位置映射" vertex="1" parent="1" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#496579;fontSize=17;fontStyle=0;">
+          <mxGeometry as="geometry" x="23" y="62" width="650" height="26" />
+        </mxCell>
+        <mxCell id="version" value="迁移版本  V197–V199" vertex="1" parent="1" style="text;html=0;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#496579;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="874" y="24" width="270" height="32" />
+        </mxCell>
+        <mxCell id="repo" value="" vertex="1" parent="1" style="rounded=0;html=0;fillColor=#FFFFFF;strokeColor=#B7C8D0;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="22" y="112" width="467" height="316" />
+        </mxCell>
+        <mxCell id="repo.head" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#DCECEB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="0" width="467" height="70" />
+        </mxCell>
+        <mxCell id="repo.title" value="存储库登记" vertex="1" parent="repo.head" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#174A4C;fontSize=19;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="8" width="435" height="26" />
+        </mxCell>
+        <mxCell id="repo.sql" value="summer_file_repository" vertex="1" parent="repo.head" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#174A4C;fontSize=16;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="38" width="435" height="22" />
+        </mxCell>
+        <mxCell id="repo.col0" value="字段" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="repo.col1" value="类型" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="170" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="repo.col2" value="约束 / 用途" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="326" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="repo.rule.id" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="104" width="467" height="1" />
+        </mxCell>
+        <mxCell id="repo.id" value="id" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="105" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.type.id" value="CHAR(36)" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="105" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.desc.id" value="PK · 库 UUID" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="105" width="138" height="33" />
+        </mxCell>
+        <mxCell id="repo.rule.name" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="138" width="467" height="1" />
+        </mxCell>
+        <mxCell id="repo.name" value="name" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="139" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.type.name" value="VARCHAR(100)" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="139" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.desc.name" value="唯一 · 显示名称" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="139" width="138" height="33" />
+        </mxCell>
+        <mxCell id="repo.rule.storage_type" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="172" width="467" height="1" />
+        </mxCell>
+        <mxCell id="repo.storage_type" value="storage_type" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="173" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.type.storage_type" value="VARCHAR(8)" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="173" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.desc.storage_type" value="LOCAL / S3" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="173" width="138" height="33" />
+        </mxCell>
+        <mxCell id="repo.rule.location" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="206" width="467" height="1" />
+        </mxCell>
+        <mxCell id="repo.location" value="location" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="207" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.type.location" value="VARCHAR(128)" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="207" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.desc.location" value="目录名 / 桶名" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="207" width="138" height="33" />
+        </mxCell>
+        <mxCell id="repo.rule.s3_credentials" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="240" width="467" height="1" />
+        </mxCell>
+        <mxCell id="repo.s3_credentials" value="s3_credentials" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="241" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.type.s3_credentials" value="TEXT" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="241" width="152" height="33" />
+        </mxCell>
+        <mxCell id="repo.desc.s3_credentials" value="NULL · 凭据密文" vertex="1" parent="repo" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="241" width="138" height="33" />
+        </mxCell>
+        <mxCell id="repo.foot" value="" vertex="1" parent="repo" style="rounded=0;html=0;fillColor=#F4F7F9;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="274" width="467" height="42" />
+        </mxCell>
+        <mxCell id="repo.key0" value="联合唯一键  (storage_type, location)" vertex="1" parent="repo.foot" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#29465B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="6" width="442" height="24" />
+        </mxCell>
+        <mxCell id="creation" value="" vertex="1" parent="1" style="rounded=0;html=0;fillColor=#FFFFFF;strokeColor=#B7C8D0;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="666" y="112" width="480" height="374" />
+        </mxCell>
+        <mxCell id="creation.head" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#DFEAF6;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="0" width="480" height="70" />
+        </mxCell>
+        <mxCell id="creation.title" value="条目创建记录" vertex="1" parent="creation.head" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#23476A;fontSize=19;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="8" width="448" height="26" />
+        </mxCell>
+        <mxCell id="creation.sql" value="summer_file_entry_creation" vertex="1" parent="creation.head" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#23476A;fontSize=16;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="38" width="448" height="22" />
+        </mxCell>
+        <mxCell id="creation.col0" value="字段" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="creation.col1" value="类型" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="170" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="creation.col2" value="约束 / 用途" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="326" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="creation.rule.id" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="104" width="480" height="1" />
+        </mxCell>
+        <mxCell id="creation.id" value="id" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="105" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.type.id" value="BIGINT" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="105" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.desc.id" value="PK · 自增" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="105" width="151" height="33" />
+        </mxCell>
+        <mxCell id="creation.rule.directory_key" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="138" width="480" height="1" />
+        </mxCell>
+        <mxCell id="creation.directory_key" value="directory_key" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="139" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.type.directory_key" value="VARBINARY(1160)" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="139" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.desc.directory_key" value="父目录定位键" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="139" width="151" height="33" />
+        </mxCell>
+        <mxCell id="creation.rule.entry_name" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="172" width="480" height="1" />
+        </mxCell>
+        <mxCell id="creation.entry_name" value="entry_name" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="173" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.type.entry_name" value="VARBINARY(1024)" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="173" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.desc.entry_name" value="末级名称" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="173" width="151" height="33" />
+        </mxCell>
+        <mxCell id="creation.rule.is_folder" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="206" width="480" height="1" />
+        </mxCell>
+        <mxCell id="creation.is_folder" value="is_folder" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="207" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.type.is_folder" value="BOOLEAN" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="207" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.desc.is_folder" value="文件夹标记" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="207" width="151" height="33" />
+        </mxCell>
+        <mxCell id="creation.rule.created_by" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="240" width="480" height="1" />
+        </mxCell>
+        <mxCell id="creation.created_by" value="created_by" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="241" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.type.created_by" value="VARCHAR(255)" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="241" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.desc.created_by" value="NULL · 创建账号" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="241" width="151" height="33" />
+        </mxCell>
+        <mxCell id="creation.rule.created_at" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="274" width="480" height="1" />
+        </mxCell>
+        <mxCell id="creation.created_at" value="created_at" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="275" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.type.created_at" value="DATETIME(6)" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="275" width="152" height="33" />
+        </mxCell>
+        <mxCell id="creation.desc.created_at" value="创建时间" vertex="1" parent="creation" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="275" width="151" height="33" />
+        </mxCell>
+        <mxCell id="creation.foot" value="" vertex="1" parent="creation" style="rounded=0;html=0;fillColor=#F4F7F9;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="308" width="480" height="66" />
+        </mxCell>
+        <mxCell id="creation.key0" value="联合唯一键  uk_file_entry_creation" vertex="1" parent="creation.foot" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#29465B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="6" width="455" height="24" />
+        </mxCell>
+        <mxCell id="creation.key1" value="(directory_key, entry_name, is_folder)" vertex="1" parent="creation.foot" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#29465B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="30" width="455" height="24" />
+        </mxCell>
+        <mxCell id="physical-location-match" edge="1" parent="1" source="repo" target="creation" style="edgeStyle=none;strokeColor=#527A81;strokeWidth=2;dashed=1;endArrow=open;endFill=0;exitX=1;exitY=0.5379746835443038;entryX=0;entryY=0.45454545454545453;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="match" value="按存储位置匹配" vertex="1" parent="1" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#24505B;fontSize=16;fontStyle=1;">
+          <mxGeometry as="geometry" x="494" y="240" width="167" height="28" />
+        </mxCell>
+        <mxCell id="no_fk" value="逻辑关联 · 无外键" vertex="1" parent="1" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#526B78;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="493" y="291" width="170" height="25" />
+        </mxCell>
+        <mxCell id="install" value="" vertex="1" parent="1" style="rounded=0;html=0;fillColor=#FFFFFF;strokeColor=#B7C8D0;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="22" y="464" width="467" height="180" />
+        </mxCell>
+        <mxCell id="install.head" value="" vertex="1" parent="install" style="rounded=0;html=0;fillColor=#E9E6F3;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="0" width="467" height="70" />
+        </mxCell>
+        <mxCell id="install.title" value="安装标记" vertex="1" parent="install.head" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#52446E;fontSize=19;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="8" width="435" height="26" />
+        </mxCell>
+        <mxCell id="install.sql" value="summer_file_repository_install" vertex="1" parent="install.head" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#52446E;fontSize=16;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="38" width="435" height="22" />
+        </mxCell>
+        <mxCell id="install.col0" value="字段" vertex="1" parent="install" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="install.col1" value="类型" vertex="1" parent="install" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="170" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="install.col2" value="约束 / 用途" vertex="1" parent="install" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=13;fontStyle=1;">
+          <mxGeometry as="geometry" x="326" y="72" width="130" height="32" />
+        </mxCell>
+        <mxCell id="install.rule.id" value="" vertex="1" parent="install" style="rounded=0;html=0;fillColor=#E0E7EB;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="104" width="467" height="1" />
+        </mxCell>
+        <mxCell id="install.id" value="id" vertex="1" parent="install" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="105" width="152" height="33" />
+        </mxCell>
+        <mxCell id="install.type.id" value="INT" vertex="1" parent="install" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Menlo;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="170" y="105" width="152" height="33" />
+        </mxCell>
+        <mxCell id="install.desc.id" value="PK · 安装步骤号" vertex="1" parent="install" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="326" y="105" width="138" height="33" />
+        </mxCell>
+        <mxCell id="install.foot" value="" vertex="1" parent="install" style="rounded=0;html=0;fillColor=#F4F7F9;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="0" y="138" width="467" height="42" />
+        </mxCell>
+        <mxCell id="install.key0" value="记录已完成的初始化与授权升级步骤。" vertex="1" parent="install.foot" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#29465B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="6" width="442" height="24" />
+        </mxCell>
+        <mxCell id="example" value="" vertex="1" parent="1" style="rounded=0;html=0;fillColor=#F4F7F9;strokeColor=none;container=1;collapsible=0;">
+          <mxGeometry as="geometry" x="666" y="518" width="480" height="144" />
+        </mxCell>
+        <mxCell id="example.title" value="父目录定位键的构成" vertex="1" parent="example" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=16;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="9" width="445" height="25" />
+        </mxCell>
+        <mxCell id="example.format" value="类型 / 登记位置 / 父目录相对路径（UTF-8）" vertex="1" parent="example" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#21374B;fontSize=15;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="39" width="448" height="24" />
+        </mxCell>
+        <mxCell id="example.value" value="示例    LOCAL/attachments/项目" vertex="1" parent="example" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#174A4C;fontSize=16;fontStyle=1;">
+          <mxGeometry as="geometry" x="16" y="67" width="448" height="25" />
+        </mxCell>
+        <mxCell id="example.detail" value="库解除登记后，原位置的创建记录仍保留。" vertex="1" parent="example" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#476275;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="16" y="107" width="448" height="23" />
+        </mxCell>
+        <mxCell id="legend" value="PK 表示主键。仅标注 NULL 的字段允许为空。" vertex="1" parent="1" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontFamily=Helvetica;fontColor=#50677B;fontSize=14;fontStyle=0;">
+          <mxGeometry as="geometry" x="22" y="687" width="950" height="25" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,5 +1,15 @@
+import {
+  GroupPermissionCheckbox,
+  indexGroupPermissions,
+} from '../permissions/components/GroupPermissionCheckbox';
 import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
   Button,
@@ -7,18 +17,27 @@ import {
   Checkbox,
   Input,
   Message,
+  Modal,
   Select,
   Space,
   Table,
   Typography,
 } from '@arco-design/web-react';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
+import { Prompt } from 'react-router-dom';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
+import RolePermissionDetails from './RolePermissionDetails';
+import RoleTable, { RolePanel } from './RoleTable';
+import PermissionGroupTree from '../permissions/components/PermissionGroupTree';
+import treeStyles from '../permissions/components/permission-group-tree.module.less';
 import { Group, Permission } from '../permissions/api';
 import {
   assignUserRoles,
   AuthorizationApiError,
   AuthorizationRole,
   createRole,
+  getRole,
+  updateRole,
+  deleteRole,
   getUserRoleAssignment,
   listPermissionChoices,
   listPermissionGroups,
@@ -27,41 +46,32 @@ import {
   UserRoleAssignment,
 } from './api';
 
-export default function RolesPage() {
+// Role details remain readable when the viewer lacks either catalog permission.
+async function readRoleCatalog<T>(
+  next: RolePanel,
+  read: () => Promise<T[]>
+): Promise<T[]> {
+  try {
+    return await read();
+  } catch (e) {
+    if (next === 'detail' && (e as AuthorizationApiError).status === 403)
+      return [];
+    throw e;
+  }
+}
+
+export default function RolesPage({
+  platform = false,
+}: {
+  platform?: boolean;
+}) {
   const tenant = useActiveEnterprise();
-  const [platform, setPlatform] = useState(false);
-  useEffect(() => {
-    if (tenant.ready && !tenant.enterpriseId) setPlatform(true);
-  }, [tenant.ready, tenant.enterpriseId]);
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
-        <Select
-          aria-label="授权域"
-          value={platform ? 'platform' : 'enterprise'}
-          disabled={tenant.busy}
-          options={[
-            { label: '企业域', value: 'enterprise' },
-            { label: '平台域', value: 'platform' },
-          ]}
-          onChange={(v) => {
-            if (tenant.dirty && !window.confirm('有未保存的授权，确定切换域？'))
-              return;
-            setPlatform(v === 'platform');
-          }}
-        />
-        {!platform && (
-          <Select
-            aria-label="活动租户"
-            placeholder="选择活动租户"
-            value={tenant.enterpriseId || undefined}
-            options={tenant.options}
-            onChange={tenant.change}
-            disabled={tenant.busy}
-            style={{ width: 240 }}
-          />
-        )}
-      </Space>
+      <Prompt
+        when={tenant.dirty || tenant.busy}
+        message={() => (tenant.busy ? false : '有未保存的授权，确定离开？')}
+      />
       {platform || tenant.enterpriseId ? (
         <RolesContent
           key={
@@ -72,12 +82,14 @@ export default function RolesPage() {
               ? '/api/v1/platform'
               : `/api/v1/enterprises/${encodeURIComponent(tenant.enterpriseId)}`
           }
-          domainLabel={platform ? '平台域' : `企业域：${tenant.enterpriseId}`}
+          domainLabel={
+            platform ? '平台角色' : `租户角色：${tenant.enterpriseId}`
+          }
           onDirtyChange={tenant.setDirty}
           onBusyChange={tenant.setBusy}
         />
       ) : (
-        tenant.ready && <Alert type="info" content="请选择一个活动成员租户。" />
+        tenant.ready && <Alert type="info" content="请先在顶部选择活动租户。" />
       )}
     </>
   );
@@ -93,6 +105,7 @@ function RolesContent({
   onDirtyChange: (v: boolean) => void;
   onBusyChange: (v: boolean) => void;
 }) {
+  const platform = base === '/api/v1/platform';
   const operations = useInterfaceOperations(
     base === '/api/v1/platform'
       ? { kind: 'PLATFORM' }
@@ -100,15 +113,24 @@ function RolesContent({
           kind: 'ENTERPRISE',
           id: decodeURIComponent(base.substring(base.lastIndexOf('/') + 1)),
         },
-    ['roles.create', 'roles.permissions.write', 'roles.assign']
+    [
+      'roles.create',
+      'roles.permissions.write',
+      'roles.update',
+      'roles.delete',
+      ...(platform ? [] : ['roles.assign']),
+    ]
   );
   const [roles, setRoles] = useState<AuthorizationRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>();
   const [editing, setEditing] = useState<AuthorizationRole>();
   const [permissionIds, setPermissionIds] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [panel, setPanel] = useState<RolePanel>();
+  const [status, setStatus] = useState('ACTIVE');
   const [username, setUsername] = useState('');
   const [assignment, setAssignment] = useState<UserRoleAssignment>();
   const [roleIds, setRoleIds] = useState<string[]>([]);
@@ -140,6 +162,7 @@ function RolesContent({
       epoch.current++;
       userRead.current++;
       setReady(false);
+      setPanel(undefined);
       setRoles([]);
       setPermissions([]);
       setGroups([]);
@@ -160,15 +183,9 @@ function RolesContent({
     const generation = ++epoch.current;
     setBusy(true);
     try {
-      const [r, p, g] = await Promise.all([
-        listRoles(base),
-        listPermissionChoices(base),
-        listPermissionGroups(base),
-      ]);
+      const r = await listRoles(base);
       if (!alive.current || generation !== epoch.current) return;
       setRoles(r);
-      setPermissions(p);
-      setGroups(g);
       setReady(true);
       setError(undefined);
     } catch (e) {
@@ -205,32 +222,18 @@ function RolesContent({
       });
   }, [base, username, ready, fail]);
   const select = (ids: string[], checked: boolean) => {
+    const toggled = new Set(ids);
     setPermissionIds((old) =>
       checked
         ? Array.from(new Set([...old, ...ids]))
-        : old.filter((id) => !ids.includes(id))
+        : old.filter((id) => !toggled.has(id))
     );
     setDirty(true);
   };
-  const groupIds = (root: string) => {
-    const descendants = new Set([root]);
-    for (let changed = true; changed; ) {
-      changed = false;
-      groups.forEach((g) => {
-        if (
-          g.parentGroupId &&
-          descendants.has(g.parentGroupId) &&
-          !descendants.has(g.groupId)
-        ) {
-          descendants.add(g.groupId);
-          changed = true;
-        }
-      });
-    }
-    return permissions
-      .filter((p) => descendants.has(p.groupId))
-      .map((p) => p.permissionId);
-  };
+  const permissionsByGroup = useMemo(
+    () => indexGroupPermissions(groups, permissions),
+    [groups, permissions]
+  );
   const write = async (action: () => Promise<void>) => {
     if (writing.current || !ready) return;
     writing.current = true;
@@ -251,17 +254,77 @@ function RolesContent({
       }
     }
   };
+  const openPanel = async (next: RolePanel, row?: AuthorizationRole) => {
+    if (busy || writing.current) return;
+    setError(undefined);
+    setBusy(true);
+    try {
+      const withCatalog =
+        next === 'detail' ||
+        next === 'permissions' ||
+        (!platform && next === 'create');
+      const [role, choices, choicesGroups] = await Promise.all([
+        row ? getRole(base, row.roleId) : undefined,
+        withCatalog
+          ? readRoleCatalog(next, () => listPermissionChoices(base))
+          : [],
+        withCatalog
+          ? readRoleCatalog(next, () => listPermissionGroups(base))
+          : [],
+      ]);
+      if (!alive.current) return;
+      setEditing(role);
+      setName(role?.name || '');
+      setCode(role?.code || '');
+      setStatus(role?.status || 'ACTIVE');
+      setPermissionIds(role?.permissionIds || []);
+      const granted = new Set(role?.permissionIds);
+      setPermissions(
+        next === 'detail'
+          ? choices.filter((p) => granted.has(p.permissionId))
+          : choices
+      );
+      setGroups(choicesGroups);
+      setSelectedGroupId(undefined);
+      setDirty(false);
+      setPanel(next);
+    } catch (e) {
+      fail(e as AuthorizationApiError);
+    } finally {
+      if (alive.current) setBusy(false);
+    }
+  };
+  const closePanel = () => {
+    if (busy || (dirty && !window.confirm('放弃未保存的角色修改？'))) return;
+    setPanel(undefined);
+    setDirty(false);
+    setError(undefined);
+  };
   const canSave =
-    operations[editing ? 'roles.permissions.write' : 'roles.create'] === true;
+    operations[
+      panel === 'edit'
+        ? 'roles.update'
+        : editing
+        ? 'roles.permissions.write'
+        : 'roles.create'
+    ] === true;
   const save = () =>
     write(async () => {
       if (!canSave) return;
-      const r = editing
-        ? await saveRolePermissions(base, editing, permissionIds)
-        : await createRole(base, name, code, permissionIds);
+      const r =
+        editing && panel === 'edit'
+          ? await updateRole(base, editing, name.trim(), status)
+          : editing
+          ? await saveRolePermissions(base, editing, permissionIds)
+          : await createRole(base, name, code, permissionIds);
       if (!alive.current) return;
-      setRoles((items) => [...items.filter((x) => x.roleId !== r.roleId), r]);
+      setRoles((items) =>
+        editing
+          ? items.map((item) => (item.roleId === r.roleId ? r : item))
+          : [r, ...items]
+      );
       setEditing(r);
+      setPanel(undefined);
       setPermissionIds(r.permissionIds);
       setDirty(false);
       if (username.trim() && assignment) {
@@ -271,11 +334,22 @@ function RolesContent({
           previous ? { ...previous, sources: current.sources } : previous
         );
       }
-      Message.success('角色权限已保存');
+      Message.success(
+        panel === 'edit'
+          ? '角色已更新'
+          : panel === 'create'
+          ? '角色已创建'
+          : '角色权限已保存'
+      );
     });
   const saveAssignment = () =>
     write(async () => {
-      if (!assignment || !operations['roles.assign']) return;
+      if (
+        !assignment ||
+        assignment.username !== username.trim() ||
+        !operations['roles.assign']
+      )
+        return;
       const v = await assignUserRoles(
         base,
         username.trim(),
@@ -287,127 +361,67 @@ function RolesContent({
       setBindingDirty(false);
       Message.success('用户角色已保存');
     });
-  return (
-    <Card
-      title="角色与权限"
-      extra={
-        <Button
-          onClick={() => {
-            if (
-              (dirty || bindingDirty) &&
-              !window.confirm('放弃当前未保存的授权并刷新？')
-            )
-              return;
-            setEditing(undefined);
-            setPermissionIds([]);
-            setName('');
-            setCode('');
-            setUsername('');
-            setAssignment(undefined);
-            setRoleIds([]);
-            setDirty(false);
-            setBindingDirty(false);
-            load();
-          }}
-          disabled={busy}
+  const selectedGroup = groups.find((g) => g.groupId === selectedGroupId);
+  const visiblePermissions = selectedGroup
+    ? permissionsByGroup.get(selectedGroup.groupId) || []
+    : permissions;
+  const selectedIds = new Set(permissionIds);
+  const selectedInScope = visiblePermissions.filter((p) =>
+    selectedIds.has(p.permissionId)
+  ).length;
+  const legacyFields = !!editing?.legacyPermissions?.length && (
+    <Space direction="vertical" style={{ marginTop: 16 }}>
+      <Typography.Text>历史授权（可保留或移除）</Typography.Text>
+      {editing.legacyPermissions.map((p) => (
+        <Checkbox
+          key={p.permissionId}
+          disabled={busy || !ready || !canSave}
+          checked={selectedIds.has(p.permissionId)}
+          onChange={(checked) => select([p.permissionId], checked)}
         >
-          刷新
-        </Button>
-      }
-    >
-      <Typography.Paragraph>
-        当前授权域：{domainLabel}
-        。按组勾选保存当前具体权限，后续移动或新增权限不会改变此授权。
-      </Typography.Paragraph>
-      {error && (
-        <Alert
-          type="error"
-          content={`${error.message}${
-            error.status === 412 ? ' 请刷新后重新核对授权。' : ''
-          }${error.requestId ? ` (${error.requestId})` : ''}`}
-        />
+          {p.name}
+        </Checkbox>
+      ))}
+    </Space>
+  );
+  const permissionFields = (
+    <>
+      <Checkbox
+        disabled={busy || !canSave || !visiblePermissions.length}
+        checked={
+          visiblePermissions.length > 0 &&
+          selectedInScope === visiblePermissions.length
+        }
+        indeterminate={
+          selectedInScope > 0 && selectedInScope < visiblePermissions.length
+        }
+        onChange={(checked) =>
+          select(
+            visiblePermissions.map((p) => p.permissionId),
+            checked
+          )
+        }
+      >
+        {selectedGroup
+          ? `全选「${selectedGroup.name}」及子组权限`
+          : '全选目录中的权限'}
+        （{selectedInScope}/{visiblePermissions.length}）
+      </Checkbox>
+      {base !== '/api/v1/platform' && (
+        <Typography.Paragraph style={{ marginTop: 16 }}>
+          权限由平台统一维护，当前租户仅配置角色和人员授权。
+        </Typography.Paragraph>
       )}
-      <Space wrap>
-        <Select
-          aria-label="编辑角色"
-          placeholder="新建角色"
-          allowClear
-          value={editing?.roleId}
-          disabled={busy || dirty}
-          options={roles.map((r) => ({
-            label: `${r.name} (${r.status === 'ACTIVE' ? '启用' : '停用'})`,
-            value: r.roleId,
-          }))}
-          onChange={(id) => {
-            const r = roles.find((x) => x.roleId === id);
-            setEditing(r);
-            if (!r) {
-              setName('');
-              setCode('');
-            }
-            setPermissionIds(r?.permissionIds || []);
-            setDirty(false);
-          }}
-        />
-        {!editing && (
-          <>
-            <Input
-              aria-label="角色名称"
-              placeholder="角色名称"
-              value={name}
-              disabled={busy}
-              onChange={(v) => {
-                setName(v);
-                setDirty(true);
-              }}
-            />
-            <Input
-              aria-label="角色编码"
-              placeholder="角色编码"
-              value={code}
-              disabled={busy}
-              onChange={(v) => {
-                setCode(v);
-                setDirty(true);
-              }}
-            />
-          </>
-        )}
-        <Button
-          type="primary"
-          onClick={save}
-          disabled={
-            !canSave || !ready || busy || (!editing && (!name || !code))
-          }
-        >
-          {editing ? '保存角色权限' : '创建角色'}
-        </Button>
-      </Space>
-      <Space wrap style={{ marginTop: 16 }}>
-        {groups.map((g) => {
-          const ids = groupIds(g.groupId);
-          return (
-            <Checkbox
-              key={g.groupId}
-              disabled={busy || !ready || !ids.length}
-              checked={
-                ids.length > 0 && ids.every((id) => permissionIds.includes(id))
-              }
-              indeterminate={
-                ids.some((id) => permissionIds.includes(id)) &&
-                !ids.every((id) => permissionIds.includes(id))
-              }
-              onChange={(checked) => select(ids, checked)}
-            >
-              组：{g.name}
-            </Checkbox>
-          );
-        })}
-      </Space>
       <Table<Permission>
         rowKey="permissionId"
-        data={permissions}
-        pagination={{ pageSize: 10 }}
+        key={selectedGroupId || ''}
+        data={visiblePermissions}
+        scroll={{ x: 540 }}
+        pagination={{
+          pageSize: 10,
+          showTotal: true,
+          hideOnSinglePage: true,
+        }}
         style={{ marginTop: 16 }}
         columns={[
           { title: '权限', dataIndex: 'name' },
@@ -427,14 +441,19 @@ function RolesContent({
             render: (_, p) => (
               <Checkbox
                 aria-label={`授予 ${p.name}`}
-                disabled={busy || !ready}
-                checked={permissionIds.includes(p.permissionId)}
+                disabled={busy || !ready || !canSave}
+                checked={selectedIds.has(p.permissionId)}
                 onChange={(checked) => select([p.permissionId], checked)}
               />
             ),
           },
         ]}
       />
+      {!selectedGroup && legacyFields}
+    </>
+  );
+  const assignmentFields = (
+    <>
       <Typography.Title heading={6}>用户角色</Typography.Title>
       <Space direction="vertical" style={{ width: '100%' }}>
         <Input
@@ -442,10 +461,18 @@ function RolesContent({
           placeholder="用户名"
           value={username}
           disabled={busy}
-          onChange={setUsername}
+          onChange={(value) => {
+            if (
+              bindingDirty &&
+              !window.confirm('放弃当前用户未保存的角色分配？')
+            )
+              return;
+            setUsername(value);
+          }}
         />
         <Select
           aria-label="用户角色"
+          placeholder="请选择角色"
           mode="multiple"
           value={roleIds}
           disabled={!ready || busy || !assignment}
@@ -483,6 +510,279 @@ function RolesContent({
           ]}
         />
       </Space>
+    </>
+  );
+  return (
+    <Card
+      title={base === '/api/v1/platform' ? '平台角色管理' : '租户角色管理'}
+      extra={
+        <Button
+          onClick={() => {
+            if (
+              (dirty || bindingDirty) &&
+              !window.confirm('放弃当前未保存的授权并刷新？')
+            )
+              return;
+            setEditing(undefined);
+            setPermissionIds([]);
+            setName('');
+            setCode('');
+            setUsername('');
+            setAssignment(undefined);
+            setRoleIds([]);
+            setDirty(false);
+            setBindingDirty(false);
+            load();
+          }}
+          disabled={busy}
+        >
+          刷新
+        </Button>
+      }
+    >
+      {!platform && (
+        <Typography.Paragraph>
+          当前授权域：{domainLabel}
+          。按组勾选保存当前具体权限，后续移动或新增权限不会改变此授权。
+        </Typography.Paragraph>
+      )}
+      {error && !panel && (
+        <Alert
+          type="error"
+          content={`${error.message}${
+            error.status === 412 ? ' 请刷新后重新核对授权。' : ''
+          }${error.requestId ? ` (${error.requestId})` : ''}`}
+        />
+      )}
+      <RoleTable
+        platform={platform}
+        roles={roles}
+        operations={operations}
+        busy={busy}
+        ready={ready}
+        openPanel={openPanel}
+      />
+      <Modal
+        visible={!!panel}
+        title={
+          panel &&
+          {
+            create: '新建角色',
+            edit: '编辑角色',
+            detail: '角色详情',
+            permissions: '配置角色权限',
+            delete: '删除角色',
+          }[panel]
+        }
+        onCancel={closePanel}
+        style={{
+          width:
+            panel === 'permissions' ||
+            panel === 'detail' ||
+            (!platform && panel === 'create')
+              ? 'min(1120px, 94vw)'
+              : 'min(720px, 94vw)',
+        }}
+        footer={null}
+        maskClosable={false}
+      >
+        {error && (
+          <Alert
+            type="error"
+            content={
+              error.status === 412
+                ? '角色已变更，请关闭后重新打开。'
+                : error.message
+            }
+          />
+        )}
+        {panel === 'detail' && editing && (
+          <Space wrap size={24}>
+            <Typography.Text>角色名称：{editing.name}</Typography.Text>
+            <Typography.Text>角色编码：{editing.code}</Typography.Text>
+            <Typography.Text>
+              状态：{editing.status === 'ACTIVE' ? '启用' : '停用'}
+            </Typography.Text>
+            <Typography.Text>
+              已授权限：{editing.permissionIds.length} 项
+            </Typography.Text>
+          </Space>
+        )}
+        {(panel === 'create' || panel === 'edit') && (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <label>
+              角色名称
+              <Input
+                aria-label="角色名称"
+                placeholder="角色名称"
+                maxLength={200}
+                value={name}
+                disabled={busy}
+                onChange={(v) => {
+                  setName(v);
+                  setDirty(true);
+                }}
+              />
+            </label>
+            <label>
+              角色编码
+              <Input
+                aria-label="角色编码"
+                placeholder="角色编码"
+                maxLength={96}
+                value={code}
+                disabled={busy || panel === 'edit'}
+                onChange={(v) => {
+                  setCode(v);
+                  setDirty(true);
+                }}
+              />
+            </label>
+            {panel === 'edit' && (
+              <Select
+                aria-label="角色状态"
+                value={status}
+                disabled={busy}
+                options={[
+                  { value: 'ACTIVE', label: '启用' },
+                  { value: 'DISABLED', label: '停用' },
+                ]}
+                onChange={(v) => {
+                  setStatus(v);
+                  setDirty(true);
+                }}
+              />
+            )}
+          </Space>
+        )}
+        {(panel === 'permissions' ||
+          panel === 'detail' ||
+          (panel === 'create' && !platform)) && (
+          <>
+            {panel === 'permissions' && (
+              <Typography.Text>{editing?.name}</Typography.Text>
+            )}
+            <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
+              <div className={treeStyles.workspace}>
+                <PermissionGroupTree
+                  groups={
+                    panel === 'detail'
+                      ? groups.filter(
+                          (g) => permissionsByGroup.get(g.groupId)?.length
+                        )
+                      : groups
+                  }
+                  selected={selectedGroup}
+                  onSelect={setSelectedGroupId}
+                  renderGroupCheckbox={
+                    panel === 'detail'
+                      ? undefined
+                      : (group) => {
+                          return (
+                            <GroupPermissionCheckbox
+                              group={group}
+                              items={
+                                permissionsByGroup.get(group.groupId) || []
+                              }
+                              selectedIds={selectedIds}
+                              disabled={busy || !ready || !canSave}
+                              onSelect={select}
+                            />
+                          );
+                        }
+                  }
+                  loading={false}
+                />
+                <section
+                  className={treeStyles.permissionTables}
+                  aria-label={panel === 'detail' ? '已授权限' : '可配置权限'}
+                >
+                  {panel === 'detail' && editing ? (
+                    <RolePermissionDetails
+                      role={editing}
+                      groups={groups}
+                      selected={selectedGroup}
+                      permissions={visiblePermissions}
+                    />
+                  ) : (
+                    <div>{permissionFields}</div>
+                  )}
+                </section>
+              </div>
+            </div>
+          </>
+        )}
+        {panel === 'delete' && (
+          <Typography.Paragraph>
+            确定删除角色“{editing?.name}”（{editing?.code}
+            ）？系统会同时解除所有用户与该角色的关联。此操作无法撤销。
+          </Typography.Paragraph>
+        )}
+        <Space
+          style={{
+            marginTop: 20,
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <Button disabled={busy} onClick={closePanel}>
+            {panel === 'detail' ? '关闭' : '取消'}
+          </Button>
+          {panel === 'delete' && editing && (
+            <Button
+              status="danger"
+              type="primary"
+              loading={busy}
+              disabled={!operations['roles.delete']}
+              onClick={() =>
+                write(async () => {
+                  await deleteRole(base, editing);
+                  if (!alive.current) return;
+                  setRoles((items) =>
+                    items.filter((x) => x.roleId !== editing.roleId)
+                  );
+                  setPanel(undefined);
+                  setEditing(undefined);
+                  Message.success('角色已删除');
+                  if (assignment) {
+                    const current = await getUserRoleAssignment(
+                      base,
+                      assignment.username
+                    );
+                    if (!alive.current) return;
+                    if (!bindingDirty) {
+                      setAssignment(current);
+                      setRoleIds(current.roleIds);
+                    } else {
+                      // Keep the draft's original version so concurrent assignment changes conflict.
+                      setAssignment({
+                        ...assignment,
+                        sources: current.sources,
+                      });
+                      setRoleIds((ids) =>
+                        ids.filter((id) => id !== editing.roleId)
+                      );
+                    }
+                  }
+                })
+              }
+            >
+              确认删除
+            </Button>
+          )}
+          {panel && !['delete', 'detail'].includes(panel) && (
+            <Button
+              type="primary"
+              loading={busy}
+              disabled={!canSave || !dirty || !name.trim() || !code.trim()}
+              onClick={save}
+            >
+              {panel === 'create' ? '创建角色' : '保存'}
+            </Button>
+          )}
+        </Space>
+      </Modal>
+      {!platform && assignmentFields}
     </Card>
   );
 }

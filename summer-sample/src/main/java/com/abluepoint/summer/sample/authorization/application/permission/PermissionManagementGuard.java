@@ -36,6 +36,13 @@ public class PermissionManagementGuard {
         }
     }
 
+    /** Permission definitions belong to platform management; role grants remain domain-scoped. */
+    public void requireDefinitionWrite(Domain domain, Authentication auth) {
+        if (!Domain.platform().equals(domain))
+            throw new AccessDeniedException("Permission definitions are managed only by the platform");
+        require(domain, auth, true);
+    }
+
     private void requireCurrent(Domain domain, Authentication auth, boolean write) {
         if (managed.managed(domain)) {
             managed.requireManagement(domain, auth, write);

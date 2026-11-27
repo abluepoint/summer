@@ -177,7 +177,7 @@ class DataScopeEnforcementHttpTest {
                 "{\"rules\":[{\"type\":\"TENANT\",\"effect\":\"IGNORE\"}]}")) {
             mvc.perform(put(BASE + "/data-scopes/system-parameters").with(member("summer-user"))
                     .contentType(MediaType.APPLICATION_JSON).content(body))
-                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SAMPLE_PERMISSION_INVALID"));
+                    .andExpect(status().isNotFound());
         }
         assertThat(legacyRows()).isEqualTo(before);
         assertThat(jdbc.queryForList("select * from summer_permission_data_scope order by domain_key,permission_id")).isEqualTo(current);
@@ -191,7 +191,7 @@ class DataScopeEnforcementHttpTest {
         mvc.perform(put(BASE + "/data-scopes/system-parameters/bindings/USER/alice")
                 .with(member("summer-user")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"rules\":[{\"type\":\"TENANT\"}]}"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SAMPLE_PERMISSION_INVALID"));
+                .andExpect(status().isNotFound());
         assertThat(legacyRows()).isEqualTo(before);
         fixture.revoke("alice", "system-parameters", "read");
         mvc.perform(get("/api/system-parameters").with(member("alice")))
@@ -203,7 +203,7 @@ class DataScopeEnforcementHttpTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(post(BASE + "/data-scopes/system-parameters:preview").with(member("summer-user"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"subject\":\"alice\"}"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("SAMPLE_PERMISSION_INVALID"));
+                .andExpect(status().isNotFound());
         preview("binding.alice", "alice", "read", false);
     }
 

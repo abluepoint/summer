@@ -50,3 +50,5 @@ origin；开发时 Vite 在 `5173` 提供页面并把认证、协议和业务请
 [`AUTH.md`](./AUTH.md)。部署路由、外部 issuer 和完整验收见
 [`docs/guides/summer4-deployment-93.md`](../docs/guides/summer4-deployment-93.md)。
 官方示例可以使用上游开发 Mock；Summer 业务和安全路由没有 Mock 回退。
+
+左侧导航使用平台菜单管理中发布的名称、父菜单和排序，按当前授权和所属客户端显示。前端通过 Vite 环境变量 `VITE_MENU_CLIENT_CODE` 设置客户端编码，默认 `web`，对应平台字典 `menu-client` 的值。

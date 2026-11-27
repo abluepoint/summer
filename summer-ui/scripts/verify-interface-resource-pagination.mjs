@@ -12,7 +12,7 @@ function fixture() {
   const api = { InterfaceResourceApiError: ApiError };
   for (const name of ['listInterfaceResources', 'listInterfaceResourceHistory', 'getInterfaceResourceRevision', 'compareInterfaceResourceRevisions'])
     api[name] = (...args) => new Promise((resolve, reject) => pending.push({ name, args, resolve, reject }));
-  const widgets = { Alert: 'alert', Button: 'button', Card: 'card', Modal: 'modal', Select: 'select', Space: 'space', Table: 'table', Tag: 'tag', Typography: { Paragraph: 'p', Title: 'h5' } };
+  const widgets = { Alert: 'alert', Input: 'input', AutoComplete: 'autocomplete', Button: 'button', Card: 'card', Modal: 'modal', Select: 'select', Space: 'space', Table: 'table', Tabs: Object.assign(({ children }) => children, { TabPane: 'tab-panel' }), Tag: 'tag', Typography: { Paragraph: 'p', Title: 'h5' } };
   const code = ts.transpileModule(readFileSync(new URL('../src/pages/interface-resources/index.tsx', import.meta.url), 'utf8'), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.React, esModuleInterop: true,
   } }).outputText;
@@ -21,6 +21,8 @@ function fixture() {
     if (name === '@arco-design/web-react') return widgets;
     if (name === '@/components/AppLoading') return { __esModule: true, default: 'app-loading' };
     if (name === '@/utils/useLocale') return { __esModule: true, default: () => ({}) };
+    if (name === '../dictionary/manage/detail') return { __esModule: true, default: 'dictionary-detail' };
+    if (name === '@/hooks/useActiveEnterprise') return { __esModule: true, default: () => ({}) };
     if (name === './api') return api;
     if (name === './locale') return {};
     throw new Error(name);

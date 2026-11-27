@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.api.permission;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -12,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RawResponse
-@RequestMapping({"/api/v1/enterprises/{enterpriseId}", "/api/v1/platform"})
+@RequestMapping("/api/v1/platform")
 public class InterfacePermissionController {
   private final PermissionResourceBindingService bindings;
   private final PermissionManagementGuard guard;
@@ -33,6 +35,8 @@ public class InterfacePermissionController {
     this.resources = resources;
   }
 
+  @Field(param = "page", required = false, style = "requestIntegerParameterStyle")
+  @Field(param = "size", required = false, style = "requestIntegerParameterStyle")
   @GetMapping("/authorization/interface-directory")
   public Object directory(
       HttpServletRequest request,
@@ -45,12 +49,13 @@ public class InterfacePermissionController {
         resources.directory(domain, page, size), requestId.currentRequestId());
   }
 
+  @Field(param = "permissionId", style = "requestTextStyle")
   @GetMapping("/permissions/{permissionId}/interfaces")
   public Object read(
       HttpServletRequest request, Authentication actor, @PathVariable String permissionId) {
     var domain = PermissionController.domain(request);
     guard.require(domain, actor, false);
-    var result = bindings.read(domain, permissionId, "INTERFACE");
+    var result = bindings.readCatalog(domain, permissionId, "INTERFACE");
     return ResponseEntity.ok()
         .eTag("\"" + result.version() + "\"")
         .body(ApiResponse.success(result.body(), requestId.currentRequestId()));
@@ -65,7 +70,7 @@ public class InterfacePermissionController {
       @RequestHeader(value = "If-Match", required = false) String match,
       @RequestHeader(value = "Idempotency-Key", required = false) String key) {
     var domain = PermissionController.domain(request);
-    guard.require(domain, actor, true);
+    guard.requireDefinitionWrite(domain, actor);
     if (!body.keySet().equals(java.util.Set.of("resourceIds"))
         || !(body.get("resourceIds") instanceof java.util.List<?> ids)
         || ids.stream().anyMatch(value -> !(value instanceof String)))

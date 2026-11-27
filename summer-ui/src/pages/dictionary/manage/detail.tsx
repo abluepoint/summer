@@ -31,6 +31,7 @@ import { Prompt } from 'react-router-dom';
 import styles from './detail.module.less';
 import DictionaryGroupsEditor, {
   DictionaryGroupsTable,
+  newDictionaryGroup,
 } from '../groups/editor';
 import DictionaryItemsTable, { matchesDictionaryItem } from './items-table';
 import {
@@ -48,23 +49,71 @@ import {
 
 type OrderedDraftItem = DictionaryDraftItem & { position: number };
 
+function ItemOrderInput({
+  id,
+  position,
+  rank,
+  disabled,
+  onCommit,
+}: {
+  id: string;
+  position: number;
+  rank: number;
+  disabled: boolean;
+  onCommit: (rank: number) => void;
+}) {
+  const [text, setText] = useState(String(rank));
+  useEffect(() => setText(String(rank)), [rank, disabled]);
+  return (
+    <Input
+      id={id}
+      aria-label={`顺序编号 ${position}`}
+      inputMode="numeric"
+      pattern="[0-9]+"
+      aria-describedby="item-order-help"
+      value={text}
+      disabled={disabled}
+      style={{ width: 110 }}
+      onChange={setText}
+      onPressEnter={(event) => event.currentTarget.blur()}
+      onBlur={() => {
+        if (disabled) return;
+        const next = Number(text);
+        if (
+          !/^\d+$/.test(text) ||
+          !Number.isSafeInteger(next) ||
+          next < 0 ||
+          next > 2147483647
+        ) {
+          Message.warning('顺序编号须为 0–2147483647 的整数，可不连续');
+          setText(String(rank));
+          return;
+        }
+        onCommit(next);
+      }}
+    />
+  );
+}
+
 export default function DictionaryDetail({
-  enterpriseId,
   code,
   initialTab = 'effective',
   groupsOnly = false,
+  initialGroupId,
+  createGroup = false,
   onBack,
-  onDirty,
-  onBusy,
+  backLabel,
 }: {
-  enterpriseId: string;
   code: string;
   initialTab?: string;
   groupsOnly?: boolean;
+  initialGroupId?: string;
+  createGroup?: boolean;
   onBack: () => void;
-  onDirty: (value: boolean) => void;
-  onBusy: (value: boolean) => void;
+  backLabel?: string;
 }) {
+  const [focusedGroupId, setFocusedGroupId] = useState(initialGroupId);
+  const newGroupPending = useRef(createGroup);
   const [tab, setTab] = useState(initialTab);
   const [reload, setReload] = useState(0);
   const [value, setValue] = useState<EffectiveDictionary>();
@@ -82,6 +131,10 @@ export default function DictionaryDetail({
   const writing = useRef(false);
   const dragged = useRef('');
   const [dropTarget, setDropTarget] = useState('');
+  const focusAfterSort = useRef<string>();
+  const [orderAnnouncement, setOrderAnnouncement] = useState('');
+  const orderControlId = (kind: string, id: string) =>
+    `${kind}-${encodeURIComponent(id)}`;
   const [itemQuery, setItemQuery] = useState('');
   const [itemPage, setItemPage] = useState(1);
   const [itemPageSize, setItemPageSize] = useState(10);
@@ -91,9 +144,29 @@ export default function DictionaryDetail({
     const byId = new Map(draft.items.map((item) => [item.id, item]));
     return draft.itemOrder.map((id, index) => ({
       ...byId.get(id),
+      sortOrder: byId.get(id)?.sortOrder ?? index,
       position: index + 1,
     }));
   }, [draft]);
+  const previewMemberships = useMemo(() => {
+    if (!preview || !groupsOnly || !draft) return undefined;
+    const byId = new Map(draft.items.map((item) => [item.id, item.value]));
+    const memberships = new Map<string, string[]>();
+    for (const group of draft.groups) {
+      group.memberIds.forEach((id, index) => {
+        const value = byId.get(id);
+        if (value === undefined) return;
+        const references = memberships.get(value) || [];
+        references.push(
+          `${group.name} (${group.code}) · ${
+            group.memberSortOrders?.[id] ?? index + 1
+          }`
+        );
+        memberships.set(value, references);
+      });
+    }
+    return memberships;
+  }, [preview, groupsOnly, draft]);
   const isFiltering = !!itemQuery.trim();
   const filteredItems = useMemo(
     () =>
@@ -107,6 +180,32 @@ export default function DictionaryDetail({
     itemPage,
     Math.max(1, Math.ceil(filteredItems.length / itemPageSize))
   );
+  useEffect(() => {
+    if (!focusAfterSort.current) return;
+    const control = document.getElementById(focusAfterSort.current);
+    if (control) {
+      control.focus();
+      focusAfterSort.current = undefined;
+    }
+  }, [draft?.itemOrder, currentItemPage]);
+  const changeItemRank = (id: string, rank: number) => {
+    if (saving || loading || isFiltering) return;
+    if (orderedItems.find((item) => item.id === id)?.sortOrder === rank) return;
+    const items = orderedItems.map((item) =>
+      item.id === id ? { ...item, sortOrder: rank } : item
+    );
+    const order = [...items]
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          (a.value < b.value ? -1 : a.value > b.value ? 1 : 0)
+      )
+      .map((item) => item.id);
+    focusAfterSort.current = orderControlId('item-order', id);
+    edit({ items, itemOrder: order });
+    setItemPage(Math.floor(order.indexOf(id) / itemPageSize) + 1);
+    setOrderAnnouncement(`顺序编号已改为 ${rank}`);
+  };
   const searchItems = (query: string) => {
     setItemQuery(query);
     setEditingMatches(new Set());
@@ -120,14 +219,6 @@ export default function DictionaryDetail({
     },
     []
   );
-  useEffect(() => {
-    onDirty(dirty || preview || !!pendingAction);
-    return () => onDirty(false);
-  }, [dirty, preview, pendingAction, onDirty]);
-  useEffect(() => {
-    onBusy(saving);
-    return () => onBusy(false);
-  }, [saving, onBusy]);
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
       if (dirty || saving) {
@@ -154,14 +245,20 @@ export default function DictionaryDetail({
     if (code) {
       setLoading(true);
       Promise.all([
-        getEffectiveDictionary(enterpriseId, code),
-        getDictionaryDraft(enterpriseId, code),
-        getDictionaryHistory(enterpriseId, code),
+        getEffectiveDictionary(code),
+        getDictionaryDraft(code),
+        getDictionaryHistory(code),
       ])
         .then(([effective, edit, versions]) => {
           if (active) {
             setValue(effective);
-            setDraft(edit);
+            if (newGroupPending.current) {
+              const group = newDictionaryGroup();
+              setDraft({ ...edit, groups: [...edit.groups, group] });
+              setFocusedGroupId(group.id);
+              setDirty(true);
+              newGroupPending.current = false;
+            } else setDraft(edit);
             setHistory(versions);
           }
         })
@@ -176,12 +273,12 @@ export default function DictionaryDetail({
     return () => {
       active = false;
     };
-  }, [enterpriseId, code, tab, reload]);
+  }, [code, tab, reload]);
   useEffect(() => {
     let active = true;
     setHistorical(undefined);
     if (selectedVersion !== undefined && code) {
-      getDictionaryHistoryDetail(enterpriseId, code, selectedVersion)
+      getDictionaryHistoryDetail(code, selectedVersion)
         .then((result) => {
           if (active) setHistorical(result);
         })
@@ -193,7 +290,7 @@ export default function DictionaryDetail({
     return () => {
       active = false;
     };
-  }, [enterpriseId, code, selectedVersion]);
+  }, [code, selectedVersion]);
   const transition = async (action: 'publish' | 'disable' | 'rollback') => {
     if (!draft || !value || loading || writing.current || dirty) return;
     if (action === 'rollback' && !historical) return;
@@ -201,7 +298,7 @@ export default function DictionaryDetail({
     setSaving(true);
     setError('');
     try {
-      await changeDictionaryVersion(enterpriseId, code, action, {
+      await changeDictionaryVersion(code, action, {
         expectedVersion: value.publishedVersion,
         expectedEffectiveRevision: value.effectiveRevision,
         ...(action === 'publish'
@@ -254,8 +351,26 @@ export default function DictionaryDetail({
     if (fromIndex < 0 || toIndex < 0) return;
     order.splice(fromIndex, 1);
     order.splice(toIndex, 0, from);
-    edit({ itemOrder: order });
+    const slots = orderedItems
+      .map((item) => item.sortOrder)
+      .sort((a, b) => a - b);
+    for (let i = 1; i < slots.length; i++)
+      slots[i] = Math.max(slots[i], slots[i - 1] + 1);
+    if (slots.some((rank) => rank > 2147483647)) {
+      Message.warning('顺序编号已达上限，请先调小编号再拖动');
+      return;
+    }
+    const ranks = new Map(order.map((id, index) => [id, slots[index]]));
+    focusAfterSort.current = orderControlId('item-handle', from);
+    edit({
+      itemOrder: order,
+      items: draft.items.map((item) => ({
+        ...item,
+        sortOrder: ranks.get(item.id),
+      })),
+    });
     setItemPage(Math.floor(toIndex / itemPageSize) + 1);
+    setOrderAnnouncement(`字典值已移至第 ${toIndex + 1} 项`);
   };
   const save = async () => {
     if (!draft || loading || writing.current) return;
@@ -311,8 +426,16 @@ export default function DictionaryDetail({
     setSaving(true);
     setError('');
     try {
-      const result = await saveDictionaryDraft(enterpriseId, draft);
+      const result = await saveDictionaryDraft(draft);
       if (alive.current) {
+        const focusedCode = draft.groups.find(
+          (group) => group.id === focusedGroupId
+        )?.code;
+        if (focusedCode)
+          setFocusedGroupId(
+            result.groups.find((group) => group.code === focusedCode)?.id ||
+              focusedGroupId
+          );
         setDraft(result);
         setEditingMatches(new Set());
         setDirty(false);
@@ -338,7 +461,7 @@ export default function DictionaryDetail({
   };
   return (
     <Card
-      title={`${groupsOnly ? '字典组管理' : '字典详情'} · ${code}`}
+      title={`${groupsOnly ? '字典组详情' : '字典详情'} · ${code}`}
       extra={
         <Button
           disabled={saving || preview || !!pendingAction}
@@ -346,7 +469,7 @@ export default function DictionaryDetail({
             if (proceed()) onBack();
           }}
         >
-          返回字典列表
+          {backLabel || (groupsOnly ? '返回字典组列表' : '返回字典列表')}
         </Button>
       }
     >
@@ -471,7 +594,9 @@ export default function DictionaryDetail({
               </h3>
               {groupsOnly ? (
                 <DictionaryGroupsTable
-                  groups={value.groups}
+                  groups={value.groups.filter(
+                    (group) => !focusedGroupId || group.id === focusedGroupId
+                  )}
                   items={value.items}
                 />
               ) : (
@@ -490,6 +615,7 @@ export default function DictionaryDetail({
               {groupsOnly ? (
                 <DictionaryGroupsEditor
                   draft={draft}
+                  focusedId={focusedGroupId}
                   disabled={saving || loading}
                   onChange={(groups) => edit({ groups })}
                 />
@@ -548,7 +674,7 @@ export default function DictionaryDetail({
                       <p className={styles.editorHelp}>
                         {isFiltering
                           ? '搜索结果中暂不支持排序，清空搜索后可调整顺序。'
-                          : '拖拽左侧手柄或使用方向键调整顺序；已发布的值不可修改或删除。'}
+                          : '拖拽左侧手柄或按 ↑ / ↓ 调整顺序，也可编辑编号跨页排序；已发布的值不可修改或删除。'}
                       </p>
                     </div>
                     <Button
@@ -569,7 +695,13 @@ export default function DictionaryDetail({
                               description: '',
                               enabled: true,
                               everPublished: false,
-                              sortOrder: draft.items.length,
+                              sortOrder: Math.min(
+                                2147483647,
+                                Math.max(
+                                  -1,
+                                  ...orderedItems.map((item) => item.sortOrder)
+                                ) + 1
+                              ),
                             },
                           ],
                           itemOrder: [...draft.itemOrder, id],
@@ -600,6 +732,24 @@ export default function DictionaryDetail({
                         : '切换分页或搜索会保留未保存的修改'}
                     </span>
                   </div>
+                  <p id="item-order-help" className={styles.editorHelp}>
+                    顺序编号可不连续（如 10、20、50），允许 0–2147483647
+                    的整数；按 Enter
+                    或移出输入框后按编号排序并显示目标页。搜索时请先清空条件再调整顺序。
+                  </p>
+                  <span
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                      position: 'absolute',
+                      width: 1,
+                      height: 1,
+                      overflow: 'hidden',
+                      clipPath: 'inset(50%)',
+                    }}
+                  >
+                    {orderAnnouncement}
+                  </span>
                   <Table<OrderedDraftItem>
                     className={styles.valueTable}
                     rowKey="id"
@@ -643,8 +793,8 @@ export default function DictionaryDetail({
                     })}
                     columns={[
                       {
-                        title: '排序',
-                        width: 88,
+                        title: '顺序编号',
+                        width: 174,
                         render: (_, item) => (
                           <div className={styles.orderCell}>
                             <Tooltip content="拖拽排序，也可聚焦后按 ↑ / ↓ 键调整">
@@ -653,6 +803,7 @@ export default function DictionaryDetail({
                                 type="text"
                                 size="mini"
                                 icon={<IconDragDotVertical />}
+                                id={orderControlId('item-handle', item.id)}
                                 aria-label={`排序第 ${item.position} 项`}
                                 disabled={saving || loading || isFiltering}
                                 draggable={!saving && !loading && !isFiltering}
@@ -685,7 +836,13 @@ export default function DictionaryDetail({
                                 }}
                               />
                             </Tooltip>
-                            <span>{item.position}</span>
+                            <ItemOrderInput
+                              id={orderControlId('item-order', item.id)}
+                              position={item.position}
+                              rank={item.sortOrder}
+                              disabled={saving || loading || isFiltering}
+                              onCommit={(rank) => changeItemRank(item.id, rank)}
+                            />
                           </div>
                         ),
                       },
@@ -864,7 +1021,9 @@ export default function DictionaryDetail({
               </p>
               {groupsOnly ? (
                 <DictionaryGroupsTable
-                  groups={historical.snapshot.groups}
+                  groups={historical.snapshot.groups.filter(
+                    (group) => !focusedGroupId || group.id === focusedGroupId
+                  )}
                   items={historical.snapshot.items}
                 />
               ) : (
@@ -940,22 +1099,26 @@ export default function DictionaryDetail({
               <Alert content="字典组随所属字典整体发布，以下字典值及所有字典组将一同生效。" />
             )}
             {groupsOnly && (
-              <DictionaryGroupsTable
-                groups={draft.groups.map((group) => ({
-                  ...group,
-                  memberValues: group.memberIds.map(
-                    (id) =>
-                      draft.items.find((item) => item.id === id)?.value || id
-                  ),
-                }))}
-                items={draft.items}
-              />
+              <>
+                <h4>字典组信息</h4>
+                {draft.groups.length ? (
+                  <ul>
+                    {draft.groups.map((group) => (
+                      <li key={group.id} style={{ overflowWrap: 'anywhere' }}>
+                        <strong>{group.name}</strong>（{group.code}） ·{' '}
+                        {group.enabled ? '启用' : '停用'} ·{' '}
+                        {group.memberIds.length} 个成员
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>暂无字典组</p>
+                )}
+              </>
             )}
             <DictionaryItemsTable
-              items={orderedItems.map((item) => ({
-                ...item,
-                sortOrder: item.position - 1,
-              }))}
+              items={orderedItems}
+              memberships={previewMemberships}
             />
           </>
         )}

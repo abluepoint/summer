@@ -99,8 +99,8 @@ class InvitationControllerTest {
         submitApplication("join-list-1", "list.applicant@example.test");
 
         mockMvc.perform(get("/api/v1/enterprises/{enterpriseId}/invitations", "ent-acme")
-                        .queryParam("page", "1")
-                        .queryParam("pageSize", "20")
+                        .queryParam("page", "")
+                        .queryParam("pageSize", "0020")
                         .with(admin("ent-acme", "enterprise.invitation.read")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].invitationId").isNotEmpty())

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.policy;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import org.springframework.security.access.AccessDeniedException;
 import java.util.function.Supplier;
@@ -30,6 +32,7 @@ class PolicyController {
         this.requestId = requestId;
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyView>>> list(@PathVariable String enterpriseId, Authentication auth) {
@@ -49,6 +52,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}")
     @RawResponse
     ResponseEntity<ApiResponse<PolicyDetailView>> detail(
@@ -58,6 +63,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}/versions")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyVersionView>>> versions(
@@ -80,6 +87,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:validate")
     @RawResponse
     ResponseEntity<ApiResponse<PolicyValidationView>> validate(
@@ -91,6 +100,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:publish")
     @RawResponse
     ResponseEntity<ApiResponse<PolicyView>> publish(
@@ -104,6 +115,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:pause")
     @RawResponse
     ResponseEntity<ApiResponse<PolicyView>> pause(
@@ -115,6 +128,8 @@ class PolicyController {
         return lifecycle(enterpriseId, policyId, "PAUSED", ifMatch, idempotencyKey, auth);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:revoke")
     @RawResponse
     ResponseEntity<ApiResponse<PolicyView>> revoke(
@@ -126,6 +141,9 @@ class PolicyController {
         return lifecycle(enterpriseId, policyId, "REVOKED", ifMatch, idempotencyKey, auth);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
+    @Field(param = "versionNo", required = false, nullable = true, style = "requestIntegerStyle")
     @PostMapping(value = "/api/v1/enterprises/{enterpriseId}/policies/{policyId}:rollback", consumes = MediaType.APPLICATION_JSON_VALUE)
     @RawResponse
     ResponseEntity<ApiResponse<PolicyView>> rollback(
@@ -153,6 +171,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}/test-cases")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyTestCaseView>>> testCases(
@@ -173,6 +193,8 @@ class PolicyController {
 
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}:test")
     @RawResponse
     ResponseEntity<ApiResponse<List<PolicyTestCaseView>>> runTests(
@@ -184,6 +206,17 @@ class PolicyController {
 
     }
 
+    // Older callers send this hint. The evaluation service computes the decision from trusted identity and policy.
+    @Field(param = "allow", required = false, nullable = true, style = "booleanStyle")
+    @Field(param = "initiator", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "actor", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "effectiveSubject", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "enterpriseId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "resource", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "action", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "risk", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "organizationId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "requestId", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value = "/internal/v1/authorization/evaluate", consumes = MediaType.APPLICATION_JSON_VALUE)
     @RawResponse
     ResponseEntity<ApiResponse<PolicyEvaluationView>> evaluate(
@@ -222,6 +255,8 @@ class PolicyController {
         return supplied == null || supplied.isBlank() || supplied.equals(trusted);
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "policyId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/policies/{policyId}/audit")
     @RawResponse
     ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> audit(

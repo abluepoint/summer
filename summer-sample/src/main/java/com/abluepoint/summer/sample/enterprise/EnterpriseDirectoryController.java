@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
@@ -27,6 +29,8 @@ class EnterpriseDirectoryController {
         this.requestId = requestId;
     }
 
+    @Field(param = "name", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "code", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value = "/api/v1/platform/enterprises", consumes = "application/json")
 
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.write')")
@@ -43,6 +47,7 @@ class EnterpriseDirectoryController {
         }
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/api/v1/platform/enterprises/{enterpriseId}/audit")
 
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.read')")

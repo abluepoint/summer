@@ -25,6 +25,12 @@ public class InterfaceOperationService {
 
   private static final Map<String, Operation> OPERATIONS =
       Map.ofEntries(
+          Map.entry("divisions.create", new Operation("POST", "/api/v1/platform/administrative-divisions",
+              false, List.of("platform.dictionary.create", "platform.dictionary.write"))),
+          Map.entry("divisions.update", new Operation("PUT", "/api/v1/platform/administrative-divisions/{id}",
+              false, List.of("platform.dictionary.update", "platform.dictionary.write"))),
+          Map.entry("divisions.delete", new Operation("DELETE", "/api/v1/platform/administrative-divisions/{id}",
+              false, List.of("platform.dictionary.write"))),
           Map.entry("menu.layout.write", management("PATCH", "/authorization/menu-layout")),
           Map.entry(
               "menu.manifest.write",
@@ -38,8 +44,26 @@ public class InterfaceOperationService {
           Map.entry("permissions.interfaces.write", management("PUT", "/permissions/{permissionId}/interfaces")),
           Map.entry("permissions.menus.write", management("PUT", "/permissions/{permissionId}/menus")),
           Map.entry("roles.create", management("POST", "/roles")),
+          Map.entry("roles.delete", management("DELETE", "/roles/{id}")),
           Map.entry("roles.update", management("PATCH", "/roles/{id}")),
           Map.entry("roles.permissions.write", management("PUT", "/roles/{id}/permissions")),
+          Map.entry("userGroups.create", management("POST", "/user-groups")),
+          Map.entry("userGroups.edit", management("PUT", "/user-groups/{id}")),
+          Map.entry("userGroups.delete", management("DELETE", "/user-groups/{id}")),
+          Map.entry("files.upload", management("POST", "/files/{id}/upload")),
+          Map.entry("files.folder", management("POST", "/files/{id}/folders")),
+          Map.entry("files.delete", management("DELETE", "/files/{id}/entries")),
+          Map.entry("files.download", management("GET", "/files/{id}/download")),
+          Map.entry("fileRepositories.create", management("POST", "/file-repositories")),
+          Map.entry("fileRepositories.credentials", management("PUT", "/file-repositories/{id}/credentials")),
+          Map.entry("fileRepositories.remove", management("DELETE", "/file-repositories/{id}")),
+          Map.entry("platformDirectory.assignGroup", management("PUT", "/administrators/user-groups/{id}")),
+          Map.entry("platformDirectory.add", management("POST", "/administrators")),
+          Map.entry("platformDirectory.remove", management("DELETE", "/administrators/{username}")),
+          Map.entry("platformDirectory.create", management("POST", "/platform-departments")),
+          Map.entry("platformDirectory.edit", management("PUT", "/platform-departments/{id}")),
+          Map.entry("platformDirectory.delete", management("DELETE", "/platform-departments/{id}")),
+          Map.entry("platformDirectory.staff", management("PUT", "/platform-departments/{id}/members/{username}")),
           Map.entry("roles.assign", management("PUT", "/users/{username}/roles")),
           Map.entry(
               "organization.create",
@@ -86,10 +110,6 @@ public class InterfaceOperationService {
           Map.entry(
               "identity.users.write",
               management("PATCH", "/api/users/{username}", "enterprise.members.write")),
-          Map.entry(
-              "authorization.events.retry",
-              management(
-                  "POST", "/api/authorization-events/{eventId}/retry", "enterprise.roles.write")),
           Map.entry(
               "customer.read",
               new Operation("GET", "/api/customers", false, List.of("customer.read"))),
@@ -138,6 +158,11 @@ public class InterfaceOperationService {
     Map<String, Boolean> result = new LinkedHashMap<>();
     boolean managed = access.managed(domain);
     for (String key : actions) {
+      if (!Domain.platform().equals(domain)
+          && (key.startsWith("divisions.") || key.startsWith("permissions.") || key.startsWith("groups.") || key.startsWith("menu."))) {
+        result.put(key, false);
+        continue;
+      }
       if (!managed) {
         result.put(key, legacyAllowed(domain, actor, key, requestId));
         continue;
@@ -197,6 +222,9 @@ public class InterfaceOperationService {
 
   /** Target operation hints never revive the old business engine. */
   private boolean legacyAllowed(Domain domain, Authentication actor, String action, String requestId) {
+    if (action.startsWith("divisions.") && Domain.platform().equals(domain)) {
+      return ManagedConsumerAccess.delegated(actor, OPERATIONS.get(action).scopes().toArray(String[]::new));
+    }
     return false;
   }
 }

@@ -3,6 +3,7 @@ package com.abluepoint.summer.sample.statistics;
 import com.abluepoint.summer.sample.authorization.AuthorizationService;
 import com.abluepoint.summer.sample.authorization.BusinessDataScopes;
 import com.abluepoint.summer.sample.resource.ResourcePermission;
+import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -78,15 +79,11 @@ class StatisticsService {
         Long roles = allowed.test("enterprise.roles.read")
                 ? count("select count(*) from summer_authorization_role where enterprise_id=?", enterpriseId) : null;
         Long dictionaries = null;
-        if (allowed.test("platform.dictionary.read")) {
-            final String selectedOrganization = organizationId;
-            dictionaries = dataScopes.read(enterpriseId, "dictionaries", "read", authentication, scope -> {
-            var bindings = new HashMap<String, Object>(scope.sqlBindings());
-            bindings.put("statisticsTenant", enterpriseId);
-            String sql = "select count(*) from summer_dictionary_type where tenant_id=:statisticsTenant and (" + scope.sqlPredicate() + ")";
-            if (selectedOrganization != null) { sql += " and organization_id=:statisticsOrganization"; bindings.put("statisticsOrganization", selectedOrganization); }
-            return new NamedParameterJdbcTemplate(jdbc).queryForObject(sql, bindings, Long.class);
-            });
+        if (installedAllowed(Domain.platform(), authentication, "GET", "/api/v1/platform/dictionaries", "platform.dictionary.read")) {
+            dictionaries = dataScopes.read(Domain.platform().id(), "dictionaries", "read", authentication, scope ->
+                    new NamedParameterJdbcTemplate(jdbc).queryForObject(
+                            "select count(*) from summer_dictionary_type where " + scope.sqlPredicate(),
+                            scope.sqlBindings(), Long.class));
         }
         // Task definitions have tenant ownership only; never imply an organization filter exists.
         boolean tasksAllowed = allowed.test("enterprise.tasks.read") && allowed.test("GET:/api/v1/enterprises/{enterpriseId}/tasks");
@@ -115,19 +112,18 @@ class StatisticsService {
             case "enterprise.statistics.read" -> "/statistics";
             case "enterprise.members.read" -> "/members";
             case "enterprise.roles.read" -> "/roles";
-            case "platform.dictionary.read" -> "/dictionaries";
             case "enterprise.tasks.read", "GET:/api/v1/enterprises/{enterpriseId}/tasks" -> "/tasks";
             case "enterprise.audit.read" -> "/audit-events";
             default -> null;
         };
         if (path == null) return false;
         String delegation = source.startsWith("GET:") ? "enterprise.tasks.read" : source;
-        return installedAllowed(enterprise, actor, "GET", "/api/v1/enterprises/{enterpriseId}" + path, delegation);
+        return installedAllowed(Domain.enterprise(enterprise), actor, "GET", "/api/v1/enterprises/{enterpriseId}" + path, delegation);
     }
 
-    private boolean installedAllowed(String enterprise, Authentication actor, String method, String path, String... scopes) {
+    private boolean installedAllowed(Domain domain, Authentication actor, String method, String path, String... scopes) {
         try {
-            return business.requireHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterprise),
+            return business.requireHttp(domain,
                     actor, method, path, scopes);
         } catch (AccessDeniedException denied) { return false; }
     }
@@ -141,7 +137,7 @@ class StatisticsService {
             for (String path : mapping.getPatternValues()) {
                 if (!path.startsWith("/api/v1/enterprises/{enterpriseId}/") || path.contains("/statistics")) continue;
                 for (var method : mapping.getMethodsCondition().getMethods())
-                    if (installedAllowed(enterprise, actor, method.name(), path, scopes)) allowed.add(method.name() + ":" + path);
+                    if (installedAllowed(Domain.enterprise(enterprise), actor, method.name(), path, scopes)) allowed.add(method.name() + ":" + path);
             }
         });
         return allowed.size();

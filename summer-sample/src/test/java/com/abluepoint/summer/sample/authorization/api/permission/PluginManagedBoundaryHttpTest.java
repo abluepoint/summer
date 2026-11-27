@@ -17,18 +17,22 @@ import tools.jackson.databind.ObjectMapper;
 @Import({RolePermissionHttpTest.Schema.class,DepartmentDataScopeHttpTest.DataSchema.class})
 @org.springframework.test.annotation.DirtiesContext
 class PluginManagedBoundaryHttpTest {
+  @Autowired HistoricalTenantPermissions historical;
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
   private static final String E="/api/v1/enterprises/ent-acme",P="/api/v1/platform";
   @Test void enterprisePluginPermissionCannotReleaseTheGlobalPlatformCustomerSource() throws Exception {
     grant(P,path -> path.startsWith("/api/v1/platform/plugins"));
     grant(E,path -> path.startsWith("/api/v1/enterprises/{enterpriseId}/plugins"));
+    grant(E,path -> path.equals("/public/enterprises/{enterpriseId}/system-parameters/{key}"));
     mvc.perform(post(P+"/plugins").with(user("summer-user")).with(csrf()).contentType("application/json")
         .content("{\"pluginId\":\"customer-insights\",\"version\":\"1.0.0\",\"artifactDigest\":\"sha256:customer-insights-v1\"}"))
         .andExpect(status().isCreated());
     mvc.perform(post(P+"/plugins/customer-insights:enable").with(user("summer-user")).with(csrf())).andExpect(status().isOk());
     var actor=jwt().jwt(j -> j.subject("summer-user").claim("scope","enterprise.plugins.read enterprise.plugins.customer-insights.read customer.read system.parameter.read platform.dictionary.read")
         .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))));
+    mvc.perform(get(E+"/plugins/customer-insights/summary").with(actor)).andExpect(status().isForbidden());
+    grant(P,path -> path.equals("/public/dictionaries/{code}"));
     mvc.perform(get(E+"/plugins/customer-insights/summary").with(actor)).andExpect(status().isForbidden());
     grant(P,path -> path.equals("/api/customers"));
     mvc.perform(get(E+"/plugins/customer-insights/summary").with(actor)).andExpect(status().isOk())
@@ -70,10 +74,9 @@ class PluginManagedBoundaryHttpTest {
         .claim("enterprise_memberships",List.of(Map.of("enterpriseId","ent-acme","status","ACTIVE"))));
     mvc.perform(get(endpoint).with(writeOnly).param("actions","messages.send,messages.ack")).andExpect(status().isOk())
         .andExpect(jsonPath("$.data.actions['messages.send']").value(false)).andExpect(jsonPath("$.data.actions['messages.ack']").value(true));
-    var current=mvc.perform(get(E+"/permissions/"+runtime+"/interfaces").with(user("summer-user"))).andExpect(status().isOk()).andReturn();
-    mvc.perform(put(E+"/permissions/"+runtime+"/interfaces").with(user("summer-user")).with(csrf()).header("If-Match",current.getResponse().getHeader("ETag"))
-        .header("Idempotency-Key",UUID.randomUUID().toString()).contentType("application/json").content("{\"resourceIds\":[]}"))
-        .andExpect(status().isOk());
+    var current=historical.readInterfaces(runtime);
+    historical.replace(E+"/permissions/"+runtime+"/interfaces", Map.of("resourceIds", List.of()),
+        current.etag());
     mvc.perform(get(endpoint).with(actor).param("actions","messages.send,messages.ack")).andExpect(status().isOk())
         .andExpect(jsonPath("$.data.actions['messages.send']").value(false)).andExpect(jsonPath("$.data.actions['messages.ack']").value(true));
   }
@@ -97,13 +100,21 @@ class PluginManagedBoundaryHttpTest {
   private String grant(String base,java.util.function.Predicate<String> selected) throws Exception {
     var ids=new ArrayList<String>();
     for(int page=0;page<10;page++) {
-      var result=mvc.perform(get(base+"/authorization/interface-directory").with(user("summer-user")).param("size","200").param("page",""+page))
+      var result=mvc.perform(get("/api/v1/platform/authorization/interface-directory").with(user("summer-user")).param("size","200").param("page",""+page))
           .andExpect(status().isOk()).andReturn();
       var data=json.readTree(result.getResponse().getContentAsString()).path("data");
       for(var row:data.path("items")) if(selected.test(row.path("normalizedPath").asText())) ids.add(row.path("resourceId").asText());
       if((page+1)*200>=data.path("total").asInt())break;
     }
     assertFalse(ids.isEmpty());
+    if (base.equals(E)) {
+      var group = historical.create(E + "/permission-groups", Map.of("name", "Plugin10"));
+      var permission = historical.create(E + "/permissions", Map.of("groupId", group.path("groupId").asText(),
+          "code", UUID.randomUUID().toString(), "name", "Plugin10", "type", "INTERFACE", "accessMode", "PUBLIC"));
+      String id = permission.path("permissionId").asText();
+      historical.replace(E + "/permissions/" + id + "/interfaces", Map.of("resourceIds", ids), "\"0\"");
+      return id;
+    }
     var group=mvc.perform(post(base+"/permission-groups").with(user("summer-user")).with(csrf()).header("Idempotency-Key",UUID.randomUUID().toString())
         .contentType("application/json").content("{\"name\":\"Plugin10\"}")).andExpect(status().isCreated()).andReturn();
     String groupId=json.readTree(group.getResponse().getContentAsString()).path("data").path("groupId").asText();

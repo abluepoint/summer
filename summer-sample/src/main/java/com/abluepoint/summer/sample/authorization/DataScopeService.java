@@ -1,242 +1,29 @@
 package com.abluepoint.summer.sample.authorization;
 
-import com.abluepoint.summer.sample.customer.CustomerAuditService;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
-
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
 
+/** Organization context used by current DATA enforcement; legacy policy management is retired. */
 @Service
 public class DataScopeService {
-    private final com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess;
+    private final JdbcTemplate jdbc;
 
-    static final String ENTERPRISE = "ent-acme";
-    private final DataScopePolicyRepository repository;
-    private final DataScopePolicyAuditRepository auditRepository;
-    private final ObjectMapper mapper;
-    private final CustomerAuditService audit;
-    private final AuthorizationChangeEventService changeEvents;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
-    private final DataScopeBindingRepository bindings;
-    private final AuthorizationUserBindingRepository users;
-    private final AuthorizationRoleRepository roles;
-
-    DataScopeService(DataScopePolicyRepository repository, DataScopePolicyAuditRepository auditRepository,
-                     ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents,
-                     org.springframework.jdbc.core.JdbcTemplate jdbc, DataScopeBindingRepository bindings,
-                     AuthorizationUserBindingRepository users, AuthorizationRoleRepository roles) { this(repository, auditRepository, mapper, audit, changeEvents, jdbc, bindings, users, roles, null); }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    DataScopeService(DataScopePolicyRepository repository, DataScopePolicyAuditRepository auditRepository,
-                     ObjectMapper mapper, CustomerAuditService audit, AuthorizationChangeEventService changeEvents,
-                     org.springframework.jdbc.core.JdbcTemplate jdbc, DataScopeBindingRepository bindings,
-                     AuthorizationUserBindingRepository users, AuthorizationRoleRepository roles, com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess managedAccess) {
-        this.managedAccess = managedAccess;
-        this.repository = repository;
-        this.auditRepository = auditRepository;
-        this.mapper = mapper;
-        this.audit = audit;
-        this.changeEvents = changeEvents;
-        this.jdbc = jdbc;
-        this.bindings = bindings;
-        this.users = users;
-        this.roles = roles;
-    }
-
-    @Transactional(readOnly = true)
-    List<DataScopePolicyView> list(String enterpriseId, Authentication auth) {
-        require(enterpriseId, "enterprise.data-scope.read", auth);
-        return repository.findAll().stream().filter(p -> enterpriseId.equals(p.enterpriseId())).map(this::view).toList();
-    }
-
-    @Transactional(readOnly = true)
-    DataScopePolicyView get(String enterpriseId, String resource, Authentication auth) {
-        require(enterpriseId, "enterprise.data-scope.read", auth);
-        return repository.findByEnterpriseIdAndResource(enterpriseId, resource).map(this::view)
-                .orElseThrow(() -> new NoSuchElementException("Data scope policy was not configured"));
-    }
-
-    @Transactional
-    DataScopePolicyView put(String enterpriseId, String resource, DataScopePolicyRequest request, Authentication auth) {
-        return put(enterpriseId, resource, request, null, auth);
-    }
-
-    @Transactional
-    DataScopePolicyView put(String enterpriseId, String resource, DataScopePolicyRequest request, String requestId, Authentication auth) {
-        require(enterpriseId, "enterprise.data-scope.write", auth);
-        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId)))
-            throw com.abluepoint.summer.common.error.SummerException.withMessage(
-                com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
-                "Legacy DATA policy and direct bindings are unsupported in managed mode; configure DATA permissions");
-        if (request == null) throw new IllegalArgumentException("policy request is required");
-        if (request.sql() != null && !request.sql().isBlank()) throw new IllegalArgumentException("raw SQL is not accepted");
-        String op = upper(request.operator() == null ? "AND" : request.operator());
-        if (!Set.of("AND", "OR").contains(op)) throw new IllegalArgumentException("operator must be AND or OR");
-        List<DataScopeRule> rules = request.rules() == null ? List.of() : new ArrayList<>(request.rules());
-        if (rules.isEmpty() && request.conditions() == null && request.conditionTree() == null) {
-            throw new IllegalArgumentException("rules or conditions are required");
-        }
-        if (request.conditions() != null && request.conditionTree() != null) throw new IllegalArgumentException("choose conditions or conditionTree, not both");
-        Object conditions = request.conditions() != null ? request.conditions() : request.conditionTree();
-        String rulesJson = write(rules);
-        String conditionsJson = write(conditions == null ? null : conditions);
-        compile(enterpriseId, op, rulesJson, conditionsJson, principal(auth), organization(enterpriseId, auth));
-        String checksum = checksum(op, rulesJson, conditionsJson);
-        DataScopePolicyEntity entity = repository.findByEnterpriseIdAndResource(enterpriseId, resource)
-                .orElseGet(() -> new DataScopePolicyEntity(UUID.randomUUID().toString(), enterpriseId, resource, op, rulesJson, conditionsJson, checksum));
-        entity.update(op, rulesJson, conditionsJson, checksum);
-        repository.saveAndFlush(entity);
-        auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterpriseId, resource,
-                entity.version(), checksum, "DATA_SCOPE_POLICY_UPDATED", principal(auth), requestId));
-        audit.recordTenantResourceSuccess(enterpriseId, "data-scope:" + enterpriseId + ":" + resource, "DATA_SCOPE_POLICY_UPDATED", requestId, auth);
-        changeEvents.enqueueEnterprise(enterpriseId, "DATA_SCOPE", resource, "DATA_SCOPE_POLICY_UPDATED", entity.version(), requestId);
-        return view(entity);
-    }
-
-    @Transactional(readOnly = true)
-    List<DataScopeAuditView> audit(String enterpriseId, String resource, Authentication auth) {
-        require(enterpriseId, "enterprise.data-scope.read", auth);
-        return auditRepository.findByEnterpriseIdAndResourceOrderByOccurredAtDesc(enterpriseId, resource).stream()
-                .map(e -> new DataScopeAuditView(e.auditId(), e.enterpriseId(), e.resource(), e.version(), e.checksum(),
-                        e.action(), e.principal(), e.requestId(), e.occurredAt())).toList();
-    }
-
-    @Transactional(readOnly = true)
-    DataScopePreviewView preview(String enterpriseId, String resource, DataScopePreviewRequest request, Authentication auth) {
-        throw com.abluepoint.summer.common.error.SummerException.withMessage(
-            com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
-            "Legacy DATA previews are retired; use the current DATA resource preview");
-    }
+    DataScopeService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     public ScopeFilter filter(String enterpriseId, String resource, Authentication auth) {
         throw new AccessDeniedException("Legacy DATA range evaluation is retired; use current DATA permissions");
-    }
-
-    @Transactional(readOnly = true)
-    List<DataScopeBindingView> bindings(String enterprise, String resource, Authentication auth) {
-        require(enterprise, "enterprise.data-scope.read", auth);
-        return bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(enterprise, resource)
-                .stream().map(this::bindingView).toList();
-    }
-
-    @Transactional
-    DataScopeBindingView bind(String enterprise, String resource, String kind, String subject,
-                              DataScopePolicyRequest request, String requestId, Authentication auth) {
-        require(enterprise, "enterprise.data-scope.write", auth);
-        if (managedAccess != null && managedAccess.managed(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterprise)))
-            throw com.abluepoint.summer.common.error.SummerException.withMessage(
-                com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID,
-                "Legacy DATA policy and direct bindings are unsupported in managed mode; configure DATA permissions");
-        if (!Set.of("USER", "ROLE").contains(kind) || blank(subject) || subject.length() > 128)
-            throw new IllegalArgumentException("Binding requires USER or ROLE and a subject identifier");
-        if (repository.findByEnterpriseIdAndResource(enterprise, resource).isEmpty())
-            throw new IllegalArgumentException("Configure the resource policy first");
-        if ("ROLE".equals(kind) && roles.findById(subject).filter(r -> enterprise.equals(r.enterpriseId())).isEmpty())
-            throw new IllegalArgumentException("Role does not belong to this enterprise");
-        if (request == null || request.sql() != null || (request.conditions() != null && request.conditionTree() != null))
-            throw new IllegalArgumentException("Invalid binding policy");
-        String operator = request.operator() == null ? "AND" : upper(request.operator());
-        String rules = write(request.rules() == null ? List.of() : request.rules());
-        String conditions = write(request.conditions() == null ? request.conditionTree() : request.conditions());
-        compile(enterprise, operator, rules, conditions, subject, storedOrganization(enterprise, subject));
-        DataScopeBindingEntity entity = bindings.findByEnterpriseIdAndResourceAndSubjectTypeAndSubjectId(enterprise, resource, kind, subject)
-                .orElseGet(DataScopeBindingEntity::new);
-        if (entity.id == null) entity.id = UUID.randomUUID().toString();
-        entity.enterpriseId = enterprise; entity.resource = resource; entity.subjectType = kind; entity.subjectId = subject;
-        entity.operator = operator; entity.rulesJson = rules; entity.conditionsJson = conditions;
-        entity.checksum = checksum(operator, rules, conditions); entity.updatedAt = java.time.Instant.now();
-        bindings.saveAndFlush(entity);
-        auditRepository.save(new DataScopePolicyAuditEntity(UUID.randomUUID().toString(), enterprise, resource,
-                entity.version, entity.checksum, "DATA_SCOPE_BINDING_UPDATED", principal(auth), requestId));
-        audit.recordTenantResourceSuccess(enterprise, "data-scope:" + enterprise + ":" + resource, "DATA_SCOPE_BINDING_UPDATED", requestId, auth);
-        changeEvents.enqueueEnterprise(enterprise, "DATA_SCOPE", entity.id, "DATA_SCOPE_BINDING_UPDATED", entity.version, requestId);
-        return bindingView(entity);
-    }
-
-    private DataScopeBindingView bindingView(DataScopeBindingEntity b) {
-        return new DataScopeBindingView(b.subjectType, b.subjectId, "USER".equals(b.subjectType) ? "DENY" : "ALLOW",
-                b.operator, readRules(b.rulesJson), readObject(b.conditionsJson), b.version, b.checksum);
-    }
-
-    private record Effective(DataScopeExpression.Node expression, DataScopeExpression.Node userDenied, List<String> sources) {}
-    private Effective effective(DataScopePolicyEntity policy, String subject, String organization) {
-        DataScopeExpression.Compiled base = compile(policy.enterpriseId(), policy.operator(), policy.rulesJson(), policy.conditionsJson(), subject, organization);
-        List<DataScopeBindingEntity> all = bindings.findByEnterpriseIdAndResourceOrderBySubjectTypeAscSubjectIdAsc(policy.enterpriseId(), policy.resource());
-        List<String> roleIds = subject == null ? List.of() : users.findByEnterpriseIdAndUsername(policy.enterpriseId(), subject)
-                .map(u -> persistedRoleIds(u.roleIds())).orElse(List.of());
-        Set<String> activeRoles = new HashSet<>();
-        for (String roleId : roleIds) roles.findById(roleId)
-                .filter(r -> policy.enterpriseId().equals(r.enterpriseId()) && "ACTIVE".equals(r.status()))
-                .ifPresent(r -> activeRoles.add(roleId));
-        List<DataScopeExpression.Node> allows = new ArrayList<>(), denies = new ArrayList<>();
-        List<String> sources = new ArrayList<>();
-        boolean managedRoles = all.stream().anyMatch(b -> "ROLE".equals(b.subjectType));
-        for (DataScopeBindingEntity binding : all) {
-            if (("ROLE".equals(binding.subjectType) && activeRoles.contains(binding.subjectId))
-                    || ("USER".equals(binding.subjectType) && binding.subjectId.equals(subject))) {
-                DataScopeExpression.Node node = compile(policy.enterpriseId(), binding.operator, binding.rulesJson, binding.conditionsJson, subject, organization).expression();
-                ("USER".equals(binding.subjectType) ? denies : allows).add(node);
-                sources.add(binding.subjectType + ":" + binding.subjectId + ":" + binding.version);
-            }
-        }
-        DataScopeExpression.Node userDenied = new DataScopeExpression.Junction(false, denies);
-        DataScopeExpression.Node grant = managedRoles ? new DataScopeExpression.Junction(false, allows) : new DataScopeExpression.Constant(true);
-        return new Effective(new DataScopeExpression.Junction(true, List.of(base.expression(), grant, new DataScopeExpression.Not(userDenied))), userDenied, sources);
-    }
-
-    private List<String> persistedRoleIds(String value) {
-        if (value == null || value.isBlank()) return List.of();
-        // Current MySQL writes use JSON arrays; older local projections used newline lists.
-        if (!value.stripLeading().startsWith("[")) {
-            return Arrays.stream(value.split("\\n", -1)).filter(role -> !role.isBlank()).toList();
-        }
-        try {
-            var array = mapper.readTree(value);
-            if (!array.isArray()) throw new IllegalArgumentException("Invalid persisted role assignment");
-            List<String> result = new ArrayList<>();
-            for (var role : array) {
-                if (!role.isString()) throw new IllegalArgumentException("Invalid persisted role assignment");
-                if (!role.asText().isBlank()) result.add(role.asText());
-            }
-            return List.copyOf(result);
-        } catch (JacksonException invalid) {
-            throw new IllegalArgumentException("Invalid persisted role assignment", invalid);
-        }
-    }
-
-    private DataScopeExpression.Compiled compile(String enterpriseId, String operator, String rules, String conditions,
-                                                 String subject, String organization) {
-        return DataScopeExpression.compile(operator, readObject(rules), readObject(conditions),
-                new DataScopeExpression.Context(enterpriseId, subject, organization, roots -> descendants(enterpriseId, roots)));
-    }
-
-    private List<String> descendants(String enterpriseId, List<String> roots) {
-        if (roots.isEmpty()) return List.of();
-        // Only organization metadata is expanded in memory. Business rows are always filtered in SQL/JPA.
-        List<OrganizationLink> links = jdbc.query("select unit_id, parent_id from summer_organization_unit where enterprise_id = ? and status = 'ACTIVE'",
-                (rs, index) -> new OrganizationLink(rs.getString(1), rs.getString(2)), enterpriseId);
-        Set<String> result = new TreeSet<>(roots);
-        boolean changed;
-        do {
-            changed = false;
-            for (OrganizationLink link : links) if (link.parent() != null && result.contains(link.parent()) && result.add(link.id())) changed = true;
-        } while (changed);
-        return List.copyOf(result);
     }
 
     private String storedOrganization(String enterpriseId, String subject) {
         return jdbc.query("select organization_id from summer_organization_context where enterprise_id = ? and subject = ?",
                 (rs, index) -> rs.getString(1), enterpriseId, subject).stream().filter(Objects::nonNull).findFirst().orElse(null);
     }
-
-    private record OrganizationLink(String id, String parent) {}
 
     public String organization(String enterpriseId, Authentication auth) {
         if (auth instanceof JwtAuthenticationToken jwt && jwt.getToken().getClaims().get("organization_context") instanceof Map<?, ?> context) {
@@ -254,68 +41,7 @@ public class DataScopeService {
                 Long.class, enterpriseId, organizationId) != 1) throw new AccessDeniedException("Organization does not belong to the active enterprise");
     }
 
-    public void assertWrite(String enterpriseId, String resource, Authentication auth, String organizationId) {
-        assertOrganization(enterpriseId, organizationId);
-        ScopeFilter f = filter(enterpriseId, resource, auth);
-        if (!f.allows(organizationId, auth == null ? null : auth.getName(), auth == null ? null : auth.getName(), auth == null ? null : auth.getName())) {
-            throw new AccessDeniedException("Write target is outside the data scope");
-        }
-    }
-
-    private DataScopePolicyView view(DataScopePolicyEntity p) {
-        return new DataScopePolicyView(p.resource(), p.enterpriseId(), p.operator(), readRules(p.rulesJson()), p.version(),
-                p.updatedAt(), p.checksum(), readObject(p.conditionsJson()));
-    }
-
-    private List<DataScopeRule> readRules(String json) {
-        try {
-            return mapper.readValue(json, mapper.getTypeFactory().constructCollectionType(List.class, DataScopeRule.class));
-        } catch (RuntimeException e) {
-            return List.of();
-        }
-    }
-
-    private Object readObject(String json) {
-        if (json == null || "null".equals(json)) return null;
-        try { return mapper.readValue(json, Object.class); } catch (RuntimeException e) { throw new IllegalArgumentException("policy cannot be decoded", e); }
-    }
-
-    private String write(Object value) {
-        try { return mapper.writeValueAsString(value); } catch (JacksonException e) { throw new IllegalArgumentException("policy cannot be serialized", e); }
-    }
-
-    private String checksum(String operator, String rules, String conditions) {
-        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((operator + "|" + rules + "|" + conditions).getBytes(StandardCharsets.UTF_8))); }
-        catch (Exception e) { throw new IllegalStateException("checksum unavailable", e); }
-    }
-
-    private static String upper(String value) { return value == null ? null : value.trim().toUpperCase(Locale.ROOT); }
-    private static boolean blank(String value) { return value == null || value.isBlank(); }
     private static String principal(Authentication auth) { return auth == null || auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken ? null : auth.getName(); }
-
-    private void require(String enterpriseId, String capability, Authentication auth) {
-        if (managedAccess != null && managedAccess.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId), auth, capability)) return;
-        throw new AccessDeniedException("Current managed resource permission required for enterprise data scope");
-    }
-
-    private static boolean hasMembership(Authentication auth, String enterpriseId) {
-        if (!(auth instanceof JwtAuthenticationToken jwt)) return false;
-        Object claim = jwt.getToken().getClaims().get("enterprise_memberships");
-        return claim instanceof Collection<?> c && c.stream().filter(Map.class::isInstance).map(Map.class::cast)
-                .anyMatch(m -> enterpriseId.equals(value(m, "enterpriseId", "enterprise_id")) && "ACTIVE".equalsIgnoreCase(value(m, "status", "membership_status")));
-    }
-
-    private static boolean hasCapability(Authentication auth, String enterpriseId, String capability) {
-        if (!(auth instanceof JwtAuthenticationToken jwt)) return false;
-        Object claim = jwt.getToken().getClaims().get("enterprise_capabilities");
-        if (!(claim instanceof Map<?, ?> map)) return false;
-        Object values = map.get(enterpriseId);
-        return values instanceof Collection<?> c && c.stream().map(String::valueOf).anyMatch(capability::equals);
-    }
-
-    private static String value(Map<?, ?> map, String first, String second) {
-        Object value = map.get(first); if (value == null) value = map.get(second); return value == null ? null : value.toString();
-    }
 
     public static String organizationId(Authentication auth) {
         if (!(auth instanceof JwtAuthenticationToken jwt)) return null;

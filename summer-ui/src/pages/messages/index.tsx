@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Input, Message, Select, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import useActiveEnterprise from '@/pages/data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import { getAuthenticatedUser, oidcManager } from '@/auth/oidc';
 import { hasEnterpriseCapability } from '@/auth/businessCapabilities';
 import { useOperationHints } from '@/auth/interfaceOperations';

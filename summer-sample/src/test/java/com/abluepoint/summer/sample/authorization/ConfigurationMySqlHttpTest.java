@@ -53,8 +53,9 @@ class ConfigurationMySqlHttpTest {
                 .content("{\"value\":\"org\",\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("org"));
         mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/system-parameters/bindings/USER/mysql-user").with(actor).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"rules\":[{\"type\":\"TENANT\"}]}")) .andExpect(status().isOk());
-        mvc.perform(get("/api/system-parameters").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
-        mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isNotFound());
+                .content("{\"rules\":[{\"type\":\"TENANT\"}]}")) .andExpect(status().isNotFound());
+        // Retired direct bindings cannot change the existing authorized data range.
+        mvc.perform(get("/api/system-parameters").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(1));
+        mvc.perform(get("/public/system-parameters/mysql.scope").with(actor)).andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("org"));
     }
 }

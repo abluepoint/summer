@@ -41,23 +41,7 @@ async function json(route, data, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
 }
 
-test('failed permission preview clears the previous effective scope and shows requestId', async () => {
-  let previews = 0;
-  const page = await pageFor('data-scopes', async (route) => {
-    if (route.request().method() === 'GET') return json(route, success([policy]));
-    if (++previews === 1) return json(route, success({ decision: 'ALLOW', allowed: true, explanation: 'UI_PREVIEW_OLD', policyVersion: 1, effectiveScope: {} }));
-    return json(route, failure(403, 'preview-denied'), 403);
-  });
-  try {
-    await page.getByPlaceholder('用户', { exact: true }).fill('ui-fixture');
-    const button = page.getByRole('button', { name: '预览', exact: true });
-    await button.click();
-    await page.getByText('UI_PREVIEW_OLD').waitFor();
-    await button.click();
-    await page.getByText('无权管理数据范围 (preview-denied)').waitFor();
-    assert.equal(await page.getByText('UI_PREVIEW_OLD').count(), 0);
-  } finally { await page.close(); }
-});
+
 
 const parameter = { id: 'synthetic-parameter', key: 'ui-probe', type: 'BOOLEAN', value: true, required: false, public: true, status: 'ACTIVE', version: 1 };
 const parameterPage = { items: [parameter], page: 0, size: 20, totalElements: 1, totalPages: 1, projection: 'detail' };
@@ -169,19 +153,7 @@ test('invalid boolean input is rejected instead of silently publishing false', a
   } finally { await page.close(); }
 });
 
-test('unsaved data scope trees block navigation and remain editable after cancellation', async () => {
-  const page = await pageFor('data-scopes', (route) => json(route, success([policy])));
-  try {
-    const textarea = page.getByRole('textbox', { name: 'system-parameters condition tree' });
-    await textarea.fill('{"field":"SELF"}');
-    const prompt = page.waitForEvent('dialog', { timeout: 2000 });
-    const clicked = page.getByRole('link', { name: '离开测试页' }).click();
-    const dialog = await prompt;
-    await dialog.dismiss();
-    await clicked;
-    assert.equal(await textarea.inputValue(), '{"field":"SELF"}');
-  } finally { await page.close(); }
-});
+
 
 test('parameter drawer cancellation keeps dirty edits until discard is confirmed', async () => {
   const page = await pageFor('system-parameters', (route) => json(route, success(new URL(route.request().url()).pathname.endsWith('/system-parameter-events') ? { items: [] } : parameterPage)));
@@ -218,16 +190,7 @@ test('dictionary form displays the selected option returned by an authorized rea
   } finally { await page.close(); }
 });
 
-test('refreshing data scopes requires confirmation before replacing unsaved trees', async () => {
-  const page = await pageFor('data-scopes', (route) => json(route, success([policy])));
-  try {
-    const textarea = page.getByRole('textbox', { name: 'system-parameters condition tree' });
-    await textarea.fill('{"field":"SELF"}');
-    await page.getByRole('button', { name: '刷新', exact: true }).click();
-    await page.getByRole('button', { name: '继续编辑', exact: true }).click();
-    assert.equal(await textarea.inputValue(), '{"field":"SELF"}');
-  } finally { await page.close(); }
-});
+
 
 test('a transient dictionary read failure clears server options while retaining a dirty override draft', async () => {
   let reads = 0;
@@ -265,19 +228,7 @@ test('a late parameter response cannot restore rows after a newer denied read', 
   } finally { release?.(); await page.close(); }
 });
 
-test('saving one resource policy preserves another resource unsaved tree', async () => {
-  const policies = [policy, { ...policy, resource: 'dictionaries' }];
-  const page = await pageFor('data-scopes', (route) => json(route, success(route.request().method() === 'PUT' ? policy : policies)));
-  try {
-    await page.getByRole('textbox', { name: 'system-parameters condition tree' }).fill('{"field":"TENANT"}');
-    const other = page.getByRole('textbox', { name: 'dictionaries condition tree' });
-    await other.fill('{"field":"SELF"}');
-    await page.getByRole('button', { name: '保存资源策略', exact: true }).first().click();
-    await page.getByText('数据范围已保存。', { exact: true }).waitFor();
-    await page.waitForLoadState('networkidle');
-    assert.equal(await other.inputValue(), '{"field":"SELF"}');
-  } finally { await page.close(); }
-});
+
 
 test('a late dictionary response cannot restore options after a denied notification refresh', async () => {
   let release;
@@ -298,8 +249,8 @@ test('a late dictionary response cannot restore options after a denied notificat
   } finally { release?.(); await page.close(); }
 });
 
-test('invalid condition and option JSON remains editable without submitting writes', async () => {
-  for (const name of ['data-scopes', 'dictionary']) {
+test('invalid option JSON remains editable without submitting writes', async () => {
+  for (const name of ['dictionary']) {
     let writes = 0;
     const page = await pageFor(name, (route) => {
       if (['PUT', 'POST'].includes(route.request().method())) { writes++; return json(route, failure(400, 'unexpected-write'), 400); }
@@ -308,10 +259,10 @@ test('invalid condition and option JSON remains editable without submitting writ
       return json(route, success([policy]));
     });
     try {
-      const textarea = page.getByRole('textbox', { name: name === 'data-scopes' ? 'system-parameters condition tree' : '覆盖选项 JSON', exact: true });
+      const textarea = page.getByRole('textbox', { name: '覆盖选项 JSON', exact: true });
       await textarea.fill('{invalid-json');
-      await page.getByRole('button', { name: name === 'data-scopes' ? '保存资源策略' : '发布字典覆盖', exact: true }).click();
-      await page.getByText(name === 'data-scopes' ? '条件树必须是有效 JSON' : '请输入有效选项 JSON', { exact: true }).waitFor();
+      await page.getByRole('button', { name: '发布字典覆盖', exact: true }).click();
+      await page.getByText('请输入有效选项 JSON', { exact: true }).waitFor();
       assert.equal(writes, 0);
       assert.equal(await textarea.inputValue(), '{invalid-json');
     } finally { await page.close(); }

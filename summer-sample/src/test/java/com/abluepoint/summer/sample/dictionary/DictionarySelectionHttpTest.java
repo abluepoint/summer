@@ -80,21 +80,14 @@ class DictionarySelectionHttpTest {
                     .andExpect(jsonPath("$.data.choices.length()").value(0));
         }
     }
-    @Test void oldOverrideArraysSupplyNamesButKeepBaseDescriptionsAndPublishedIdentity() throws Exception {
+    @Test void platformChoicesRetainPublishedNamesAndDescriptions() throws Exception {
         String path = published("selection-overlay");
-        String raw = http.perform(put(path + "/overrides/_tenant").with(admin()).contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"value":[{"value":"01","label":"Overlay name","sortOrder":0,"enabled":true}],"publicReadable":true,"enabled":true}
-                    """)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        Number version = com.jayway.jsonpath.JsonPath.read(raw, "$.data.version");
-        Number revision = com.jayway.jsonpath.JsonPath.read(raw, "$.data.publishedRevision");
-        http.perform(post(path + "/overrides/_tenant/draft").with(admin()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"expectedVersion\":" + version + ",\"value\":[{\"value\":\"1\",\"label\":\"Draft name\",\"sortOrder\":0,\"enabled\":true}],\"publicReadable\":true,\"enabled\":true}"))
-                .andExpect(status().isOk());
+        http.perform(put(path + "/overrides/_tenant").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                .content("{}")).andExpect(status().isNotFound());
         http.perform(post(path + "/resolve-selection").with(admin()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"values\":[\"01\"]}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.publishedRevision").value(revision.intValue()))
-                .andExpect(jsonPath("$.data.choices[0].label").value("Overlay name"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.publishedRevision").isEmpty())
+                .andExpect(jsonPath("$.data.choices[0].label").value("Leading zero"))
                 .andExpect(jsonPath("$.data.choices[0].description").value("Base description"))
                 .andExpect(jsonPath("$.data.items[0].description").value("Base description"));
     }

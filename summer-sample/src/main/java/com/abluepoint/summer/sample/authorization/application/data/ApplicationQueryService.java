@@ -132,15 +132,6 @@ public class ApplicationQueryService {
     }
 
     public Object preview(Domain domain, String resource, Map<String, Object> body) {
-        return previewCurrent(domain, resource, body, null);
-    }
-
-    public Object previewPermission(Domain domain, String resource, Map<String, Object> body, String permissionId) {
-        if (permissionId == null || permissionId.isBlank()) throw invalid("A current permission identity is required");
-        return previewCurrent(domain, resource, body, permissionId);
-    }
-
-    private Object previewCurrent(Domain domain, String resource, Map<String, Object> body, String permissionId) {
         requireAdapter(resource);
         if (!body.keySet().equals(Set.of("subject", "recordId", "action"))
                 || !(body.get("subject") instanceof String subject)
@@ -180,8 +171,7 @@ public class ApplicationQueryService {
                             "revision",
                             scope.revision());
                 };
-        return permissionId == null ? reads.read(domain, resource, action, target, query)
-                : reads.readPermission(domain, resource, action, target, permissionId, query);
+        return reads.read(domain, resource, action, target, query);
     }
 
     public Object batchRead(

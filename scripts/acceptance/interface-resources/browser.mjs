@@ -31,7 +31,8 @@ try{
  page.on('request',request=>{if(new URL(request.url()).pathname===api)bearer=request.headers().authorization||bearer;});
  page.on('response',response=>{const path=new URL(response.url()).pathname;if(path.startsWith(api))result.requests.push({method:response.request().method(),path,status:response.status()});});
  stage=planned[0];await login(page,process.env.SUMMER_E2E_USERNAME,process.env.SUMMER_E2E_PASSWORD);
- await page.getByText('版本历史',{exact:true}).waitFor();await page.getByText('当前版本: '+process.env.CATALOG_REPLACEMENT,{exact:true}).waitFor();
+ await page.getByRole('tabpanel',{name:'当前版本'}).getByRole('cell',{name:process.env.CATALOG_REPLACEMENT,exact:true}).first().waitFor();
+ await page.getByRole('tab',{name:'历史版本',exact:true}).click();
  assert.ok(result.requests.some(r=>r.path===api+'/history'&&r.status===200));mark();
  stage=planned[1];
  step='from-select';await selectRevision('起始版本',process.env.CATALOG_ORIGINAL);
@@ -46,12 +47,12 @@ try{
  step='same-revision';await selectRevision('起始版本',process.env.CATALOG_REPLACEMENT);
  assert.equal(await page.getByRole('button',{name:'比较版本',exact:true}).isDisabled(),true);mark();
  stage=planned[3];assert.ok(bearer);const invalid=await page.request.get(origin+api+'/history?size=0',{headers:{Authorization:bearer}});assert.equal(invalid.status(),400);const error=await invalid.json();assert.ok(error.requestId);assert.equal(error.error.code,'SUMMER_RESOURCE_HISTORY_INVALID');mark();
- stage=planned[4];await control('stop');const unavailable=page.waitForResponse(r=>new URL(r.url()).pathname===api&&r.status()===502);await page.getByRole('button',{name:'刷新',exact:true}).click();await unavailable;
- await page.locator('.arco-alert-error').waitFor();assert.equal(await page.getByText('版本历史',{exact:true}).count(),1);
- await control('restart');const recovered=page.waitForResponse(r=>new URL(r.url()).pathname===api&&r.status()===200);await page.getByRole('button',{name:'刷新',exact:true}).click();await recovered;await page.getByText('版本历史',{exact:true}).waitFor();mark();
+ stage=planned[4];await page.getByRole('tab',{name:'当前版本',exact:true}).click();await control('stop');const unavailable=page.waitForResponse(r=>new URL(r.url()).pathname===api&&r.status()===502);await page.getByRole('button',{name:'筛选',exact:true}).click();await unavailable;
+ await page.locator('.arco-alert-error').waitFor();assert.equal(await page.getByRole('tab',{name:'历史版本',exact:true}).count(),1);
+ await control('restart');const recovered=page.waitForResponse(r=>new URL(r.url()).pathname===api&&r.status()===200);await page.getByRole('button',{name:'筛选',exact:true}).click();await recovered;await page.getByRole('tab',{name:'历史版本',exact:true}).waitFor();mark();
  stage=planned[5];const denied=await browser.newContext();const deniedPage=await denied.newPage();deniedPage.setDefaultTimeout(25000);
  await login(deniedPage,process.env.CATALOG_DENIED_USERNAME,process.env.CATALOG_DENIED_PASSWORD);
- await deniedPage.getByText('对不起，您没有访问该资源的权限',{exact:true}).waitFor();assert.equal(await deniedPage.getByText('版本历史',{exact:true}).count(),0);mark();
+ await deniedPage.getByText('对不起，您没有访问该资源的权限',{exact:true}).waitFor();assert.equal(await deniedPage.getByRole('tab',{name:'历史版本',exact:true}).count(),0);mark();
  await deniedPage.screenshot({path:output+'/catalog-real-denied.png',fullPage:true});await denied.close();result.status='PASSED';
 }catch(error){result.status='FAILED';result.failures=1;result.failedStage=stage;result.failureType=error?.name||'Error';result.failureStep=step;if(stage!==planned[0]){let summary=String(error?.message||'');for(const secret of [process.env.SUMMER_E2E_PASSWORD,process.env.CATALOG_DENIED_PASSWORD,bearer])if(secret)summary=summary.replaceAll(secret,'<redacted>');result.failureSummary=summary.slice(0,1200);if(page && await page.locator('input[type=password]').count()===0)await page.screenshot({path:output+'/catalog-browser-failure.png',fullPage:true}).catch(()=>{});}}
 finally{input.close();if(browser)await browser.close();result.tests=result.checks.length+result.failures;result.skipped=planned.filter(name=>!result.checks.some(c=>c.name===name)&&name!==result.failedStage).length;await writeFile(output+'/browser-result.json',JSON.stringify(result,null,2));console.log(JSON.stringify({status:result.status,tests:result.tests,failures:result.failures,skipped:result.skipped,failedStage:result.failedStage}));if(result.status==='FAILED')process.exitCode=1;}

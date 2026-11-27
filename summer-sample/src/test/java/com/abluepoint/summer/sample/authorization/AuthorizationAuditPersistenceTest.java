@@ -24,6 +24,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@org.springframework.test.context.jdbc.Sql("/fixtures/menu-client-dictionary.sql")
 @SpringBootTest(properties="summer.security.storage.keys=memory")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(CurrentManagedAuthorizationTestFixture.class)
@@ -43,7 +44,7 @@ class AuthorizationAuditPersistenceTest {
   @Autowired org.springframework.beans.factory.ObjectProvider<RequestMappingHandlerMapping> mappings;
 
   @BeforeEach void initializeUnpublishedMenuState() {
-    fixture.grantHandlers(PLATFORM,"audit-admin",(h,p,m)->p.startsWith("/api/v1/platform/menu-manifest"));
+    fixture.grantHandlers(PLATFORM,"audit-admin",(h,p,m)->(p.equals("/api/v1/platform/menu-manifest") || p.equals("/api/v1/platform/authorization/menu-layout")));
     fixture.grantHandlers(ENTERPRISE,"audit-admin",(h,p,m)->p.startsWith("/api/v1/enterprises/{enterpriseId}/menu-manifest"));
     jdbc.update("update summer_menu_publication set published=false,manifest_version=0 where publication_id='global'");
   }
@@ -53,8 +54,8 @@ class AuthorizationAuditPersistenceTest {
   }
   private JwtAuthenticationToken principal(String name) {
     return new JwtAuthenticationToken(Jwt.withTokenValue("test-only").header("alg","none").subject(name)
-        .claim("scope","enterprise.menu.write platform.menu.write enterprise.roles.read enterprise.roles.write customer.read").build(),
-        java.util.Arrays.stream(new String[]{"enterprise.menu.write", "platform.menu.write", "enterprise.roles.read", "enterprise.roles.write", "customer.read"})
+        .claim("scope","enterprise.menu.write platform.menu.write platform.capabilities.write enterprise.roles.read enterprise.roles.write customer.read").build(),
+        java.util.Arrays.stream(new String[]{"enterprise.menu.write", "platform.menu.write", "platform.capabilities.write", "enterprise.roles.read", "enterprise.roles.write", "customer.read"})
             .map(scope -> new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_" + scope)).toList());
   }
   private ResourceAuthorization.Resource resource(String method,String path) {
@@ -94,16 +95,16 @@ class AuthorizationAuditPersistenceTest {
   }
   @Test void menuSyncAndOverrideHaveDurableAuditsAlongsideTheirOutboxEvents() throws Exception {
     syncMenu();
-    mvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/audit-menu").with(authentication(principal("audit-admin")))
+    mvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId","audit-menu").with(authentication(principal("audit-admin")))
         .contentType("application/json").header("Idempotency-Key","audit-menu-override").header("If-Match","\"1\"")
         .header("X-Request-Id","menu-override-request").content("{\"enabled\":false}")).andExpect(status().isOk());
     assertThat(freshAuditStore().read(PLATFORM,"manifest")).anySatisfy(row->assertThat(row).containsEntry("action","MENU_MANIFEST_PUBLISHED").containsEntry("requestId","menu-sync-request").containsEntry("principal","audit-admin"));
     // Current metadata writes remain in their complete domain; historical bare rows are never unioned.
-    assertThat(freshAuditStore().read(ENTERPRISE,"audit-menu")).anySatisfy(row->assertThat(row).containsEntry("action","MENU_LAYOUT_CHANGED").containsEntry("requestId","menu-override-request"));
+    assertThat(freshAuditStore().read(PLATFORM,"audit-menu")).anySatisfy(row->assertThat(row).containsEntry("action","MENU_LAYOUT_CHANGED").containsEntry("requestId","menu-override-request"));
     assertThat(freshAuditStore().read(ENTERPRISE,"manifest")).isEmpty();
     assertThat(freshAuditStore().read(ENTERPRISE.id(),"audit-menu")).isEmpty();
-    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(PLATFORM.key(),"MENU")).singleElement().satisfies(e->{ assertThat(e.enterpriseId()).isEqualTo(PLATFORM.key()); assertThat(e.resourceId()).isEqualTo("manifest"); assertThat(e.eventType()).isEqualTo("MENU_CHANGED"); assertThat(e.requestId()).isEqualTo("menu-sync-request"); });
-    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(ENTERPRISE.key(),"MENU")).singleElement().satisfies(e->{ assertThat(e.resourceId()).isEqualTo("audit-menu"); assertThat(e.eventType()).isEqualTo("MENU_CHANGED"); assertThat(e.requestId()).isEqualTo("menu-override-request"); });
+    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(PLATFORM.key(),"MENU")).filteredOn(e->e.resourceId().equals("manifest")).singleElement().satisfies(e->{ assertThat(e.enterpriseId()).isEqualTo(PLATFORM.key()); assertThat(e.resourceId()).isEqualTo("manifest"); assertThat(e.eventType()).isEqualTo("MENU_CHANGED"); assertThat(e.requestId()).isEqualTo("menu-sync-request"); });
+    assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(PLATFORM.key(),"MENU")).filteredOn(e->e.resourceId().equals("audit-menu")).singleElement().satisfies(e->{ assertThat(e.resourceId()).isEqualTo("audit-menu"); assertThat(e.eventType()).isEqualTo("MENU_CHANGED"); assertThat(e.requestId()).isEqualTo("menu-override-request"); });
   }
   @Test void menuMutationAuditAndOutboxRollBackTogether() {
     long before=outbox.count();

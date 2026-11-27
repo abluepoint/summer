@@ -1,7 +1,22 @@
 export default {
   'zh-CN': {
+    'catalog.details': '详情',
+    'catalog.detailTitle': '接口资源详情',
+    'catalog.close': '关闭',
+    'catalog.noConditions': '无',
+    'catalog.sync': '从系统同步接口信息',
+    'catalog.syncConfirm': '同步',
+    'catalog.retry': '重新加载',
+    'catalog.serviceHelp':
+      '服务名称由平台字典“服务名称”维护。选择已发布且启用的服务名称后，系统会重新扫描接口并更新该服务的接口目录。',
+    'catalog.refreshForbidden': '您没有同步接口信息的权限。',
+    'catalog.refreshFailed': '接口信息同步失败。',
+    'catalog.serviceName': '服务名称',
+    'catalog.chooseService': '请选择服务名称',
+    'catalog.all': '全部',
+    'catalog.filter': '筛选',
     'catalog.current': '当前版本',
-    'catalog.history': '版本历史',
+    'catalog.history': '历史版本',
     'catalog.from': '起始版本',
     'catalog.to': '目标版本',
     'catalog.compare': '比较版本',
@@ -10,6 +25,7 @@ export default {
     'catalog.incompleteDetail':
       '以下运行组件尚未提供可枚举元数据，当前目录不能作为完整覆盖证明。',
     'catalog.revision': '版本',
+    'catalog.lastSyncedAt': '最近同步时间',
     'catalog.time': '首次发现时间',
     'catalog.count': '资源数量',
     'catalog.action': '操作',
@@ -33,6 +49,22 @@ export default {
       '已移除资源保留历史记录。替换处理器不能继承旧关联，请在权限管理中显式重新关联。',
   },
   'en-US': {
+    'catalog.details': 'Details',
+    'catalog.detailTitle': 'Interface resource details',
+    'catalog.close': 'Close',
+    'catalog.noConditions': 'None',
+    'catalog.sync': 'Sync interface information from the system',
+    'catalog.syncConfirm': 'Sync',
+    'catalog.retry': 'Reload',
+    'catalog.serviceHelp':
+      'Service names are maintained in the platform’s Service name dictionary. Select a published, enabled service name to scan system interfaces and update its catalog.',
+    'catalog.refreshForbidden':
+      'You do not have permission to sync interface information.',
+    'catalog.refreshFailed': 'Interface sync failed.',
+    'catalog.serviceName': 'Service name',
+    'catalog.chooseService': 'Select a service',
+    'catalog.all': 'All',
+    'catalog.filter': 'Filter',
     'catalog.current': 'Current revision',
     'catalog.history': 'Revision history',
     'catalog.from': 'From revision',
@@ -43,6 +75,7 @@ export default {
     'catalog.incompleteDetail':
       'These runtime components have no enumerable metadata. This catalog does not prove complete coverage.',
     'catalog.revision': 'Revision',
+    'catalog.lastSyncedAt': 'Last synced',
     'catalog.time': 'First observed',
     'catalog.count': 'Resources',
     'catalog.action': 'Actions',

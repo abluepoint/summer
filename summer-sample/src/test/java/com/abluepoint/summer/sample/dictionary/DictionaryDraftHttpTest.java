@@ -24,7 +24,7 @@ class DictionaryDraftHttpTest {
         managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
                 managedDb, managedTransactions, managedInterfaces);
         managed.configuration("ent-acme", "dictionaries", false, "operator");
-        managed.interfaces("ENTERPRISE:ent-acme", "creator", java.util.Set.of("dictionaries"));
+        managed.interfaces("PLATFORM:platform", "creator", java.util.Set.of("dictionaries"));
         managed.data("ent-acme", "creator", "dictionaries", "read", "TENANT_ALL");
         managed.data("ent-acme", "creator", "dictionaries", "create", "TENANT_ALL");
         managed.data("ent-acme", "creator", "dictionaries", "update", "TENANT_ALL");
@@ -72,5 +72,59 @@ class DictionaryDraftHttpTest {
         http.perform(put(path + "/draft").with(jwt().jwt(j -> j.claim("scope", "platform.dictionary.read platform.dictionary.create").subject("creator").claim("enterprise_memberships",java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
             .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"), new SimpleGrantedAuthority("SCOPE_platform.dictionary.create")))
             .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[2].value").value("c"));
+    }
+    @Test void editableSparseRanksPersistAndPublishWithoutChangingGroupOrder() throws Exception {
+        String path = "/api/dictionaries/item-ranks";
+        var mapper = new tools.jackson.databind.ObjectMapper();
+        http.perform(post("/api/dictionaries").with(admin()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"code\":\"item-ranks\",\"name\":\"Item ranks\"}")).andExpect(status().isOk());
+        String raw = http.perform(put(path + "/draft").with(admin()).contentType(MediaType.APPLICATION_JSON).content("""
+            {"expectedDraftRevision":0,"name":"Item ranks","publicReadable":false,"enabled":true,
+             "items":[{"id":"new:a","value":"a","label":"A","enabled":true,"sortOrder":10},{"id":"new:b","value":"b","label":"B","enabled":true,"sortOrder":20},{"id":"new:c","value":"c","label":"C","enabled":true,"sortOrder":50}],
+             "itemOrder":["new:a","new:b","new:c"],"groups":[{"id":"new:first","code":"first","name":"First","enabled":true,
+             "memberIds":["new:a","new:b"],"memberOrder":["new:a","new:b"],"memberSortOrders":{"new:a":5,"new:b":8}}]}
+            """)).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[*].sortOrder").value(org.hamcrest.Matchers.contains(10,20,50)))
+            .andReturn().getResponse().getContentAsString();
+        java.util.Map<String,Object> view = com.jayway.jsonpath.JsonPath.read(raw,"$.data");
+        var request = new java.util.LinkedHashMap<String,Object>();
+        for (String key : java.util.List.of("name","publicReadable","enabled","items","itemOrder")) request.put(key,view.get(key));
+        request.put("expectedDraftRevision",1);
+        java.util.List<java.util.Map<String,Object>> values = com.jayway.jsonpath.JsonPath.read(raw,"$.data.items");
+        request.put("items",values);
+        java.util.Map<String,Object> originalGroup = com.jayway.jsonpath.JsonPath.read(raw,"$.data.groups[0]");
+        // Omitting groups preserves all existing references and their independent ranks.
+        for (Object invalid : java.util.List.of(-1,2147483648L,new java.math.BigDecimal("1.5"),"bad")) {
+            values.getFirst().put("sortOrder",invalid);
+            http.perform(put(path + "/draft").with(admin()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+        }
+        values.getFirst().put("sortOrder",15);
+        http.perform(put(path + "/draft").with(jwt().jwt(j -> j.claim("scope","platform.dictionary.read platform.dictionary.create").subject("creator")
+                .claim("enterprise_memberships",java.util.List.of(java.util.Map.of("enterpriseId","ent-acme","status","ACTIVE"))))
+                .authorities(new SimpleGrantedAuthority("SCOPE_platform.dictionary.read"),new SimpleGrantedAuthority("SCOPE_platform.dictionary.create")))
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request))).andExpect(status().isForbidden());
+        http.perform(put(path + "/draft").with(admin()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.draftRevision").value(2));
+        http.perform(get(path + "/draft").with(admin())).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[*].sortOrder").value(org.hamcrest.Matchers.contains(15,20,50)))
+            .andExpect(jsonPath("$.data.groups[0]").value(org.hamcrest.Matchers.equalTo(originalGroup)));
+        http.perform(post(path + "/publish").with(admin()).contentType(MediaType.APPLICATION_JSON)
+            .content(DraftRevisionFixture.lifecycle(http,path + "/publish","{\"expectedVersion\":0}"))).andExpect(status().isOk());
+        request.put("expectedDraftRevision",2); values.getFirst().put("sortOrder",1000);
+        http.perform(put(path + "/draft").with(admin()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[*].value").value(org.hamcrest.Matchers.contains("b","c","a")))
+            .andExpect(jsonPath("$.data.items[*].sortOrder").value(org.hamcrest.Matchers.contains(20,50,1000)))
+            .andExpect(jsonPath("$.data.groups[0].memberIds").value(org.hamcrest.Matchers.equalTo(originalGroup.get("memberIds"))))
+            .andExpect(jsonPath("$.data.groups[0].memberSortOrders").value(org.hamcrest.Matchers.equalTo(originalGroup.get("memberSortOrders"))));
+        http.perform(post(path + "/publish").with(admin()).contentType(MediaType.APPLICATION_JSON)
+            .content(DraftRevisionFixture.lifecycle(http,path + "/publish","{\"expectedVersion\":1}"))).andExpect(status().isOk());
+        http.perform(get(path + "/effective").with(admin())).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[*].sortOrder").value(org.hamcrest.Matchers.contains(20,50,1000)));
+        http.perform(get(path + "/versions/1").with(admin())).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.snapshot.items[*].sortOrder").value(org.hamcrest.Matchers.contains(15,20,50)));
+        http.perform(post(path + "/rollback").with(admin()).contentType(MediaType.APPLICATION_JSON)
+            .content(DraftRevisionFixture.lifecycle(http,path + "/rollback","{\"expectedVersion\":2,\"targetVersion\":1}"))).andExpect(status().isOk());
+        http.perform(get(path + "/effective").with(admin())).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[*].sortOrder").value(org.hamcrest.Matchers.contains(15,20,50)));
     }
 }

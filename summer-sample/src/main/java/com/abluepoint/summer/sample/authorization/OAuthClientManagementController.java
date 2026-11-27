@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.SummerException;
 
 import com.abluepoint.summer.common.response.ApiResponse;
@@ -115,6 +117,8 @@ class OAuthClientManagementController {
         return ok(Map.of("items", items));
     }
 
+    @Field(param = "clientId", style = "requestTextStyle")
+    @Field(param = "principalName", style = "requestTextStyle")
     @DeleteMapping("/api/security/oauth-consents/{clientId}/{principalName}")
     @PreAuthorize("hasAuthority('SCOPE_security.oauth-client.write')")
     ResponseEntity<ApiResponse<Map<String, Object>>> revokeConsent(@PathVariable String clientId,

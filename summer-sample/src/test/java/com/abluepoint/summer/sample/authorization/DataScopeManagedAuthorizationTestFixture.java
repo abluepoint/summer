@@ -91,7 +91,6 @@ final class DataScopeManagedAuthorizationTestFixture {
             String path = row.get("normalized_path").toString();
             if (!(path.equals("/api/system-parameters") || path.startsWith("/api/system-parameters/")
                     || path.equals("/api/dictionaries") || path.startsWith("/api/dictionaries/")
-                    || path.startsWith("/api/v1/enterprises/{enterpriseId}/data-scopes/")
                     || path.startsWith("/api/v1/enterprises/{enterpriseId}/data-resources/"))) continue;
             String resource = row.get("resource_id").toString();
             // Reuse any installed association's access mode; configuration cannot mix modes.

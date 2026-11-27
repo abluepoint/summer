@@ -1,4 +1,4 @@
-import { activeEnterpriseSelection } from '@/pages/data-scopes/useActiveEnterprise';
+import { activeEnterpriseSelection } from '@/hooks/useActiveEnterprise';
 import { requestMenuRefresh } from '@/menu/refresh';
 declare module 'axios' {
   interface AxiosRequestConfig {

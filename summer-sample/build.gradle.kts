@@ -30,6 +30,8 @@ dependencies {
     implementation(libs.resilience4j.timelimiter)
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.flywaydb:flyway-core")
+    implementation("software.amazon.awssdk:s3:2.59.10")
+    implementation("software.amazon.awssdk:url-connection-client:2.59.10")
     runtimeOnly("com.mysql:mysql-connector-j")
     runtimeOnly("org.flywaydb:flyway-mysql")
     runtimeOnly("org.postgresql:postgresql")

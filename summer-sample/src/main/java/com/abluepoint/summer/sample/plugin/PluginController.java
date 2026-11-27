@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.plugin;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
@@ -30,6 +32,9 @@ class PluginController {
     @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.read') or (hasAuthority('SCOPE_platform.plugins.read'))")
     ResponseEntity<ApiResponse<PluginPage>> list(Authentication authentication) { return ok(service.platformList(authentication)); }
 
+    @Field(param = "pluginId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "version", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "artifactDigest", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value = "/v1/platform/plugins", consumes = "application/json")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
@@ -37,31 +42,39 @@ class PluginController {
         return body(HttpStatus.CREATED, nativeBoundary(() -> service.register(body, authentication)));
     }
 
+    @Field(param = "pluginId", style = "requestTextStyle")
     @PostMapping("/v1/platform/plugins/{pluginId}:enable")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> enable(@PathVariable String pluginId, Authentication authentication) { return lifecycle(() -> service.enable(pluginId, authentication)); }
 
+    @Field(param = "pluginId", style = "requestTextStyle")
     @PostMapping("/v1/platform/plugins/{pluginId}:disable")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> disable(@PathVariable String pluginId, Authentication authentication) { return lifecycle(() -> service.disable(pluginId, authentication)); }
 
+    @Field(param = "pluginId", style = "requestTextStyle")
+    @Field(param = "version", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "artifactDigest", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value = "/v1/platform/plugins/{pluginId}:upgrade", consumes = "application/json")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.write') or (hasAuthority('SCOPE_platform.plugins.write'))")
     ResponseEntity<ApiResponse<PluginView>> upgrade(@PathVariable String pluginId, @RequestBody PluginUpgradeRequest body, Authentication authentication) { return lifecycle(() -> service.upgrade(pluginId, body, authentication)); }
 
+    @Field(param = "pluginId", style = "requestTextStyle")
     @GetMapping("/v1/platform/plugins/{pluginId}/diagnostic")
     @RawResponse
     @PreAuthorize("@businessMethodAccess.requirePreservingDenial(authentication, 'Platform plugin capability denied', 'platform.plugins.read') or (hasAuthority('SCOPE_platform.plugins.read'))")
     ResponseEntity<ApiResponse<PluginDiagnosticView>> diagnostic(@PathVariable String pluginId, Authentication authentication) { return lifecycle(() -> service.diagnostic(pluginId, authentication)); }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins")
     @RawResponse
 
     ResponseEntity<ApiResponse<PluginPage>> enterpriseList(@PathVariable String enterpriseId, Authentication authentication) { return lifecycle(() -> service.enterpriseList(enterpriseId, authentication)); }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/v1/enterprises/{enterpriseId}/plugins/customer-insights/summary")
     @RawResponse
 

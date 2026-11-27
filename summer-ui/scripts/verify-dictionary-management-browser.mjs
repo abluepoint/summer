@@ -7,7 +7,7 @@ import { createServer } from 'vite';
 
 let vite, browser, origin;
 const errors = [];
-const base = '/api/v1/enterprises/ent-acme/dictionaries';
+const base = '/api/v1/platform/dictionaries';
 const makeRow = (code, name) => ({
   code,
   name,
@@ -124,9 +124,14 @@ async function setup(initial = [makeRow('customer-type', '客户类型')], group
         ...drafts.get(code),
         ...body,
         draftRevision: body.expectedDraftRevision + 1,
+        groups: body.groups.map(group => ({
+          ...group,
+          id: group.id.startsWith('new:') ? `saved-${group.code}` : group.id,
+          everPublished: drafts.get(code).groups.find(previous => previous.id === group.id)?.everPublished ?? false,
+        })),
         items: body.items.map((item, index) => ({
           ...item,
-          sortOrder: index,
+          sortOrder: item.sortOrder ?? index,
           everPublished: false,
         })),
       };
@@ -163,7 +168,7 @@ async function setup(initial = [makeRow('customer-type', '客户类型')], group
     throw new Error(`Unexpected fixture endpoint: ${method} ${path}`);
   });
   await page.goto(origin + '/__t18-t19/dictionary-manage' + (groupsOnly ? '?groups' : ''));
-  await page.getByRole('button', { name: groupsOnly ? '管理字典组' : '新建字典', exact: true }).first().waitFor();
+  await page.getByRole('button', { name: groupsOnly ? '新建字典组' : '新建字典', exact: true }).first().waitFor();
   await page.waitForFunction(
     () => !document.querySelector('.arco-spin-loading')
   );
@@ -332,7 +337,7 @@ test('list failures show a retryable error and refresh recovers', async () => {
   }
 });
 
-test('a pending create blocks duplicate submission, tenant switching and cancellation', async () => {
+test('a pending create blocks duplicate submission and cancellation', async () => {
   const { page, state, writes } = await setup([]);
   let release;
   state.createGate = new Promise((resolve) => {
@@ -351,24 +356,12 @@ test('a pending create blocks duplicate submission, tenant switching and cancell
       .dblclick();
     await started;
     assert.equal(writes.length, 1);
-    assert.match(
-      await page
-        .getByRole('combobox', { name: '全局活动租户', exact: true })
-        .getAttribute('class'),
-      /arco-select-disabled/
-    );
     await page.getByRole('button', { name: '取消', exact: true }).click();
     assert.equal(await page.getByLabel('新字典名称').isVisible(), true);
     release();
     await page
       .getByRole('button', { name: '新增字典值', exact: true })
       .waitFor();
-    assert.doesNotMatch(
-      await page
-        .getByRole('combobox', { name: '全局活动租户', exact: true })
-        .getAttribute('class'),
-      /arco-select-disabled/
-    );
   } finally {
     release();
     await page.close();
@@ -467,6 +460,7 @@ test('all detail views omit group definitions while value edits preserve legacy 
       enabled: legacyGroup.enabled,
       memberIds: legacyGroup.memberIds,
       memberOrder: legacyGroup.memberIds,
+      memberSortOrders: { 'item-trial': 1, 'item-standard': 2 },
     };
     assert.deepEqual(writes[0].body.groups, [expectedGroup]);
     await page
@@ -480,6 +474,7 @@ test('all detail views omit group definitions while value edits preserve legacy 
         ...expectedGroup,
         memberIds: ['item-standard'],
         memberOrder: ['item-standard'],
+        memberSortOrders: { 'item-standard': 2 },
       },
     ]);
     await page.getByRole('button', { name: '核对并发布', exact: true }).click();
@@ -867,46 +862,281 @@ test('the disable menu requires confirmation, cancellation sends no write and fa
   }
 });
 
-test('group entry edits groups independently, preserves values, rejects invalid codes and keeps conflicts editable', async () => {
-  const { page, drafts, writes, state } = await setup(undefined, true);
+test('group list shows groups across dictionaries, searches, and edits only the selected group while preserving the aggregate', async () => {
+  const groups = [{ id: 'group-one', code: 'one', name: '常用组', enabled: true, memberValues: ['alpha'] }];
+  const { page, drafts, writes, state } = await setup([
+    { ...makeRow('customer-type', '客户类型'), published: true, publishedVersion: 1, groups },
+    { ...makeRow('other-type', '其他类型'), published: true, publishedVersion: 2, groups: [{ ...groups[0], name: '另一个组' }] },
+  ], true);
   const draft = drafts.get('customer-type');
-  draft.items = [{ id: 'item-a', value: 'alpha', label: '甲', description: '保留说明', enabled: true, everPublished: true, sortOrder: 0 }, { id: 'item-b', value: 'beta', label: '乙', enabled: true, everPublished: true, sortOrder: 1 }];
-  draft.itemOrder = ['item-a', 'item-b'];
-  draft.groups = [{ id: 'group-one', code: 'one', name: '旧组', enabled: true, everPublished: true, memberIds: ['item-a', 'item-b'] }];
+  draft.items = [{ id: 'item-a', value: 'alpha', label: '甲', enabled: true, everPublished: true, sortOrder: 0 }];
+  draft.itemOrder = ['item-a'];
+  draft.groups = [{ id: 'group-one', code: 'one', name: '常用组', enabled: true, everPublished: true, memberIds: ['item-a'] }, { id: 'group-two', code: 'two', name: '保留组', enabled: true, everPublished: true, memberIds: [] }];
   try {
-    assert.equal(await page.getByRole('button', { name: '新建字典', exact: true }).count(), 0);
-    await page.getByRole('button', { name: '管理字典组', exact: true }).click();
+    await page.getByRole('cell', { name: '常用组', exact: true }).waitFor();
+    await page.getByRole('cell', { name: '另一个组', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '管理字典组', exact: true }).count(), 0);
+    await page.screenshot({ path: '../.scratch/dictionary-groups-list-20261120/list.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '../.scratch/dictionary-groups-list-20261120/narrow.png', fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByLabel('搜索字典组', { exact: true }).fill('客户类型');
+    assert.equal(await page.getByRole('cell', { name: '另一个组', exact: true }).count(), 0);
+    await page.getByRole('button', { name: '详情', exact: true }).click();
     await page.getByRole('button', { name: '编辑字典组', exact: true }).click();
-    await page.getByLabel('组名称（必填）').fill('常用组');
-    assert.equal(await page.getByLabel('组编码（必填）').isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: '删除字典组', exact: true }).isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: '新增字典值', exact: true }).count(), 0);
-    await page.getByRole('button', { name: '下移', exact: true }).first().click();
-    await page.getByRole('button', { name: '新增字典组', exact: true }).click();
-    await page.getByLabel('组编码（必填）').nth(1).fill('BAD');
-    await page.getByLabel('组名称（必填）').nth(1).fill('新组');
-    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
-    await page.getByText('请检查字典组：', { exact: false }).waitFor();
-    assert.equal(writes.length, 0);
-    await page.getByLabel('组编码（必填）').nth(1).fill('new-group');
+    await page.getByLabel('组名称（必填）').waitFor();
+    assert.equal(await page.getByLabel('组名称（必填）').count(), 1);
+    await page.getByLabel('组名称（必填）').fill('已修改组');
     state.saveStatus = 409;
     await page.getByRole('button', { name: '保存草稿', exact: true }).click();
     await page.getByText('草稿已被其他客户端修改', { exact: false }).waitFor();
-    assert.equal(await page.getByLabel('组名称（必填）').first().inputValue(), '常用组');
+    assert.equal(await page.getByLabel('组名称（必填）').inputValue(), '已修改组');
     state.saveStatus = 200;
     await page.getByRole('button', { name: '保存草稿', exact: true }).click();
     await page.getByText('字典组已保存为草稿，发布后生效', { exact: true }).waitFor();
-    assert.deepEqual(writes[1].body.groups[0].memberOrder, ['item-b', 'item-a']);
-    assert.equal(writes[1].body.groups[1].code, 'new-group');
-    assert.equal(writes[1].body.items[0].description, '保留说明');
-    assert.deepEqual(writes[1].body.itemOrder, ['item-a', 'item-b']);
-    await page.screenshot({ path: '../.scratch/dictionary-groups-editor.png', fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: '../.scratch/dictionary-groups-narrow.png', fullPage: true });
-    await page.setViewportSize({ width: 1280, height: 900 });
+    assert.equal(writes[1].body.groups[1].name, '保留组');
+    assert.deepEqual(writes[1].body.itemOrder, ['item-a']);
+    await page.getByRole('button', { name: '返回字典组列表', exact: true }).click();
+    assert.equal(await page.getByLabel('搜索字典组').inputValue(), '客户类型');
+    await page.getByRole('row').filter({ hasText: '常用组' }).getByText('已发布').waitFor();
+    await page.getByRole('row').filter({ hasText: '保留组' }).getByText('当前未生效').waitFor();
+  } finally { await page.close(); }
+});
+
+test('empty group list creates a group after selecting its dictionary and keeps validation and publication preview', async () => {
+  const { page, writes } = await setup(undefined, true);
+  try {
+    await page.getByText('暂无字典组，点击“新建字典组”开始创建', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '新建字典组', exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: '开始编辑', exact: true }).isDisabled(), true);
+    await page.getByLabel('新组所属字典').click();
+    await page.getByRole('option', { name: '客户类型 (customer-type)', exact: true }).click();
+    await page.getByRole('button', { name: '开始编辑', exact: true }).click();
+    await page.getByLabel('组编码（必填）').fill('BAD');
+    await page.getByLabel('组名称（必填）').fill('新组');
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('请检查字典组：', { exact: false }).waitFor();
+    assert.equal(writes.length, 0);
+    await page.getByLabel('组编码（必填）').fill('new-group');
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('字典组已保存为草稿，发布后生效', { exact: true }).waitFor();
+    assert.equal(writes[0].body.groups[0].code, 'new-group');
+    assert.equal(await page.getByLabel('组编码（必填）').inputValue(), 'new-group');
     await page.getByRole('button', { name: '核对并发布', exact: true }).click();
     await page.getByText('字典组随所属字典整体发布，以下字典值及所有字典组将一同生效。', { exact: true }).waitFor();
-  } finally {
-    await page.close();
-  }
+  } finally { await page.close(); }
+});
+
+test('group value lists resolve references and removal preserves original values and other groups', async () => {
+  const items = [
+    { value: 'alpha', label: '字典最新名称', description: '来自字典的说明', enabled: true, sortOrder: 0 },
+    { value: 'beta', label: '停用值', description: '保留停用状态', enabled: false, sortOrder: 1 },
+    { value: 'gamma', label: '未引用值', enabled: true, sortOrder: 2 },
+  ];
+  const group = { id: 'group-one', code: 'common', name: '常用字典组', enabled: true, memberValues: ['beta', 'alpha'] };
+  const { page, drafts, writes, state } = await setup([{ ...makeRow('customer-type', '客户类型'), published: true, publishedVersion: 2, items, groups: [group] }], true);
+  const draft = drafts.get('customer-type');
+  draft.items = items.map(item => ({ ...item, id: `item-${item.value}`, everPublished: true }));
+  draft.itemOrder = draft.items.map(item => item.id);
+  draft.groups = [
+    { ...group, everPublished: true, memberIds: ['item-beta', 'item-alpha'] },
+    { id: 'group-two', code: 'other', name: '其他字典组', enabled: true, everPublished: true, memberIds: ['item-beta'] },
+  ];
+  state.history = [{ version: 1, createdAt: '2026-11-19', snapshot: { name: '客户类型', enabled: true, publicReadable: false, items: items.map(item => ({ ...item, label: `历史${item.label}` })), groups: [group] } }];
+  try {
+    await page.locator('thead').getByText('字典组名称', { exact: true }).waitFor();
+    await page.locator('thead').getByText('字典组编码', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '详情', exact: true }).click();
+    const effective = page.getByRole('tabpanel', { name: '生效版本', exact: true });
+    await effective.getByRole('cell', { name: '字典最新名称', exact: true }).waitFor();
+    await effective.getByRole('cell', { name: '来自字典的说明', exact: true }).waitFor();
+    await effective.getByRole('cell', { name: '停用', exact: true }).waitFor();
+    assert.equal(await effective.getByRole('cell', { name: '未引用值', exact: true }).count(), 0);
+    assert.deepEqual(await effective.locator('.arco-table tbody tr td:first-child').allTextContents(), ['beta', 'alpha']);
+    await page.screenshot({ path: '../.scratch/dictionary-group-references-20261120/detail.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '../.scratch/dictionary-group-references-20261120/narrow.png', fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await effective.getByLabel('搜索字典值', { exact: true }).fill('来自字典的说明');
+    assert.equal(await effective.getByRole('cell', { name: 'beta', exact: true }).count(), 0);
+    await page.getByRole('tab', { name: '历史版本', exact: true }).click();
+    await page.getByLabel('历史版本号', { exact: true }).click();
+    await page.getByRole('option', { name: '版本 1 · 2026-11-19', exact: true }).click();
+    await page.getByRole('tabpanel', { name: '历史版本', exact: true }).getByRole('cell', { name: '历史字典最新名称', exact: true }).waitFor();
+    await page.getByRole('tab', { name: '草稿', exact: true }).click();
+    const editing = page.getByRole('tabpanel', { name: '草稿', exact: true });
+    await editing.getByRole('button', { name: '移除引用', exact: true }).first().click();
+    assert.equal(await editing.getByRole('cell', { name: 'beta', exact: true }).count(), 0);
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('字典组已保存为草稿，发布后生效', { exact: true }).waitFor();
+    assert.deepEqual(writes[0].body.groups[0].memberIds, ['item-alpha']);
+    assert.deepEqual(writes[0].body.groups[1].memberIds, ['item-beta']);
+    assert.deepEqual(writes[0].body.items, items.map((item) => ({ ...item, id: `item-${item.value}` })));
+    assert.deepEqual(writes[0].body.itemOrder, ['item-alpha', 'item-beta', 'item-gamma']);
+  } finally { await page.close(); }
+});
+
+test('group members drag, use keyboard and edit absolute order across pages without changing values or other groups', async () => {
+  const items = Array.from({ length: 37 }, (_, index) => ({ id: `item-${index + 1}`, value: `value-${index + 1}`, label: `客户${index + 1}`, description: `说明${index + 1}`, enabled: true, sortOrder: index, everPublished: true }));
+  const ids = items.slice(0, 25).map(item => item.id);
+  const group = { id: 'group-order', code: 'ordered', name: '可排序组', enabled: true, memberValues: items.slice(0, 25).map(item => item.value) };
+  const { page, drafts, writes } = await setup([{ ...makeRow('customer-type', '客户类型'), published: true, publishedVersion: 1, items, groups: [group] }], true);
+  const draft = drafts.get('customer-type');
+  draft.itemOrder = items.map(item => item.id);
+  draft.groups = [{ ...group, everPublished: true, memberIds: ids }, { id: 'group-other', code: 'other', name: '其他组', enabled: true, everPublished: true, memberIds: ['item-1'] }];
+  try {
+    await page.getByRole('button', { name: '详情', exact: true }).click();
+    await page.getByRole('button', { name: '编辑字典组', exact: true }).click();
+    const editing = page.getByRole('tabpanel', { name: '草稿', exact: true });
+    assert.equal(await editing.getByRole('button', { name: '上移', exact: true }).count(), 0);
+    await page.getByLabel('组内项 3', { exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: '排序组内第 1 项', exact: true }).dragTo(page.getByLabel('组内项 3', { exact: true }));
+    await page.getByLabel('组内项 3', { exact: true }).getByRole('cell', { name: 'value-1', exact: true }).waitFor();
+    await page.getByRole('button', { name: '排序组内第 3 项', exact: true }).press('ArrowUp');
+    await page.getByLabel('组内项 2', { exact: true }).getByRole('cell', { name: 'value-1', exact: true }).waitFor();
+    await page.getByLabel('组内顺序 2', { exact: true }).fill('1000');
+    await page.getByLabel('组内顺序 2', { exact: true }).press('Enter');
+    await page.getByLabel('组内项 25', { exact: true }).getByRole('cell', { name: 'value-1', exact: true }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '组内顺序 25');
+    await page.getByLabel('组内顺序 25', { exact: true }).fill('1');
+    await page.getByLabel('组内顺序 25', { exact: true }).press('Tab');
+    await page.getByLabel('组内项 1', { exact: true }).getByRole('cell', { name: 'value-1', exact: true }).waitFor();
+    for (const invalid of ['0', '2147483648', '1.5', '']) {
+      const input = page.getByLabel('组内顺序 1', { exact: true });
+      await input.fill(invalid); await input.press('Enter');
+      assert.equal(await input.inputValue(), '1');
+    }
+    await page.getByRole('button', { name: '排序组内第 10 项', exact: true }).press('ArrowDown');
+    await page.getByLabel('组内项 11', { exact: true }).getByRole('cell', { name: 'value-10', exact: true }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '排序组内第 11 项');
+    await page.waitForFunction(() => !document.body.textContent.includes('顺序编号须为'));
+    await page.screenshot({ path: '../.scratch/dictionary-group-order-20261120/editor.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '../.scratch/dictionary-group-order-20261120/narrow.png', fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('字典组已保存为草稿，发布后生效', { exact: true }).waitFor();
+    const expected = [...ids]; [expected[9], expected[10]] = [expected[10], expected[9]];
+    assert.deepEqual(writes[0].body.groups[0].memberOrder, expected);
+    assert.deepEqual(writes[0].body.groups[1].memberOrder, ['item-1']);
+    assert.deepEqual(writes[0].body.itemOrder, items.map(item => item.id));
+    assert.deepEqual(writes[0].body.items, items.map(({ everPublished, ...item }) => item));
+    await editing.getByRole('button', { name: '添加字典值' }).click();
+    const picker = page.getByRole('dialog', { name: '添加字典值' });
+    const check = (value) => picker.getByRole('row').filter({ has: page.getByRole('cell', { name: value, exact: true }) }).locator('label.arco-checkbox').click();
+    await check('value-27');
+    await picker.getByRole('button', { name: '取消' }).click();
+    await editing.getByRole('button', { name: '添加字典值' }).click();
+    await check('value-26');
+    await picker.locator('.arco-pagination-item').filter({ hasText: /^2$/ }).click();
+    await check('value-37');
+    await picker.getByRole('button', { name: '添加（2）' }).click();
+    assert.equal(await editing.getByRole('button', { name: /^排序组内第/ }).first().isDisabled(), true);
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('button[aria-label^="排序组内第"]:not([disabled])'));
+    assert.deepEqual(writes[1].body.groups[0].memberIds, [...expected, 'item-26', 'item-37']);
+    await editing.getByRole('button', { name: '核对并发布' }).click();
+    const review = page.getByRole('dialog', { name: '核对完整草稿后发布' });
+    await review.getByRole('listitem').filter({ hasText: '可排序组（ordered） · 启用 · 27 个成员' }).waitFor();
+    assert.equal(await review.locator('thead').getByText('字典组名称', { exact: true }).count(), 0);
+    await review.getByLabel('搜索字典值').waitFor();
+    assert.equal(await review.locator('thead').getByText('字典值', { exact: true }).count(), 1);
+    await review.getByLabel('搜索字典值').fill('value-1');
+    const shared = review.getByRole('row').filter({ has: page.getByRole('cell', { name: 'value-1', exact: true }) });
+    await shared.getByText(/可排序组.*其他组/).waitFor();
+  } finally { await page.close(); }
+});
+
+test('sparse group ranks survive saving and reopening, and dragging preserves gaps', async () => {
+  const items = ['alpha', 'beta', 'gamma'].map((value, index) => ({ id: `item-${value}`, value, label: value, enabled: true, sortOrder: index, everPublished: true }));
+  const group = { id: 'group-sparse', code: 'sparse', name: '间隔编号组', enabled: true, memberValues: items.map(item => item.value), memberSortOrders: { alpha: 10, beta: 20, gamma: 50 } };
+  const { page, drafts, writes } = await setup([{ ...makeRow('customer-type', '客户类型'), published: true, publishedVersion: 1, items, groups: [group] }], true);
+  const draft = drafts.get('customer-type');
+  draft.itemOrder = items.map(item => item.id);
+  draft.groups = [{ ...group, everPublished: true, memberIds: draft.itemOrder, memberSortOrders: { 'item-alpha': 10, 'item-beta': 20, 'item-gamma': 50 } }];
+  try {
+    await page.getByRole('button', { name: '详情', exact: true }).click();
+    await page.getByRole('cell', { name: '50', exact: true }).waitFor();
+    await page.getByRole('button', { name: '编辑字典组', exact: true }).click();
+    assert.equal(await page.getByLabel('组内顺序 1', { exact: true }).inputValue(), '10');
+    await page.getByLabel('组内顺序 1', { exact: true }).fill('1000');
+    await page.getByLabel('组内顺序 1', { exact: true }).press('Enter');
+    await page.getByLabel('组内项 3', { exact: true }).getByRole('cell', { name: 'alpha', exact: true }).first().waitFor();
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('字典组已保存为草稿，发布后生效', { exact: true }).waitFor();
+    assert.deepEqual(writes[0].body.groups[0].memberSortOrders, { 'item-alpha': 1000, 'item-beta': 20, 'item-gamma': 50 });
+    await page.getByRole('button', { name: '返回字典组列表', exact: true }).click();
+    await page.getByRole('button', { name: '详情', exact: true }).click();
+    await page.getByRole('button', { name: '编辑字典组', exact: true }).click();
+    assert.equal(await page.getByLabel('组内顺序 3', { exact: true }).inputValue(), '1000');
+    await page.getByLabel('组内项 3', { exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: '排序组内第 3 项', exact: true }).dragTo(page.getByLabel('组内项 2', { exact: true }));
+    await page.getByLabel('组内项 2', { exact: true }).getByRole('cell', { name: 'alpha', exact: true }).first().waitFor();
+    assert.equal(await page.getByLabel('组内顺序 2', { exact: true }).inputValue(), '50');
+    assert.equal(await page.getByLabel('组内顺序 3', { exact: true }).inputValue(), '1000');
+    await page.screenshot({ path: '../.scratch/dictionary-group-ranks-20261120/editor.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '../.scratch/dictionary-group-ranks-20261120/narrow.png', fullPage: true });
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.waitForFunction(() => document.body.textContent.includes('字典组已保存为草稿，发布后生效'));
+    assert.deepEqual(writes[1].body.groups[0].memberSortOrders, { 'item-alpha': 50, 'item-beta': 20, 'item-gamma': 1000 });
+  } finally { await page.close(); }
+});
+
+test('dictionary values edit sparse ranks across pages, reopen saved ranks and keep group references', async () => {
+  const items = Array.from({ length: 25 }, (_, index) => ({ id: `item-${index + 1}`, value: `value-${index + 1}`, label: `客户${index + 1}`, description: '', enabled: true, sortOrder: (index + 1) * 10, everPublished: true }));
+  const { page, drafts, writes } = await setup([{ ...makeRow('item-order', '编号排序'), published: true, publishedVersion: 1, items }]);
+  const draft = drafts.get('item-order');
+  draft.itemOrder = items.map(item => item.id);
+  draft.groups = [{ id: 'group-kept', code: 'kept', name: '保留组', enabled: true, everPublished: true, memberIds: ['item-25', 'item-1'], memberSortOrders: { 'item-25': 10, 'item-1': 50 } }];
+  try {
+    await page.getByRole('button', { name: '详情', exact: true }).click();
+    await page.getByRole('button', { name: '编辑字典值', exact: true }).click();
+    assert.equal(await page.getByLabel('顺序编号 1', { exact: true }).inputValue(), '10');
+    await page.getByLabel('顺序编号 1', { exact: true }).fill('1000');
+    await page.getByLabel('顺序编号 1', { exact: true }).press('Enter');
+    assert.equal(await page.getByLabel('值 25', { exact: true }).inputValue(), 'value-1');
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '顺序编号 25');
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('草稿修订 1', { exact: true }).waitFor();
+    assert.equal(writes[0].body.items.find(item => item.id === 'item-1').sortOrder, 1000);
+    assert.deepEqual(writes[0].body.groups[0].memberSortOrders, { 'item-25': 10, 'item-1': 50 });
+    await page.getByRole('button', { name: '返回字典列表', exact: true }).click();
+    await page.getByRole('button', { name: '详情', exact: true }).click();
+    await page.getByRole('button', { name: '编辑字典值', exact: true }).click();
+    await page.getByRole('tabpanel', { name: '草稿', exact: true }).getByLabel('第 3 页', { exact: true }).click();
+    assert.equal(await page.getByLabel('顺序编号 25', { exact: true }).inputValue(), '1000');
+    await page.getByLabel('顺序编号 25', { exact: true }).fill('5');
+    await page.getByLabel('顺序编号 25', { exact: true }).press('Tab');
+    assert.equal(await page.getByLabel('值 1', { exact: true }).inputValue(), 'value-1');
+    for (const invalid of ['-1', '2147483648', '1.5', '']) {
+      const input = page.getByLabel('顺序编号 1', { exact: true });
+      await input.fill(invalid); await input.press('Enter');
+      assert.equal(await input.inputValue(), '5');
+    }
+    await page.getByLabel('默认项 3', { exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: '排序第 1 项', exact: true }).dragTo(page.getByLabel('默认项 3', { exact: true }));
+    assert.equal(await page.getByLabel('值 3', { exact: true }).inputValue(), 'value-1');
+    assert.equal(await page.getByLabel('顺序编号 3', { exact: true }).inputValue(), '30');
+    await page.getByRole('button', { name: '排序第 3 项', exact: true }).press('ArrowUp');
+    assert.equal(await page.getByLabel('顺序编号 2', { exact: true }).inputValue(), '20');
+    await page.getByLabel('搜索草稿字典值', { exact: true }).fill('客户1');
+    assert.equal(await page.getByLabel('顺序编号 2', { exact: true }).isDisabled(), true);
+    await page.getByLabel('搜索草稿字典值', { exact: true }).fill('');
+    await page.waitForFunction(() => !document.body.textContent.includes('顺序编号须为'));
+    await page.screenshot({ path: '../.scratch/dictionary-item-ranks-20261120/editor.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '../.scratch/dictionary-item-ranks-20261120/narrow.png', fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    await page.getByText('草稿修订 2', { exact: true }).waitFor();
+    assert.deepEqual(writes[1].body.itemOrder, ['item-2', 'item-1', ...items.slice(2).map(item => item.id)]);
+    assert.deepEqual(writes[1].body.groups, writes[0].body.groups);
+    assert.deepEqual(writes[1].body.items.filter(item => !['item-1', 'item-2'].includes(item.id)).map(item => item.sortOrder), items.slice(2).map(item => item.sortOrder));
+    await page.getByRole('button', { name: '核对并发布', exact: true }).click();
+    await page.locator('.arco-modal').getByRole('cell', { name: '5', exact: true }).waitFor();
+    await page.locator('.arco-modal').getByRole('button', { name: '取消', exact: true }).click();
+    await page.getByRole('button', { name: '新增字典值', exact: true }).click();
+    assert.equal(await page.getByLabel('顺序编号 26', { exact: true }).inputValue(), '251');
+  } finally { await page.close(); }
 });

@@ -6,13 +6,14 @@ import java.util.Set;
 public final class BusinessConsumerRoutes {
   private static final String ROOT = "com.abluepoint.summer.sample.";
   private static final Set<String> ENTERPRISE = Set.of(
-      "configuration.ConfigurationOverrideController", "dictionary.DictionaryController",
-      "dictionary.DictionaryNotificationController", "systemparameter.SystemParameterController",
+      "configuration.ConfigurationOverrideController",
+      "systemparameter.SystemParameterController",
       "systemparameter.SystemParameterCountController", "systemparameter.SystemParameterEventController",
       "systemparameter.PublicSystemParameterController",
       "statistics.StatisticsController", "realtime.RealtimeMessageController",
       "task.TaskProgressController", "task.TaskSchedulerController");
   private static final Set<String> PLATFORM = Set.of(
+      "dictionary.AdministrativeDivisionController", "dictionary.DictionaryController", "dictionary.DictionaryNotificationController",
       "customer.CustomerController", "customer.CustomerAuditController", "key.KeyCapabilityController", "key.ReferenceKeyCapabilityController",
       "release.ReleaseGateController");
   private BusinessConsumerRoutes() {}

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Form, Input, InputNumber, Message, Modal, Select, Space, Table, Tag, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import useActiveEnterprise from '@/pages/data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import { Prompt } from 'react-router-dom';
 import { createTask, listExecutions, listTasks, listTrustedTaskTypes, newTaskTriggerKey, setTaskStatus, subscribeTaskProgress, Task, TaskApiError, TaskExecution, triggerTask, updateTask, TrustedTaskType } from './api';
 

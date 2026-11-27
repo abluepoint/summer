@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { Alert, Button, Card, Drawer, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tree } from '@arco-design/web-react';
 import { isAuthRedirecting } from '@/auth/oidc';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import useOrganizationOperationAccess from './useOperationAccess';
 import { AssignmentDraft, OrganizationApiError, OrganizationMember, OrganizationTree, OrganizationUnit, UnitDraft, MemberPage, TenantMember, assignOrganizations, changeMemberStatus, createOrganization, deleteOrganization, getOrganizationContext, getOrganizationDetail, getOrganizationMembers, getOrganizationTree, getTenantMember, listTenantMembers, selectOrganizationContext, updateOrganization } from './api';
 

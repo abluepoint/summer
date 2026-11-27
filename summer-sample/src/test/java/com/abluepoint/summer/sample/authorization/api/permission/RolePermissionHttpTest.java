@@ -46,6 +46,7 @@ class RolePermissionHttpTest {
       return args -> {
         for (String name :
             List.of(
+                "V12__authorization_roles_and_bindings.sql",
                 "V60__permission_management.sql",
                 "V70__role_permission_and_resource_associations.sql",
                 "V80__permission_resource_controls.sql",
@@ -55,6 +56,11 @@ class RolePermissionHttpTest {
               new String(
                   new ClassPathResource("db/migration/mysql/" + name).getContentAsByteArray(),
                   StandardCharsets.UTF_8);
+          // Hibernate creates the role and capability entities; V12 owns their legacy join table.
+          if (name.startsWith("V12")) {
+            int joinTable = sql.indexOf("CREATE TABLE summer_authorization_role_capability (");
+            sql = sql.substring(joinTable, sql.indexOf(';', joinTable) + 1);
+          }
           if (name.startsWith("V60")) sql = sql.substring(0, sql.indexOf("ALTER TABLE"));
           for (String statement : sql.replaceAll("(?m)--[^\\n]*", "").split(";"))
             if (!statement.isBlank())
@@ -66,6 +72,56 @@ class RolePermissionHttpTest {
         db.update("insert into summer_menu_publication(publication_id,published,manifest_version) values ('global',false,0) on duplicate key update publication_id=publication_id");
       };
     }
+  }
+
+  @Test
+  void platformRoleDeletionChecksVersionBindingsAndReplaysSuccess() throws Exception {
+    var actor = user("summer-user");
+    mvc.perform(get(BASE + "/authorization/operations").with(actor).param("actions", "roles.delete"))
+        .andExpect(status().isOk())
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+            .jsonPath("$.data.actions['roles.delete']").value(true));
+    var builtin = db.queryForMap("select r.role_id, r.version from summer_authorization_role r"
+        + " join summer_permission_role p on p.role_id=r.role_id where p.domain_key='PLATFORM:platform'"
+        + " and r.built_in=true and r.code='PLATFORM:permission-administrator'");
+    mvc.perform(delete(BASE + "/roles/" + builtin.get("role_id")).with(actor).with(csrf())
+        .header("Idempotency-Key", UUID.randomUUID()).header("If-Match", "\"" + builtin.get("version") + "\""))
+        .andExpect(status().isConflict());
+    String permission = db.queryForObject(
+        "select permission_id from summer_permission where domain_key='PLATFORM:platform' and code='management-read'",
+        String.class);
+    var created = mvc.perform(post(BASE + "/roles").with(actor).with(csrf())
+            .header("Idempotency-Key", UUID.randomUUID()).contentType("application/json")
+            .content(json.writeValueAsString(Map.of("name", "Temporary", "code", "temp-" + UUID.randomUUID(),
+                "permissionIds", List.of(permission)))))
+        .andExpect(status().isCreated()).andReturn();
+    String id = json.readTree(created.getResponse().getContentAsString()).path("data").path("roleId").asText();
+    String path = BASE + "/roles/" + id;
+    var remove = delete(path).with(actor).with(csrf()).header("Idempotency-Key", UUID.randomUUID())
+        .header("If-Match", "\"1\"");
+    mvc.perform(delete(path).with(user("unassigned")).with(csrf())).andExpect(status().isForbidden());
+    mvc.perform(delete(path).with(actor).with(csrf()).header("Idempotency-Key", UUID.randomUUID())
+        .header("If-Match", "\"0\"")).andExpect(status().isPreconditionFailed());
+    db.update("insert into summer_permission_user_role values ('PLATFORM:platform','summer-user',?)", id);
+    // A historical built-in flag alone does not make this the default administrator.
+    db.update("update summer_authorization_role set built_in=true where role_id=?", id);
+    Long bindingVersion = db.queryForObject("select version from summer_permission_user where"
+        + " domain_key='PLATFORM:platform' and username='summer-user'", Long.class);
+    mvc.perform(get(path).with(actor)).andExpect(status().isOk()).andExpect(
+        org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.defaultPlatformAdministrator").value(false));
+    mvc.perform(remove).andExpect(status().isOk());
+    mvc.perform(remove).andExpect(status().isOk());
+    assertEquals(bindingVersion + 1, db.queryForObject("select version from summer_permission_user where"
+        + " domain_key='PLATFORM:platform' and username='summer-user'", Long.class));
+    assertEquals(0, db.queryForObject("select count(*) from summer_permission_user_role where role_id=?", Integer.class, id));
+    assertEquals(1, db.queryForObject("select count(*) from summer_permission_user_role where"
+        + " domain_key='PLATFORM:platform' and username='summer-user' and role_id=?", Integer.class, builtin.get("role_id")));
+    mvc.perform(put(BASE + "/users/summer-user/roles").with(actor).with(csrf())
+        .header("Idempotency-Key", UUID.randomUUID()).header("If-Match", "\"" + bindingVersion + "\"")
+        .contentType("application/json")
+        .content(json.writeValueAsString(Map.of("roleIds", List.of(builtin.get("role_id"), id)))))
+        .andExpect(status().isPreconditionFailed());
+    mvc.perform(get(path).with(actor)).andExpect(status().isNotFound());
   }
 
   @Test
@@ -236,6 +292,7 @@ class RolePermissionHttpTest {
   void interfacePermissionDoesNotGrantManagementMenuNavigation() throws Exception {
     String subject="interface-only-navigation";
     db.update("insert into summer_auth_user(username,password_hash,role,active,created_at,updated_at) select ?,password_hash,role,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP from summer_auth_user where username='summer-user'",subject);
+    db.update("insert into summer_platform_administrator(username,display_name) values(?,?)",subject,subject);
     String readPermission=db.queryForObject("select permission_id from summer_permission where domain_key='PLATFORM:platform' and code='management-read'",String.class);
     var created=mvc.perform(post(BASE+"/roles").with(user("summer-user")).with(csrf())
         .header("Idempotency-Key","interface-only-navigation-role").contentType("application/json")
@@ -262,7 +319,7 @@ class RolePermissionHttpTest {
     json.readTree(result.getResponse().getContentAsString()).path("data").path("items")
         .forEach(item -> administratorMenus.add(item.path("menuId").asText()));
     assertEquals(Set.of("roles", "permissions", "menu-manifest", "interface-resources", "oauth-clients",
-        "auth-users", "organization", "authorization-events", "data-scopes"), administratorMenus);
+        "auth-users", "organization"), administratorMenus);
   }
 
   @Test

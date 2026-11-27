@@ -30,12 +30,8 @@ export type DictionaryStreamState =
   | 'RECONNECTING'
   | 'CLOSED';
 
-const publicDictionaryPath = (code: string, enterpriseId?: string) =>
-  enterpriseId
-    ? `/public/enterprises/${encodeURIComponent(
-        enterpriseId
-      )}/dictionaries/${encodeURIComponent(code)}`
-    : `/public/dictionaries/${encodeURIComponent(code)}`;
+const publicDictionaryPath = (code: string) =>
+  `/public/dictionaries/${encodeURIComponent(code)}`;
 
 async function readPublicDictionary<T>(path: string): Promise<T> {
   try {
@@ -60,33 +56,22 @@ async function readPublicDictionary<T>(path: string): Promise<T> {
   }
 }
 
-export const getPublicDictionary = (code: string, enterpriseId?: string) =>
-  readPublicDictionary<PublicDictionary>(
-    publicDictionaryPath(code, enterpriseId)
-  );
+export const getPublicDictionary = (code: string) =>
+  readPublicDictionary<PublicDictionary>(publicDictionaryPath(code));
 
-export const getPublicDictionaryItem = (
-  code: string,
-  value: string,
-  enterpriseId?: string
-) =>
+export const getPublicDictionaryItem = (code: string, value: string) =>
   readPublicDictionary<DictionaryOption>(
-    `${publicDictionaryPath(code, enterpriseId)}/items/${encodeURIComponent(
-      value
-    )}`
+    `${publicDictionaryPath(code)}/items/${encodeURIComponent(value)}`
   );
 
 export function subscribeDictionaryNotifications(
-  enterpriseId: string,
   code: string,
   onEvent: (event: DictionaryNotification) => void,
   onState: (state: DictionaryStreamState) => void,
   onError: () => void
 ): () => void {
   const source = new EventSource(
-    `/api/v1/enterprises/${encodeURIComponent(
-      enterpriseId
-    )}/dictionaries/${encodeURIComponent(code)}/events`
+    `/api/v1/platform/dictionaries/${encodeURIComponent(code)}/events`
   );
   // Browser EventSource automatically sends Last-Event-ID on reconnect.
   const eventTypes = [
@@ -124,38 +109,6 @@ export function subscribeDictionaryNotifications(
   };
 }
 
-export async function saveDictionaryOverride(
-  code: string,
-  organization: string,
-  options: DictionaryOption[],
-  expectedVersion?: number,
-  enterpriseId?: string
-): Promise<{ version: number }> {
-  try {
-    const response = await axios.put(
-      enterpriseId
-        ? `/api/v1/enterprises/${encodeURIComponent(
-            enterpriseId
-          )}/dictionaries/${encodeURIComponent(
-            code
-          )}/overrides/${encodeURIComponent(organization)}`
-        : `/api/dictionaries/${encodeURIComponent(
-            code
-          )}/overrides/${encodeURIComponent(organization)}`,
-      { value: options, publicReadable: true, expectedVersion }
-    );
-    return readEnvelope(response.data, response.status) as { version: number };
-  } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
-    const failure = readFailure(
-      error.response?.data,
-      error.response?.status || 0,
-      String(error.response?.headers?.['x-request-id'] || '')
-    );
-    throw Object.assign(new Error(failure.message), failure);
-  }
-}
-
 export type EffectiveDictionary = {
   code: string;
   name: string | null;
@@ -184,19 +137,13 @@ export type CreateDictionary = {
   publicReadable: boolean;
   enabled: boolean;
 };
-export const getDictionaryDraftList = (enterpriseId: string) =>
-  readPublicDictionary<DictionaryType[]>(
-    `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries`
-  );
+export const getDictionaryDraftList = () =>
+  readPublicDictionary<DictionaryType[]>(`/api/v1/platform/dictionaries`);
 export async function createDictionary(
-  enterpriseId: string,
   input: CreateDictionary
 ): Promise<DictionaryType> {
   try {
-    const response = await axios.post(
-      `/api/v1/enterprises/${encodeURIComponent(enterpriseId)}/dictionaries`,
-      input
-    );
+    const response = await axios.post(`/api/v1/platform/dictionaries`, input);
     return readEnvelope(response.data, response.status) as DictionaryType;
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
@@ -210,11 +157,9 @@ export async function createDictionary(
     });
   }
 }
-export const getEffectiveDictionary = (enterpriseId: string, code: string) =>
+export const getEffectiveDictionary = (code: string) =>
   readPublicDictionary<EffectiveDictionary>(
-    `/api/v1/enterprises/${encodeURIComponent(
-      enterpriseId
-    )}/dictionaries/${encodeURIComponent(code)}/effective`
+    `/api/v1/platform/dictionaries/${encodeURIComponent(code)}/effective`
   );
 
 export type DictionaryDraftItem = DictionaryOption & {
@@ -228,6 +173,7 @@ export type DictionaryDraftGroup = {
   enabled: boolean;
   everPublished: boolean;
   memberIds: string[];
+  memberSortOrders?: Record<string, number>;
 };
 export type DictionarySnapshotGroup = {
   id: string;
@@ -235,6 +181,7 @@ export type DictionarySnapshotGroup = {
   name: string;
   enabled: boolean;
   memberValues: string[];
+  memberSortOrders?: Record<string, number>;
 };
 export type DictionaryDraft = {
   code: string;
@@ -248,43 +195,55 @@ export type DictionaryDraft = {
   itemOrder: string[];
   groups: DictionaryDraftGroup[];
 };
-const draftPath = (enterpriseId: string, code: string) =>
-  `/api/v1/enterprises/${encodeURIComponent(
-    enterpriseId
-  )}/dictionaries/${encodeURIComponent(code)}/draft`;
-export const getDictionaryDraft = (enterpriseId: string, code: string) =>
-  readPublicDictionary<DictionaryDraft>(draftPath(enterpriseId, code));
+const draftPath = (code: string) =>
+  `/api/v1/platform/dictionaries/${encodeURIComponent(code)}/draft`;
+export const getDictionaryDraft = (code: string) =>
+  readPublicDictionary<DictionaryDraft>(draftPath(code));
 export async function saveDictionaryDraft(
-  enterpriseId: string,
   draft: DictionaryDraft
 ): Promise<DictionaryDraft> {
   try {
     const itemIds = new Set(draft.items.map((item) => item.id));
-    const response = await axios.put(draftPath(enterpriseId, draft.code), {
+    const response = await axios.put(draftPath(draft.code), {
       expectedDraftRevision: draft.draftRevision,
       name: draft.name,
       publicReadable: draft.publicReadable,
       enabled: draft.enabled,
-      items: draft.items.map(({ id, value, label, description, enabled }) => ({
-        id,
-        value,
-        label,
-        description,
-        enabled,
-      })),
+      items: draft.items.map(
+        ({ id, value, label, description, enabled, sortOrder }) => ({
+          id,
+          value,
+          label,
+          description,
+          enabled,
+          sortOrder,
+        })
+      ),
       itemOrder: draft.itemOrder,
       // Preserve legacy groups in aggregate saves, pruning only deleted items.
-      groups: draft.groups.map(({ id, code, name, enabled, memberIds }) => {
-        const members = memberIds.filter((id) => itemIds.has(id));
-        return {
-          id,
-          code,
-          name,
-          enabled,
-          memberIds: members,
-          memberOrder: members,
-        };
-      }),
+      groups: draft.groups.map(
+        ({ id, code, name, enabled, memberIds, memberSortOrders }) => {
+          const members = memberIds.filter((id) => itemIds.has(id));
+          let nextRank = Math.max(0, ...Object.values(memberSortOrders || {}));
+          return {
+            id,
+            code,
+            name,
+            enabled,
+            memberIds: members,
+            memberOrder: members,
+            memberSortOrders: Object.fromEntries(
+              members.map((memberId) => [
+                memberId,
+                memberSortOrders?.[memberId] ??
+                  (memberSortOrders
+                    ? Math.min(++nextRank, 2147483647)
+                    : memberIds.indexOf(memberId) + 1),
+              ])
+            ),
+          };
+        }
+      ),
     });
     return readEnvelope(response.data, response.status) as DictionaryDraft;
   } catch (error) {
@@ -310,24 +269,15 @@ export type DictionaryHistory = {
     'code' | 'publishedVersion' | 'status' | 'effectiveRevision'
   >;
 };
-const managementPath = (enterpriseId: string, code: string) =>
-  `/api/v1/enterprises/${encodeURIComponent(
-    enterpriseId
-  )}/dictionaries/${encodeURIComponent(code)}`;
-export const getDictionaryHistory = (enterpriseId: string, code: string) =>
-  readPublicDictionary<DictionaryHistory[]>(
-    `${managementPath(enterpriseId, code)}/versions`
-  );
-export const getDictionaryHistoryDetail = (
-  enterpriseId: string,
-  code: string,
-  version: number
-) =>
+const managementPath = (code: string) =>
+  `/api/v1/platform/dictionaries/${encodeURIComponent(code)}`;
+export const getDictionaryHistory = (code: string) =>
+  readPublicDictionary<DictionaryHistory[]>(`${managementPath(code)}/versions`);
+export const getDictionaryHistoryDetail = (code: string, version: number) =>
   readPublicDictionary<DictionaryHistory>(
-    `${managementPath(enterpriseId, code)}/versions/${version}`
+    `${managementPath(code)}/versions/${version}`
   );
 export async function changeDictionaryVersion(
-  enterpriseId: string,
   code: string,
   action: 'publish' | 'disable' | 'rollback',
   body: {
@@ -340,7 +290,7 @@ export async function changeDictionaryVersion(
 ) {
   try {
     const response = await axios.post(
-      `${managementPath(enterpriseId, code)}/${action}`,
+      `${managementPath(code)}/${action}`,
       body
     );
     return readEnvelope(response.data, response.status);

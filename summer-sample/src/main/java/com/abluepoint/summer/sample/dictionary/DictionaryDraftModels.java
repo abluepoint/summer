@@ -2,7 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import java.util.List;
 
-record DictionaryDraftItem(String id, Object value, String label, String description, boolean enabled, Boolean everPublished) {}
+record DictionaryDraftItem(String id, Object value, String label, String description, boolean enabled, Boolean everPublished, java.math.BigDecimal sortOrder) {}
 record DictionaryDraftRequest(Object expectedDraftRevision, String name, Boolean publicReadable, Boolean enabled,
                               List<DictionaryDraftItem> items, List<String> itemOrder, List<DictionaryDraftGroupRequest> groups) {}
 record DictionaryDraftView(String code, String name, boolean publicReadable, boolean enabled, long draftRevision,

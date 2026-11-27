@@ -17,6 +17,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 /** HTTP navigation contract; isolated SQL fixtures establish resource hierarchy and role facts. */
+@org.springframework.test.context.jdbc.Sql("/fixtures/menu-client-dictionary.sql")
 @SpringBootTest(
     properties = {
       "summer.sample.authorization.managed-bootstrap-domains=PLATFORM:platform,ENTERPRISE:ent-acme",
@@ -71,7 +72,77 @@ class MenuNavigationHttpTest {
   }
 
   @Test
-  void disabledEnterpriseAncestorBlocksOtherwiseQualifiedChild() throws Exception {
+  void clientNavigationUsesPublishedLayoutAndChecksAncestorsBeforeFiltering() throws Exception {
+    db.update("""
+        insert into summer_menu_manifest_item(menu_id,parent_menu_id,path,title_key,icon_key,sort_order,manifest_version,client_code,created_at,updated_at)
+        values ('roles',null,'/roles','后台岗位','',9,8,'mobile',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+               ('permissions','roles','/permissions','业务权限','',7,8,'web',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        """);
+    String path = "/api/v1/platform/authorization/navigation";
+    mvc.perform(get(path).param("clientCode","web").with(user("summer-user"))).andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items.length()").value(1))
+        .andExpect(jsonPath("$.data.items[0].titleKey").value("业务权限"))
+        .andExpect(jsonPath("$.data.items[0].parentMenuId").isEmpty());
+    mvc.perform(get(path).param("clientCode","mobile").with(user("summer-user"))).andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items.length()").value(1))
+        .andExpect(jsonPath("$.data.items[0].menuId").value("roles"));
+    db.update("insert into summer_menu_domain_layout(layout_id,domain_key,menu_id,enabled,version) values ('disabled-mobile','PLATFORM:platform','roles',false,2)");
+    mvc.perform(get(path).param("clientCode","web").with(user("summer-user"))).andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items").isEmpty());
+  }
+
+  @Test
+  void publishedPlatformRolesHaveIndependentLayoutAndEligibility() throws Exception {
+    db.update("""
+        insert into summer_menu_manifest_item(menu_id,parent_menu_id,path,title_key,icon_key,sort_order,manifest_version,client_code,created_at,updated_at)
+        values ('roles',null,'/roles','角色与权限','',0,8,'web',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+               ('access-control',null,'/access-control','访问控制','',1,8,'web',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+               ('platform/roles','access-control','/platform/roles','平台角色与权限','',4,8,'web',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        """);
+    String platform = "/api/v1/platform/authorization/navigation";
+    var actor = user("summer-user");
+    mvc.perform(get(platform).param("clientCode","web").with(actor))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+    db.update("""
+        insert into summer_permission_resource
+        select domain_key,permission_id,'MENU','platform/roles' from summer_permission_resource
+        where resource_type='MENU' and resource_id='roles'
+        """);
+    mvc.perform(get(platform).param("clientCode","web").with(actor)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items.length()").value(2))
+        .andExpect(jsonPath("$.data.items[0].navOnly").value(true))
+        .andExpect(jsonPath("$.data.items[1].parentMenuId").value("access-control"));
+    mvc.perform(get("/api/v1/enterprises/ent-acme/authorization/navigation").param("clientCode","web").with(actor))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+        .andExpect(jsonPath("$.data.items[0].menuId").value("roles"));
+    db.update("update summer_menu_manifest_item set client_code='tablet' where menu_id='platform/roles'");
+    mvc.perform(get(platform).param("clientCode","web").with(actor))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+  }
+
+  @Test
+  void dictionaryManagementPagesRequirePlatformQualification() throws Exception {
+    for (String id : java.util.List.of("dictionary/manage", "dictionary/groups")) {
+      db.update("""
+          insert into summer_menu_manifest_item(menu_id,path,title_key,icon_key,sort_order,manifest_version,created_at,updated_at)
+          values (?,?,?,'',0,8,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+          """, id, "/" + id, id);
+      db.update("""
+          insert into summer_permission_resource
+          select domain_key,permission_id,'MENU',? from summer_permission_resource
+          where resource_type='MENU' and resource_id='roles'
+          """, id);
+    }
+    var actor = user("summer-user");
+    mvc.perform(get("/api/v1/enterprises/ent-acme/authorization/navigation").with(actor))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+    mvc.perform(get("/api/v1/platform/authorization/navigation").with(actor))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[*].menuId",
+            org.hamcrest.Matchers.containsInAnyOrder("dictionary/manage", "dictionary/groups")));
+  }
+
+  @Test
+  void disabledPlatformAncestorBlocksOtherwiseQualifiedChild() throws Exception {
     db.update(
         "insert into"
             + " summer_menu_manifest_item(menu_id,parent_menu_id,path,title_key,icon_key,sort_order,manifest_version,created_at,updated_at)"
@@ -89,9 +160,9 @@ class MenuNavigationHttpTest {
             + " resource_type='MENU'");
     db.update(
         "insert into"
-            + " summer_menu_manifest_override(override_id,enterprise_id,menu_id,enabled,version,created_at,updated_at)"
+            + " summer_menu_domain_layout(layout_id,domain_key,menu_id,enabled,version)"
             + " values"
-            + " ('ent-acme:block-parent-05','ent-acme','block-parent-05',false,2,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+            + " ('platform:block-parent-05','PLATFORM:platform','block-parent-05',false,2)");
     var denied =
         mvc.perform(
                 get("/api/v1/enterprises/ent-acme/authorization/navigation")
@@ -103,8 +174,8 @@ class MenuNavigationHttpTest {
         java.util.stream.StreamSupport.stream(items.spliterator(), false)
             .anyMatch(x -> x.path("menuId").asText().startsWith("block-")));
     db.update(
-        "update summer_menu_manifest_override set enabled=true where"
-            + " override_id='ent-acme:block-parent-05'");
+        "update summer_menu_domain_layout set enabled=true where"
+            + " layout_id='platform:block-parent-05'");
     var allowed =
         mvc.perform(
                 get("/api/v1/enterprises/ent-acme/authorization/navigation")
@@ -478,6 +549,7 @@ class MenuNavigationHttpTest {
     String parent = "menu-or-parent-" + java.util.UUID.randomUUID();
     String page = "menu-or-page-" + java.util.UUID.randomUUID();
     causalIdentity(subject);
+    db.update("insert into summer_platform_administrator(username,display_name) values(?,?)",subject,subject);
     causalPublish(parent, java.util.List.of(page));
     causalAssociations(page, java.util.Set.of());
     String p1 = causalPermission(java.util.List.of(page));

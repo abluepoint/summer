@@ -1,5 +1,7 @@
 # T20 授权变更传播实际验收
 
+> 2026-11-20：授权事件页面、列表/重试和授权解释接口已退役，见 [ADR 0041](../../../docs/adr/0041-retire-authorization-event-management.md)。本目录涉及旧页面或 `/api/authorization-events` 的脚本保留为历史验收材料，不能用于当前版本验收；内部事件写入、事务一致性与投递测试继续保留。
+
 从仓库根目录执行，使用本地 Kubernetes `docker-desktop/local-base` 的 MySQL、
 独立临时 Redis、两个实际 Spring Boot JVM 和实际 Chrome。复用
 `../task-configuration/environment.py` 的凭据注入、随机 schema/账号及清理逻辑；

@@ -13,12 +13,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(
-    properties = "summer.sample.authorization.managed-bootstrap-domains=ENTERPRISE:ent-acme")
+    properties = "summer.sample.authorization.managed-bootstrap-domains=ENTERPRISE:ent-acme,PLATFORM:platform")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import({RolePermissionHttpTest.Schema.class, DepartmentDataScopeHttpTest.DataSchema.class})
 @org.springframework.test.annotation.DirtiesContext(
     classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DepartmentDataScopeHttpTest {
+  @Autowired HistoricalTenantPermissions historical;
   @Autowired org.springframework.jdbc.core.JdbcTemplate db;
 
   @org.springframework.boot.test.context.TestConfiguration
@@ -46,47 +47,11 @@ class DepartmentDataScopeHttpTest {
   @Autowired ObjectMapper json;
 
   @Test
-  void administratorCanSaveDepartmentPresetThroughPermissionApi() throws Exception {
-    String base = "/api/v1/enterprises/ent-acme";
-    var g =
-        mvc.perform(
-                post(base + "/permission-groups")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .contentType("application/json")
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .content("{\"name\":\"Departments\"}"))
-            .andExpect(status().isCreated())
-            .andReturn();
-    String gid =
-        json.readTree(g.getResponse().getContentAsString()).path("data").path("groupId").asText();
-    mvc.perform(
-            post(base + "/permissions")
-                .with(user("summer-user"))
-                .with(csrf())
-                .contentType("application/json")
-                .header("Idempotency-Key", UUID.randomUUID().toString())
-                .content(
-                    json.writeValueAsString(
-                        Map.of(
-                            "code",
-                            "dept-" + UUID.randomUUID(),
-                            "name",
-                            "Department read",
-                            "type",
-                            "DATA",
-                            "groupId",
-                            gid,
-                            "dataScope",
-                            Map.of(
-                                "dataResourceKey",
-                                "applications",
-                                "action",
-                                "read",
-                                "scopePreset",
-                                "DEPARTMENT")))))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.data.dataScope.scopePreset").value("DEPARTMENT"));
+  void tenantAdministratorCannotCreateCustomDepartmentPermissions() throws Exception {
+    mvc.perform(post(BASE + "/permission-groups").with(user("summer-user")).with(csrf())
+            .contentType("application/json").header("Idempotency-Key", UUID.randomUUID().toString())
+            .content("{\"name\":\"Departments\"}"))
+        .andExpect(status().isNotFound());
   }
 
   static final String BASE = "/api/v1/enterprises/ent-acme";
@@ -136,46 +101,18 @@ class DepartmentDataScopeHttpTest {
   }
 
   String create(Map<String, Object> detail, int expected) throws Exception {
-    var g =
-        mvc.perform(
-                post(BASE + "/permission-groups")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .contentType("application/json")
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .content("{\"name\":\"Departments\"}"))
-            .andExpect(status().isCreated())
-            .andReturn();
-    String gid =
-        json.readTree(g.getResponse().getContentAsString()).path("data").path("groupId").asText();
-    var r =
-        mvc.perform(
-                post(BASE + "/permissions")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .contentType("application/json")
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .content(
-                        json.writeValueAsString(
-                            Map.of(
-                                "code",
-                                "dept-" + UUID.randomUUID(),
-                                "name",
-                                "Scope",
-                                "type",
-                                "DATA",
-                                "accessMode",
-                                "PUBLIC",
-                                "groupId",
-                                gid,
-                                "dataScope",
-                                detail))))
-            .andExpect(status().is(expected))
-            .andReturn();
-    return json.readTree(r.getResponse().getContentAsString())
-        .path("data")
-        .path("permissionId")
-        .asText();
+    var group = historical.create(BASE + "/permission-groups", Map.of("name", "Departments"));
+    var body = Map.<String, Object>of("code", "dept-" + UUID.randomUUID(), "name", "Scope",
+        "type", "DATA", "accessMode", "PUBLIC", "groupId", group.path("groupId").asText(), "dataScope", detail);
+    if (expected == 400) {
+      var failure = org.junit.jupiter.api.Assertions.assertThrows(com.abluepoint.summer.common.error.SummerException.class,
+          () -> historical.create(BASE + "/permissions", body));
+      org.junit.jupiter.api.Assertions.assertEquals(
+          com.abluepoint.summer.sample.authorization.domain.permission.PermissionErrorCode.INVALID, failure.errorCode());
+      return "";
+    }
+    org.junit.jupiter.api.Assertions.assertEquals(201, expected);
+    return historical.create(BASE + "/permissions", body).path("permissionId").asText();
   }
 
   Map<String, Object> detail(String preset) {
@@ -207,8 +144,7 @@ class DepartmentDataScopeHttpTest {
     d.put("departmentIds", List.of("p07-A", "p07-A", "p07-X"));
     String id = create(d, 201);
     total(2);
-    mvc.perform(get(BASE + "/permissions/" + id + "/data-scope").with(user("summer-user")))
-        .andExpect(jsonPath("$.data.departmentIds.length()").value(2));
+    org.junit.jupiter.api.Assertions.assertEquals(2, db.queryForObject("select count(*) from summer_permission_selected_department where domain_key=? and permission_id=?", Integer.class, "ENTERPRISE:ent-acme", id));
     db.update("update summer_organization_unit set status='DISABLED' where unit_id='p07-A'");
     total(1);
   }
@@ -277,50 +213,15 @@ class DepartmentDataScopeHttpTest {
   }
 
   void openOrganizationCreate() throws Exception {
-    var g =
-        mvc.perform(
-                post(BASE + "/permission-groups")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .contentType("application/json")
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .content("{\"name\":\"Organization API\"}"))
-            .andExpect(status().isCreated())
-            .andReturn();
-    String gid =
-        json.readTree(g.getResponse().getContentAsString()).path("data").path("groupId").asText();
-    var permission =
-        mvc.perform(
-                post(BASE + "/permissions")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .contentType("application/json")
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .content(
-                        json.writeValueAsString(
-                            Map.of(
-                                "code",
-                                "org-" + UUID.randomUUID(),
-                                "name",
-                                "Organization create",
-                                "type",
-                                "INTERFACE",
-                                "accessMode",
-                                "AUTHORIZED",
-                                "groupId",
-                                gid))))
-            .andExpect(status().isCreated())
-            .andReturn();
-    String id =
-        json.readTree(permission.getResponse().getContentAsString())
-            .path("data")
-            .path("permissionId")
-            .asText();
+    var group = historical.create(BASE + "/permission-groups", Map.of("name", "Organization API"));
+    String id = historical.create(BASE + "/permissions", Map.of("code", "org-" + UUID.randomUUID(),
+        "name", "Organization create", "type", "INTERFACE", "accessMode", "AUTHORIZED",
+        "groupId", group.path("groupId").asText())).path("permissionId").asText();
     List<String> resources = new ArrayList<>();
     for (int page = 0; ; page++) {
       var r =
           mvc.perform(
-                  get(BASE + "/authorization/interface-directory?page=" + page + "&size=100")
+                  get("/api/v1/platform/authorization/interface-directory?page=" + page + "&size=100")
                       .with(user("summer-user")))
               .andExpect(status().isOk())
               .andReturn();
@@ -334,16 +235,7 @@ class DepartmentDataScopeHttpTest {
     }
     org.junit.jupiter.api.Assertions.assertEquals(1, resources.size());
     String path = BASE + "/permissions/" + id + "/interfaces";
-    var r = mvc.perform(get(path).with(user("summer-user"))).andExpect(status().isOk()).andReturn();
-    mvc.perform(
-            put(path)
-                .with(user("summer-user"))
-                .with(csrf())
-                .contentType("application/json")
-                .header("If-Match", r.getResponse().getHeader("ETag"))
-                .header("Idempotency-Key", UUID.randomUUID().toString())
-                .content(json.writeValueAsString(Map.of("resourceIds", resources))))
-        .andExpect(status().isOk());
+    historical.replace(path, Map.of("resourceIds", resources), historical.readInterfaces(id).etag());
   }
 
   @Autowired com.abluepoint.summer.sample.member.MemberDirectory memberDirectory;

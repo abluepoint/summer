@@ -69,7 +69,7 @@ class PluginConfigurationHttpTest {
         managed.data("ent-acme", "bob", "dictionaries", "read", "TENANT_ALL");
         // DraftRevisionFixture reads revisions as operator, independently of the business writer.
         managed.data("ent-acme", "operator", "dictionaries", "read", "TENANT_ALL");
-        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+        current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator",
                 (handler, path, method) -> handler.getBeanType().getName().equals("com.abluepoint.summer.sample.dictionary.DictionaryController")
                         && method.equals("GET") && path.equals("/api/dictionaries/{code}/draft"));
     }
@@ -97,19 +97,19 @@ class PluginConfigurationHttpTest {
     }
     private static final String SUMMARY="/api/v1/enterprises/ent-acme/plugins/customer-insights/summary";
 
-    @Test void organizationAndSelfPoliciesApplyToConfigurationAndDictionary() throws Exception {
+    @Test void enterprisePoliciesFilterParametersWhileDictionariesRemainPlatformWide() throws Exception {
         setup();
-        policy("system-parameters","ORG"); policy("dictionaries","ORG");
+        policy("system-parameters","ORG");
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").value("Visible"))
                 .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Published"));
         mvc.perform(get(SUMMARY).with(actor("bob","org-operations"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").doesNotExist())
-                .andExpect(jsonPath("$.data.dictionary.items").isEmpty());
-        policy("system-parameters","SELF"); policy("dictionaries","SELF");
+                .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Published"));
+        policy("system-parameters","SELF");
         mvc.perform(get(SUMMARY).with(actor("bob","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").doesNotExist())
-                .andExpect(jsonPath("$.data.dictionary.items").isEmpty());
+                .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Published"));
     }
     @Test void publishedSnapshotIgnoresDraftAndRollbackSelectsOldSnapshot() throws Exception {
         setup();
@@ -143,18 +143,14 @@ class PluginConfigurationHttpTest {
         mvc.perform(get("/api/v1/enterprises/ent-acme/plugins").with(reader)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].menus").isEmpty());
     }
-    @Test void effectiveOverrideAndItemScopeAreReusedByPlugin() throws Exception {
+    @Test void enterpriseParameterOverrideKeepsGlobalDictionaryOptions() throws Exception {
         setup();
         mvc.perform(put("/api/system-parameters/customer-insights.label/overrides/org-engineering")
                 .with(actor("alice","org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"value\":\"Organization override\",\"publicReadable\":true}")) .andExpect(status().isOk());
-        policy("dictionaries","SELF");
-        jdbc.update("update summer_dictionary_item set owner_id='bob' where dictionary_code='customer-segment'");
-        assertThat(jdbc.queryForObject("select owner_id from summer_dictionary_item where dictionary_code='customer-segment'", String.class)).isEqualTo("bob");
-        assertThat(jdbc.queryForObject("select created_by from summer_dictionary_item where dictionary_code='customer-segment'", String.class)).isEqualTo("alice");
         mvc.perform(get(SUMMARY).with(actor("alice","org-engineering"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configuration[0].value").value("Organization override"))
-                .andExpect(jsonPath("$.data.dictionary.items").isEmpty());
+                .andExpect(jsonPath("$.data.dictionary.items[0].label").value("Published"));
     }
     @Test void disabledDictionaryAndWithdrawnParameterAreAbsent() throws Exception {
         setup();
@@ -187,10 +183,7 @@ class PluginConfigurationHttpTest {
                 .content("{\"code\":\"customer-segment\",\"name\":\"Segment\",\"publicReadable\":true}")) .andExpect(status().isOk());
         mvc.perform(post("/api/dictionaries/customer-segment/items").with(actor("alice","org-engineering")).contentType(MediaType.APPLICATION_JSON)
                 .content(com.abluepoint.summer.sample.dictionary.DraftRevisionFixture.revised(mvc, "/api/dictionaries/customer-segment/items", "{\"value\":\"standard\",\"label\":\"Published\",\"sortOrder\":1}"))) .andExpect(status().isOk());
-        // Dictionary creation has no organization field; provision row ownership as fixture metadata.
         jdbc.update("update summer_system_parameter set organization_id='org-engineering' where parameter_key='customer-insights.label'");
-        jdbc.update("update summer_dictionary_type set organization_id='org-engineering' where code='customer-segment'");
-        jdbc.update("update summer_dictionary_item set organization_id='org-engineering' where dictionary_code='customer-segment'");
         publish(0);
     }
     private void publish(int expected) throws Exception {

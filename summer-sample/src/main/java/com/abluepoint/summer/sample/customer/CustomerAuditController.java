@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.customer;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiError;
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
@@ -53,11 +55,12 @@ class CustomerAuditController {
             CustomerAuditPage value = service.search(new CustomerAuditQuery(principal, resource, action, result,
                     requestId, fromTime, toTime), PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "occurredAt")));
             return body(HttpStatus.OK, value);
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException | java.time.format.DateTimeParseException exception) {
             return failure(HttpStatus.BAD_REQUEST, "SUMMER_INVALID_ARGUMENT", "Invalid audit query");
         }
     }
 
+    @Field(param = "eventId", style = "requestTextStyle")
     @GetMapping("/{eventId}")
     @RawResponse
     ResponseEntity<ApiResponse<CustomerAuditEventView>> detail(@PathVariable String eventId) {

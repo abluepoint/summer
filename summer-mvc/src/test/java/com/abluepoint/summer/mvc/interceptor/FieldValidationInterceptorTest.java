@@ -59,6 +59,26 @@ class FieldValidationInterceptorTest {
     }
 
     @Test
+    void recognizesOnlyTheSecurityFiltersFormParameterOnUnsafeRequests() throws Exception {
+        var interceptor = new FieldValidationInterceptor(new StyleRegistry(Map.of(
+                "integerStyle", new PatternStyle(Integer.class, "an integer", Map.of(), Pattern.compile("[0-9]+")))), 100);
+        var handler = new HandlerMethod(new FieldController(), FieldController.class.getDeclaredMethod("create"));
+        var response = new MockHttpServletResponse();
+        var request = new MockHttpServletRequest("POST", "/example");
+        request.addParameter("age", "42");
+        request.addParameter("custom-csrf", "test-value");
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler))
+                .isInstanceOf(FieldValidationException.class);
+        var token = new org.springframework.security.web.csrf.DefaultCsrfToken("X-CSRF", "custom-csrf", "test-value");
+        request.setAttribute(org.springframework.security.web.csrf.CsrfToken.class.getName(), token);
+        assertThat(interceptor.preHandle(request, response, handler)).isTrue();
+        assertThat(FieldValues.from(request).asMap()).containsOnlyKeys("age");
+        request.setMethod("GET");
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler))
+                .isInstanceOf(FieldValidationException.class);
+    }
+
+    @Test
     void aggregatesRequiredAndStyleViolationsWithoutExportingPartialValues() throws Exception {
         FieldValidationInterceptor interceptor = new FieldValidationInterceptor(
                 new StyleRegistry(Map.of(

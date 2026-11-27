@@ -2,6 +2,7 @@ package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
+import com.abluepoint.summer.mvc.annotation.Field;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
 import org.springframework.http.MediaType;
@@ -25,19 +26,19 @@ class DictionaryNotificationController {
         this.requestId = requestId;
     }
 
-    @GetMapping(value = "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events",
+    @GetMapping(value = "/api/v1/platform/dictionaries/{code}/events",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RawResponse
-
+    @Field(param = "code", style = "dictionaryCodeStyle")
     @PreAuthorize("@businessMethodAccess.require(authentication, 'platform.dictionary.read') or (hasAuthority('SCOPE_platform.dictionary.read'))")
-    ResponseEntity<?> subscribe(@PathVariable String enterpriseId, @PathVariable String code,
+    ResponseEntity<?> subscribe(@PathVariable String code,
                                 @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
                                 Authentication authentication) {
         try {
             return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM)
                     .header("Cache-Control", "no-cache")
                     .header("X-Request-Id", requestId.currentRequestId())
-                    .body(notifications.subscribe(enterpriseId, code, parseLastEventId(lastEventId), authentication));
+                    .body(notifications.subscribe("platform", code, parseLastEventId(lastEventId), authentication));
         } catch (AccessDeniedException exception) {
             throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Dictionary capability denied", exception);
         } catch (IllegalArgumentException exception) {

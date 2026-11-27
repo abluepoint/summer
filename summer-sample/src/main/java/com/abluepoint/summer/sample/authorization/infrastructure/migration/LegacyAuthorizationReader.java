@@ -358,11 +358,7 @@ public class LegacyAuthorizationReader {
     raw.put(
         "menuPublication", rows("select * from summer_menu_publication order by publication_id"));
     raw.put("menus", rows("select * from summer_menu_manifest_item order by menu_id"));
-    raw.put(
-        "menuOverrides",
-        rows(
-            "select * from summer_menu_manifest_override where enterprise_id=? order by menu_id",
-            domain.id()));
+    raw.put("menuOverrides", List.of());
     return raw;
   }
 

@@ -242,6 +242,8 @@ class PermissionDataOperationsHttpTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Autowired HistoricalTenantPermissions historical;
+
     String grant(String action, String preset) throws Exception {
         var group =
                 mvc.perform(
@@ -260,43 +262,6 @@ class PermissionDataOperationsHttpTest {
                         .path("data")
                         .path("groupId")
                         .asText();
-        var permission =
-                mvc.perform(
-                                post("/api/v1/platform/permissions")
-                                        .with(user("summer-user"))
-                                        .with(csrf())
-                                        .contentType("application/json")
-                                        .header(
-                                                "Idempotency-Key",
-                                                java.util.UUID.randomUUID().toString())
-                                        .content(
-                                                json.writeValueAsString(
-                                                        java.util.Map.of(
-                                                                "code",
-                                                                "data-"
-                                                                        + java.util.UUID
-                                                                                .randomUUID(),
-                                                                "name",
-                                                                "Operation",
-                                                                "type",
-                                                                "DATA",
-                                                                "accessMode",
-                                                                "PUBLIC",
-                                                                "groupId",
-                                                                gid,
-                                                                "dataScope",
-                                                                java.util.Map.of(
-                                                                        "dataResourceKey",
-                                                                        "applications",
-                                                                        "action",
-                                                                        action,
-                                                                        "scopePreset",
-                                                                        preset)))))
-                        .andExpect(status().isCreated())
-                        .andReturn();
-        return json.readTree(permission.getResponse().getContentAsString())
-                .path("data")
-                .path("permissionId")
-                .asText();
+        return historical.platformData(gid, action, preset, "PUBLIC");
     }
 }

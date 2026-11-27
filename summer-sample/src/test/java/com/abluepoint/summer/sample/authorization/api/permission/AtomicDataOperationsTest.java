@@ -64,6 +64,8 @@ class AtomicDataOperationsTest {
     assertEquals(0, db.queryForObject("select count(*) from summer_application_record where record_id='other10'",Integer.class));
   }
 
+  @Autowired HistoricalTenantPermissions historical;
+
   private void grant(String action, String preset) throws Exception {
     var user = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("summer-user");
     var group = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/platform/permission-groups")
@@ -71,10 +73,6 @@ class AtomicDataOperationsTest {
         .header("Idempotency-Key",java.util.UUID.randomUUID().toString()).contentType("application/json").content("{\"name\":\"Atomic10\"}"))
         .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated()).andReturn();
     String gid = json.readTree(group.getResponse().getContentAsString()).path("data").path("groupId").asText();
-    mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/platform/permissions")
-        .with(user).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
-        .header("Idempotency-Key",java.util.UUID.randomUUID().toString()).contentType("application/json")
-        .content(json.writeValueAsString(java.util.Map.of("code","atomic10-"+java.util.UUID.randomUUID(),"name","Atomic", "type","DATA", "accessMode","PUBLIC", "groupId",gid,"dataScope",java.util.Map.of("dataResourceKey","applications","action",action,"scopePreset",preset)))))
-        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated());
+    historical.platformData(gid, action, preset, "PUBLIC");
   }
 }

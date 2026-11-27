@@ -17,6 +17,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @TestConfiguration(proxyBeanMethods = false)
 public class TrustedManagedTestFixture {
   @Bean
+  HistoricalTenantPermissions historicalTenantPermissions(DataSource source,
+      com.abluepoint.summer.sample.authorization.application.permission.PermissionService permissions,
+      com.abluepoint.summer.sample.authorization.application.permission.PermissionResourceBindingService bindings,
+      tools.jackson.databind.ObjectMapper json,
+      com.abluepoint.summer.sample.authorization.application.permission.ManagedRoleService roles,
+      com.abluepoint.summer.sample.authorization.application.data.PermissionDataDetails details,
+      org.springframework.transaction.PlatformTransactionManager transactions) throws Exception {
+    return new HistoricalTenantPermissions(source, permissions, bindings, json, roles, details, transactions);
+  }
+
+  @Bean
   FreshManagedDomains trustedManagedDomains(ManagedAuthorizationBootstrap bootstrap, JdbcTemplate db,
       DataSource source, @Value("${summer.sample.authorization.managed-bootstrap-domains:}") String domains) {
     return new FreshManagedDomains(bootstrap, db, source, domains);

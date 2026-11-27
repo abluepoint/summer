@@ -86,6 +86,8 @@ public final class BusinessManagedAuthorizationTestFixture implements AutoClosea
 
     private static boolean family(String path, String family) {
         return switch (family) {
+            case "administrative-divisions" -> path.equals("/api/v1/platform/administrative-divisions")
+                    || path.equals("/api/v1/platform/administrative-divisions/{id}");
             case "customers" -> path.equals("/api/customers") || path.startsWith("/api/customers/");
             case "roles" -> path.contains("/roles") || path.contains("/data-resources/");
             case "tasks" -> path.contains("/tasks");
@@ -99,7 +101,7 @@ public final class BusinessManagedAuthorizationTestFixture implements AutoClosea
     }
 
     public void configuration(String tenant, String resource, boolean anonymous, String... subjects) {
-        String domain = "ENTERPRISE:" + tenant;
+        String domain = resource.equals("dictionaries") ? "PLATFORM:platform" : "ENTERPRISE:" + tenant;
         for (String subject : subjects) {
             interfaces(domain, subject, Set.of(resource));
             for (String action : List.of("read", "create", "update", "delete"))
@@ -109,7 +111,7 @@ public final class BusinessManagedAuthorizationTestFixture implements AutoClosea
     }
 
     public void data(String tenant, String subject, String resource, String action, String preset) {
-        String domain = "ENTERPRISE:" + tenant;
+        String domain = resource.equals("dictionaries") ? "PLATFORM:platform" : "ENTERPRISE:" + tenant;
         identity(domain, subject);
         String permission = permission(domain, "DATA", "AUTHORIZED", subject + ":" + resource + ":" + action);
         detail(domain, permission, resource, action, preset);
@@ -118,20 +120,20 @@ public final class BusinessManagedAuthorizationTestFixture implements AutoClosea
     }
 
     public void publicData(String tenant, String resource, String preset) {
-        String domain = "ENTERPRISE:" + tenant;
+        String domain = resource.equals("dictionaries") ? "PLATFORM:platform" : "ENTERPRISE:" + tenant;
         domain(domain);
         detail(domain, permission(domain, "DATA", "PUBLIC", resource + ":read"), resource, "read", preset);
         advance(domain);
     }
 
     public void revokeRead(String tenant, String subject, String resource) {
-        String domain = "ENTERPRISE:" + tenant;
+        String domain = resource.equals("dictionaries") ? "PLATFORM:platform" : "ENTERPRISE:" + tenant;
         db.update("delete from summer_role_permission where domain_key=? and role_id=? and permission_id in (select permission_id from summer_permission_data_scope where domain_key=? and data_resource_key=? and action='read')", domain, role(domain, subject), domain, resource);
         advance(domain);
     }
 
     public void revokePublicRead(String tenant, String resource) {
-        String domain = "ENTERPRISE:" + tenant;
+        String domain = resource.equals("dictionaries") ? "PLATFORM:platform" : "ENTERPRISE:" + tenant;
         db.update("update summer_permission set status='DISABLED',version=version+1 where domain_key=? and group_id=? and type='DATA' and access_mode='PUBLIC' and permission_id in (select permission_id from summer_permission_data_scope where domain_key=? and data_resource_key=? and action='read')", domain, id("group", domain), domain, resource);
         advance(domain);
     }

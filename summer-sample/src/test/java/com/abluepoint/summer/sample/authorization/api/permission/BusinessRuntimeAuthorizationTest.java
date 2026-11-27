@@ -44,11 +44,7 @@ class BusinessRuntimeAuthorizationTest {
   @Test void persistedPublicAssociationAllowsAnonymousAndRemovalRevokesNextInvocation() throws Exception {
     assertThrows(AccessDeniedException.class, () -> access.requireRuntime(Domain.platform(), null, operation, "inspect"));
     // Discovery is the formal directory, and association is the formal versioned mutation API.
-    var directory = mvc.perform(get("/api/v1/platform/authorization/interface-directory").param("size", "200")
-        .with(user("summer-user"))).andExpect(status().isOk()).andReturn();
-    String resource = "";
-    for (var item : json.readTree(directory.getResponse().getContentAsString()).path("data").path("items"))
-      if ("/fixture10/runtime".equals(item.path("normalizedPath").asText())) resource = item.path("resourceId").asText();
+    String resource = discovered("/fixture10/runtime");
     assertFalse(resource.isBlank());
     String group = db.queryForObject("select group_id from summer_permission where domain_key='PLATFORM:platform' and code='PUBLIC'", String.class);
     var created = mvc.perform(post("/api/v1/platform/permissions").with(user("summer-user")).with(csrf())
@@ -119,10 +115,15 @@ class BusinessRuntimeAuthorizationTest {
   }
 
   private String discovered(String path) throws Exception {
-    var response = mvc.perform(get("/api/v1/platform/authorization/interface-directory").param("size", "200")
-        .with(user("summer-user"))).andExpect(status().isOk()).andReturn();
-    for (var item : json.readTree(response.getResponse().getContentAsString()).path("data").path("items"))
-      if (path.equals(item.path("normalizedPath").asText())) return item.path("resourceId").asText();
+    for (int page = 0; ; page++) {
+      var response = mvc.perform(get("/api/v1/platform/authorization/interface-directory")
+          .param("size", "200").param("page", Integer.toString(page))
+          .with(user("summer-user"))).andExpect(status().isOk()).andReturn();
+      var data = json.readTree(response.getResponse().getContentAsString()).path("data");
+      for (var item : data.path("items"))
+        if (path.equals(item.path("normalizedPath").asText())) return item.path("resourceId").asText();
+      if ((page + 1) * 200 >= data.path("total").asInt()) break;
+    }
     throw new AssertionError("Installed resource absent from directory");
   }
 

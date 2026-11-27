@@ -29,7 +29,9 @@ export function clearRecoveryState(storage) {
 }
 
 export function isBusinessApi(url) {
-  return typeof url === 'string' && /^\/api(?:\/|\?|$)/.test(url);
+  return typeof url === 'string' && (
+    /^\/api(?:\/|\?|$)/.test(url) || url === '/internal/v1/release/readiness'
+  );
 }
 
 export function classifyBusinessFailure(status, hasResponse) {

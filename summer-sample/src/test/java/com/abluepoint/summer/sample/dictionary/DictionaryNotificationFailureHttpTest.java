@@ -29,16 +29,16 @@ class DictionaryNotificationFailureHttpTest {
     void currentManagedAuthorization() {
         managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
                 managedDb, managedTransactions, managedInterfaces);
-        readerRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "dictionary-contract",
+        readerRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "dictionary-contract",
                 (handler, path, method) -> handler.getBeanType().equals(DictionaryNotificationController.class)
                         && handler.getMethod().getName().equals("subscribe") && method.equals("GET")
-                        && path.equals("/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events"));
+                        && path.equals("/api/v1/platform/dictionaries/{code}/events"));
         managed.data("ent-acme", "dictionary-contract", "dictionaries", "read", "TENANT_ALL");
     }
 
     @org.junit.jupiter.api.AfterEach
     void releaseManagedAuthorization() {
-        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "dictionary-contract", readerRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "dictionary-contract", readerRole);
         managed.close();
     }
 
@@ -48,7 +48,7 @@ class DictionaryNotificationFailureHttpTest {
     @Test
     void missingDictionaryIsJsonWithCorrelationEvenWhenClientAcceptsOnlyEvents() throws Exception {
         for (MediaType accept : List.of(MediaType.ALL, MediaType.TEXT_EVENT_STREAM)) {
-            mvc.perform(get("/api/v1/enterprises/ent-acme/dictionaries/absent-contract/events").accept(accept)
+            mvc.perform(get("/api/v1/platform/dictionaries/absent-contract/events").accept(accept)
                             .header("X-Request-Id", "dictionary-missing").with(reader()))
                     .andExpect(status().isNotFound()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.error.code").value("SUMMER_NOT_FOUND"))
@@ -64,7 +64,7 @@ class DictionaryNotificationFailureHttpTest {
     void invalidCursorsAreJsonBeforeStartingTheStream() throws Exception {
         for (MediaType accept : List.of(MediaType.ALL, MediaType.TEXT_EVENT_STREAM)) {
             for (String cursor : List.of("invalid", "-1", "9223372036854775808")) {
-                mvc.perform(get("/api/v1/enterprises/ent-acme/dictionaries/absent-contract/events").accept(accept)
+                mvc.perform(get("/api/v1/platform/dictionaries/absent-contract/events").accept(accept)
                                 .header("Last-Event-ID", cursor).header("X-Request-Id", "dictionary-cursor").with(reader()))
                         .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                         .andExpect(jsonPath("$.error.code").value("SUMMER_DICTIONARY_SSE_LAST_EVENT_ID"))

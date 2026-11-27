@@ -7,7 +7,6 @@ import java.util.List;
 
 interface AuthorizationChangeEventOutboxRepository extends JpaRepository<AuthorizationChangeEventOutboxEntity, String> {
     List<AuthorizationChangeEventOutboxEntity> findTop100ByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAtAsc(AuthorizationChangeEventStatus status, Instant now);
-    List<AuthorizationChangeEventOutboxEntity> findAllByEnterpriseIdOrderByCreatedAtDesc(String enterpriseId);
     List<AuthorizationChangeEventOutboxEntity> findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc(String enterpriseId, String resourceType);
 }
 

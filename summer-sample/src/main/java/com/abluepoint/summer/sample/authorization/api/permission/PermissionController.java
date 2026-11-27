@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.api.permission;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.*;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -17,7 +19,7 @@ import java.util.*;
 
 @RestController
 @RawResponse
-@RequestMapping({"/api/v1/enterprises/{enterpriseId}", "/api/v1/platform"})
+@RequestMapping("/api/v1/platform")
 public class PermissionController {
     private final PermissionService service;
     private final PermissionManagementGuard guard;
@@ -66,13 +68,14 @@ public class PermissionController {
             HttpServletRequest r, Authentication a, @RequestParam Map<String, String> query) {
         Domain d = domain(r);
         guard.require(d, a, false);
-        return ApiResponse.success(service.list(d, group(r), query), requestId.currentRequestId());
+        return ApiResponse.success(service.list(Domain.platform(), group(r), query), requestId.currentRequestId());
     }
 
+    @Field(param = "id", style = "requestTextStyle")
     @GetMapping({"/permission-groups/{id}", "/permissions/{id}"})
     public Object get(HttpServletRequest r, Authentication a, @PathVariable String id) {
         guard.require(domain(r), a, false);
-        return response(service.get(domain(r), group(r), id));
+        return response(service.get(service.readDomain(domain(r), group(r), id), group(r), id));
     }
 
     @PostMapping({"/permission-groups", "/permissions"})
@@ -95,6 +98,7 @@ public class PermissionController {
         return mutate(r, a, id, body, condition, key);
     }
 
+    @Field(param = "id", style = "requestTextStyle")
     @DeleteMapping({"/permission-groups/{id}", "/permissions/{id}"})
     public Object delete(
             HttpServletRequest r,
@@ -113,7 +117,7 @@ public class PermissionController {
             String condition,
             String key) {
         Domain d = domain(r);
-        guard.require(d, a, true);
+        guard.requireDefinitionWrite(d, a);
         return response(
                 service.mutate(
                         d,

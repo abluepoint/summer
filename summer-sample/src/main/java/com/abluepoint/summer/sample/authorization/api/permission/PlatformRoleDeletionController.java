@@ -32,7 +32,20 @@ public class PlatformRoleDeletionController {
   public ResponseEntity<?> delete(@PathVariable String id, Authentication actor,
       @RequestHeader(value = "If-Match", required = false) String condition,
       @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-    Domain domain = Domain.platform();
+    return deleteRole(Domain.platform(), id, actor, condition, key);
+  }
+
+  @Field(param = "enterpriseId", style = "requestTextStyle")
+  @Field(param = "id", style = "requestTextStyle")
+  @DeleteMapping("/api/v1/enterprises/{enterpriseId}/roles/{id}")
+  public ResponseEntity<?> deleteTenantRole(@PathVariable String enterpriseId, @PathVariable String id,
+      Authentication actor, @RequestHeader(value = "If-Match", required = false) String condition,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return deleteRole(Domain.enterprise(enterpriseId), id, actor, condition, key);
+  }
+
+  private ResponseEntity<?> deleteRole(Domain domain, String id, Authentication actor,
+      String condition, String key) {
     guard.require(domain, actor, true);
     String requestId = requests.currentRequestId();
     var result = roles.mutate(domain, actor.getName(), "role", id, "DELETE", Map.of(), condition,

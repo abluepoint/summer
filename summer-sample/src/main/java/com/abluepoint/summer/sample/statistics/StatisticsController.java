@@ -7,6 +7,8 @@ import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.error.ErrorStatusResolver;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
+import com.abluepoint.summer.mvc.validate.PatternStyle;
+import com.abluepoint.summer.mvc.validate.Style;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,6 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.time.format.DateTimeParseException;
 
 @RestController
 final class StatisticsController {
@@ -64,14 +69,25 @@ final class StatisticsController {
     }
 
     @org.springframework.context.annotation.Bean
-    static com.abluepoint.summer.mvc.validate.Style statisticsInstantStyle() {
-        return com.abluepoint.summer.mvc.validate.Styles.string().matches(java.util.regex.Pattern.compile(".{1,64}"), "an ISO-8601 instant").build();
+    static Style statisticsInstantStyle() {
+        return new PatternStyle(String.class, "an ISO-8601 instant", Map.of(), Pattern.compile(".{1,64}")) {
+            @Override
+            public boolean validate(String value) {
+                if (!super.validate(value)) return false;
+                try {
+                    parse(value);
+                    return true;
+                } catch (IllegalArgumentException invalid) {
+                    return false;
+                }
+            }
+        };
     }
 
-    private Instant parse(String value) {
+    private static Instant parse(String value) {
         if (value == null || value.isBlank()) return null;
         try { return Instant.parse(value); }
-        catch (RuntimeException exception) { throw new IllegalArgumentException("from and to must be ISO-8601 instants"); }
+        catch (DateTimeParseException exception) { throw new IllegalArgumentException("from and to must be ISO-8601 instants", exception); }
     }
 
     private <T> ResponseEntity<ApiResponse<T>> ok(T value) {

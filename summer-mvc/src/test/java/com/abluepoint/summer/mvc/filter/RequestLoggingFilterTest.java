@@ -165,6 +165,17 @@ class RequestLoggingFilterTest {
     }
 
     @Test
+    void s3CredentialsAreRedactedEvenWithCustomFields() throws Exception {
+        var snapshotter = new RequestBodySnapshotter(new ObjectMapper(), true, 256, Set.of("custom"));
+        var request = jsonRequest("""
+                {"name":"archive","accessKeyId":"s3-id-sample","secretAccessKey":"s3-secret-sample"}
+                """);
+        String preview = snapshotter.snapshot(new CachedBodyHttpServletRequest(request));
+        assertThat(preview).contains("archive", RequestBodySnapshotter.REDACTED_VALUE)
+                .doesNotContain("s3-id-sample", "s3-secret-sample");
+    }
+
+    @Test
     void objectArraysStillRedactNestedFields() throws Exception {
         RequestBodySnapshotter snapshotter = new RequestBodySnapshotter(
                 new ObjectMapper(), true, 128, Set.of("password"));

@@ -70,40 +70,40 @@ export function resolveMenuRoutes(
     });
   visit(local);
   const visible = new Map(
-    items
-      .filter((item) => item.enabled && known.has(item.menuId))
-      .map((item) => [item.menuId, item])
+    items.filter((item) => item.enabled).map((item) => [item.menuId, item])
   );
   const nodes = new Map<string, IRoute>();
   const ordered = Array.from(visible.values()).sort(
     (a, b) => a.sortOrder - b.sortOrder || a.menuId.localeCompare(b.menuId)
   );
+  // A published directory can organize registered pages without having a page component itself.
+  const reachable = new Set<string>();
   for (const item of ordered) {
-    let parent = item.parentMenuId;
-    const seen = new Set([item.menuId]);
-    let valid = true;
-    while (parent) {
-      if (!visible.has(parent) || seen.has(parent)) {
-        valid = false;
-        break;
-      }
-      seen.add(parent);
-      parent = visible.get(parent).parentMenuId;
+    if (!known.has(item.menuId)) continue;
+    const branch = new Set<string>();
+    let cursor: string | undefined = item.menuId;
+    while (cursor && visible.has(cursor) && !branch.has(cursor)) {
+      branch.add(cursor);
+      cursor = visible.get(cursor).parentMenuId;
     }
-    if (!valid) continue;
+    if (!cursor) branch.forEach((id) => reachable.add(id));
+  }
+  for (const item of ordered) {
+    if (!reachable.has(item.menuId)) continue;
     const source = known.get(item.menuId);
     nodes.set(item.menuId, {
       ...source,
-      navOnly: Boolean(item.navOnly) || item.pageEligible === false,
+      children: undefined,
+      key: item.menuId,
+      navOnly: !source || Boolean(item.navOnly) || item.pageEligible === false,
       exact: ![
         'customer/drawer',
         'customer/modal',
         'customer/page',
         'customer/detail',
-      ].includes(source.key),
+      ].includes(item.menuId),
       name: item.titleKey,
       iconKey: item.iconKey,
-      children: source.children ? [] : undefined,
     });
   }
   const roots: IRoute[] = [];

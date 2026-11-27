@@ -126,9 +126,9 @@ class DictionaryNotificationService {
     }
 
     private void requireReadable(String enterpriseId, String dictionaryCode, Authentication authentication) {
-        com.abluepoint.summer.sample.configuration.ConfigurationTenantContext.requireMembership(enterpriseId, authentication);
-        boolean managed = business.requireHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(enterpriseId),
-                authentication, "GET", "/api/v1/enterprises/{enterpriseId}/dictionaries/{code}/events", "platform.dictionary.read");
+        if (!"platform".equals(enterpriseId)) throw new org.springframework.security.access.AccessDeniedException("Platform dictionary required");
+        boolean managed = business.requireHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),
+                authentication, "GET", "/api/v1/platform/dictionaries/{code}/events", "platform.dictionary.read");
         if (!managed) actions.requirePublic(enterpriseId, "dictionaries", authentication);
         boolean visible = dataScopes.read(enterpriseId,"dictionaries","read",authentication,
                 scope -> types.findScoped(dictionaryCode,scope).isPresent());

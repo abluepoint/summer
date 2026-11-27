@@ -8,8 +8,6 @@ public final class ManagementConsumerRoutes {
   private static final Set<String> OWNERS =
       Set.of(
           "authorization.AuthorizationController",
-          "authorization.AuthorizationChangeEventController",
-          "authorization.DataScopeController",
           "authorization.OAuthClientManagementController",
           "authorization.policy.PolicyController",
           "enterprise.EnterpriseDirectoryController",
@@ -37,8 +35,6 @@ public final class ManagementConsumerRoutes {
     if (path.startsWith("/api/v1/enterprises/{enterpriseId}/")) return "ENTERPRISE";
     if (owner.equals(ROOT + "identity.AuthUserController")
         || owner.equals(ROOT + "authorization.OAuthClientManagementController")) return "PLATFORM";
-    if (owner.equals(ROOT + "authorization.AuthorizationChangeEventController"))
-      return "ENTERPRISE";
     return BusinessConsumerRoutes.domainKind(owner, path);
   }
 }

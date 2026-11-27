@@ -210,7 +210,7 @@ public class ControlledAuthorizationCutover {
   private String authorizationFingerprint(String domain) {
     var facts=new TreeMap<String,Object>();
     for(String table:List.of("summer_permission_identity","summer_permission_group","summer_permission",
-        "summer_permission_role","summer_role_permission","summer_permission_user","summer_permission_user_role",
+        "summer_permission_role","summer_role_permission", "summer_role_platform_permission","summer_permission_user","summer_permission_user_role",
         "summer_permission_resource","summer_permission_resource_control","summer_permission_data_scope","summer_permission_selected_department")) {
       var rows=db.queryForList("select * from "+table+" where domain_key=?",domain).stream()
           .map(row->json.writeValueAsString(new TreeMap<>(row))).sorted().toList();

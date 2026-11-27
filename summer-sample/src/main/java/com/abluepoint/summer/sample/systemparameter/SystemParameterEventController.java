@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.systemparameter;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -30,6 +32,8 @@ class SystemParameterEventController {
         return body(HttpStatus.OK, Map.of("items", page.items(), "totalElements", page.totalElements()));
     }
 
+    @Field(param = "enterpriseId", required = false, style = "requestTextStyle")
+    @Field(param = "eventId", style = "requestTextStyle")
     @PostMapping("/{eventId}/retry")
 
     @RawResponse

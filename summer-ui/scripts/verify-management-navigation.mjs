@@ -222,19 +222,40 @@ test('a different frontend client requests and renders only that client', async 
   assert.equal(view.items[0].parentMenuId,undefined);
 });
 
-test('the published access control folder contains four platform entrances and keeps tenant roles separate', async () => {
+test('published folders place platform roles under platform management and keep tenant roles separate', async () => {
   const folder = 'access-control';
-  const pages = ['interface-resources', 'permissions', 'menu-manifest', 'platform/roles'];
+  const platformFolder = 'platform-management';
+  const pages = ['interface-resources', 'permissions', 'menu-manifest'];
   const {api} = fixture({tenant: [row('roles'), row('platform/roles')], platform: [
     row(folder, {navOnly:true, pageEligible:false}),
     ...pages.map((id, sortOrder) => row(id, {parentMenuId:folder, sortOrder})),
+    row(platformFolder, {titleKey:'平台管理', navOnly:true, pageEligible:false}),
+    row('platform/roles', {titleKey:'平台角色管理', parentMenuId:platformFolder}),
   ]});
   const view = await api.getVisibleMenuManifest('tenant-a');
   assert.deepEqual(plain(view.items.filter(x=>x.parentMenuId===folder).map(x=>x.path)), [
-    '/interface-resources', '/platform/permissions', '/platform/menu-manifest', '/platform/roles',
+    '/interface-resources', '/platform/permissions', '/platform/menu-manifest',
   ]);
-  assert.equal(view.items.filter(x=>x.menuId==='platform/roles').length,1);
+  const root = view.items.find(item => item.menuId === platformFolder);
+  assert.equal(root.titleKey, '平台管理');
+  assert.equal(root.parentMenuId, undefined);
+  assert.deepEqual(plain(view.items.filter(item => item.menuId === 'platform/roles')
+    .map(item => [item.parentMenuId, item.path, item.titleKey])), [
+    [platformFolder, '/platform/roles', '平台角色管理'],
+  ]);
   assert.equal(view.items.find(x=>x.menuId==='roles').parentMenuId,undefined);
+});
+
+test('platform directories in a tenant shell require a platform grant and keep their platform parent', async () => {
+  const ids = ['platform/administrators','platform/organization'];
+  const tenant = ids.map(id=>row(id));
+  const platform = [row('platform-management',{navOnly:true,pageEligible:false}),
+    ...ids.map(id=>row(id,{parentMenuId:'platform-management'}))];
+  const visible = await fixture({tenant,platform}).api.getVisibleMenuManifest('tenant-a');
+  for (const id of ids)
+    assert.equal(visible.items.find(item=>item.menuId===id)?.parentMenuId,'platform-management');
+  const denied = await fixture({tenant,denied:true}).api.getVisibleMenuManifest('tenant-a');
+  assert.deepEqual(plain(denied.items),[]);
 });
 
 test('dictionary management and groups require independent platform menu grants', async () => {

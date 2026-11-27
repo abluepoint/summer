@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.release;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
@@ -24,7 +26,12 @@ class ReleaseGateController {
     @GetMapping("/internal/v1/release/readiness") @RawResponse ResponseEntity<ApiResponse<ReadinessView>> readiness(Authentication a) { return ok(nativeBoundary(() -> service.readiness(a))); }
     @PostMapping(value="/internal/v1/release/performance-benchmarks", consumes=MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<PerformanceBenchmarkView>> benchmark(@RequestBody PerformanceBenchmarkRequest q,@RequestHeader(value="Idempotency-Key",required=false)String k,Authentication a){return ok(nativeBoundary(() -> service.benchmark(q,k,a)));}
     @PostMapping(value="/internal/v1/release/gates:validate", consumes=MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<ReleaseGateView>> validate(@RequestBody ReleaseGateRequest q,@RequestHeader(value="Idempotency-Key",required=false)String k,Authentication a){return ok(nativeBoundary(() -> service.validate(q,k,a)));}
+    @Field(param = "releaseVersion", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "targetVersion", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "reason", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value="/internal/v1/release/rollback:dry-run", consumes=MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<RollbackDryRunView>> rollback(@RequestBody RollbackDryRunRequest q,@RequestHeader(value="Idempotency-Key",required=false)String k,Authentication a){return ok(nativeBoundary(() -> service.rollback(q,k,a)));}
+    @Field(param = "component", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "scenario", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value="/internal/v1/release/failure-drills", consumes=MediaType.APPLICATION_JSON_VALUE) @RawResponse ResponseEntity<ApiResponse<FailureDrillView>> drill(@RequestBody FailureDrillRequest q,@RequestHeader(value="Idempotency-Key",required=false)String k,Authentication a){return ok(nativeBoundary(() -> service.drill(q,k,a)));}
     private<T>ResponseEntity<ApiResponse<T>>ok(T value){return ResponseEntity.ok().header("X-Request-Id",requestId.currentRequestId()).body(ApiResponse.success(value,requestId.currentRequestId()));}
     // Native permission failures retain the existing public business message.

@@ -13,17 +13,29 @@ public class ConfigurationActionAccess {
     ConfigurationActionAccess(AuthorizationService authorization, com.abluepoint.summer.sample.resource.BusinessResourceAccess business) {
         this.authorization=authorization; this.business=business;
     }
+    private void requireDictionary(Authentication actor, String... scopes) {
+        if (!business.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), actor, scopes))
+            throw new AccessDeniedException("Platform dictionary permission required");
+    }
     public void requirePublic(String resource, Authentication auth) {
-        requirePublic(resolve(auth), resource, auth);
+        if ("dictionaries".equals(resource)) requireDictionary(auth, "platform.dictionary.read");
+        else requirePublic(resolve(auth), resource, auth);
     }
     public void requirePublic(String tenant, String resource, Authentication auth) {
-        String scope = "dictionaries".equals(resource) ? "platform.dictionary.read" : "system.parameter.read";
+        if ("dictionaries".equals(resource)) { requireDictionary(auth, "platform.dictionary.read"); return; }
+        String scope = "system.parameter.read";
         if (business.requirePublicConfigurationRead(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(tenant), auth, resource, scope)) return;
         if (!(auth instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken)) return;
-        String permission = "dictionaries".equals(resource) ? "platform.dictionary.read" : "system.parameter.read";
+        String permission = scope;
         if (!authorization.decision(auth, tenant, permission, null).allowed())
             throw new AccessDeniedException("Configuration read denied");
     }
+    public void requirePublishedDictionary(Authentication actor) {
+        if (!business.requireHttp(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(),
+                actor, "GET", "/public/dictionaries/{code}", "platform.dictionary.read"))
+            throw new AccessDeniedException("Platform dictionary permission required");
+    }
+
     /** The plugin reader invokes this fixed installed operation without a servlet request. */
     public void requirePublishedParameter(String tenant, Authentication auth) {
         if (!business.requireHttp(
@@ -40,6 +52,7 @@ public class ConfigurationActionAccess {
                 : ("system-parameters".equals(resource)
                     ? new String[]{permission, prefix+".write", "platform.parameter."+action, "platform.parameter.write"}
                     : new String[]{permission, prefix+".write"});
+        if ("dictionaries".equals(resource)) { requireDictionary(auth, delegated); return; }
         if (business.require(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise(resolve(auth)), auth, delegated)) return;
         boolean allowed=auth!=null && auth.getAuthorities().stream().anyMatch(a ->
                 a.getAuthority().equals("SCOPE_"+permission) || (!"read".equals(action) && a.getAuthority().equals("SCOPE_"+prefix+".write"))

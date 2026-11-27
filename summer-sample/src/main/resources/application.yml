@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 64MB
+      max-request-size: 65MB
   application:
     name: summer-sample
   session:
@@ -143,8 +147,6 @@ summer:
             - enterprise.capabilities.write
             - enterprise.bundles.read
             - enterprise.bundles.write
-            - enterprise.data-scope.read
-            - enterprise.data-scope.write
             - enterprise.policies.read
             - enterprise.policies.write
             - platform.enterprise.read
@@ -155,6 +157,8 @@ summer:
             - platform.interface-resources.read
             - capabilities.platform.read
             - capabilities.enterprise.read
+            - security.key.read
+            - internal.release.read
             - security.oauth-client.read
             - security.oauth-client.write
             - platform.dictionary.read

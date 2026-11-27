@@ -79,7 +79,7 @@ OrderView update(
 }
 ```
 
-`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。空字符串和全空白字符串都算已传值，继续交给 Style 校验；不能用空白值绕过格式规则。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。使用 Field 契约的接口始终拒绝未声明的查询/表单、JSON 和路径字段，不提供宽松开关。MVC 会在请求链开始时缓存可重复读取的完整正文，Field 校验、Jackson DTO 绑定和 HTTP 日志消费者可以按各自职责读取；malformed JSON 统一返回 HTTP 400。
+`required` 只约束字段是否存在，`nullable` 只约束已存在的 JSON 值能否为 null。空字符串和全空白字符串都算已传值，继续交给 Style 校验；不能用空白值绕过格式规则。JSON 字符串、数字和布尔值按 Style 导出类型保持原生类型边界，例如字符串 `"42"` 不会作为 integer Style 的 JSON number；对象和数组不能作为标量 `@Field`。使用 Field 契约的接口始终拒绝未声明的查询/表单、JSON 和路径业务字段。对于 POST 等非安全方法，若 Spring Security 已在请求上发布 CsrfToken，其实际参数名由安全过滤器处理，MVC 的未知参数检查识别该名称。JSON 和路径仍须完整声明。MVC 会在请求链开始时缓存可重复读取的完整正文，Field 校验、Jackson DTO 绑定和 HTTP 日志消费者可以按各自职责读取；malformed JSON 统一返回 HTTP 400。
 
 MVC 不提供手动缓存开关。`summer.mvc.request-body.max-bytes` 统一限制 MVC 缓存的请求体，默认 1 MiB；已知或未知 Content-Length 超限均返回 JSON 413（`SUMMER_REQUEST_BODY_TOO_LARGE`，包含 requestId）。到达上限的正文仍完整交给 Field、`@RequestBody` 和业务代码，读取中断则不派发部分正文。URL 编码表单和 multipart 由 Servlet 容器管理，须在容器/应用上传设置中另行限额。`summer.mvc.request-logging.body.max-preview-length` 只截断脱敏后的日志副本，不替代请求接收上限。
 

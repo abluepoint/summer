@@ -123,6 +123,8 @@ class SystemParameterController {
     }
 
     @GetMapping("/{key}/versions")
+    @Field(param = "enterpriseId", required = false, style = "systemParameterTenantStyle")
+    @Field(param = "key", style = "systemParameterKeyStyle")
     @RawResponse
 
     @PreAuthorize("@businessMethodAccess.require(authentication, 'system.parameter.read', 'platform.parameter.read', 'customer.read') or (hasAnyAuthority('SCOPE_system.parameter.read','SCOPE_platform.parameter.read','SCOPE_customer.read'))")

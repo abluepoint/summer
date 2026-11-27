@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const api = fs.readFileSync(new URL('../src/pages/data-scopes/api.ts', import.meta.url), 'utf8');
-const page = fs.readFileSync(new URL('../src/pages/data-scopes/index.tsx', import.meta.url), 'utf8');
 const routes = fs.readFileSync(new URL('../src/routes.ts', import.meta.url), 'utf8');
-assert.match(api, /data-scopes/); assert.match(api, /saveDataScope/); assert.match(page, /SELF/); assert.match(page, /ORGANIZATION_TREE/); assert.match(routes, /key: 'data-scopes'/);
-console.log('Data scope UI uses real enterprise policy APIs and structured conditions');
+assert.doesNotMatch(routes, /key: 'data-scopes'|menu\.dataScopes/);
+assert.equal(fs.existsSync(new URL('../src/pages/data-scopes', import.meta.url)), false);
+assert.ok(fs.existsSync(new URL('../src/pages/permissions/index.tsx', import.meta.url)));
+assert.ok(fs.existsSync(new URL('../src/hooks/useActiveEnterprise.ts', import.meta.url)));
+console.log('Retired data scope page is absent; permission management and shared enterprise context remain');

@@ -22,33 +22,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthorizationChangeEventHttpTest {
     @Autowired CurrentManagedAuthorizationTestFixture managed;
     @org.junit.jupiter.api.BeforeEach void currentFacts() {
-        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "security-admin", (handler,path,method) -> path.startsWith("/api/authorization-events") || path.startsWith("/api/v1/enterprises/{enterpriseId}/roles"));
+        managed.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "security-admin", (handler,path,method) -> path.startsWith("/api/v1/enterprises/{enterpriseId}/roles"));
     }
     @Autowired
     MockMvc mockMvc;
+    @Autowired AuthorizationChangeEventOutboxRepository outbox;
 
     @Test
-    void authorizationMutationIsTraceableAndCanBeRetried() throws Exception {
-        mockMvc.perform(post("/api/v1/enterprises/ent-acme/roles")
+    void authorizationMutationStillPersistsAnInternalChangeEvent() throws Exception {
+        String role = mockMvc.perform(post("/api/v1/enterprises/ent-acme/roles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Event reader\",\"code\":\"event-reader\",\"permissionIds\":[]}")
                         .header("Idempotency-Key", "event-role-1")
+                        .header("X-Request-Id", "event-role-request")
                         .with(admin("enterprise.roles.write")))
-                .andExpect(status().isCreated());
-
-        String events = mockMvc.perform(get("/api/authorization-events")
-                        .with(admin("enterprise.roles.read")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items").isArray())
-                .andReturn().getResponse().getContentAsString();
-        String eventId = JsonPath.read(events, "$.data.items[0].eventId");
-        org.junit.jupiter.api.Assertions.assertEquals("ROLE_CHANGED", JsonPath.read(events, "$.data.items[0].eventType"));
-
-        mockMvc.perform(post("/api/authorization-events/" + eventId + "/retry")
-                        .with(admin("enterprise.roles.write")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.eventId").value(eventId))
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String roleId = JsonPath.read(role, "$.data.roleId");
+        org.assertj.core.api.Assertions.assertThat(outbox.findAllByEnterpriseIdAndResourceTypeOrderByCreatedAtDesc("ENTERPRISE:ent-acme", "ROLE"))
+                .filteredOn(event -> event.resourceId().equals(roleId))
+                .singleElement().satisfies(event -> {
+                    org.junit.jupiter.api.Assertions.assertEquals("ROLE_CHANGED", event.eventType());
+                    org.junit.jupiter.api.Assertions.assertEquals("event-role-request", event.requestId());
+                    org.junit.jupiter.api.Assertions.assertEquals(AuthorizationChangeEventStatus.PENDING, event.status());
+                });
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor admin(String capability) {

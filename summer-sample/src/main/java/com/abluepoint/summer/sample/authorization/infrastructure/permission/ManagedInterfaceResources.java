@@ -316,7 +316,8 @@ public class ManagedInterfaceResources implements TrustedPermissionResourceResol
             id);
     if (rows.size() != 1
         || !Boolean.TRUE.equals(rows.getFirst().get("configurable"))
-        || !domain.kind().equals(rows.getFirst().get("domain_kind")))
+        || !(domain.kind().equals(rows.getFirst().get("domain_kind"))
+            || Domain.platform().equals(domain) && "ENTERPRISE".equals(rows.getFirst().get("domain_kind"))))
       throw SummerException.withMessage(
           PermissionErrorCode.INVALID,
           "Active configurable interface in the current domain required");
@@ -330,15 +331,15 @@ public class ManagedInterfaceResources implements TrustedPermissionResourceResol
     long total =
         db.queryForObject(
             "select count(*) from summer_interface_resource where active=true and configurable=true"
-                + " and domain_kind=?",
+                + " and (domain_kind=? or ?='PLATFORM')",
             Long.class,
-            domain.kind());
+            domain.kind(), domain.kind());
     var rows =
         db.queryForList(
             "select * from summer_interface_resource where active=true and configurable=true and"
-                + " domain_kind=? order by normalized_path,http_method,resource_id limit ? offset"
+                + " (domain_kind=? or ?='PLATFORM') order by normalized_path,http_method,resource_id limit ? offset"
                 + " ?",
-            domain.kind(),
+            domain.kind(), domain.kind(),
             size,
             (long) page * size);
     var items =

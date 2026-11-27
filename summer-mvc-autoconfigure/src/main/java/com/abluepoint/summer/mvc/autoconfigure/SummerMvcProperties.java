@@ -77,7 +77,7 @@ public class SummerMvcProperties {
             private int maxPreviewLength = 2048;
             private Set<String> redactedFields = new LinkedHashSet<>(Set.of(
                     "password", "passwd", "secret", "token", "access_token", "refresh_token",
-                    "client_secret", "authorization", "cookie"
+                    "client_secret", "authorization", "cookie", "accesskeyid", "secretaccesskey"
             ));
 
             public boolean isEnabled() {

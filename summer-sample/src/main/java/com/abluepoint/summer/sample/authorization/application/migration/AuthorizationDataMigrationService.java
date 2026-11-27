@@ -176,7 +176,7 @@ public class AuthorizationDataMigrationService {
     db.update("insert into summer_permission_identity values (?,?,?,'DATA')", domain.key(), id, id);
     db.update("insert into summer_permission values (?,?,?,?,?,'DATA','AUTHORIZED',?,'ACTIVE',1)", domain.key(), id, id,
         "Migrated " + grant.resource() + " " + grant.action() + " " + grant.preset(), "Frozen DATA proof " + plan.snapshotId(), group);
-    details.replace(domain, id, details.validate(scope(grant)));
+    details.replace(domain, id, details.historical(scope(grant)));
     mapping(plan.snapshotId(), "DATA_POLICY", grant.resource() + ":" + grant.action() + ":" + grant.preset(), "PERMISSION", id);
   }
 
@@ -219,7 +219,7 @@ public class AuthorizationDataMigrationService {
         case "DATA_PERMISSION" -> {
           var permission = db.queryForList("select code,type,access_mode,status from summer_permission where domain_key=? and permission_id=?", domain.key(), id);
           if (permission.size() != 1 || !permission.getFirst().equals(Map.of("code", id, "type", "DATA", "access_mode", "AUTHORIZED", "status", "ACTIVE"))
-              || !scope(grant(plan, id)).equals(details.get(domain, id))) throw conflict("Applied DATA permission drift");
+              || !scope(grant(plan, id)).equals(details.stored(domain, id))) throw conflict("Applied DATA permission drift");
         }
         case "DATA_ROLE" -> {
           var vector = roleVector(plan, id);

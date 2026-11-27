@@ -43,12 +43,13 @@ class PermissionDataHttpTest {
         }
     }
 
+    @Autowired HistoricalTenantPermissions historical;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
 
     @Test
     void dataResponsesPreserveRequestCorrelation() throws Exception {
-        mvc.perform(get("/api/v1/platform/data-resources").with(user("summer-user")))
+        mvc.perform(get("/api/v1/platform/permissions?type=INTERFACE").with(user("summer-user")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
@@ -90,10 +91,8 @@ class PermissionDataHttpTest {
                                                         gid,
                                                         "dataScope",
                                                         java.util.Map.of(
-                                                                "dataResourceKey",
-                                                                "applications",
-                                                                "action",
-                                                                "read",
+                                                                "interfacePermissionIds",
+                                                                java.util.List.of(interfaceId()),
                                                                 "scopePreset",
                                                                 "SELF")))))
                 .andExpect(status().isCreated())
@@ -290,7 +289,7 @@ class PermissionDataHttpTest {
                         .andReturn();
         String etag = before.getResponse().getHeader("ETag");
         String body =
-                "{\"dataResourceKey\":\"applications\",\"action\":\"read\",\"scopePreset\":\"TENANT_ALL\"}";
+                json.writeValueAsString(java.util.Map.of("interfacePermissionIds", java.util.List.of(interfaceId()), "scopePreset", "TENANT_ALL"));
         String key = UUID.randomUUID().toString();
         var saved =
                 mvc.perform(
@@ -325,40 +324,63 @@ class PermissionDataHttpTest {
                 .andExpect(status().isPreconditionFailed());
     }
 
+    @Test
+    void linkedScopeFollowsOnlyAnApplicableInterfaceOnTheCurrentRequest() throws Exception {
+        String base = "/api/v1/platform";
+        String records = base + "/data-records/applications";
+        var request = mvc.perform(get(records).with(user("summer-user")))
+                .andExpect(status().isOk()).andReturn().getRequest();
+        String resource = (String) request.getAttribute(
+                com.abluepoint.summer.sample.authorization.application.permission.ManagedPermissionAccess.RESOURCE_ATTRIBUTE);
+        org.junit.jupiter.api.Assertions.assertNotNull(resource);
+        String group = db.queryForObject("select group_id from summer_permission where domain_key='PLATFORM:platform' and code='PUBLIC'", String.class);
+        var created = mvc.perform(post(base + "/permissions").with(user("summer-user")).with(csrf())
+                .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+                .content(json.writeValueAsString(java.util.Map.of("name", "Read applications", "code", "app-scope-target",
+                        "groupId", group, "type", "INTERFACE", "accessMode", "AUTHORIZED"))))
+                .andExpect(status().isCreated()).andReturn();
+        String target = json.readTree(created.getResponse().getContentAsString()).path("data").path("permissionId").asText();
+        String id = create(group, "read", "SELF");
+        String path = base + "/permissions/" + id + "/data-scope";
+        mvc.perform(get(path).with(user("summer-user")))
+                .andExpect(jsonPath("$.data.interfacePermissionIds").isEmpty())
+                .andExpect(jsonPath("$.data.dataResourceKey").doesNotExist())
+                .andExpect(jsonPath("$.data.action").doesNotExist());
+        mvc.perform(put(path).with(user("summer-user")).with(csrf()).header("If-Match", "\"1\"")
+                .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+                .content("{\"dataResourceKey\":\"applications\",\"action\":\"read\",\"scopePreset\":\"SELF\"}"))
+                .andExpect(status().isBadRequest());
+        for (String invalid : java.util.List.of(id, "unknown")) {
+            mvc.perform(put(path).with(user("summer-user")).with(csrf()).header("If-Match", "\"1\"")
+                    .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+                    .content(json.writeValueAsString(java.util.Map.of("interfacePermissionIds", java.util.List.of(invalid), "scopePreset", "SELF"))))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(put(path).with(user("summer-user")).with(csrf()).header("If-Match", "\"1\"")
+                .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+                .content(json.writeValueAsString(java.util.Map.of("interfacePermissionIds", java.util.List.of(target, target), "scopePreset", "SELF"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.interfacePermissionIds.length()").value(1));
+        mvc.perform(get(path).with(user("summer-user")))
+                .andExpect(jsonPath("$.data.interfacePermissionIds[0]").value(target))
+                .andExpect(jsonPath("$.data.dataResourceKey").doesNotExist());
+        db.update("insert into summer_application_record(record_id,domain_key,tenant_id,applicant_id,created_by,business_visible)"
+                + " values('scope-row','PLATFORM:platform','platform','summer-user','summer-user',true)");
+        db.update("insert into summer_permission_resource(domain_key,permission_id,resource_type,resource_id)"
+                + " values('PLATFORM:platform',?,'INTERFACE',?)", target, resource);
+        mvc.perform(get(records).with(user("summer-user"))).andExpect(jsonPath("$.data.total").value(0));
+        db.update("insert into summer_role_permission(domain_key,role_id,permission_id)"
+                + " select domain_key,role_id,? from summer_permission_user_role where domain_key='PLATFORM:platform' and username='summer-user'", target);
+        mvc.perform(get(records).with(user("summer-user"))).andExpect(jsonPath("$.data.total").value(1));
+        mvc.perform(get(records + "/jpa").with(user("summer-user"))).andExpect(jsonPath("$.data.total").value(0));
+        db.update("delete from summer_permission_resource where permission_id=? and resource_id=?", target, resource);
+        mvc.perform(get(records).with(user("summer-user"))).andExpect(jsonPath("$.data.total").value(0));
+    }
+
     private String create(String gid, String action, String preset) throws Exception {
-        var r =
-                mvc.perform(
-                                post("/api/v1/platform/permissions")
-                                        .with(user("summer-user"))
-                                        .with(csrf())
-                                        .contentType("application/json")
-                                        .header("Idempotency-Key", UUID.randomUUID().toString())
-                                        .content(
-                                                json.writeValueAsString(
-                                                        java.util.Map.of(
-                                                                "code",
-                                                                "data-" + UUID.randomUUID(),
-                                                                "name",
-                                                                "Scope",
-                                                                "type",
-                                                                "DATA",
-                                                                "accessMode",
-                                                                "PUBLIC",
-                                                                "groupId",
-                                                                gid,
-                                                                "dataScope",
-                                                                java.util.Map.of(
-                                                                        "dataResourceKey",
-                                                                        "applications",
-                                                                        "action",
-                                                                        action,
-                                                                        "scopePreset",
-                                                                        preset)))))
-                        .andExpect(status().isCreated())
-                        .andReturn();
-        return json.readTree(r.getResponse().getContentAsString())
-                .path("data")
-                .path("permissionId")
-                .asText();
+        return historical.platformData(gid, action, preset, "PUBLIC");
+    }
+
+    private String interfaceId() {
+        return db.queryForObject("select min(permission_id) from summer_permission where domain_key='PLATFORM:platform' and type='INTERFACE'", String.class);
     }
 }

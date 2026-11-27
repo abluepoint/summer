@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.identity;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.error.SampleTransportErrorCode;
@@ -53,6 +55,7 @@ final class SessionController {
                 .body(ApiResponse.success(snapshot, requestIdAccessor.currentRequestId()));
     }
 
+    @Field(param = "principal", required = false, style = "requestTextStyle")
     @GetMapping("/api/v1/sessions")
     @RawResponse
     ResponseEntity<ApiResponse<SessionIndexPage>> sessions(
@@ -67,6 +70,7 @@ final class SessionController {
         }
     }
 
+    @Field(param = "reference", style = "requestTextStyle")
     @DeleteMapping("/api/v1/sessions/{reference}")
     @RawResponse
     ResponseEntity<ApiResponse<SessionIndexOperation>> revoke(

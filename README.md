@@ -47,3 +47,11 @@ dependencies {
 | [迁移与验收说明](docs/guides/迁移与验收说明.md) | Gradle 基线与后续完整质量门禁 |
 
 需求和任务以 [GitHub Issues](https://github.com/abluepoint/summer/issues) 为准；最新 Summer UI 规格为 [Issue #69](https://github.com/abluepoint/summer/issues/69)。
+
+### 平台文件存储库
+
+在「文件管理 → 文件存储库」登记本地子目录或已有的 S3 存储桶。本地根目录由 `summer.storage.root` 指定，默认是服务工作目录下的 `data/file-repositories`。多实例部署时应将该目录指向同一共享卷。
+
+新增 S3 库时在页面填写 Access Key ID 和 Secret Access Key。管理员可用「更换密钥」更新已有库。服务端使用部署主密钥（`SUMMER_SECURITY_MASTER_KEY` 或 `summer.sample.security.master-key`）加密保存每个库的凭据，保存前验证桶访问权限。已有未单独配置密钥的库继续使用 AWS SDK 默认凭据链。服务地址和区域仍由部署配置 `summer.storage.s3.endpoint` 和 `summer.storage.s3.region` 指定。列表统计需要列举桶内对象；读写及删除分别需要相应对象权限。刷新会遍历目录或分页列举存储桶，S3 的可用空间显示为「未提供」。
+
+业务服务可注入 `com.abluepoint.summer.sample.storage.FileStoreManager`，通过存储库 ID 与文件名调用 `write(id, key, inputStream, byteLength)`、`read(id, key)` 和 `delete(id, key)`。写入同名文件会替换内容，调用方应关闭输入流和读取返回的流。移除登记保留底层文件。

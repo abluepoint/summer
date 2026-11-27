@@ -27,7 +27,8 @@ import tools.jackson.databind.ObjectMapper;
 @Import({RolePermissionHttpTest.Schema.class, DepartmentDataScopeHttpTest.DataSchema.class})
 @DirtiesContext
 class PublicConfigurationFinalHandlerHttpTest {
-  private static final String BASE = "/api/v1/enterprises/ent-acme";
+  @Autowired HistoricalTenantPermissions historical;
+  private static final String BASE = "/api/v1/platform";
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
 
@@ -65,7 +66,7 @@ class PublicConfigurationFinalHandlerHttpTest {
       for (var row : data.path("items")) {
         String path = row.path("normalizedPath").asText();
         if (path.startsWith("/api/dictionaries")
-            || path.startsWith("/api/v1/enterprises/{enterpriseId}/dictionaries")
+            || path.startsWith(BASE + "/dictionaries")
             || path.startsWith("/public/dictionaries")
             || path.startsWith("/public/enterprises/{enterpriseId}/dictionaries"))
           ids.add(row.path("resourceId").asText());
@@ -133,7 +134,7 @@ class PublicConfigurationFinalHandlerHttpTest {
                     com.abluepoint.summer.sample.authorization.application.permission
                         .ManagedConsumerAccess.DOMAIN_ATTRIBUTE,
                     com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain
-                        .enterprise("ent-acme")))
+                        .platform()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.items[0].value").value("aa"));
     mvc.perform(get("/public/enterprises/ent-acme/dictionaries/public-final09/items/aa"))
@@ -168,51 +169,26 @@ class PublicConfigurationFinalHandlerHttpTest {
   }
 
   private String permission(Map<String, Object> extra) throws Exception {
-    var group =
-        mvc.perform(
-                post(BASE + "/permission-groups")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .contentType("application/json")
-                    .content("{\"name\":\"Public final handler09\"}"))
-            .andExpect(status().isCreated())
-            .andReturn();
-    var body = new HashMap<String, Object>(extra);
-    body.put(
-        "groupId",
-        json.readTree(group.getResponse().getContentAsString())
-            .path("data")
-            .path("groupId")
-            .asText());
+    var group = json.readTree(mvc.perform(post(BASE + "/permission-groups").with(user("summer-user")).with(csrf())
+        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+        .content("{\"name\":\"Public final handler09\"}")).andExpect(status().isCreated()).andReturn()
+        .getResponse().getContentAsString()).path("data");
+    var body = new java.util.HashMap<String, Object>(extra);
     body.put("code", UUID.randomUUID().toString());
     body.put("name", "Public final handler09");
     body.put("accessMode", "PUBLIC");
-    var created =
-        mvc.perform(
-                post(BASE + "/permissions")
-                    .with(user("summer-user"))
-                    .with(csrf())
-                    .header("Idempotency-Key", UUID.randomUUID().toString())
-                    .contentType("application/json")
-                    .content(json.writeValueAsString(body)))
-            .andExpect(status().isCreated())
-            .andReturn();
-    return json.readTree(created.getResponse().getContentAsString())
-        .path("data")
-        .path("permissionId")
-        .asText();
+    body.put("groupId", group.path("groupId").asText());
+    if ("DATA".equals(body.get("type")))
+      return historical.seedData(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), body);
+    return json.readTree(mvc.perform(post(BASE + "/permissions").with(user("summer-user")).with(csrf())
+        .header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+        .content(json.writeValueAsString(body))).andExpect(status().isCreated()).andReturn()
+        .getResponse().getContentAsString()).path("data").path("permissionId").asText();
   }
 
   private void bind(String permission, List<String> ids, String etag) throws Exception {
-    mvc.perform(
-            put(BASE + "/permissions/" + permission + "/interfaces")
-                .with(user("summer-user"))
-                .with(csrf())
-                .header("If-Match", etag)
-                .header("Idempotency-Key", UUID.randomUUID().toString())
-                .contentType("application/json")
-                .content(json.writeValueAsString(Map.of("resourceIds", ids))))
-        .andExpect(status().isOk());
+    mvc.perform(put(BASE + "/permissions/" + permission + "/interfaces").with(user("summer-user")).with(csrf())
+        .header("If-Match", etag).header("Idempotency-Key", UUID.randomUUID().toString()).contentType("application/json")
+        .content(json.writeValueAsString(Map.of("resourceIds", ids)))).andExpect(status().isOk());
   }
 }

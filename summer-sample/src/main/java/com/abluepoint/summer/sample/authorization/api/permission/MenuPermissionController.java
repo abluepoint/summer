@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.api.permission;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -15,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RawResponse
-@RequestMapping({"/api/v1/platform", "/api/v1/enterprises/{enterpriseId}"})
+@RequestMapping("/api/v1/platform")
 public class MenuPermissionController {
   private final PermissionResourceBindingService bindings;
   private final PermissionManagementGuard guard;
@@ -30,11 +32,12 @@ public class MenuPermissionController {
     this.rid = rid;
   }
 
+  @Field(param = "permissionId", style = "requestTextStyle")
   @GetMapping("/permissions/{permissionId}/menus")
   public Object read(HttpServletRequest r, Authentication a, @PathVariable String permissionId) {
     var domain = PermissionController.domain(r);
     guard.require(domain, a, false);
-    var result = bindings.read(domain, permissionId, "MENU");
+    var result = bindings.readCatalog(domain, permissionId, "MENU");
     return ResponseEntity.status(result.status())
         .eTag("\"" + result.version() + "\"")
         .body(ApiResponse.success(result.body(), rid.currentRequestId()));
@@ -49,7 +52,7 @@ public class MenuPermissionController {
       @RequestHeader(value = "If-Match", required = false) String match,
       @RequestHeader(value = "Idempotency-Key", required = false) String key) {
     var domain = PermissionController.domain(r);
-    guard.require(domain, a, true);
+    guard.requireDefinitionWrite(domain, a);
     if (!body.keySet().equals(Set.of("menuIds"))
         || !(body.get("menuIds") instanceof List<?> values)
         || values.stream().anyMatch(value -> !(value instanceof String)))

@@ -55,9 +55,9 @@ class ManagedDomainOnboardingHttpTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.items.length()").value(1))
         .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"));
-    mvc.perform(get("/api/v1/enterprises/{id}/permissions", id).with(user("summer-user")))
+    mvc.perform(get("/api/v1/enterprises/{id}/roles?catalog=permissions", id).with(user("summer-user")))
         .andExpect(status().isOk());
-    mvc.perform(get("/api/v1/enterprises/{id}/permissions", id).with(user("unassigned")))
+    mvc.perform(get("/api/v1/enterprises/{id}/roles?catalog=permissions", id).with(user("unassigned")))
         .andExpect(status().isForbidden());
   }
 }

@@ -38,7 +38,7 @@ class InterfaceResourcePaginationHttpTest {
         when(history.read(6)).thenReturn(new InterfaceResourceCatalogView(items, 6));
         var requestId = mock(RequestIdAccessor.class);
         when(requestId.currentRequestId()).thenReturn("pagination-check");
-        mvc = MockMvcBuilders.standaloneSetup(new InterfaceResourceCatalogController(service, requestId, history))
+        mvc = MockMvcBuilders.standaloneSetup(new InterfaceResourceCatalogController(service, requestId, history, mock(InterfaceServiceDirectory.class)))
                 .setControllerAdvice(new com.abluepoint.summer.mvc.support.ApiExceptionHandler(
                         (code, arguments, locale) -> code.defaultMessage(),
                         new com.abluepoint.summer.mvc.error.DefaultErrorStatusResolver(), requestId))

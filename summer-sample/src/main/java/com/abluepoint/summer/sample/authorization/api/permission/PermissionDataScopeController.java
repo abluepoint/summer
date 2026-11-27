@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.authorization.api.permission;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.response.ApiResponse;
 import com.abluepoint.summer.mvc.api.RawResponse;
 import com.abluepoint.summer.mvc.request.RequestIdAccessor;
@@ -16,10 +18,7 @@ import java.util.Map;
 
 @RestController
 @RawResponse
-@RequestMapping({
-    "/api/v1/enterprises/{enterpriseId}/permissions/{id}/data-scope",
-    "/api/v1/platform/permissions/{id}/data-scope"
-})
+@RequestMapping("/api/v1/platform/permissions/{id}/data-scope")
 public class PermissionDataScopeController {
     private final PermissionService service;
     private final PermissionManagementGuard guard;
@@ -34,11 +33,12 @@ public class PermissionDataScopeController {
         this.requests = requests;
     }
 
+    @Field(param = "id", style = "requestTextStyle")
     @GetMapping
     public Object get(HttpServletRequest r, Authentication a, @PathVariable String id) {
         var domain = PermissionController.domain(r);
         guard.require(domain, a, false);
-        return response(service.getDataScope(domain, id));
+        return response(service.getDataScope(service.readDomain(domain, false, id), id));
     }
 
     @PutMapping
@@ -50,7 +50,7 @@ public class PermissionDataScopeController {
             @RequestHeader(value = "If-Match", required = false) String condition,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         var domain = PermissionController.domain(r);
-        guard.require(domain, a, true);
+        guard.requireDefinitionWrite(domain, a);
         return response(
                 service.replaceDataScope(
                         domain,

@@ -93,6 +93,8 @@ public class DataOperationExecutor {
         try {
             return writes.execute(
                     tx -> {
+                        if (!Domain.platform().equals(domain))
+                            db.queryForList("select revision from summer_authorization_domain where domain_key='PLATFORM:platform' for update");
                         var domainRows = db.queryForList(
                                         "select engine_mode,revision from summer_authorization_domain where"
                                             + " domain_key=? for update",

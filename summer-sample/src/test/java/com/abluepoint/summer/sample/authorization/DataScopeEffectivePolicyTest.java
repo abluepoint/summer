@@ -90,9 +90,6 @@ class DataScopeEffectivePolicyTest {
         fixture.revoke("role08-department", permission);
         assertThat(allows("alice", "org-engineering", "alice")).isTrue();
         assertThat(allows("alice", "org-operations", "bob")).isFalse();
-        assertThatThrownBy(() -> legacy.preview(TENANT, RESOURCE,
-                new DataScopePreviewRequest("alice", "org-operations", "bob", null, List.of(), List.of()), principal("alice")))
-                .isInstanceOf(SummerException.class).hasMessageContaining("retired");
     }
 
     @Test
@@ -231,13 +228,7 @@ class DataScopeEffectivePolicyTest {
     void retiredRangeEntryPointRejectsAndConstructionNeverSeedsLegacyPolicies() {
         assertThatThrownBy(() -> legacy.filter(TENANT, RESOURCE, principal("alice")))
                 .isInstanceOf(AccessDeniedException.class).hasMessageContaining("retired");
-        var policies = mock(DataScopePolicyRepository.class);
-        var bindings = mock(DataScopeBindingRepository.class);
-        new DataScopeService(policies, mock(DataScopePolicyAuditRepository.class), mapper,
-                mock(com.abluepoint.summer.sample.customer.CustomerAuditService.class),
-                mock(AuthorizationChangeEventService.class), mock(JdbcTemplate.class), bindings,
-                mock(AuthorizationUserBindingRepository.class), mock(AuthorizationRoleRepository.class));
-        verifyNoInteractions(policies, bindings);
+        new DataScopeService(mock(JdbcTemplate.class));
         assertThat(db.queryForObject("select count(*) from summer_data_scope_policy", Integer.class)).isZero();
     }
 

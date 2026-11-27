@@ -1,4 +1,6 @@
 package com.abluepoint.summer.sample.auditledger;
+
+import com.abluepoint.summer.mvc.annotation.Field;
 import java.util.function.Supplier;
 import org.springframework.security.access.AccessDeniedException;
 import com.abluepoint.summer.common.error.CommonErrorCode;
@@ -37,6 +39,16 @@ class AuditLedgerController {
         return response(HttpStatus.CREATED, preserveAccessDenied(() -> service.append(request, key, rid(), auth)));
     }
 
+    @Field(param = "invocationId", style = "requestTextStyle")
+    @Field(param = "permitId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "permitJti", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "executionAttemptId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "resultStatus", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "resultDigest", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "remoteRequestId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "latencyMs", required = false, nullable = true, style = "requestLongStyle")
+    @Field(param = "connectionSessionRef", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "detail", required = false, nullable = true, style = "requestTextStyle")
     @PostMapping(value = "/internal/v1/mcp/invocations/{invocationId}:complete", consumes = MediaType.APPLICATION_JSON_VALUE)
     @RawResponse
     ResponseEntity<ApiResponse<McpInvocationView>> complete(
@@ -47,6 +59,12 @@ class AuditLedgerController {
         return response(HttpStatus.OK, preserveAccessDenied(() -> service.complete(invocationId, request, key, rid(), auth)));
     }
 
+    @Field(param = "invocationId", style = "requestTextStyle")
+    @Field(param = "executionAttemptId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "resultStatus", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "resultDigest", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "remoteRequestId", required = false, nullable = true, style = "requestTextStyle")
+    @Field(param = "latencyMs", required = false, nullable = true, style = "requestLongStyle")
     @PostMapping(value = "/internal/v1/mcp/invocations/{invocationId}:reconcile", consumes = MediaType.APPLICATION_JSON_VALUE)
     @RawResponse
     ResponseEntity<ApiResponse<McpInvocationView>> reconcile(
@@ -57,6 +75,8 @@ class AuditLedgerController {
         return response(HttpStatus.OK, preserveAccessDenied(() -> service.reconcile(invocationId, request, key, rid(), auth)));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "invocationId", style = "requestTextStyle")
     @PostMapping("/api/v1/enterprises/{enterpriseId}/mcp-invocations/{invocationId}:mark-unknown")
     @RawResponse
     ResponseEntity<ApiResponse<McpInvocationView>> markUnknown(
@@ -83,8 +103,8 @@ class AuditLedgerController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             Authentication auth) {
-        Instant fromTime = from == null || from.isBlank() ? null : Instant.parse(from);
-        Instant toTime = to == null || to.isBlank() ? null : Instant.parse(to);
+        Instant fromTime = parseInstant(from);
+        Instant toTime = parseInstant(to);
         return response(HttpStatus.OK, preserveAccessDenied(() -> service.events(enterpriseId, new AuditQuery(initiator, actor, effectiveSubject,
                 agentInstanceId, toolId, decision, resultStatus, invocationId, eventType, fromTime, toTime), auth)));
     }
@@ -140,6 +160,8 @@ class AuditLedgerController {
                 .body(preserveAccessDenied(() -> service.exportEvents(enterpriseId, query, auth)));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "eventId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/audit-events/{eventId}")
     @RawResponse
     ResponseEntity<ApiResponse<AuditEventView>> event(
@@ -162,12 +184,14 @@ class AuditLedgerController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             Authentication auth) {
-        Instant fromTime = from == null || from.isBlank() ? null : Instant.parse(from);
-        Instant toTime = to == null || to.isBlank() ? null : Instant.parse(to);
+        Instant fromTime = parseInstant(from);
+        Instant toTime = parseInstant(to);
         return response(HttpStatus.OK, preserveAccessDenied(() -> service.invocations(enterpriseId, new AuditQuery(initiator, actor, effectiveSubject,
                 agentInstanceId, toolId, decision, resultStatus, invocationId, null, fromTime, toTime), auth)));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
+    @Field(param = "invocationId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/mcp-invocations/{invocationId}")
     @RawResponse
     ResponseEntity<ApiResponse<McpInvocationView>> invocation(
@@ -175,6 +199,7 @@ class AuditLedgerController {
         return response(HttpStatus.OK, preserveAccessDenied(() -> service.invocation(enterpriseId, invocationId, auth)));
     }
 
+    @Field(param = "enterpriseId", style = "requestTextStyle")
     @GetMapping("/api/v1/enterprises/{enterpriseId}/audit-anomalies")
     @RawResponse
     ResponseEntity<ApiResponse<List<AuditEventView>>> anomalies(

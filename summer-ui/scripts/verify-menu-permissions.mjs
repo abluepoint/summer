@@ -44,13 +44,17 @@ const routes = evaluateModule('../src/routes.ts', {
   '@/utils/authentication': authentication,
   '@/menu/manifest': menu,
   '@/menu/access': access,
+  '@/menu/managementNavigation': evaluateModule('../src/menu/managementNavigation.ts'),
   react: {},
 });
-assert.equal(routes.menuManifest.manifestVersion, 9, 'changed metadata must have a new version');
+assert.equal(routes.menuManifest.manifestVersion, 11, 'changed metadata must have a new version');
 const dictionaryGroups = routes.menuManifest.items.find(item => item.menuId === 'dictionary/groups');
 assert.equal(dictionaryGroups.parentMenuId, 'dictionary');
 assert.equal(dictionaryGroups.path, '/dictionary/groups');
 assert.equal(dictionaryGroups.capabilityCode, 'platform.dictionary.read');
+const divisions = routes.menuManifest.items.find(item => item.menuId === 'dictionary/divisions');
+assert.equal(divisions.parentMenuId, 'dictionary');
+assert.equal(divisions.capabilityCode, 'platform.dictionary.read');
 const bootstrapCodes = {
   'diagnostics/release': 'internal.release.read',
   'plugins/customer-insights': 'enterprise.plugins.customer-insights.read',
@@ -92,24 +96,59 @@ assert.equal(access.customerRouteAllowed('/customer/page/create', currentCustome
 const contract = await import('../src/pages/customer/contract.mjs');
 let calls = [], modeResponse;
 const fakeAxios = { get: async url => { calls.push(url); if (modeResponse instanceof Error) throw modeResponse; return { status: 200, data: { success: true, data: calls.length === 1 ? modeResponse : { manifestVersion: 1, items: [] } } }; }, isAxiosError: () => false };
-const navigationApi = evaluateModule('../src/menu/api.ts', { axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
+const navigationApi = evaluateModule('../src/menu/api.ts', { './client': {menuClientCode:'web'}, axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract, './managementNavigation': evaluateModule('../src/menu/managementNavigation.ts') });
 modeResponse = { engineMode: 'LEGACY', items: [] };
 await navigationApi.getVisibleMenuManifest('ent-acme');
 assert.equal(calls.length, 2);assert.equal(calls[1], '/api/v1/enterprises/ent-acme/menu-manifest');
 calls = [];modeResponse = { engineMode: 'MANAGED', items: [] };
-await navigationApi.getVisibleMenuManifest('ent-acme');assert.equal(calls.length, 1);
+await navigationApi.getVisibleMenuManifest('ent-acme');assert.equal(calls.length, 2);assert.equal(calls[1], '/api/v1/platform/authorization/navigation');
 for (const failure of [new Error('403'), new Error('503'), { engineMode: 'UNKNOWN', items: [] }]) {
   calls = [];modeResponse = failure;
   await assert.rejects(() => navigationApi.getVisibleMenuManifest('ent-acme'));assert.equal(calls.length, 1, 'managed/unknown failures never fall back to legacy facts');
 }
 console.log('Menu navigation: directory, explicit-owner, engine-mode and fail-closed contracts passed');
-const managedEditorApi = evaluateModule('../src/pages/menu-manifest/api.ts', { axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
+const managedEditorApi = evaluateModule('../src/pages/menu-manifest/api.ts', { '@/menu/client': {menuClientCode:'web'}, axios: { default: fakeAxios }, '@/pages/customer/contract.mjs': contract });
 calls = [];modeResponse = { engineMode: 'LEGACY', items: [] };
-await managedEditorApi.getManagedManifest('ent-acme');
+await managedEditorApi.getPlatformManifest();
 assert.equal(calls.length, 2);
-assert.equal(calls[1], '/api/v1/enterprises/ent-acme/menu-manifest/management', 'explicit legacy mode retains the original management read');
+assert.equal(calls[1], '/api/v1/platform/menu-manifest', 'explicit legacy mode retains the original management read');
 calls = [];modeResponse = { engineMode: 'MANAGED', items: [] };
-await managedEditorApi.getManagedManifest('ent-acme');assert.equal(calls[1], '/api/v1/enterprises/ent-acme/authorization/menu-layout');
+await managedEditorApi.getPlatformManifest();assert.equal(calls[1], '/api/v1/platform/authorization/menu-manifest');
 calls = [];modeResponse = new Error('503');
-await assert.rejects(() => managedEditorApi.getManagedManifest('ent-acme'));assert.equal(calls.length, 1);
+await assert.rejects(() => managedEditorApi.getPlatformManifest());assert.equal(calls.length, 1);
 console.log('Menu editor selects explicit LEGACY or MANAGED and never falls back on dependency failure');
+
+assert.equal(routes.menuManifest.items.some(item => item.menuId === 'dictionary/form'), false);
+
+assert.equal(routes.menuManifest.items.some(item => item.menuId.startsWith('platform/')), false, 'local platform aliases must not publish duplicate permission resources');
+
+const navigation = evaluateModule('../src/menu/managementNavigation.ts');
+const regionPage = { ...divisions, enabled: true, pageEligible: true };
+const dictParent = { menuId: 'dictionary', enabled: true };
+const tenantRegion = navigation.managementNavigation([dictParent, regionPage], 'ENTERPRISE', 'web');
+assert.ok(!tenantRegion.some(row => row.menuId === regionPage.menuId));
+const qualifiedRegion = navigation.managementNavigation([dictParent, regionPage], 'PLATFORM', 'web');
+assert.ok(navigation.withPlatformEntries([], qualifiedRegion).some(row => row.menuId === regionPage.menuId && row.pageEligible));
+assert.ok(navigation.withPlatformEntries([], qualifiedRegion).some(row => row.menuId === 'dictionary' && row.navOnly));
+
+const exampleRoot = { menuId: 'arco-examples', enabled: true, navOnly: true };
+const formDirectory = { menuId: 'form', parentMenuId: 'arco-examples', enabled: true, navOnly: true };
+const stepPage = { menuId: 'form/step', parentMenuId: 'form', enabled: true, pageEligible: true };
+const groupPage = { ...dictionaryGroups, enabled: true, pageEligible: true };
+const tenantRoles = { menuId: 'roles', enabled: true, pageEligible: true };
+const workspace = { menuId: 'platform-workspace', enabled: true, pageEligible: true };
+const diagnostics = { menuId: 'diagnostics', parentMenuId: workspace.menuId, enabled: true, navOnly: true, pageEligible: false };
+const runtime = { menuId: 'diagnostics/runtime', parentMenuId: diagnostics.menuId, enabled: true, pageEligible: true };
+assert.deepEqual(plain(navigation.withPlatformEntries([], [workspace, diagnostics, runtime]).map(row => row.menuId).sort()),
+  ['diagnostics', 'diagnostics/runtime', 'platform-workspace']);
+assert.equal(navigation.withPlatformEntries([], [{ ...workspace, navOnly: true }, diagnostics, runtime]).length, 0);
+assert.equal(navigation.withPlatformEntries([], [workspace, diagnostics, { ...runtime, pageEligible: false }]).length, 0);
+const merged = navigation.withPlatformEntries([tenantRoles], [
+  dictParent, groupPage, exampleRoot, formDirectory, stepPage,
+  { ...stepPage, menuId: 'form/group', navOnly: true, pageEligible: false },
+  { ...stepPage, menuId: 'statistics' },
+]);
+assert.deepEqual(plain(merged.map(row => row.menuId).sort()), [
+  'arco-examples', 'dictionary', 'dictionary/groups', 'form', 'form/step', 'roles',
+]);
+assert.ok(merged.find(row => row.menuId === 'arco-examples').navOnly);

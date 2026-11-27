@@ -5,12 +5,14 @@ export type ManifestRoute = AuthParams & {
   key: string;
   iconKey?: string;
   ignore?: boolean;
+  navigationAlias?: boolean;
   children?: ManifestRoute[];
   capabilityCode?: string;
 };
 
 export type MenuManifestItem = {
   menuId: string;
+  clientCode?: string;
   parentMenuId?: string;
   path: string;
   titleKey: string;
@@ -32,7 +34,7 @@ export function createMenuManifest(routeTree: ManifestRoute[]): { manifestVersio
   const items: MenuManifestItem[] = [];
   function visit(routes: ManifestRoute[], parentMenuId?: string) {
     routes.forEach((route, index) => {
-      if (route.ignore) return;
+      if (route.ignore || route.navigationAlias) return;
       items.push({
         menuId: route.key,
         ...(parentMenuId ? { parentMenuId } : {}),
@@ -46,5 +48,5 @@ export function createMenuManifest(routeTree: ManifestRoute[]): { manifestVersio
     });
   }
   visit(routeTree);
-  return { manifestVersion: 9, items };
+  return { manifestVersion: 11, items };
 }

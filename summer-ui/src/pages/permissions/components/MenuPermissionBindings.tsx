@@ -1,4 +1,4 @@
-import { activeEnterpriseSelection } from '@/pages/data-scopes/useActiveEnterprise';
+import { activeEnterpriseSelection } from '@/hooks/useActiveEnterprise';
 import { requestMenuRefresh } from '@/menu/refresh';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Checkbox, Space } from '@arco-design/web-react';

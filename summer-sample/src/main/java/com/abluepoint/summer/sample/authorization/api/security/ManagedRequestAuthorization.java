@@ -53,6 +53,9 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
     // A platform enterprise audit contains an enterpriseId but still addresses PLATFORM.
     if (pattern != null && pattern.toString().startsWith("/api/v1/platform/"))
       return ResourceAuthorization.Domain.platform();
+    // The legacy public URL carries a tenant segment, but published dictionaries belong to PLATFORM.
+    if (pattern != null && pattern.toString().startsWith("/public/enterprises/{enterpriseId}/dictionaries/"))
+      return ResourceAuthorization.Domain.platform();
     Object variables = r.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
     if (variables instanceof Map<?, ?> vars && vars.get("enterpriseId") instanceof String id)
       return ResourceAuthorization.Domain.enterprise(id);
@@ -61,14 +64,6 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
     String kind = com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerRoutes
         .domainKind(owner, String.valueOf(pattern));
     if (kind.equals("PLATFORM")) return ResourceAuthorization.Domain.platform();
-    if (owner.equals("com.abluepoint.summer.sample.authorization.AuthorizationChangeEventController")) {
-      String[] values = r.getParameterValues("enterpriseId");
-      if (values == null || values.length == 1 && values[0].isEmpty())
-        return ResourceAuthorization.Domain.enterprise("ent-acme");
-      if (values.length != 1 || !values[0].matches("[A-Za-z0-9_-]{1,80}"))
-        throw new org.springframework.security.access.AccessDeniedException("A single valid enterpriseId is required");
-      return ResourceAuthorization.Domain.enterprise(values[0]);
-    }
     if (com.abluepoint.summer.sample.authorization.domain.permission.BusinessConsumerRoutes
         .domainKind(owner, String.valueOf(pattern)).equals("ENTERPRISE"))
       return ResourceAuthorization.Domain.enterprise(EnterpriseRequestContext.resolve(
@@ -100,14 +95,6 @@ public class ManagedRequestAuthorization implements ResourceRequestAuthorization
               match.domain(), a, resource, com.abluepoint.summer.mvc.request.ServletRequestIdAccessor.requestId(r))).allowed());
         }
         if (chain.getHandler() instanceof HandlerMethod handler) {
-          if (handler.getBeanType().getName().equals("com.abluepoint.summer.sample.authorization.AuthorizationChangeEventController")) {
-            String[] values = r.getParameterValues("enterpriseId");
-            if (values != null && (values.length != 1
-                || !values[0].isEmpty() && !values[0].matches("[A-Za-z0-9_-]{1,80}")))
-              // The final MVC guard rejects this malformed selector before the controller.
-              // Preserve its native AccessDenied translation and request correlation.
-              return new AuthorizationDecision(access.authenticated(a));
-          }
           var d = domain(r, handler);
           return new AuthorizationDecision(
               d != null && access.managed(d)

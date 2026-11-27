@@ -6,9 +6,8 @@ import { Select } from '@arco-design/web-react';
 import { User } from 'oidc-client-ts';
 import { oidcManager } from '../src/auth/oidc';
 import { GlobalContext } from '../src/context';
-import useActiveEnterprise from '../src/pages/data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '../src/hooks/useActiveEnterprise';
 import Roles from '../src/pages/roles';
-import Events from '../src/pages/authorization-events';
 import '@arco-design/web-react/dist/css/arco.css';
 const w = window as any;
 const f = w.fixture = { requests: [], hold: '', pending: [], deny: false, conflict: false, version: 4 };
@@ -22,10 +21,7 @@ axios.defaults.adapter = async (config) => {
   if (method === 'put' && f.conflict) { f.conflict = false; f.version = 9; throw { isAxiosError: true, response: { status: 412, data: { success: false, error: { code: 'SUMMER_VERSION_CONFLICT', message: 'Stale' }, requestId: 'fixture-conflict' }, headers: {} } }; }
   let data: any;
   if (url.endsWith('/interface-resources')) data = { items: [{ httpMethod: 'GET', normalizedPath: '/api/customers', permissionCode: 'GET:/api/customers', resourceType: 'BUSINESS', configurable: true }] };
-  else if (url.startsWith('/api/authorization-events')) {
-    const item = { eventId: 'event-'+tenant, enterpriseId: tenant, resourceType: 'ROLE', resourceId: 'EVENT_'+tenant, eventType: 'CHANGED', version: 1, status: 'PUBLISHED', attempts: 1, requestId: 'fixture-event' };
-    data = method === 'get' ? { items: [item], totalElements: 1 } : item;
-  } else if (url.includes('/users/')) data = { username: 'alice', enterpriseId: tenant, roleIds: ['role-'+tenant], deniedCapabilityCodes: [], version: method === 'put' ? ++f.version : f.version };
+  else if (url.includes('/users/')) data = { username: 'alice', enterpriseId: tenant, roleIds: ['role-'+tenant], deniedCapabilityCodes: [], version: method === 'put' ? ++f.version : f.version };
   else data = method === 'get' ? [row(tenant)] : { ...row(tenant), name: JSON.parse(config.data).name };
   if (f.hold && url.includes(f.hold)) {
     f.hold = '';
@@ -37,7 +33,7 @@ axios.defaults.adapter = async (config) => {
 function Shell() {
   const tenant = useActiveEnterprise();
   return <><Select aria-label="fixture-global-enterprise" value={tenant.enterpriseId || undefined} options={tenant.options} onChange={tenant.change} disabled={tenant.busy} />
-    {new URLSearchParams(location.search).get('page') === 'events' ? <Events /> : <Roles />}</>;
+    <Roles /></>;
 }
 async function start() {
   const payload = btoa(JSON.stringify({ enterprise_memberships: ['ent-acme','tenant-b'].map(enterpriseId => ({ enterpriseId, status: 'ACTIVE' })), active_enterprise_id: 'tenant-b' })).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');

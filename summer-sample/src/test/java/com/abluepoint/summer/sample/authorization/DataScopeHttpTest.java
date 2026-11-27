@@ -49,7 +49,7 @@ class DataScopeHttpTest {
     @Test void currentSelfRangeIsInjectedIntoParameterListDetailAndWrites() throws Exception {
         mvc.perform(put("/api/v1/enterprises/ent-acme/data-scopes/system-parameters")
             .contentType("application/json").content("{\"operator\":\"AND\",\"rules\":[{\"type\":\"SELF\"}]}")
-            .with(user("summer-user")).with(csrf())).andExpect(status().isBadRequest());
+            .with(user("summer-user")).with(csrf())).andExpect(status().isNotFound());
         create("owned.by.alice", "alice");
         create("owned.by.bob", "bob");
         mvc.perform(get("/api/system-parameters").with(member("alice", "system.parameter.read")))
@@ -67,10 +67,10 @@ class DataScopeHttpTest {
 
     @Test void scopeAloneCannotReadManagementAndCrossTenantIsForbidden() throws Exception {
         mvc.perform(get("/api/v1/enterprises/ent-other/data-scopes").with(user("summer-user")))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isNotFound());
         facts.identity("ENTERPRISE:ent-acme", "reader");
         mvc.perform(get("/api/v1/enterprises/ent-acme/data-scopes/system-parameters")
-            .with(member("reader", "enterprise.data-scope.read"))).andExpect(status().isForbidden());
+            .with(member("reader", "enterprise.data-scope.read"))).andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/enterprises/ent-acme/data-scopes/system-parameters").with(user("summer-user")))
             .andExpect(status().isNotFound());
     }

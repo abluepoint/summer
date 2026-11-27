@@ -1,6 +1,9 @@
 package com.abluepoint.summer.sample.authorization.application.data;
 
 import com.abluepoint.summer.sample.authorization.application.permission.ManagedPermissionAccess;
+import com.abluepoint.summer.sample.authorization.application.permission.ManagedConsumerAccess;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
 import java.util.*;
 import java.util.function.Function;
@@ -101,19 +104,6 @@ public class DataReadService {
 
   public <T> T read(
       Domain d, String resource, String action, Authentication a, Function<Scope, T> query) {
-    return readCurrent(d, resource, action, a, null, query);
-  }
-
-  /** A diagnostic can narrow the existing grant set, never supply its own range. */
-  public <T> T readPermission(Domain d, String resource, String action, Authentication a,
-      String permissionId, Function<Scope, T> query) {
-    if (permissionId == null || permissionId.isBlank())
-      throw new AccessDeniedException("A current permission identity is required");
-    return readCurrent(d, resource, action, a, permissionId, query);
-  }
-
-  private <T> T readCurrent(Domain d, String resource, String action, Authentication a,
-      String permissionId, Function<Scope, T> query) {
     var registration = registry.require(resource, action);
     try {
       for (int attempt = 0; attempt < 2; attempt++) {
@@ -135,18 +125,7 @@ public class DataReadService {
                     throw new AccessDeniedException("Active identity required");
                   boolean all = false, self = false;
                   Set<String> departments = new TreeSet<>();
-                  for (var p :
-                      db.queryForList(
-                          "select p.*,s.scope_preset from"
-                              + " summer_permission p join"
-                              + " summer_permission_data_scope s on"
-                              + " s.domain_key=p.domain_key and"
-                              + " s.permission_id=p.permission_id where"
-                              + " p.domain_key=? and p.type='DATA' and"
-                              + " s.data_resource_key=? and s.action=?"
-                              + (permissionId == null ? "" : " and p.permission_id=?"),
-                          permissionId == null ? new Object[]{d.key(), resource, action}
-                              : new Object[]{d.key(), resource, action, permissionId})) {
+                  for (var p : matchingPermissions(d, resource, action, a)) {
                     if (!access.applies(d, a, p)) continue;
                     if ("TENANT_ALL".equals(p.get("scope_preset"))) all = true;
                     else if ("SELF".equals(p.get("scope_preset")) && access.active(d, a))
@@ -177,6 +156,36 @@ public class DataReadService {
     }
   }
 
+  private List<Map<String, Object>> matchingPermissions(Domain domain, String resource, String action, Authentication actor) {
+    String scopeRows = "select p.*,s.scope_preset from summer_permission p join summer_permission_data_scope s"
+        + " on s.domain_key=p.domain_key and s.permission_id=p.permission_id ";
+    var matches = db.queryForList(scopeRows + "where p.domain_key in (?, 'PLATFORM:platform') and p.type='DATA'"
+        + " and s.data_resource_key=? and s.action=?", domain.key(), resource, action);
+    var attributes = RequestContextHolder.getRequestAttributes();
+    if (!(attributes instanceof ServletRequestAttributes servlet)) return matches;
+    var request = servlet.getRequest();
+    if (!domain.equals(request.getAttribute(ManagedConsumerAccess.DOMAIN_ATTRIBUTE))
+        || !(request.getAttribute(ManagedPermissionAccess.RESOURCE_ATTRIBUTE) instanceof String matchedId)) return matches;
+
+    var linked = db.queryForList("""
+        select p.*, s.scope_preset, i.permission_id as target_id, i.status as target_status,
+               i.access_mode as target_mode
+        from summer_permission_data_interface link
+        join summer_permission_data_scope s on s.domain_key=link.domain_key and s.permission_id=link.permission_id
+        join summer_permission p on p.domain_key=s.domain_key and p.permission_id=s.permission_id
+        join summer_permission i on i.domain_key=link.domain_key and i.permission_id=link.interface_permission_id
+        join summer_permission_resource r on r.domain_key=i.domain_key and r.permission_id=i.permission_id
+        where link.domain_key in (?, 'PLATFORM:platform') and s.data_resource_key is null
+          and p.type='DATA' and i.type='INTERFACE' and r.resource_type='INTERFACE' and r.resource_id=?
+        """, domain.key(), matchedId);
+    for (var row : linked) {
+      if (access.applies(domain, actor, Map.of("permission_id", row.get("target_id"),
+          "domain_key", row.get("domain_key"), "access_mode", row.get("target_mode"), "status", row.get("target_status"))))
+        matches.add(row);
+    }
+    return matches;
+  }
+
   private Set<String> departments(Domain d, Authentication a, Map<String, Object> permission) {
     String preset = String.valueOf(permission.get("scope_preset"));
     if (!Set.of("DEPARTMENT", "DEPARTMENT_AND_DESCENDANTS", "SPECIFIED_DEPARTMENTS")
@@ -195,7 +204,7 @@ public class DataReadService {
               "select department_id from summer_permission_selected_department where domain_key=?"
                   + " and permission_id=?",
               String.class,
-              d.key(),
+              permission.get("domain_key"),
               permission.get("permission_id")));
       result.retainAll(active);
       return result;
@@ -231,6 +240,13 @@ public class DataReadService {
     if (rows.size() != 1 || !(rows.getFirst().get("revision") instanceof Number revision)
         || revision.longValue() < 0)
       throw new AccessDeniedException("Unconfirmed authorization domain state");
-    return rows.getFirst();
+    var state = new HashMap<String, Object>();
+    state.put("engine_mode", rows.getFirst().get("engine_mode"));
+    state.put("revision", rows.getFirst().get("revision"));
+    if (!Domain.platform().equals(d)) {
+      var catalog = db.queryForList("select engine_mode,revision from summer_authorization_domain where domain_key='PLATFORM:platform'");
+      state.put("catalog", catalog);
+    }
+    return state;
   }
 }

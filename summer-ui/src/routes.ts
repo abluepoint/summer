@@ -9,6 +9,7 @@ export type IRoute = AuthParams & {
   // Local group routes must not prefix-match disabled descendants.
   exact?: boolean;
   navOnly?: boolean;
+  navigationAlias?: boolean;
   iconKey?: string;
   capabilityCode?: string;
   // 当前页是否展示面包屑
@@ -256,14 +257,6 @@ export const routes: IRoute[] = [
     capabilityCode: 'enterprise.roles.read',
   },
   {
-    name: 'menu.authorizationEvents',
-    key: 'authorization-events',
-    requiredPermissions: [
-      { resource: 'menu.authorizationEvents', actions: ['read'] },
-    ],
-    capabilityCode: 'enterprise.roles.read',
-  },
-  {
     name: 'menu.tasks',
     key: 'tasks',
     requiredPermissions: [{ resource: 'enterprise.tasks', actions: ['read'] }],
@@ -276,11 +269,6 @@ export const routes: IRoute[] = [
       { resource: 'enterprise.messages', actions: ['read'] },
     ],
     capabilityCode: 'enterprise.messages.read',
-  },
-  {
-    name: 'menu.dataScopes',
-    key: 'data-scopes',
-    requiredPermissions: [{ resource: 'menu.dataScopes', actions: ['read'] }],
   },
   {
     name: 'menu.menuManifest',
@@ -308,8 +296,12 @@ export const routes: IRoute[] = [
         ],
       },
       {
-        name: 'menu.dictionary.form',
-        key: 'dictionary/form',
+        name: '省市区管理',
+        key: 'dictionary/divisions',
+        capabilityCode: 'platform.dictionary.read',
+        requiredPermissions: [
+          { resource: 'platform.dictionary', actions: ['read'] },
+        ],
       },
     ],
   },
@@ -385,6 +377,22 @@ export const routes: IRoute[] = [
     key: 'arco-examples',
     children: officialExampleRoutes,
   },
+  { name: '权限管理', key: 'platform/permissions', navigationAlias: true },
+  {
+    name: '平台管理员管理',
+    key: 'platform/administrators',
+    navigationAlias: true,
+  },
+  {
+    name: '平台组织机构管理',
+    key: 'platform/organization',
+    navigationAlias: true,
+  },
+  { name: '平台用户组管理', key: 'platform/user-groups', navigationAlias: true },
+  { name: '文件管理器', key: 'platform/files', navigationAlias: true },
+  { name: '文件存储库', key: 'platform/file-repositories', navigationAlias: true },
+  { name: '平台角色管理', key: 'platform/roles', navigationAlias: true },
+  { name: '菜单管理', key: 'platform/menu-manifest', navigationAlias: true },
 ];
 
 export const menuManifest = createMenuManifest(routes);
@@ -416,13 +424,12 @@ export const generatePermission = (role: string) => {
   return result;
 };
 
-const useRoute = (userPermission): [IRoute[], string] => {
+const useRoute = (): [IRoute[], string] => {
   const menuItems = useMenuItems();
   const permissionRoute = useMemo(
     () => resolveMenuRoutes(routes, menuItems),
     [menuItems]
   );
-
   const defaultRoute = useMemo(() => {
     const firstPage = (items: IRoute[]): string => {
       for (const item of items) {

@@ -329,13 +329,12 @@ for (const platform of [false, true])
   } role write stays in its domain`, async () => {
     const { page, calls } = await open((platform ? 'platform/' : '') + 'roles');
     try {
-      if (platform)
-        await page.getByRole('button', { name: '新建角色' }).click();
+      await page.getByRole('button', { name: '新建角色' }).click();
       await page.getByPlaceholder('角色名称', { exact: true }).fill('测试角色');
       await page.getByPlaceholder('角色编码', { exact: true }).fill('test');
       await page.getByRole('button', { name: '创建角色', exact: true }).click();
       await page
-        .getByText(platform ? '角色已创建' : '角色权限已保存', { exact: true })
+        .getByText('角色已创建', { exact: true })
         .waitFor();
       const write = calls.find((x) => x.method === 'POST');
       assert.equal(
@@ -351,11 +350,12 @@ for (const platform of [false, true])
 test('dirty role blocks navigation to separate platform entry', async () => {
   const { page } = await open('roles');
   try {
+    await page.getByRole('button', { name: '新建角色' }).click();
     await page.getByPlaceholder('角色名称', { exact: true }).fill('未保存');
     const dialog = page.waitForEvent('dialog');
     const click = page
       .getByRole('link', { name: 'platform/roles', exact: true })
-      .click();
+      .evaluate(link => link.click());
     await (await dialog).dismiss();
     await click;
     assert.ok(page.url().endsWith('/__separate/roles'));
@@ -384,11 +384,35 @@ test('platform entry works without tenant membership', async () => {
 test('tenant role edits use catalog choices and let users explicitly remove historical grants', async () => {
   const { page, calls, errors } = await open('roles', '', true);
   try {
-    await page
-      .getByText('权限由平台统一维护，当前租户仅配置角色和人员授权。')
-      .waitFor();
-    await page.getByLabel('编辑角色').click();
-    await page.getByText('已有角色 (启用)', { exact: true }).click();
+    const list = page.getByRole('region', { name: '租户角色列表' });
+    await list.getByText('已有角色').waitFor();
+    assert.ok(!calls.some(x => x.query.catalog));
+    let deleteCount = 0;
+    let role = {
+      roleId: 'r1', name: '已有角色', code: 'existing', status: 'ACTIVE',
+      permissionIds: ['shared-permission', 'legacy-permission'],
+      legacyPermissions: [{ permissionId: 'legacy-permission', name: '历史菜单授权' }],
+      version: 1,
+    };
+    await page.route('**/api/v1/enterprises/tenant-a/roles/r1', async route => {
+      if (route.request().method() === 'DELETE') {
+        assert.equal(route.request().headers()['if-match'], '"' + role.version + '"');
+        deleteCount++;
+      }
+      if (route.request().method() === 'PATCH') {
+        assert.equal(route.request().headers()['if-match'], '"1"');
+        role = { ...role, ...route.request().postDataJSON(), version: 2 };
+      }
+      await route.fulfill({ json: { success: true, data: role } });
+    });
+    await list.getByRole('button', { name: '查看' }).click();
+    await page.getByRole('region', { name: '已授权限' }).getByText('历史菜单授权').waitFor();
+    await page.getByRole('button', { name: '关闭', exact: true }).click();
+    await list.getByRole('button', { name: '编辑' }).click();
+    await page.getByLabel('角色名称').fill('修改名称');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await list.getByText('修改名称').waitFor();
+    await list.getByRole('button', { name: '配置权限' }).click();
     await page.getByText('历史授权（可保留或移除）', { exact: true }).waitFor();
     assert.equal(
       await page
@@ -404,7 +428,7 @@ test('tenant role edits use catalog choices and let users explicitly remove hist
     await page.getByText('历史菜单授权', { exact: true }).click();
     assert.equal(await legacy.isChecked(), false);
     await page
-      .getByRole('button', { name: '保存角色权限', exact: true })
+      .getByRole('button', { name: '保存', exact: true })
       .click();
     await page.waitForFunction(
       () => document.querySelectorAll('.arco-spin-loading').length === 0
@@ -418,6 +442,13 @@ test('tenant role edits use catalog choices and let users explicitly remove hist
       false
     );
     assert.deepEqual(errors, []);
+    await list.getByRole('button', { name: '删除' }).click();
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+    assert.equal(deleteCount, 0);
+    await list.getByRole('button', { name: '删除' }).click();
+    await page.getByRole('button', { name: '确认删除', exact: true }).click();
+    await list.getByText('existing', { exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(deleteCount, 1);
     await page.screenshot({ path: output + 'tenant-shared-catalog-role.png' });
   } finally {
     await page.close();
@@ -494,63 +525,117 @@ test('platform role list supports search, details, edit and confirmed delete', a
   }
 });
 
-test('platform toolbar opens a fresh user assignment and saves the selected roles', async () => {
-  const { page, errors } = await open('platform/roles', '', true);
+test('platform administrator row assigns roles to its displayed account', async () => {
+  const {page,errors} = await open('platform/administrators','',true, async page => {
+    await page.route('**/api/v1/platform/administrators', route => route.fulfill({json:{success:true,data:{
+      version:1,people:[{username:'operator',displayName:'运营人员',active:true}],
+      roles:[{roleId:'r1',name:'审核员',status:'ACTIVE'}],
+      assignments:[{username:'operator',version:3,roleId:null}]
+    }}}));
+  });
   try {
-    let writes = 0;
-    await page.route(
-      '**/api/v1/platform/users/operator/roles',
-      async (route) => {
-        const request = route.request();
-        let assigned = [];
-        if (request.method() === 'PUT') {
-          assert.equal(request.headers()['if-match'], '"3"');
-          assigned = request.postDataJSON().roleIds;
-          assert.deepEqual(assigned, ['r1']);
-          writes++;
-        }
-        await route.fulfill({
-          json: {
-            success: true,
-            data: {
-              username: 'operator',
-              roleIds: assigned,
-              sources: [],
-              version: 3 + writes,
-            },
-          },
-        });
-      }
-    );
-    const trigger = page.getByRole('button', {
-      name: '分配用户角色',
-      exact: true,
+    const writes=[];
+    await page.route('**/api/v1/platform/users/operator/roles', async route=>{
+      writes.push([route.request().headers()['if-match'],route.request().postDataJSON()]);
+      await route.fulfill({json:{success:true,data:{version:4}}});
     });
-    const username = page.getByRole('textbox', { name: '用户名' });
-    assert.equal(await username.count(), 0);
-    await trigger.click();
-    await username.fill('operator');
-    await page.getByLabel('用户角色', { exact: true }).click();
-    await page
-      .locator('.arco-select-option')
-      .getByText('已有角色', { exact: true })
-      .click();
-    await username.click();
-    await page
-      .locator('.arco-select-option:visible')
-      .waitFor({ state: 'hidden' });
-    await page.screenshot({ path: output + 'platform-role-assignment.png' });
-    await page.getByRole('button', { name: '保存用户角色' }).click();
-    await username.waitFor({ state: 'hidden' });
-    assert.equal(writes, 1);
-    await trigger.click();
-    assert.equal(await username.inputValue(), '');
-    await username.press('Escape');
-    await username.waitFor({ state: 'hidden' });
+    await page.getByRole('button',{name:'分配角色',exact:true}).click();
+    await page.locator('.arco-modal .arco-select-view').click();
+    await page.locator('.arco-select-option').getByText('审核员').click();
+    await page.locator('.arco-modal-title').click();
+    await page.locator('.arco-modal-footer .arco-btn-primary').click();
+    await page.locator('.arco-modal-wrapper:visible').waitFor({state:'hidden'});
+    assert.deepEqual(writes,[['"3"',{roleIds:['r1']}]]);
+    assert.deepEqual(errors,[]);
+  } finally {await page.close();}
+});
+
+test('platform organization counts people once and filters direct or descendant affiliations', async () => {
+  const {page,errors}=await open('platform/organization','',false,async page=>{
+    await page.route('**/api/v1/platform/platform-departments',route=>route.fulfill({json:{success:true,data:{
+      version:1,all:true,departments:[{id:'a',name:'运营部',enabled:true},{id:'b',parentId:'a',name:'夜班组',enabled:true}],
+      people:[{username:'one',displayName:'李明'},{username:'two',displayName:'张三'},{username:'three',displayName:'王五'}],
+      memberships:[{username:'one',departmentId:'a',primary:true},{username:'one',departmentId:'b'},{username:'two',departmentId:'b',primary:true}]
+    }}}));
+  });
+  try {
+    await page.getByRole('heading',{name:'平台组织机构 · 3 人'}).waitFor();
+    await page.getByText('未分配部门',{exact:true}).first().click();
+    await page.getByRole('heading',{name:'平台组织机构 · 1 人'}).waitFor();
+    await page.locator('.arco-tree-node-title').getByText('运营部',{exact:true}).click();
+    await page.getByRole('heading',{name:'运营部 · 1 人'}).waitFor();
+    await page.getByText('包含下级部门',{exact:true}).click();
+    await page.getByRole('heading',{name:'运营部 · 2 人'}).waitFor();
+    assert.deepEqual(errors,[]);
+  } finally {await page.close();}
+});
+
+test('assigns an unassigned administrator to an enabled department in staff scope', async () => {
+  const directory = {
+    version: 7, all: true, writable: { staff: { all: false, ids: ['ops', 'closed'] } },
+    departments: [
+      { id: 'hq', name: '管理中心', enabled: true },
+      { id: 'ops', parentId: 'hq', name: '运营部', enabled: true },
+      { id: 'closed', name: '停用部', enabled: false },
+      { id: 'outside', name: '其他部', enabled: true },
+    ],
+    people: [{ username: 'operator', displayName: '王五', active: true }],
+    memberships: [],
+  };
+  const writes = [];
+  const { page, errors } = await open('platform/organization', '', false, async (page) => {
+    await page.route('**/api/v1/platform/platform-departments', route =>
+      route.fulfill({ json: { success: true, data: directory } }));
+    await page.route('**/api/v1/platform/platform-departments/*/members/*', async route => {
+      const request = route.request();
+      writes.push([request.method(), new URL(request.url()).pathname,
+        request.headers()['if-match'], request.postDataJSON()]);
+      directory.memberships.push({ username: 'operator', departmentId: 'ops', primary: true });
+      directory.version++;
+      await route.fulfill({ json: { success: true, data: { saved: true } } });
+    });
+  });
+  try {
+    await page.getByText('未分配部门', { exact: true }).first().click();
+    const row = page.getByRole('row').filter({ hasText: 'operator' });
+    await row.getByRole('button', { name: '分配部门' }).click();
+    const modal = page.locator('.arco-modal:visible');
+    const ok = modal.locator('.arco-modal-footer .arco-btn-primary');
+    assert.equal(await ok.isDisabled(), true);
+    const search = modal.locator('.arco-tree-select input');
+    await search.click();
+    const popup = page.locator('.arco-tree-select-popup:visible');
+    const parent = popup.getByRole('treeitem').filter({ hasText: '管理中心' });
+    const toggle = parent.locator('.arco-tree-node-switcher-icon');
+    if (await parent.getAttribute('aria-expanded') === 'true') await toggle.click();
+    await toggle.click();
+    await popup.getByText('运营部', { exact: true }).waitFor();
+    await toggle.click();
+    await popup.getByText('管理中心', { exact: true }).click();
+    assert.equal(await ok.isDisabled(), true);
+    assert.equal(await popup.getByText(/停用部|其他部/).count(), 0);
+    await search.fill('不存在');
+    await popup.getByText('无匹配部门').waitFor();
+    await search.fill(' 营 ');
+    await popup.getByText('运营部', { exact: true }).click();
+    await modal.getByText('管理中心 / 运营部', { exact: true }).first().waitFor();
+    await modal.getByRole('button', { name: '取消' }).click();
+    await modal.waitFor({ state: 'hidden' });
+    assert.deepEqual(writes, []);
+    await row.getByRole('button', { name: '分配部门' }).click();
+    assert.equal(await ok.isDisabled(), true);
+    await search.click();
+    await search.fill('营');
+    await popup.getByText('运营部', { exact: true }).click();
+    await ok.click();
+    await page.getByRole('heading', { name: '平台组织机构 · 0 人' }).waitFor();
+    assert.deepEqual(writes, [['PUT', '/api/v1/platform/platform-departments/ops/members/operator',
+      '"7"', { action: 'JOIN' }]]);
+    await page.locator('.arco-tree-node-title').getByText('运营部', { exact: true }).click();
+    assert.match(await row.innerText(), /运营部（主属）/);
+    assert.equal(await row.getByRole('button', { name: '分配部门' }).count(), 0);
     assert.deepEqual(errors, []);
-  } finally {
-    await page.close();
-  }
+  } finally { await page.close(); }
 });
 
 test('permission group search reveals ancestors and preserves the selected list filter', async () => {
@@ -652,17 +737,19 @@ test('permission group search reveals ancestors and preserves the selected list 
   }
 });
 
-test('permission tables filter together and paginate independently', async () => {
+test('permission tabs share filters and preserve independent pagination', async () => {
   const { page, calls, errors } = await open('platform/permissions', '', true);
   try {
-    const table = (name) => page.getByRole('region', { name });
+    const table = (name) => page.getByRole('tabpanel', { name });
+    const selectTab = (name) => page.getByRole('tab', { name, exact: true }).click();
     const menu = table('菜单权限');
     const api = table('接口权限');
     const data = table('数据权限');
     await api.getByText('接口条目1', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('tabpanel').count(), 1);
+    assert.equal(await page.getByRole('tab', { selected: true }).innerText(), '接口权限');
+    await selectTab('菜单权限');
     await menu.getByText('菜单条目1', { exact: true }).waitFor();
-    await data.getByText('数据条目1', { exact: true }).waitFor();
-    assert.equal(await api.getByText('菜单条目1', { exact: true }).count(), 0);
     const lists = () => calls.filter((c) => c.path.endsWith('/permissions'));
     const before = lists().length;
     await menu
@@ -676,6 +763,10 @@ test('permission tables filter together and paginate independently', async () =>
         .map((c) => [c.query.type, c.query.page]),
       [['MENU', '2']]
     );
+    await selectTab('数据权限');
+    await data.getByText('数据条目1', { exact: true }).waitFor();
+    await selectTab('菜单权限');
+    await menu.getByText('菜单条目21').waitFor();
     await page.getByRole('button', { name: '报表查询', exact: true }).click();
     await menu.getByText('菜单条目1', { exact: true }).waitFor();
     assert.deepEqual(
@@ -691,9 +782,11 @@ test('permission tables filter together and paginate independently', async () =>
       ['DATA', 'INTERFACE', 'MENU']
     );
     await page.getByRole('textbox', { name: '权限名称筛选' }).fill('数据条目');
-    await data.getByText('数据条目1', { exact: true }).waitFor();
-    await api.locator('.arco-empty').waitFor();
     await menu.locator('.arco-empty').waitFor();
+    await selectTab('接口权限');
+    await api.locator('.arco-empty').waitFor();
+    await selectTab('数据权限');
+    await data.getByText('数据条目1', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally {
     await page.close();
@@ -959,8 +1052,9 @@ test('role details browse only granted groups and pages, including historical an
 test('data permission replaces its legacy scope using the interface permission group tree', async () => {
   const { page, calls, errors } = await open('platform/permissions', '', true);
   try {
+    await page.getByRole('tab', { name: '数据权限' }).click();
     await page
-      .getByRole('region', { name: '数据权限' })
+      .getByRole('tabpanel', { name: '数据权限' })
       .getByRole('button', { name: '编辑' })
       .click();
     const dialog = page.getByRole('dialog');
@@ -1034,7 +1128,7 @@ test('interface transfer searches across directory pages and saves explicit move
       }
       return respond(route, binding);
     });
-    const edit = page.getByRole('region', { name: '接口权限' }).getByRole('button', { name: '编辑' });
+    const edit = page.getByRole('tabpanel', { name: '接口权限' }).getByRole('button', { name: '编辑' });
     await edit.click();
     const dialog = page.getByRole('dialog');
     const target = dialog.locator('.arco-transfer-view-target');
@@ -1099,7 +1193,7 @@ test('interface transfer retries only the pending association after metadata suc
       });
       return ok(route, { resourceIds: [], version: 4 });
     });
-    await page.getByRole('region', { name: '接口权限' }).getByRole('button', { name: '编辑' }).click();
+    await page.getByRole('tabpanel', { name: '接口权限' }).getByRole('button', { name: '编辑' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByText('目录中已失效 · old').click();
     await dialog.getByRole('button', { name: 'move selected left' }).click();
@@ -1156,6 +1250,239 @@ test('administrative divisions expand by parent, edit with revision and retain u
     await row.getByText('东城区测试').waitFor();
     await row.getByText(/2026\/11\/24/).waitFor();
     assert.deepEqual(reads, [null, 'bj', null, 'bj']);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('register and remove a platform file repository', async () => {
+  let rows = [];
+  const { page, errors } = await open('platform/file-repositories', '', false, async page => {
+    await page.route(/\/api\/v1\/platform\/file-repositories(?:\/repo(?:\/credentials)?)?$/, async route => {
+      const request = route.request();
+      if (request.method() === 'POST') {
+        const form = request.postDataJSON();
+        assert.equal(form.accessKeyId, 'test-access');
+        assert.equal(form.secretAccessKey, 'test-secret');
+        rows = [{ name: form.name, type: form.type, id: 'repo', path: 's3://' + form.path, state: 'ONLINE', blobCount: 3, totalSize: 2048, availableSpace: null }];
+      } else if (request.method() === 'DELETE') rows = [];
+      await route.fulfill({ json: { success: true, data: rows } });
+    });
+  });
+  try {
+    await page.getByRole('button', { name: '添加存储库' }).click();
+    await page.getByLabel('名字', { exact: true }).fill('归档');
+    await page.locator('.arco-modal .arco-select-view').click();
+    await page.locator('.arco-select-option').getByText('S3').click();
+    await page.getByLabel('存储位置').fill('archive');
+    await page.getByLabel('Access Key ID', {exact:true}).fill('test-access');
+    await page.getByLabel('Secret Access Key', {exact:true}).fill('test-secret');
+    await page.locator('.arco-modal-footer .arco-btn-primary').click();
+    const row = page.getByRole('row').filter({ hasText: 's3://archive' });
+    await row.getByText('未提供').waitFor();
+    assert.match(await row.innerText(), /2 KiB/);
+    await row.getByRole('button', {name: '更换密钥'}).click();
+    assert.equal(await page.getByLabel('Secret Access Key').inputValue(), '');
+    await page.getByLabel('Access Key ID').fill('replacement-id');
+    await page.getByLabel('Secret Access Key').fill('replacement-secret');
+    const rotation = page.waitForRequest(req => req.method() === 'PUT' && req.url().endsWith('/repo/credentials'));
+    await page.locator('.arco-modal-footer .arco-btn-primary').click();
+    assert.deepEqual((await rotation).postDataJSON(), {accessKeyId:'replacement-id', secretAccessKey:'replacement-secret'});
+    await page.locator('.arco-modal-wrapper:visible').waitFor({state:'hidden'});
+    await row.getByRole('button', { name: '移除' }).click();
+    await page.locator('.arco-modal-footer .arco-btn-primary').click();
+    await row.waitFor({ state: 'hidden' });
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('show uploaded files on entry and restore their folder after refresh', async () => {
+  const root = [{ name: '资料', folder: true, size: 0 }];
+  const items = [];
+  const { page, errors } = await open('platform/files', '', false, async page => {
+    await page.route(/\/api\/v1\/platform\/files(?:\/|$)/, async route => {
+      const url = new URL(route.request().url());
+      let data;
+      if (url.pathname.endsWith('/upload')) {
+        items.push({ name: '附件.txt', folder: false, size: 3 });
+        data = { uploaded: true };
+      } else if (url.pathname.endsWith('/entries')) {
+        data = url.searchParams.get('folder') === '资料' ? items : root;
+      } else {
+        data = [{ id: 'repo', name: '文档库' }];
+      }
+      await route.fulfill({ json: { success: true, data } });
+    });
+  });
+  try {
+    await page.getByRole('button', { name: '资料', exact: true }).click();
+    await page.getByRole('navigation', { name: '文件目录' }).getByText('资料', { exact: true }).waitFor();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: '上传文件' }).click();
+    const dialog = await chooser;
+    const permissions = page.waitForResponse(r => r.url().includes('/authorization/operations'));
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await permissions;
+    assert.ok(await dialog.element().evaluate(el => el.isConnected));
+    await dialog.setFiles({
+      name: '附件.txt', mimeType: 'text/plain', buffer: Buffer.from('abc'),
+    });
+    await page.getByRole('region', { name: '上传列表' }).getByText('附件.txt · 已上传').waitFor();
+    const row = page.getByRole('row').filter({ hasText: '附件.txt' });
+    await row.waitFor();
+    await page.reload();
+    await row.waitFor();
+    const input = page.getByLabel('选择上传文件');
+    const upload = '**/files/repo/upload?*';
+    const sample = { name: '失败.txt', mimeType: 'text/plain', buffer: Buffer.from('abc') };
+    await page.route(upload, route => route.fulfill({ status: 413, body: '' }));
+    await input.setInputFiles(sample);
+    const alert = page.getByRole('region', { name: '上传列表' }).getByRole('alert').first();
+    await alert.getByText(/失败.txt.*上传失败.*超过服务器允许的上传大小/).waitFor();
+    await page.locator('.arco-message-error').getByText(/失败.txt 上传失败/).waitFor();
+    await page.unroute(upload);
+    await page.route(upload, route => route.abort('failed'));
+    await input.setInputFiles(sample);
+    await alert.getByText(/失败.txt.*上传失败.*未收到服务器响应/).waitFor();
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('confirm file deletion and retain the row on failure', async () => {
+  const entries = [{ name: '文件夹', folder: true, size: 0 }, { name: '样例 #1.txt', folder: false, size: 2 }];
+  let deletes = 0;
+  const { page, errors } = await open('platform/files', '', false, async page => {
+    await page.route(/\/api\/v1\/platform\/files(?:\/|$)/, async route => {
+      const url = new URL(route.request().url());
+      if (route.request().method() === 'DELETE') {
+        if (url.searchParams.get('key') === '文件夹/') {
+          entries.splice(0, 1);
+          return route.fulfill({ json: { success: true, data: { deleted: true } } });
+        }
+        assert.equal(url.searchParams.get('key'), '样例 #1.txt');
+        if (++deletes === 1) return route.fulfill({
+          status: 503, json: { success: false, error: { message: '存储库暂不可用' } },
+        });
+        entries.pop();
+        return route.fulfill({ json: { success: true, data: { deleted: true } } });
+      }
+      const data = url.pathname.endsWith('/entries') ? entries : [{ id: 'repo', name: '测试库' }];
+      return route.fulfill({ json: { success: true, data } });
+    });
+  });
+  try {
+    const row = page.getByRole('row').filter({ hasText: '样例 #1.txt' });
+    const remove = row.getByRole('button', { name: '删除', exact: true });
+    const modal = page.locator('.arco-modal:visible');
+    await remove.click();
+    await modal.getByText('确认删除文件「样例 #1.txt」？').waitFor();
+    await modal.locator('.arco-modal-footer button').first().click();
+    await modal.waitFor({ state: 'hidden' });
+    assert.equal(deletes, 0);
+    await remove.click();
+    const confirm = modal.getByRole('button', { name: '确认删除' });
+    await confirm.click();
+    await modal.getByText('删除失败：存储库暂不可用').waitFor();
+    assert.equal(await row.count(), 1);
+    await confirm.click();
+    await row.waitFor({ state: 'detached' });
+    const folderRow = page.getByRole('row').filter({ hasText: '文件夹' });
+    await folderRow.getByRole('button', { name: '删除', exact: true }).click();
+    await modal.getByText('确认删除文件夹「文件夹」？只能删除空文件夹。').waitFor();
+    await confirm.click();
+    await folderRow.waitFor({ state: 'detached' });
+    assert.equal(await page.getByRole('button', { name: '删除', exact: true }).count(), 0);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('navigate file breadcrumbs to any ancestor in the selected repository', async () => {
+  const names = ['研发 #1', '归档', '归档'];
+  const { page, errors } = await open('platform/files', '', false, async page => {
+    await page.route(/\/api\/v1\/platform\/files(?:\/|$)/, async route => {
+      const url = new URL(route.request().url());
+      const folder = url.searchParams.get('folder') || '';
+      const depth = folder ? folder.split('/').length : 0;
+      assert.equal(folder, names.slice(0, depth).join('/'));
+      const data = !url.pathname.endsWith('/entries') ? [{ id: 'repo', name: '文档库' }]
+        : depth < names.length ? [{ name: names[depth], folder: true, size: 0 }] : [];
+      await route.fulfill({ json: { success: true, data } });
+    });
+  });
+  try {
+    const trail = page.getByRole('navigation', { name: '文件目录' });
+    const table = page.getByRole('table');
+    for (const name of names) await table.getByRole('button', { name, exact: true }).click();
+    assert.deepEqual(await trail.getByRole('listitem').allTextContents(), ['根目录', ...names]);
+    await trail.getByRole('button', { name: names[0] }).press('Enter');
+    await table.getByRole('button', { name: names[1], exact: true }).waitFor();
+    assert.equal(await trail.locator('[aria-current]').textContent(), names[0]);
+    await page.reload();
+    await trail.getByRole('button', { name: '根目录' }).click();
+    await table.getByRole('button', { name: names[0], exact: true }).waitFor();
+    assert.equal(await trail.locator('[aria-current]').textContent(), '根目录');
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('browse only folders in the sidebar and list files in the selected directory', async () => {
+  const listing = (name, folder = false) => ({ name, folder, size: 0 });
+  const files = Array.from({ length: 12 }, (_, i) => listing('资料-' + i + '.txt'));
+  const reads = [];
+  const { page, errors } = await open('platform/files', '', false, async page => {
+    await page.route(/\/api\/v1\/platform\/files(?:\/|$)/, async route => {
+      const url = new URL(route.request().url());
+      const path = url.searchParams.get('folder') || '';
+      let data = [{ id: 'one', name: '文档库' }, { id: 'two', name: '其他库' }];
+      if (url.pathname.endsWith('/entries')) {
+        reads.push(path);
+        data = url.pathname.includes('/two/') ? [listing('其他文件')]
+          : path === '' ? [listing('归档 #1', true), listing('空目录', true), listing('根文件.txt')]
+          : path === '归档 #1' ? [listing('子目录', true), ...files] : [];
+      }
+      await route.fulfill({ json: { success: true, data } });
+    });
+  });
+  try {
+    const tree = page.getByRole('complementary', { name: '目录树' });
+    const table = page.getByRole('table');
+    const trail = page.getByRole('navigation', { name: '文件目录' });
+    const dir = tree.getByRole('treeitem').filter({ hasText: '归档 #1' });
+    await dir.waitFor();
+    assert.deepEqual([...new Set(reads)], ['']);
+    await table.getByText('根文件.txt').waitFor();
+    assert.equal(await tree.getByText('根文件.txt').count(), 0);
+    await dir.getByRole('button', { name: 'expand button' }).click();
+    await tree.getByText('子目录', { exact: true }).waitFor();
+    assert.equal(await tree.getByText(/资料-.*\.txt/).count(), 0);
+    assert.equal(await trail.locator('[aria-current]').textContent(), '根目录');
+    await tree.getByText('归档 #1', { exact: true }).click();
+    await table.getByText('资料-0.txt', { exact: true }).waitFor();
+    await page.locator('.arco-pagination-item').filter({ hasText: /^2$/ }).click();
+    await table.getByText('资料-11.txt', { exact: true }).waitFor();
+    assert.equal(await trail.locator('[aria-current]').textContent(), '归档 #1');
+    await page.reload();
+    await tree.locator('.arco-tree-node-selected').getByText('归档 #1').waitFor();
+    await tree.getByText('根目录', { exact: true }).click();
+    await table.getByRole('button', { name: '空目录' }).waitFor();
+    const left = await tree.boundingBox();
+    const right = await table.boundingBox();
+    assert.ok(left.x + left.width <= right.x);
+    await page.locator('.arco-card .arco-select-view').click();
+    await page.locator('.arco-select-option').getByText('其他库').click();
+    await table.getByText('其他文件', { exact: true }).waitFor();
+    assert.equal(await tree.getByText('其他文件').count(), 0);
+    assert.equal(await tree.getByText('归档 #1').count(), 0);
+    assert.ok(!reads.includes('空目录'));
     assert.deepEqual(errors, []);
   } finally {
     await page.close();

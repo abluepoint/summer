@@ -1,3 +1,5 @@
+> 历史验收入口：旧数据权限菜单和 `/data-scopes` API 已于 2026-11-20 退休。以下脚本仅用于匹配的历史制品，不能用于当前版本；当前契约见 [ADR 0040](../../../docs/adr/0040-retire-legacy-data-scope-management.md)。
+
 # T17 actual data-scope acceptance
 
 `run.py` runs real PKCE/HTTP, MySQL readbacks, isolated Redis, policy scopes, two tenants/users, restart persistence and Chrome. `ui-run.py` replays only the UI recovery flow and its required real management API setup. Both use the current shared `summer-ui` workspace and record related source hashes; no synthetic principal, network mocking or SQL business-data writes.

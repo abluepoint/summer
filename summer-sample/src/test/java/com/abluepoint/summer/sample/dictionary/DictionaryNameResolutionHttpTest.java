@@ -33,12 +33,12 @@ class DictionaryNameResolutionHttpTest {
         managed = new com.abluepoint.summer.sample.authorization.BusinessManagedAuthorizationTestFixture(
                 managedDb, managedTransactions, managedInterfaces);
         managed.configuration("ent-acme", "dictionaries", true, "dictionary-operator");
-        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator",
+        operatorRole = current.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator",
                 (handler, path, method) -> handler.getBeanType().equals(DictionaryController.class)
                         && handler.getMethod().getName().equals("draft") && method.equals("GET")
                         && path.equals("/api/dictionaries/{code}/draft"));
         managed.data("ent-acme", "operator", "dictionaries", "read", "TENANT_ALL");
-        managed.interfaces("ENTERPRISE:ent-acme", "other-author", java.util.Set.of("dictionaries"));
+        managed.interfaces("PLATFORM:platform", "other-author", java.util.Set.of("dictionaries"));
         managed.data("ent-acme", "other-author", "dictionaries", "create", "TENANT_ALL");
         // Creating an item also advances the parent dictionary draft revision.
         managed.data("ent-acme", "other-author", "dictionaries", "update", "TENANT_ALL");
@@ -46,12 +46,12 @@ class DictionaryNameResolutionHttpTest {
 
     @org.junit.jupiter.api.AfterEach
     void releaseManagedAuthorization() {
-        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "operator", operatorRole);
+        current.revoke(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.platform(), "operator", operatorRole);
         managed.close();
     }
 
     private static final String PUBLIC = "/public/enterprises/ent-acme/dictionaries/name-resolution";
-    private static final String RESOLVE = "/api/v1/enterprises/ent-acme/dictionaries/name-resolution/resolve-names";
+    private static final String RESOLVE = "/api/v1/platform/dictionaries/name-resolution/resolve-names";
     @Autowired MockMvc http;
 
     @Test
@@ -87,9 +87,9 @@ class DictionaryNameResolutionHttpTest {
         http.perform(post(RESOLVE).with(identity("dictionary-reader", "SCOPE_customer.read"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"values\":[\"selected\"]}"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.success").value(false));
-        http.perform(post(RESOLVE.replace("ent-acme", "ent-other")).with(identity("SCOPE_platform.dictionary.read"))
+        http.perform(post(RESOLVE).header("X-Enterprise-Id","ent-other").with(identity("SCOPE_platform.dictionary.read"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"values\":[\"selected\"]}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
         long version = 1;
         for (String flag : List.of("publicReadable", "enabled")) {
             changeFlag(flag, false); publish(version++);
@@ -101,7 +101,7 @@ class DictionaryNameResolutionHttpTest {
     }
 
     @Test
-    void overrideLabelsAndBaseOnlyOldValuesUseTheSameAuthorizedSource() throws Exception {
+    void enterpriseOverrideCannotChangePlatformNames() throws Exception {
         create();
         http.perform(post("/api/dictionaries/name-resolution/items").with(writer()).contentType(MediaType.APPLICATION_JSON)
                 .content(DraftRevisionFixture.revised(http, "/api/dictionaries/name-resolution/items", "{\"value\":\"old-value\",\"label\":\"Base old name\",\"sortOrder\":1,\"enabled\":true}")))
@@ -109,16 +109,16 @@ class DictionaryNameResolutionHttpTest {
         publish(1);
         http.perform(put("/api/dictionaries/name-resolution/overrides/_tenant").with(writer()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"value\":[{\"value\":\"selected\",\"label\":\"Override name\",\"sortOrder\":0,\"enabled\":true}],\"publicReadable\":true,\"enabled\":true}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
         http.perform(post(RESOLVE).with(identity("SCOPE_platform.dictionary.read"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"values\":[\"selected\",\"old-value\"]}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Override name"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].label").value("Selected"))
                 .andExpect(jsonPath("$.data.items[1].label").value("Base old name"))
                 .andExpect(jsonPath("$.data.publishedVersion").value(2))
-                .andExpect(jsonPath("$.data.publishedRevision").isNumber())
-                .andExpect(jsonPath("$.data.source").value("override"));
+                .andExpect(jsonPath("$.data.publishedRevision").isEmpty())
+                .andExpect(jsonPath("$.data.source").value("base"));
         http.perform(get(PUBLIC)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(1)));
+                .andExpect(jsonPath("$.data.items", org.hamcrest.Matchers.hasSize(2)));
     }
 
     @Test

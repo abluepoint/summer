@@ -1,5 +1,7 @@
 # #142 角色及授权事件的活动租户集成验收
 
+> 2026-11-20：授权事件页面、列表/重试和授权解释接口已退役，见 [ADR 0041](../../../docs/adr/0041-retire-authorization-event-management.md)。本目录涉及旧页面或 `/api/authorization-events` 的脚本保留为历史验收材料，不能用于当前版本验收；内部事件写入、事务一致性与投递测试继续保留。
+
 `run.py` 使用独立真实 MySQL schema、独立 Redis 容器和固定候选 JAR，通过正式管理 API 创建两个租户与测试成员。`browser.mjs` 在 Google Chrome 中完成严格 PKCE 登录，操作实际 React/Arco 页面。无业务 SQL 写入、无网络替身、无修改 JWT 或服务端组织上下文来模拟租户选择。
 
 在仓库根运行。设置 `SUMMER_T34_EVIDENCE_DIR` 为新的仓库内证据目录、`SUMMER_T34_CANDIDATE` 为不可变 JAR 绝对路径、`SUMMER_T34_CANDIDATE_SHA256` 为其真实 SHA-256，然后执行：

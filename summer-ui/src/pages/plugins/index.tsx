@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Form, Input, Message, Space, Table, Tag, Typography } from '@arco-design/web-react';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import useLocale from '@/utils/useLocale';
-import { disablePlugin, enablePlugin, getCustomerInsights, getPluginDiagnostic, listEnterprisePlugins, listPlugins, Plugin, PluginApiError, PluginDiagnostic, PluginInsights, registerPlugin } from './api';
-
-const enterpriseId = 'ent-acme';
+import { disablePlugin, enablePlugin, getCustomerInsights, getPluginDiagnostic, listPlugins, Plugin, PluginApiError, PluginDiagnostic, PluginInsights, registerPlugin } from './api';
 
 export default function PluginsPage() {
+  const { enterpriseId } = useActiveEnterprise();
+  return <PluginManagement key={enterpriseId} enterpriseId={enterpriseId} />;
+}
+
+function PluginManagement({ enterpriseId }: { enterpriseId: string }) {
   const t = useLocale();
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [insights, setInsights] = useState<PluginInsights | null>(null);
@@ -28,8 +32,8 @@ export default function PluginsPage() {
     if (!mounted.current) return Promise.resolve();
     const epoch = invalidate();
     setLoading(true);
-    return Promise.all([listPlugins(), listEnterprisePlugins(enterpriseId)])
-      .then(([platform]) => { if (current(epoch)) setPlugins(platform.items); })
+    return listPlugins()
+      .then((platform) => { if (current(epoch)) setPlugins(platform.items); })
       .catch((failure) => { if (current(epoch)) setError(failure); })
       .finally(() => { if (current(epoch)) setLoading(false); });
   };
@@ -83,7 +87,7 @@ export default function PluginsPage() {
       { title: t['plugins.pluginId'], dataIndex: 'pluginId' }, { title: t['plugins.version'], dataIndex: 'version' },
       { title: t['plugins.status'], dataIndex: 'status', render: (value) => <Tag color={value === 'ENABLED' ? 'green' : value === 'INCOMPATIBLE' ? 'red' : 'gray'}>{value}</Tag> },
       { title: t['plugins.trusted'], dataIndex: 'trusted', render: (value) => value ? t['plugins.yes'] : t['plugins.no'] },
-      { title: t['plugins.actions'], render: (_, plugin) => <Space><Button size="small" onClick={() => toggle(plugin)}>{plugin.status === 'ENABLED' ? t['plugins.disable'] : t['plugins.enable']}</Button><Button size="small" onClick={() => inspect(plugin)}>{t['plugins.diagnostic']}</Button>{plugin.status === 'ENABLED' && <Button size="small" onClick={readInsights}>{t['plugins.readExample']}</Button>}</Space> },
+      { title: t['plugins.actions'], render: (_, plugin) => <Space><Button size="small" onClick={() => toggle(plugin)}>{plugin.status === 'ENABLED' ? t['plugins.disable'] : t['plugins.enable']}</Button><Button size="small" onClick={() => inspect(plugin)}>{t['plugins.diagnostic']}</Button>{enterpriseId && plugin.status === 'ENABLED' && <Button size="small" onClick={readInsights}>{t['plugins.readExample']}</Button>}</Space> },
     ]} />
     {diagnostic && <Card title={t['plugins.diagnostic']} style={{ marginTop: 18 }}><Descriptions column={1} data={[{ label: t['plugins.status'], value: diagnostic.status }, { label: t['plugins.compatible'], value: String(diagnostic.compatible) }, { label: t['plugins.diagnostic'], value: diagnostic.diagnostic }, { label: t['plugins.problems'], value: diagnostic.problems.join('; ') || '-' }]} /></Card>}
     {insights && <Card title={t['plugins.exampleTitle']} style={{ marginTop: 18 }}><Descriptions column={1} data={[{ label: t['plugins.activeCustomers'], value: insights.activeCustomerCount }, { label: t['plugins.requestId'], value: insights.requestId }, { label: t['plugins.dictionary'], value: `${insights.dictionary.code} (${insights.dictionary.items.length})` }, { label: t['plugins.configuration'], value: insights.configuration.map((item) => String(item.key)).join(', ') }]} /></Card>}

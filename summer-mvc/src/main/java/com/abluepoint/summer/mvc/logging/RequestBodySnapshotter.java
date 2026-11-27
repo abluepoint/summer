@@ -19,7 +19,7 @@ public final class RequestBodySnapshotter {
     public static final String UNAVAILABLE_VALUE = "[BODY_UNAVAILABLE]";
     private static final Set<String> DEFAULT_REDACTED_FIELDS = Set.of(
             "password", "passwd", "secret", "token", "access_token", "refresh_token",
-            "client_secret", "authorization", "cookie"
+            "client_secret", "authorization", "cookie", "accesskeyid", "secretaccesskey"
     );
 
     private final ObjectMapper objectMapper;
@@ -140,6 +140,8 @@ public final class RequestBodySnapshotter {
             }
             normalized.add(field.toLowerCase(Locale.ROOT));
         }
+        normalized.add("accesskeyid");
+        normalized.add("secretaccesskey");
         return Set.copyOf(normalized);
     }
 }

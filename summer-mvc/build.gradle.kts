@@ -10,6 +10,9 @@ dependencies {
     api("jakarta.validation:jakarta.validation-api")
     api("tools.jackson.core:jackson-databind")
 
+    compileOnly("org.springframework.security:spring-security-web")
+
+    testImplementation("org.springframework.security:spring-security-web")
     testImplementation("org.springframework:spring-test")
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")

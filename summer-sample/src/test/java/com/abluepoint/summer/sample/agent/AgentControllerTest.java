@@ -34,6 +34,22 @@ class AgentControllerTest {
     }
 
 
+    @Test
+    void agentContractsRejectUnknownQueryAndReportMalformedBodyFieldsTogether() throws Exception {
+        String path = "/api/v1/enterprises/ent-acme/agents";
+        mockMvc.perform(get(path).param("unexpected", "x").with(admin("enterprise.agents.read")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.violations[0].field").value("unexpected"));
+        mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":12,"code":{},"unexpected":false}
+                                """)
+                        .with(admin("enterprise.agents.write")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.violations[*].field",
+                        org.hamcrest.Matchers.hasItems("name", "code", "unexpected")));
+    }
+
     @Test void nativeAccessDenialsKeepTheirOriginalMessageAndCause() throws Exception {
         managed.reachServiceWithoutDelegation(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"), "agent-native-no-cap", (handler,path,method) -> handler.getBeanType().getName().endsWith(".AgentController") && method.equals("GET") && path.startsWith("/api/v1/enterprises/{enterpriseId}/"));
         String path = "/api/v1/enterprises/ent-acme/agents";

@@ -36,15 +36,12 @@ class MenuManifestHttpTest {
         current.grantHandlers(Domain.platform(), "platform-admin", (handler, path, method) ->
                 handler.getBeanType().equals(MenuManifestController.class)
                         && path.equals("/api/v1/platform/menu-manifest") && java.util.Set.of("GET", "PUT").contains(method));
+        current.grantHandlers(Domain.platform(), "platform-admin", (handler, path, method) ->
+                handler.getBeanType().equals(com.abluepoint.summer.sample.authorization.api.permission.MenuDirectoryController.class)
+                    && path.equals("/api/v1/platform/authorization/menu-layout"));
         for (String subject : List.of("security-admin", "alice", "reader", "action-reader")) {
             managed.identity("ENTERPRISE:ent-acme", subject);
-            if (subject.equals("security-admin"))
-                menuRoles.put(subject, current.grantHandlers(Domain.enterprise("ent-acme"), subject, (handler, path, method) ->
-                        handler.getBeanType().equals(MenuManifestController.class)
-                                && path.startsWith("/api/v1/enterprises/{enterpriseId}/menu-manifest")
-                                && (method.equals("GET") || method.equals("PATCH"))));
-            else
-                menuRoles.put(subject, menuDb.queryForObject("select role_id from summer_permission_user_role where domain_key='ENTERPRISE:ent-acme' and username=?", String.class, subject));
+            menuRoles.put(subject, menuDb.queryForObject("select role_id from summer_permission_user_role where domain_key='ENTERPRISE:ent-acme' and username=?", String.class, subject));
         }
         managed.identity("PLATFORM:platform", "ordinary");
         managed.identity("ENTERPRISE:ent-acme", "ordinary");
@@ -64,6 +61,41 @@ class MenuManifestHttpTest {
                 menuDb.update("insert into summer_permission_resource(domain_key,permission_id,resource_type,resource_id) values ('ENTERPRISE:ent-acme',?,'MENU',?)", permission, menuId);
             menuDb.update("update summer_authorization_domain set revision=revision+1 where domain_key='ENTERPRISE:ent-acme'");
         });
+    }
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions dictionary;
+    @org.junit.jupiter.api.BeforeEach void publishedClients() {
+        org.mockito.Mockito.when(dictionary.published("menu-client")).thenReturn(List.of(
+            new com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions.Option("web", "Web 管理端", true),
+            new com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions.Option("mobile", "移动端", true),
+            new com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions.Option("retired", "已停用", false)));
+    }
+
+    @Test void menuClientMustComeFromPublishedOptionsAndTenantCannotChangeLayout() throws Exception {
+        String body = """
+            {"manifestVersion":1,"items":[{"menuId":"catalog","path":"/catalog","titleKey":"Catalog","iconKey":"list","sortOrder":0,"clientCode":"mobile"}]}
+            """;
+        for (var code : List.of("unknown", "retired")) {
+            mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"0\"")
+                .header("Idempotency-Key", "invalid-" + code).contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("mobile", code)).with(platformAdmin("platform.menu.write"))).andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"0\"")
+            .header("Idempotency-Key", "valid-client").contentType(MediaType.APPLICATION_JSON)
+            .content(body).with(platformAdmin("platform.menu.write"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].clientCode").value("mobile"));
+        mockMvc.perform(get("/api/v1/platform/menu-manifest").with(platformAdmin("platform.menu.write")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.clientOptions[1].label").value("移动端"));
+        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/catalog")
+            .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}")
+            .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isNotFound());
+        org.mockito.Mockito.when(dictionary.published("menu-client")).thenReturn(List.of());
+        mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"1\"")
+            .header("Idempotency-Key", "old-publisher").contentType(MediaType.APPLICATION_JSON)
+            .content(body.replace("\"manifestVersion\":1","\"manifestVersion\":2").replace(",\"clientCode\":\"mobile\"", ""))
+            .with(platformAdmin("platform.menu.write"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].clientCode").value("mobile"));
     }
 
     @Autowired
@@ -111,12 +143,12 @@ class MenuManifestHttpTest {
                 .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_MENU_MANIFEST_CONFLICT", "Manifest version must increase"));
 
         grantMenus("security-admin", "roles");
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/roles")
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "roles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false,\"sortOrder\":90}")
                         .header("If-Match", "\"1\"")
                         .header("Idempotency-Key", "menu-override-1")
-                        .with(enterpriseAdmin("enterprise.menu.write")))
+                        .with(platformAdmin("platform.capabilities.write")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.enabled").value(false))
                 .andExpect(jsonPath("$.data.sortOrder").value(90));
@@ -159,17 +191,17 @@ class MenuManifestHttpTest {
         mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"0\"").contentType(MediaType.APPLICATION_JSON).content(body)
                         .header("Idempotency-Key", "manage-current").with(platformAdmin("platform.menu.write")))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(enterpriseAdmin("enterprise.menu.write")))
+        mockMvc.perform(get("/api/v1/platform/authorization/menu-layout").with(platformAdmin("platform.capabilities.read")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[1].version").value(1));
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/child").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "child").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false,\"parentMenuId\":\"\",\"sortOrder\":3}")
-                        .header("Idempotency-Key", "manage-disable").header("If-Match", "\"1\"").with(enterpriseAdmin("enterprise.menu.write")))
+                        .header("Idempotency-Key", "manage-disable").header("If-Match", "\"1\"").with(platformAdmin("platform.capabilities.write")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.parentMenuId").doesNotExist());
-        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(enterpriseAdmin("enterprise.menu.write")))
+        mockMvc.perform(get("/api/v1/platform/authorization/menu-layout").with(platformAdmin("platform.capabilities.read")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].menuId").value("child"))
                 .andExpect(jsonPath("$.data.items[0].enabled").value(false))
                 .andExpect(jsonPath("$.data.items[0].capabilityCode").doesNotExist());
-        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(subject("ordinary", "customer.read")))
+        mockMvc.perform(get("/api/v1/platform/authorization/menu-layout").with(subject("ordinary", "customer.read")))
                 .andExpect(status().isForbidden());
     }
 
@@ -179,22 +211,22 @@ class MenuManifestHttpTest {
         mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"0\"").contentType(MediaType.APPLICATION_JSON).content(body)
                         .header("Idempotency-Key", "parents").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());
         grantMenus("reader", "parent", "child");
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "parent").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false}").header("Idempotency-Key", "disable-parent").header("If-Match", "\"1\"")
-                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isOk());
+                        .with(platformAdmin("platform.capabilities.write"))).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(subject("reader", "customer.read")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"enabled\":true}").header("Idempotency-Key", "missing-version").with(enterpriseAdmin("enterprise.menu.write")))
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "parent").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true}").header("Idempotency-Key", "missing-version").with(platformAdmin("platform.capabilities.write")))
                 .andExpect(status().is(428))
                 .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SAMPLE_PERMISSION_CONDITION_REQUIRED", "If-Match is required"));
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "parent").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":true}").header("Idempotency-Key", "enable-parent").header("If-Match", "\"2\"")
-                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(3));
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/parent").contentType(MediaType.APPLICATION_JSON)
+                        .with(platformAdmin("platform.capabilities.write"))).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(3));
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "parent").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false}").header("Idempotency-Key", "stale-version").header("If-Match", "\"1\"")
-                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed())
-                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
+                        .with(platformAdmin("platform.capabilities.write"))).andExpect(status().isPreconditionFailed())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SAMPLE_PERMISSION_STALE", "Menu metadata has changed"));
     }
 
     @Test
@@ -209,10 +241,10 @@ class MenuManifestHttpTest {
                         .content("{\"manifestVersion\":2,\"items\":[" + root + "," + child + "]}")
                         .header("Idempotency-Key", "nested-order").with(platformAdmin("platform.menu.write")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[1].menuId").value("dictionary/form"));
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest").param("menuId", "dictionary/form")
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "dictionary/form")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}")
                         .header("If-Match", "\"1\"").header("Idempotency-Key", "nested-override")
-                        .with(enterpriseAdmin("enterprise.menu.write")))
+                        .with(platformAdmin("platform.capabilities.write")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.menuId").value("dictionary/form"))
                 .andExpect(jsonPath("$.data.enabled").value(false));
     }
@@ -223,21 +255,58 @@ class MenuManifestHttpTest {
         mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"0\"").contentType(MediaType.APPLICATION_JSON).content(body)
                         .header("Idempotency-Key", "first-override").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());
         for (int retry = 0; retry < 2; retry++) {
-            mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/root").contentType(MediaType.APPLICATION_JSON)
+            mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "root").contentType(MediaType.APPLICATION_JSON)
                             .content("{\"enabled\":false}").header("If-Match", "\"1\"").header("Idempotency-Key", "same-operation")
-                            .with(enterpriseAdmin("enterprise.menu.write")))
+                            .with(platformAdmin("platform.capabilities.write")))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(2));
         }
-        mockMvc.perform(patch("/api/v1/enterprises/ent-acme/menu-manifest/root").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(patch("/api/v1/platform/authorization/menu-layout").param("menuId", "root").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":true}").header("If-Match", "\"1\"").header("Idempotency-Key", "stale-initial-editor")
-                        .with(enterpriseAdmin("enterprise.menu.write"))).andExpect(status().isPreconditionFailed())
-                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SUMMER_PRECONDITION_FAILED", "The resource has changed"));
+                        .with(platformAdmin("platform.capabilities.write"))).andExpect(status().isPreconditionFailed())
+                .andExpect(com.abluepoint.summer.sample.authorization.UnifiedBusinessFailure.unified("SAMPLE_PERMISSION_STALE", "Menu metadata has changed"));
         mockMvc.perform(put("/api/v1/platform/menu-manifest").header("If-Match", "\"1\"").contentType(MediaType.APPLICATION_JSON)
                         .content(body.replace("\"manifestVersion\":1", "\"manifestVersion\":2").replace("\"sortOrder\":10", "\"sortOrder\":50"))
                         .header("Idempotency-Key", "next-manifest").with(platformAdmin("platform.menu.write"))).andExpect(status().isOk());
-        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest/management").with(enterpriseAdmin("enterprise.menu.write")))
+        mockMvc.perform(get("/api/v1/platform/authorization/menu-layout").with(platformAdmin("platform.capabilities.read")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].enabled").value(false))
                 .andExpect(jsonPath("$.data.items[0].sortOrder").value(50));
+    }
+
+    @Test
+    void editorCommitsNameHierarchyAndStatusTogetherAndRejectsStaleLayouts() throws Exception {
+        String endpoint = "/api/v1/platform/authorization/menu-manifest";
+        current.grantHandlers(Domain.platform(), "platform-admin", (handler, path, method) ->
+            handler.getBeanType().equals(com.abluepoint.summer.sample.authorization.api.permission.MenuDirectoryController.class)
+                && path.equals(endpoint));
+        menuDb.update("update summer_menu_publication set published=true where publication_id='global'");
+        String root = """
+            {"menuId":"root","titleKey":"目录","path":"/root","iconKey":"","sortOrder":0,"enabled":true,"clientCode":"web"}
+            """.trim();
+        String leaf = """
+            {"menuId":"leaf","parentMenuId":"root","titleKey":"页面","path":"/leaf","iconKey":"","sortOrder":1,"enabled":false,"clientCode":"web"}
+            """.trim();
+        var actor = platformAdmin("platform.capabilities.write");
+        mockMvc.perform(put(endpoint).with(actor).header("If-Match","\"0\"").header("Idempotency-Key","tree-create")
+            .contentType(MediaType.APPLICATION_JSON).content("{\"manifestVersion\":1,\"layoutVersions\":{},\"items\":[" + root + "," + leaf + "]}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[1].parentMenuId").value("root"))
+            .andExpect(jsonPath("$.data.items[1].enabled").value(false));
+        grantMenus("alice", "leaf");
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(subject("alice","openid")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+        String edited = leaf.replace("页面","新名称").replace("false","true").replace("\"parentMenuId\":\"root\",","");
+        String body = "{\"manifestVersion\":2,\"layoutVersions\":{\"root\":2,\"leaf\":2},\"items\":[" + root + "," + edited + "]}";
+        mockMvc.perform(put(endpoint).with(actor).header("If-Match","\"1\"").header("Idempotency-Key","tree-stale")
+            .contentType(MediaType.APPLICATION_JSON).content(body.replace("\"leaf\":2","\"leaf\":1"))).andExpect(status().isPreconditionFailed());
+        mockMvc.perform(put(endpoint).with(actor).header("If-Match","\"1\"").header("Idempotency-Key","tree-edit")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(subject("alice","openid")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].titleKey").value("新名称"))
+            .andExpect(jsonPath("$.data.items[0].parentMenuId").doesNotExist());
+        mockMvc.perform(put(endpoint).with(actor).header("If-Match","\"2\"").header("Idempotency-Key","tree-delete")
+            .contentType(MediaType.APPLICATION_JSON).content("{\"manifestVersion\":3,\"layoutVersions\":{\"root\":2,\"leaf\":3},\"items\":["+root+"]}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1));
+        mockMvc.perform(get("/api/v1/enterprises/ent-acme/menu-manifest").with(subject("alice","openid")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
     }
 
     @Test

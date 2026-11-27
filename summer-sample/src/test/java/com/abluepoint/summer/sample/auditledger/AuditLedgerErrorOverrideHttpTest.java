@@ -28,7 +28,8 @@ class AuditLedgerErrorOverrideHttpTest {
     @Autowired com.abluepoint.summer.sample.authorization.CurrentManagedAuthorizationTestFixture fixture;
     @org.junit.jupiter.api.BeforeEach void authorizeExactValidationHandler() {
         fixture.grantHandlers(com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain.enterprise("ent-acme"),
-            "audit-admin", (handler, path, method) -> method.equals("GET") && path.equals("/api/v1/enterprises/{enterpriseId}/audit-events:query"));
+            "audit-admin", (handler, path, method) -> method.equals("GET") && List.of("/api/v1/enterprises/{enterpriseId}/audit-events:query",
+                    "/api/v1/enterprises/{enterpriseId}/audit-events", "/api/v1/enterprises/{enterpriseId}/mcp-invocations").contains(path));
     }
 
     @Test
@@ -36,15 +37,29 @@ class AuditLedgerErrorOverrideHttpTest {
         mvc.perform(get("/api/v1/enterprises/ent-acme/audit-events:query")
                         .queryParam("page", "-1")
                         .header("X-Request-Id", "audit-policy")
-                        .with(jwt().jwt(token -> token.subject("audit-admin").claim("scope", "enterprise.audit.read")
-                                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
-                                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.audit.read"))))
-                                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"))))
+                        .with(auditReader()))
                 .andExpect(status().is(422))
                 .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_INVALID"))
                 .andExpect(jsonPath("$.error.message").value("page must be non-negative and size must be between 1 and 100"))
                 .andExpect(jsonPath("$.requestId").value("audit-policy"))
                 .andExpect(header().string("X-Request-Id", "audit-policy"));
+    }
+
+    @Test
+    void malformedListTimesKeepTheAuditErrorPolicy() throws Exception {
+        for (String resource : List.of("audit-events", "mcp-invocations")) {
+            mvc.perform(get("/api/v1/enterprises/ent-acme/" + resource)
+                            .queryParam("to", "yesterday").with(auditReader()))
+                    .andExpect(status().is(422))
+                    .andExpect(jsonPath("$.error.code").value("IAM_AUDIT_INVALID"));
+        }
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor auditReader() {
+        return jwt().jwt(token -> token.subject("audit-admin").claim("scope", "enterprise.audit.read")
+                                        .claim("enterprise_memberships", List.of(Map.of("enterpriseId", "ent-acme", "status", "ACTIVE")))
+                                        .claim("enterprise_capabilities", Map.of("ent-acme", List.of("enterprise.audit.read"))))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_enterprise.audit.read"));
     }
 
     @TestConfiguration

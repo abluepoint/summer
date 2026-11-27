@@ -1,7 +1,13 @@
 import { useOperationHints } from '@/auth/interfaceOperations';
 import AppLoading from '@/components/AppLoading';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Switch, Route, Redirect, useHistory } from 'react-router-dom';
+import {
+  Switch,
+  Route,
+  Redirect,
+  useHistory,
+  useLocation,
+} from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -29,6 +35,7 @@ import Navbar from './components/NavBar';
 import Footer from './components/Footer';
 import useRoute, { IRoute } from '@/routes';
 import { customerRouteAllowed, useMenuItems } from '@/menu/access';
+import { menuAncestorKeys } from '@/menu/managementNavigation';
 import { isArray } from './utils/is';
 import useLocale from './utils/useLocale';
 import getUrlParams from './utils/getUrlParams';
@@ -170,15 +177,15 @@ function PageLayout() {
   const operationHints = useOperationHints();
   const urlParams = getUrlParams();
   const history = useHistory();
-  const pathname = history.location.pathname;
+  const { pathname } = useLocation();
   const currentComponent = qs.parseUrl(pathname).url.slice(1);
   const locale = useLocale();
-  const { settings, userLoading, userInfo } = useSelector(
+  const { settings, userLoading } = useSelector(
     (state: GlobalState) => state
   );
 
   const menuItems = useMenuItems();
-  const [routes, defaultRoute] = useRoute(userInfo?.permissions);
+  const [routes, defaultRoute] = useRoute();
   const defaultSelectedKeys = [currentComponent || defaultRoute];
   const paths = (currentComponent || defaultRoute).split('/');
   const defaultOpenKeys = paths.slice(0, paths.length - 1);
@@ -225,6 +232,7 @@ function PageLayout() {
 
   function renderRoutes(locale) {
     routeMap.current.clear();
+    menuMap.current.clear();
     return function travel(_routes: IRoute[], level, parentNode = []) {
       return _routes.map((route) => {
         const { breadcrumb = true, ignore } = route;
@@ -264,39 +272,55 @@ function PageLayout() {
           );
         }
         menuMap.current.set(route.key, { menuItem: true });
-        return <MenuItem key={route.key}>{titleDom}</MenuItem>;
+        return (
+          <MenuItem
+            key={route.key}
+            aria-current={
+              selectedKeys.includes(route.key) ? 'page' : undefined
+            }
+          >
+            {titleDom}
+          </MenuItem>
+        );
       });
     };
   }
 
-  function updateMenuStatus() {
+  useEffect(() => {
+    const routeConfig = routeMap.current.get(pathname);
+    setBreadCrumb(routeConfig || []);
     const pathKeys = pathname.split('/');
     const newSelectedKeys: string[] = [];
-    const newOpenKeys: string[] = [...openKeys];
+    const newOpenKeys = new Set<string>();
     while (pathKeys.length > 0) {
       const currentRouteKey = pathKeys.join('/');
       const menuKey = currentRouteKey.replace(/^\//, '');
       const menuType = menuMap.current.get(menuKey);
       if (menuType && menuType.menuItem) {
         newSelectedKeys.push(menuKey);
+        for (const parent of menuAncestorKeys(routes, menuKey)) {
+          newOpenKeys.add(parent);
+        }
       }
-      if (menuType && menuType.subMenu && !openKeys.includes(menuKey)) {
-        newOpenKeys.push(menuKey);
+      if (menuType && menuType.subMenu) {
+        newOpenKeys.add(menuKey);
       }
       pathKeys.pop();
     }
     setSelectedKeys(newSelectedKeys);
-    setOpenKeys(newOpenKeys);
-  }
-
-  useEffect(() => {
-    const routeConfig = routeMap.current.get(pathname);
-    setBreadCrumb(routeConfig || []);
-    updateMenuStatus();
-  }, [pathname]);
+    setOpenKeys((previous) =>
+      Array.from(new Set(previous.concat(Array.from(newOpenKeys))))
+    );
+  }, [pathname, routes, userLoading]);
 
   return (
-    <Layout className={styles.layout}>
+    <Layout
+      className={cs(styles.layout, {
+        [styles['fluid-directory']]:
+          currentComponent === 'platform/administrators' ||
+          currentComponent === 'platform/user-groups',
+      })}
+    >
       <div
         className={cs(styles['layout-navbar'], {
           [styles['layout-navbar-hidden']]: !showNavbar,

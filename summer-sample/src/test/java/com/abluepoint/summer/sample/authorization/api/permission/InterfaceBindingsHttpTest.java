@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
   com.example.catalog.ManagedInterfaceExtensionFixture.class
 })
 class InterfaceBindingsHttpTest {
+  @Autowired HistoricalTenantPermissions historical;
   @org.springframework.beans.factory.annotation.Value("${local.server.port}")
   int port;
 
@@ -277,15 +278,9 @@ class InterfaceBindingsHttpTest {
   @Test
   void actualHttpUsesTheFirstOrderedMappingForOverlappingMvcAndExtension() throws Exception {
     String path = "/api/v1/platform/interface-overlap";
-    var response =
-        mvc.perform(
-                get("/api/v1/platform/authorization/interface-directory")
-                    .param("size", "200")
-                    .with(user("summer-user")))
-            .andExpect(status().isOk())
-            .andReturn();
+    var response = listedResources();
     var items =
-        json.readTree(response.getResponse().getContentAsString()).path("data").path("items");
+        response;
     var candidates =
         java.util.stream.StreamSupport.stream(items.spliterator(), false)
             .filter(
@@ -359,15 +354,9 @@ class InterfaceBindingsHttpTest {
 
   @Test
   void actualConditionsAndVariablesUseTheBoundPersistentResource() throws Exception {
-    var directory =
-        mvc.perform(
-                get("/api/v1/platform/authorization/interface-directory")
-                    .param("size", "200")
-                    .with(user("summer-user")))
-            .andExpect(status().isOk())
-            .andReturn();
+    var directory = listedResources();
     var items =
-        json.readTree(directory.getResponse().getContentAsString()).path("data").path("items");
+        directory;
     var resources =
         java.util.stream.StreamSupport.stream(items.spliterator(), false)
             .filter(
@@ -428,17 +417,9 @@ class InterfaceBindingsHttpTest {
   }
 
   private String generationResource() throws Exception {
-    var response =
-        mvc.perform(
-                get("/api/v1/platform/authorization/interface-directory")
-                    .param("size", "200")
-                    .with(user("summer-user")))
-            .andExpect(status().isOk())
-            .andReturn();
+    var response = listedResources();
     return java.util.stream.StreamSupport.stream(
-            json.readTree(response.getResponse().getContentAsString())
-                .path("data")
-                .path("items")
+            response
                 .spliterator(),
             false)
         .filter(
@@ -497,18 +478,10 @@ class InterfaceBindingsHttpTest {
   @Test
   void explicitNonMvcAdapterUsesTheSameDecisionAndRejectsOtherMethods() throws Exception {
     String path = "/api/v1/platform/interface-extension";
-    var response =
-        mvc.perform(
-                get("/api/v1/platform/authorization/interface-directory")
-                    .param("size", "200")
-                    .with(user("summer-user")))
-            .andExpect(status().isOk())
-            .andReturn();
+    var response = listedResources();
     String resource =
         java.util.stream.StreamSupport.stream(
-                json.readTree(response.getResponse().getContentAsString())
-                    .path("data")
-                    .path("items")
+                response
                     .spliterator(),
                 false)
             .filter(row -> row.path("normalizedPath").asText().equals(path))
@@ -594,15 +567,14 @@ class InterfaceBindingsHttpTest {
         "select resource_id from summer_interface_resource where normalized_path='/api/v1/enterprises/{enterpriseId}/invitations' and http_method='GET' and active=true",
         String.class);
     String route = "/api/v1/enterprises/ent-acme/permissions/" + permission + "/interfaces";
-    var initial = mvc.perform(get(route).with(user("summer-user")))
-        .andExpect(status().isOk()).andReturn().getResponse();
+    var initial = historical.readInterfaces(permission);
     java.util.List<String> original = new java.util.ArrayList<>();
-    json.readTree(initial.getContentAsString()).path("data").path("resourceIds")
+    initial.body().path("resourceIds")
         .forEach(id -> original.add(id.asText()));
     org.junit.jupiter.api.Assertions.assertTrue(original.contains(target),
         "Fresh management seed must cover the invitation management entry");
     var changed = replaceInvitationBindings(route,
-        original.stream().filter(id -> !target.equals(id)).toList(), initial.getHeader("ETag"));
+        original.stream().filter(id -> !target.equals(id)).toList(), initial.etag());
     try {
     var response =
         mvc.perform(
@@ -618,20 +590,12 @@ class InterfaceBindingsHttpTest {
         response.getHandler(),
         "Unbound management must be rejected before MVC, not deferred to an applicant exemption");
     } finally {
-      replaceInvitationBindings(route, original, changed.getHeader("ETag"));
+      replaceInvitationBindings(route, original, changed);
     }
   }
 
-  private org.springframework.mock.web.MockHttpServletResponse replaceInvitationBindings(
-      String route, java.util.List<String> ids, String etag) throws Exception {
-    return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(route)
-        .with(user("summer-user"))
-        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
-        .header("If-Match", etag)
-        .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
-        .contentType("application/json")
-        .content(json.writeValueAsString(java.util.Map.of("resourceIds", ids))))
-        .andExpect(status().isOk()).andReturn().getResponse();
+  private String replaceInvitationBindings(String route, java.util.List<String> ids, String etag) {
+    return historical.replace(route, java.util.Map.of("resourceIds", ids), etag).etag();
   }
 
   @Test
@@ -672,18 +636,23 @@ class InterfaceBindingsHttpTest {
     return context.getBeanNamesForType(com.example.catalog.ManagedInterfaceFixture.class)[0];
   }
 
+  private tools.jackson.databind.JsonNode listedResources() throws Exception {
+    var items = json.createArrayNode();
+    for (int page = 0; ; page++) {
+      var response = mvc.perform(get("/api/v1/platform/authorization/interface-directory")
+          .param("size", "200").param("page", Integer.toString(page)).with(user("summer-user")))
+          .andExpect(status().isOk()).andReturn();
+      var data = json.readTree(response.getResponse().getContentAsString()).path("data");
+      for (var item : data.path("items")) items.add(item);
+      if (items.size() >= data.path("total").asInt()) return items;
+      org.junit.jupiter.api.Assertions.assertFalse(data.path("items").isEmpty());
+    }
+  }
+
   private String listedResource(String path, String method) throws Exception {
-    var response =
-        mvc.perform(
-                get("/api/v1/platform/authorization/interface-directory")
-                    .param("size", "200")
-                    .with(user("summer-user")))
-            .andExpect(status().isOk())
-            .andReturn();
+    var response = listedResources();
     return java.util.stream.StreamSupport.stream(
-            json.readTree(response.getResponse().getContentAsString())
-                .path("data")
-                .path("items")
+            response
                 .spliterator(),
             false)
         .filter(

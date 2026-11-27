@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.enterprise;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
@@ -27,6 +29,9 @@ class PlatformEnterpriseDirectoryController {
         this.requestId = requestId;
     }
 
+    @Field(param = "search", required = false, style = "requestTextStyle")
+    @Field(param = "status", required = false, style = "requestTextStyle")
+    @Field(param = "qualification", required = false, style = "requestTextStyle")
     @GetMapping("/api/v1/platform/enterprises")
 
     @PreAuthorize("hasAuthority('SCOPE_platform.enterprise.read')")
@@ -42,6 +47,7 @@ class PlatformEnterpriseDirectoryController {
                 .body(ApiResponse.success(body, requestId.currentRequestId()));
     }
 
+    @Field(param = "id", style = "requestTextStyle")
     @PostMapping({
             "/api/v1/platform/enterprises/{id}:freeze",
             "/api/v1/platform/enterprises/{id}:disable",

@@ -1,5 +1,7 @@
 package com.abluepoint.summer.sample.resource;
 
+import com.abluepoint.summer.mvc.annotation.Field;
+
 import com.abluepoint.summer.common.error.CommonErrorCode;
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.common.response.ApiResponse;
@@ -24,13 +26,16 @@ final class InterfaceResourceCatalogController {
     private final RequestIdAccessor requestIdAccessor;
     private final InterfaceResourceHistory history;
 
+    private final InterfaceServiceDirectory directory;
+
     InterfaceResourceCatalogController(
             InterfaceResourceCatalogService service,
-            RequestIdAccessor requestIdAccessor, InterfaceResourceHistory history
+            RequestIdAccessor requestIdAccessor, InterfaceResourceHistory history, InterfaceServiceDirectory directory
     ) {
         this.service = service;
         this.requestIdAccessor = requestIdAccessor;
         this.history = history;
+        this.directory = directory;
     }
 
     @GetMapping("/api/v1/platform/interface-resources")
@@ -45,6 +50,12 @@ final class InterfaceResourceCatalogController {
     ) {
         String requestId = requestIdAccessor.currentRequestId();
         try {
+            if ("true".equals(request.getParameter("directory"))) {
+                var result = directory.page(authentication, page == null ? 0 : page, size == null ? 10 : size,
+                        revision, request.getParameter("path"), request.getParameter("policy"), request.getParameter("serviceName"), request.getParameter("serviceCode"));
+                return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                        .header("X-Request-Id", requestId).body(ApiResponse.success(result, requestId));
+            }
             Object view;
             String etag;
             if (page != null || size != null) {
@@ -72,6 +83,24 @@ final class InterfaceResourceCatalogController {
             throw SummerException.withMessage(InterfaceResourceErrorCode.PAGE_INVALID, invalid.getMessage(), invalid);
         }
     }
+    record ServiceRefresh(String serviceCode, String serviceName) {}
+
+    @org.springframework.web.bind.annotation.PostMapping("/api/v1/platform/interface-resources/refresh")
+    @RawResponse
+    ResponseEntity<?> refresh(Authentication actor, @org.springframework.web.bind.annotation.RequestBody ServiceRefresh input) {
+        String requestId = requestIdAccessor.currentRequestId();
+        try {
+            return ResponseEntity.ok().header("X-Request-Id", requestId)
+                    .body(ApiResponse.success(directory.refresh(actor, input.serviceCode(), input.serviceName()), requestId));
+        } catch (AccessDeniedException denied) {
+            throw SummerException.withMessage(CommonErrorCode.FORBIDDEN, "Interface refresh denied", denied);
+        } catch (IllegalArgumentException invalid) {
+            throw SummerException.withMessage(InterfaceResourceErrorCode.PAGE_INVALID, invalid.getMessage(), invalid);
+        }
+    }
+
+    @Field(param = "page", required = false, style = "requestIntegerParameterStyle")
+    @Field(param = "size", required = false, style = "requestIntegerParameterStyle")
     @GetMapping("/api/v1/platform/interface-resources/history")
     @RawResponse
     ResponseEntity<?> history(Authentication authentication, @RequestParam(defaultValue = "0") int page,
@@ -79,6 +108,9 @@ final class InterfaceResourceCatalogController {
         return historyResponse(authentication, () -> java.util.Map.of("items", history.list(page, size), "page", page, "size", size, "total", history.count()));
     }
 
+    @Field(param = "revision", style = "requestLongParameterStyle")
+    @Field(param = "page", required = false, style = "requestIntegerParameterStyle")
+    @Field(param = "size", required = false, style = "requestIntegerParameterStyle")
     @GetMapping("/api/v1/platform/interface-resources/history/{revision}")
     @RawResponse
     ResponseEntity<?> revision(Authentication authentication, @PathVariable long revision,
@@ -87,6 +119,8 @@ final class InterfaceResourceCatalogController {
                 : InterfaceResourceCatalogPage.of(history.read(revision), page == null ? 0 : page, size == null ? 10 : size));
     }
 
+    @Field(param = "from", style = "requestLongParameterStyle")
+    @Field(param = "to", style = "requestLongParameterStyle")
     @GetMapping("/api/v1/platform/interface-resources/diff")
     @RawResponse
     ResponseEntity<?> diff(Authentication authentication, @RequestParam long from, @RequestParam long to) {

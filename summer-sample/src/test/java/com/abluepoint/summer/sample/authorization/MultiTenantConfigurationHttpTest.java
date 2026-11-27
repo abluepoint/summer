@@ -192,7 +192,7 @@ class MultiTenantConfigurationHttpTest {
         mvc.perform(put("/api/v1/enterprises/ent-policy-a/data-scopes/system-parameters/bindings/USER/policy-user")
                 .with(member()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"rules\":[{\"type\":\"TENANT\"}]}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
         org.junit.jupiter.api.Assertions.assertEquals(before, jdbc.queryForList(
                 "select permission_id,version,status from summer_permission where domain_key='ENTERPRISE:ent-policy-a' order by permission_id"));
         org.junit.jupiter.api.Assertions.assertEquals(oldFacts, retiredPolicyFacts());

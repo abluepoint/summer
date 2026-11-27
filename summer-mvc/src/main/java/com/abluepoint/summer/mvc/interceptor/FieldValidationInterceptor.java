@@ -15,7 +15,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletRequestWrapper;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -37,6 +40,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class FieldValidationInterceptor implements HandlerInterceptor {
+
+    private static final boolean SPRING_SECURITY_PRESENT = ClassUtils.isPresent(
+            "org.springframework.security.web.csrf.CsrfToken", FieldValidationInterceptor.class.getClassLoader());
 
     private final StyleRegistry styleRegistry;
     private final int maxListSize;
@@ -572,7 +578,7 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             if (!declared) {
                 declared = lists.stream().anyMatch(fieldList -> isDeclaredListParameter(parameter, fieldList));
             }
-            if (!declared) {
+            if (!declared && !(SPRING_SECURITY_PRESENT && CsrfParameters.matches(request, parameter))) {
                 violations.add(new SummerException.Violation(parameter, "is not allowed"));
             }
         }
@@ -586,6 +592,15 @@ public final class FieldValidationInterceptor implements HandlerInterceptor {
             }
         }
         rejectUnknownJsonFields(jsonBody, fields, lists, violations);
+    }
+
+    // Spring Security publishes the active token on the request. Its form parameter belongs to the filter.
+    private static final class CsrfParameters {
+        static boolean matches(HttpServletRequest request, String parameter) {
+            return request.getAttribute(CsrfToken.class.getName()) instanceof CsrfToken token
+                    && CsrfFilter.DEFAULT_CSRF_MATCHER.matches(request)
+                    && parameter.equals(token.getParameterName());
+        }
     }
 
     private boolean isDeclaredListParameter(String parameter, FieldList fieldList) {

@@ -1,6 +1,7 @@
 package com.abluepoint.summer.sample.authorization.application.permission;
 
 import com.abluepoint.summer.security.authorization.ResourceAuthorization.Domain;
+import com.abluepoint.summer.sample.dictionary.PlatformDictionaryOptions;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,12 +18,14 @@ public class MenuNavigationService {
   private final ManagedPermissionAccess access;
   private final TransactionTemplate fresh;
   private final MenuPublicationState publication;
+  private final MenuCatalogService catalog;
 
   public MenuNavigationService(
       JdbcTemplate db,
       ManagedPermissionAccess access,
       PlatformTransactionManager transactions,
-      MenuPublicationState publication) {
+      MenuPublicationState publication, MenuCatalogService catalog) {
+    this.catalog = catalog;
     this.publication = publication;
     this.db = db;
     this.access = access;
@@ -33,10 +36,14 @@ public class MenuNavigationService {
   }
 
   public Map<String, Object> visible(Domain domain, Authentication authentication) {
+    return visible(domain, authentication, null);
+  }
+
+  public Map<String, Object> visible(Domain domain, Authentication authentication, String clientCode) {
     for (int attempt = 0; attempt < 2; attempt++) {
       Map<String, Object> result;
       try {
-        result = fresh.execute(status -> snapshot(domain, authentication));
+        result = fresh.execute(status -> snapshot(domain, authentication, clientCode));
       } catch (org.springframework.dao.DataAccessException
           | org.springframework.transaction.TransactionException failure) {
         throw com.abluepoint.summer.common.error.SummerException.withMessage(
@@ -48,7 +55,7 @@ public class MenuNavigationService {
     throw new AccessDeniedException("Authorization changed while reading navigation");
   }
 
-  private Map<String, Object> snapshot(Domain domain, Authentication authentication) {
+  private Map<String, Object> snapshot(Domain domain, Authentication authentication, String clientCode) {
     if (!access.active(domain, authentication)
         || db.queryForObject(
                 "select count(*) from summer_auth_user where username=? and active=true",
@@ -68,77 +75,20 @@ public class MenuNavigationService {
     Map<String, Map<String, Object>> nodes = new LinkedHashMap<>();
     var state = publication.read();
     long manifestVersion = state.manifestVersion();
-    for (var row :
-        db.queryForList(
-            "select * from summer_menu_manifest_item where manifest_version=? order by"
-                + " sort_order,menu_id",
-            manifestVersion)) {
-      String id = row.get("menu_id").toString();
-      var item = new LinkedHashMap<String, Object>();
-      item.put("menuId", id);
-      item.put("path", row.get("path"));
-      item.put("parentMenuId", row.get("parent_menu_id"));
-      item.put("titleKey", row.get("title_key"));
-      item.put("iconKey", row.get("icon_key"));
-      item.put("sortOrder", row.get("sort_order"));
-      item.put("enabled", true);
-      item.put("version", 1L);
-      nodes.put(id, item);
-      manifestVersion =
-          Math.max(manifestVersion, ((Number) row.get("manifest_version")).longValue());
-    }
-    // Stable bootstrap identities survive before the first full frontend manifest publication.
-    if (!state.published())
-      for (var page : com.abluepoint.summer.sample.authorization.domain.permission.ManagementConsumerMenus.PAGES) {
-        String id = page.id();
-        nodes.computeIfAbsent(
-            id,
-            key -> {
-              var item = new LinkedHashMap<String, Object>();
-              item.put("menuId", id);
-              item.put("path", "/" + id);
-              item.put("titleKey", page.title());
-              item.put("iconKey", id);
-              item.put("sortOrder", 0);
-              item.put("enabled", true);
-              item.put("version", 1L);
-              return item;
-            });
-      }
-    if (domain.kind().equals("ENTERPRISE"))
-      for (var row :
-          db.queryForList(
-              "select * from summer_menu_manifest_override where enterprise_id=?", domain.id())) {
-        var item = nodes.get(row.get("menu_id").toString());
-        if (item == null) continue;
-        if (row.get("enabled") != null) item.put("enabled", row.get("enabled"));
-        if (row.get("parent_menu_id") != null) {
-          String parent = row.get("parent_menu_id").toString();
-          item.put("parentMenuId", parent.isBlank() ? null : parent);
-        }
-        if (row.get("sort_order") != null) item.put("sortOrder", row.get("sort_order"));
-        item.put("version", row.get("version"));
-      }
-    for (var row :
-        db.queryForList(
-            "select * from summer_menu_domain_layout where domain_key=?", domain.key())) {
-      var item = nodes.get(row.get("menu_id").toString());
-      if (item == null) continue;
-      if (row.get("enabled") != null) item.put("enabled", row.get("enabled"));
-      if (row.get("parent_menu_id") != null) {
-        String parent = row.get("parent_menu_id").toString();
-        item.put("parentMenuId", parent.isBlank() ? null : parent);
-      }
-      if (row.get("sort_order") != null) item.put("sortOrder", row.get("sort_order"));
-      item.put("version", row.get("version"));
-    }
+    for (var item : catalog.effectiveCatalog()) nodes.put((String) item.get("menuId"), item);
     Set<String> qualified = new HashSet<>(), visible = new HashSet<>();
+    // Older catalogs use "roles" for both domains. An explicit platform page owns its
+    // destination even when disabled, assigned to another client, or lacking a grant.
+    boolean separatePlatformRoles = nodes.containsKey("platform/roles");
     for (String id : nodes.keySet()) {
-      if (!enabledBranch(id, nodes) || !access.allows(domain, authentication, "MENU", id)) continue;
+      if (Domain.platform().equals(domain) ? separatePlatformRoles && "roles".equals(id)
+          : Set.of("platform/roles","platform/administrators","platform/organization","platform/file-repositories","platform/files","platform/user-groups").contains(id)) continue;
+      if (!matchesClient(nodes.get(id), clientCode) || !enabledBranch(id, nodes)
+          || !access.allows(domain, authentication, "MENU", id)) continue;
       qualified.add(id);
       String cursor = id;
       while (cursor != null && !cursor.isBlank()) {
-        visible.add(cursor);
+        if (matchesClient(nodes.get(cursor), clientCode)) visible.add(cursor);
         Object parent = nodes.get(cursor).get("parentMenuId");
         cursor = parent == null ? null : parent.toString();
       }
@@ -146,6 +96,11 @@ public class MenuNavigationService {
     List<Map<String, Object>> items = new ArrayList<>();
     for (String id : visible) {
       var item = nodes.get(id);
+      String parent = (String) item.get("parentMenuId");
+      while (parent != null && !parent.isBlank() && !visible.contains(parent))
+        parent = (String) nodes.get(parent).get("parentMenuId");
+      item = new LinkedHashMap<>(item);
+      item.put("parentMenuId", parent == null || parent.isBlank() ? null : parent);
       boolean page = qualified.contains(id);
       item.put("navOnly", !page);
       item.put("pageEligible", page);
@@ -171,6 +126,10 @@ public class MenuNavigationService {
         revision,
         "items",
         items);
+  }
+
+  private static boolean matchesClient(Map<String, Object> item, String clientCode) {
+    return clientCode == null || clientCode.equals(Objects.requireNonNullElse(item.get("clientCode"), PlatformDictionaryOptions.WEB_CLIENT));
   }
 
   private boolean enabledBranch(String id, Map<String, Map<String, Object>> nodes) {

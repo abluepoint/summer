@@ -9,7 +9,10 @@ export type AuthorizationRole = {
   name: string;
   code: string;
   status: string;
+  builtIn?: boolean;
+  defaultPlatformAdministrator?: boolean;
   permissionIds: string[];
+  legacyPermissions?: { permissionId: string; name: string }[];
   version: number;
 };
 export type UserRoleAssignment = {
@@ -71,16 +74,56 @@ export const assignUserRoles = (
     version,
     key()
   );
-async function pages<T>(d: string, path: string): Promise<T[]> {
+async function pages<T>(
+  d: string,
+  path: string,
+  type?: string,
+  catalog?: string
+): Promise<T[]> {
   const items: T[] = [];
   for (let page = 1; ; page++) {
-    const result = await call<Page<T>>(d, `${path}?page=${page}&size=200`);
+    const result = await call<Page<T>>(
+      d,
+      `${path}?page=${page}&size=200${type ? `&type=${type}` : ''}${
+        catalog ? `&catalog=${catalog}` : ''
+      }`
+    );
     items.push(...result.items);
     if (items.length >= result.total) return items;
     if (!result.items.length) throw new Error('权限目录发生变化，请刷新后重试');
   }
 }
-export const listPermissionChoices = (d: string) =>
-  pages<Permission>(d, '/permissions');
+export const listPermissionChoices = (d: string, type?: 'INTERFACE') =>
+  d === '/api/v1/platform'
+    ? pages<Permission>(d, '/permissions', type)
+    : pages<Permission>(d, '/roles', type, 'permissions');
 export const listPermissionGroups = (d: string) =>
-  pages<Group>(d, '/permission-groups');
+  d === '/api/v1/platform'
+    ? pages<Group>(d, '/permission-groups')
+    : pages<Group>(d, '/roles', undefined, 'permission-groups');
+
+export const getRole = (base: string, id: string) =>
+  call<AuthorizationRole>(base, `/roles/${encodeURIComponent(id)}`);
+export const updateRole = (
+  base: string,
+  role: AuthorizationRole,
+  name: string,
+  status: string
+) =>
+  call<AuthorizationRole>(
+    base,
+    `/roles/${encodeURIComponent(role.roleId)}`,
+    'PATCH',
+    { name, status },
+    role.version,
+    key()
+  );
+export const deleteRole = (base: string, role: AuthorizationRole) =>
+  call(
+    base,
+    `/roles/${encodeURIComponent(role.roleId)}`,
+    'DELETE',
+    undefined,
+    role.version,
+    key()
+  );

@@ -2,7 +2,7 @@ import AppLoading from '@/components/AppLoading';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Empty, Grid, Select, Space, Statistic, Typography } from '@arco-design/web-react';
 import useLocale from '@/utils/useLocale';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import { getStatistics, Statistics, StatisticsError } from './api';
 import locale from './locale';
 const { Row, Col } = Grid;

@@ -51,7 +51,7 @@ class StatisticsHttpTest {
         jdbc.update("insert into summer_enterprise_member(enterprise_id,member_id,subject,display_name,email,status,version,created_at,updated_at) values (?,?,?,?,?,?,?,?,?)", "ent-acme","member-stat","stats-admin","Statistics","stats@example.test","ACTIVE",0,START,START);
         jdbc.update("insert into summer_organization_membership(enterprise_id,member_id,organization_id,primary_organization,created_at,updated_at) values (?,?,?,?,?,?)", "ent-acme","member-stat","org-engineering",true,START,START);
         jdbc.update("insert into summer_organization_context(subject,enterprise_id,organization_id,revision,created_at,updated_at) values (?,?,?,?,?,?)", "stats-admin","ent-acme","org-engineering","1",START,START);
-        jdbc.update("insert into summer_dictionary_type(id,code,tenant_id,organization_id,created_by,owner_id,name,published,public_readable,enabled) values (?,?,?,?,?,?,?,?,?,?)", UUID.randomUUID().toString(),"stats-dictionary","ent-acme","org-engineering","other-user","other-user","Stats",true,true,true);
+        jdbc.update("insert into summer_dictionary_type(id,code,tenant_id,organization_id,created_by,owner_id,name,published,public_readable,enabled) values (?,?,?,?,?,?,?,?,?,?)", UUID.randomUUID().toString(),"stats-dictionary","platform",null,"other-user","other-user","Stats",true,true,true);
         jdbc.update("insert into summer_task_definition(task_id,enterprise_id,name,task_type,cron_expression,parameters_json,max_retries,timeout_ms,status,version,created_at,updated_at) values (?,?,?,?,?,?,?,?,?,?,?,?)", "task-stat","ent-acme","Stats task","system.noop","0 0 0 1 1 ? 2099","{}",0,30000,"ACTIVE",0,START,START);
         for (String state : List.of("SUCCESS","FAILED","RUNNING")) jdbc.update("insert into summer_task_execution(execution_id,task_id,enterprise_id,fire_instance_id,idempotency_key,status,attempt,started_at,finished_at,node_id,recovery_count) values (?,?,?,?,?,?,?,?,?,?,?)", "exec-"+state,"task-stat","ent-acme","fire-"+state,"key-"+state,state,1,START.plusSeconds(1),state.equals("RUNNING")?null:START.plusSeconds(2),"test",0);
         jdbc.update("insert into summer_audit_event(event_id,tenant_id,organization_id,principal,resource,action,result,request_id,detail_json,occurred_at) values (?,?,?,?,?,?,?,?,?,?)", "audit-stat","ent-acme","org-engineering","stats-admin","task:task-stat","TASK_CREATED","SUCCESS","stat-request","{}",START.plusSeconds(1));
@@ -66,9 +66,9 @@ class StatisticsHttpTest {
         current.grantHandlers(Domain.enterprise("ent-acme"), "stats-admin", (handler, path, method) ->
                 handler.getBeanType().getName().equals("com.abluepoint.summer.sample.member.MemberController")
                         && java.util.Set.of("GET /api/v1/enterprises/{enterpriseId}/members").contains(method + " " + path));
-        current.grantHandlers(Domain.enterprise("ent-acme"), "stats-admin", (handler, path, method) ->
+        current.grantHandlers(Domain.platform(), "stats-admin", (handler, path, method) ->
                 handler.getBeanType().getName().equals("com.abluepoint.summer.sample.dictionary.DictionaryController")
-                        && java.util.Set.of("GET /api/v1/enterprises/{enterpriseId}/dictionaries").contains(method + " " + path));
+                        && java.util.Set.of("GET /api/v1/platform/dictionaries").contains(method + " " + path));
         current.grantHandlers(Domain.enterprise("ent-acme"), "stats-admin", (handler, path, method) ->
                 handler.getBeanType().getName().equals("com.abluepoint.summer.sample.task.TaskSchedulerController")
                         && java.util.Set.of("GET /api/v1/enterprises/{enterpriseId}/tasks").contains(method + " " + path));
@@ -78,6 +78,7 @@ class StatisticsHttpTest {
     }
     @Test void returnsBusinessAuditAndExecutionCountsFromPersistence() throws Exception {
         query().andExpect(status().isOk()).andExpect(jsonPath("$.data.auditEventCount").value(1))
+            .andExpect(jsonPath("$.data.dictionaryCount").value(1))
             .andExpect(jsonPath("$.data.taskExecutionCount").value(3)).andExpect(jsonPath("$.data.successfulTaskExecutionCount").value(1))
             .andExpect(jsonPath("$.data.failedTaskExecutionCount").value(1)).andExpect(jsonPath("$.data.taskSuccessRate").value(1.0/3.0));
     }
@@ -111,6 +112,12 @@ class StatisticsHttpTest {
     @Test void defaultFromIsRelativeToExplicitTo() throws Exception {
         mockMvc.perform(get(URL).queryParam("to","2025-02-01T00:00:00Z").with(admin()))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.window.from").value("2025-01-02T00:00:00Z"));
+    }
+    @Test void reportsBothMalformedTimeFields() throws Exception {
+        mockMvc.perform(get(URL).queryParam("from", "yesterday").queryParam("to", "today").with(admin()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.violations[*].field",
+                    org.hamcrest.Matchers.containsInAnyOrder("from", "to")));
     }
     @Test void rejectsUnknownParameters() throws Exception {
         mockMvc.perform(get(URL).queryParam("typo","1").with(admin()))

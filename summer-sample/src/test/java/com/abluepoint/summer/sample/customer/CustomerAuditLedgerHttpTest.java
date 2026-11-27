@@ -169,6 +169,13 @@ class CustomerAuditLedgerHttpTest {
     }
 
     @Test
+    void malformedTimeInSearchIsABadRequest() throws Exception {
+        mockMvc.perform(get("/api/audit-events").queryParam("from", "yesterday").with(auditReader()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("SUMMER_INVALID_ARGUMENT"));
+    }
+
+    @Test
     void auditQueryRequiresReadCapabilityAndDoesNotAllowCrossTenantSelection() throws Exception {
         mockMvc.perform(get("/api/audit-events").with(customerWriter()))
                 .andExpect(status().isForbidden());

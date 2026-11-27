@@ -1,0 +1,95 @@
+.panel {
+  position: relative;
+  flex: none;
+  min-width: 0;
+  align-self: flex-start;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+}
+
+.panel button:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: -2px;
+}
+
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(100% + 1px);
+  width: 24px;
+  color: var(--color-text-3);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.divider::before {
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--color-border-2);
+}
+
+.divider::after {
+  top: 50%;
+  width: 8px;
+  height: 32px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--color-border-3);
+  background: radial-gradient(circle at 50% 10px, currentColor 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 15px, currentColor 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 20px, currentColor 1px, transparent 1.5px)
+    var(--color-bg-2);
+}
+
+.divider:hover,
+.divider:active,
+.divider:focus-visible {
+  color: rgb(var(--primary-6));
+}
+
+.divider:is(:hover, :active, :focus-visible)::before {
+  background: currentColor;
+}
+
+.divider:is(:hover, :active, :focus-visible)::after {
+  border-color: currentColor;
+  background-color: var(--color-primary-light-1);
+}
+
+.divider:active::before {
+  width: 2px;
+}
+
+.divider:focus-visible {
+  outline: none;
+}
+
+.divider:focus-visible::after {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown -- component breakpoint */
+@container (max-width: 719px) {
+  .panel {
+    flex: 0 0 100%;
+  }
+
+  .divider {
+    display: none;
+  }
+}

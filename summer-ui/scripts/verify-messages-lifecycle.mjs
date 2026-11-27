@@ -129,7 +129,7 @@ function pageFixture({ mode = 'MANAGED', send = true, ack = true, scopes = ['ent
   const page = load('../src/pages/messages/index.tsx', {
     react: guardedReact, '@arco-design/web-react': widgets,
     '@/utils/useLocale': { __esModule: true, default: () => ({ 'messages.refresh': 'refresh' }) },
-    '@/pages/data-scopes/useActiveEnterprise': { __esModule: true, default: () => ({ enterpriseId: 'ent-test', options: [], change: noop, setDirty: noop }) },
+    '@/hooks/useActiveEnterprise': { __esModule: true, default: () => ({ enterpriseId: 'ent-test', options: [], change: noop, setDirty: noop }) },
     '@/auth/oidc': { getAuthenticatedUser: () => Promise.resolve({ scopes }), oidcManager: { events: {
       addUserLoaded(fn) { listeners.add(fn); }, removeUserLoaded(fn) { listeners.delete(fn); },
       addUserUnloaded(fn) { listeners.add(fn); }, removeUserUnloaded(fn) { listeners.delete(fn); },

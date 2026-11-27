@@ -1,0 +1,29 @@
+.workspace {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  /* stylelint-disable-next-line property-no-unknown -- component breakpoint */
+  container-type: inline-size;
+}
+
+.workspace > aside {
+  align-self: stretch;
+}
+
+.tree {
+  /* stylelint-disable-next-line unit-no-unknown -- account for mobile browser chrome */
+  max-height: 65dvh;
+  overflow: auto;
+}
+
+.members {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown -- component breakpoint */
+@container (max-width: 719px) {
+  .members {
+    flex-basis: 100%;
+  }
+}

@@ -2,12 +2,9 @@ package com.abluepoint.summer.sample.dictionary;
 
 import com.abluepoint.summer.common.error.SummerException;
 import com.abluepoint.summer.sample.configuration.ConfigurationActionAccess;
-import com.abluepoint.summer.sample.configuration.ConfigurationOverrideService;
-import com.abluepoint.summer.sample.configuration.ConfigurationTenantContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -16,16 +13,11 @@ import java.util.*;
 @Service
 class DictionaryNameResolver {
     private final EffectiveDictionaryReader effective;
-    private final ConfigurationOverrideService overrides;
     private final ConfigurationActionAccess actions;
-    private final ObjectMapper mapper;
 
-    DictionaryNameResolver(EffectiveDictionaryReader effective, ConfigurationOverrideService overrides,
-                           ConfigurationActionAccess actions, ObjectMapper mapper) {
+    DictionaryNameResolver(EffectiveDictionaryReader effective, ConfigurationActionAccess actions) {
         this.effective = effective;
-        this.overrides = overrides;
         this.actions = actions;
-        this.mapper = mapper;
     }
 
     @Transactional(readOnly = true)
@@ -39,7 +31,7 @@ class DictionaryNameResolver {
     }
 
     private DictionaryNameResolution resolve(String code, DictionaryNameRequest request, Authentication auth, boolean selection) {
-        String tenant = ConfigurationTenantContext.resolve(auth);
+        String tenant = "platform";
         actions.requirePublic(tenant, "dictionaries", auth);
         var base = effective.read(tenant, code, auth, true);
         if (request == null || request.values() == null || (!selection && request.values().isEmpty()) || request.values().size() > 500
@@ -47,14 +39,6 @@ class DictionaryNameResolver {
             throw new SummerException(DictionaryErrorCode.INVALID,
                     List.of(new SummerException.Violation("values", "must contain 1 to 500 string values of length 1 to 80")));
         }
-        // resolve() rejects hidden/disabled higher-priority overrides, before any fallback.
-        var selected = overrides.resolve(tenant, "dictionaries", code, auth);
-        Map<String, DictionaryItemView> labels = new HashMap<>();
-        selected.ifPresent(source -> {
-            List<DictionaryItemView> items = mapper.readValue(source.valueJson(),
-                    mapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class));
-            items.forEach(item -> labels.put(item.value(), item));
-        });
         Map<String, DictionaryItemView> visible = new HashMap<>();
         base.snapshot().items().stream().filter(item -> base.visibleValues().contains(item.value()))
                 .forEach(item -> visible.put(item.value(), item));
@@ -62,23 +46,15 @@ class DictionaryNameResolver {
             String raw = (String) value;
             var item = visible.get(raw);
             if (item == null) return new DictionaryResolvedName(raw, null, "", "unknown");
-            var overlay = labels.get(raw);
-            return new DictionaryResolvedName(raw, overlay == null ? item.label() : overlay.label(), item.description(),
-                    item.enabled() && (overlay == null || overlay.enabled()) ? "enabled" : "disabled");
+            return new DictionaryResolvedName(raw, item.label(), item.description(), item.enabled() ? "enabled" : "disabled");
         }).toList();
-        Set<String> baseValues = base.snapshot().items().stream().map(DictionaryItemView::value).collect(java.util.stream.Collectors.toSet());
-        boolean overrideReviewRequired = labels.keySet().stream().anyMatch(value -> !baseValues.contains(value));
         Map<String, DictionaryChoiceFacet> facets = new LinkedHashMap<>();
         if (selection) {
             List<String> requestedGroups = request.groupCodes() == null ? List.of(request.groupCode() == null ? "" : request.groupCode()) : request.groupCodes();
             if (requestedGroups.size() > 200 || requestedGroups.stream().anyMatch(Objects::isNull))
                 throw new SummerException(DictionaryErrorCode.INVALID);
             Set<String> allowed = base.selectableValues();
-            List<DictionaryItemView> candidates = selected.isPresent()
-                    ? mapper.readValue(selected.get().valueJson(), mapper.getTypeFactory().constructCollectionType(List.class, DictionaryItemView.class))
-                    : base.snapshot().items();
-            List<DictionaryItemView> choices = candidates.stream().filter(DictionaryItemView::enabled).filter(i -> allowed.contains(i.value()))
-                    .map(i -> new DictionaryItemView(i.value(), i.label(), i.sortOrder(), true, visible.get(i.value()).description())).toList();
+            List<DictionaryItemView> choices = base.snapshot().items().stream().filter(i -> allowed.contains(i.value())).toList();
             Map<String, DictionaryItemView> byValue = new HashMap<>();
             choices.forEach(i -> byValue.put(i.value(), i));
             for (String groupCode : requestedGroups) {
@@ -89,13 +65,13 @@ class DictionaryNameResolver {
             }
         }
         var primary = facets.getOrDefault(request.groupCode() == null ? "" : request.groupCode(), new DictionaryChoiceFacet(List.of(), "available"));
-        String source = selected.map(v -> v.sourceId() + ":" + v.publishedRevision()).orElse("base");
+        String source = "base";
         String token = UUID.nameUUIDFromBytes((tenant + ":" + code + ":" + base.publishedVersion() + ":"
                 + base.effectiveRevision() + ":" + source + ":" + base.scopeFingerprint() + ":"
                 + new TreeSet<>(base.visibleValues())).getBytes(StandardCharsets.UTF_8)).toString();
         return new DictionaryNameResolution(code, result, base.publishedVersion(), base.effectiveRevision(),
-                selected.map(ConfigurationOverrideService.Value::publishedRevision).orElse(null),
-                selected.isPresent() ? "override" : "base", token, primary.choices(), primary.groupStatus(), facets, overrideReviewRequired);
+                null,
+                source, token, primary.choices(), primary.groupStatus(), facets, false);
     }
 }
 

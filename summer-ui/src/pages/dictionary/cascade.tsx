@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button } from '@arco-design/web-react';
 import { DictionarySelect } from './select';
 import { DictionaryNameDisplay, useDictionaryNames } from './names';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
 
 export type DictionaryCascadeLevel = {
   code: string;
@@ -18,17 +17,7 @@ type Props = {
 
 /** Controlled business values. Only an explicit user selection starts reconciliation. */
 export function DictionaryCascade(props: Props) {
-  const tenant = useActiveEnterprise();
-  return (
-    <CascadeContent
-      key={JSON.stringify([
-        tenant.enterpriseId,
-        tenant.contextVersion,
-        props.levels,
-      ])}
-      {...props}
-    />
-  );
+  return <CascadeContent key={JSON.stringify(props.levels)} {...props} />;
 }
 function CascadeContent({ levels, values, onChange }: Props) {
   const [pending, setPending] = useState<number | null>(null);

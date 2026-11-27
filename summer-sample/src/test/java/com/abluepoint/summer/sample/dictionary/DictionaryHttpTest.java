@@ -125,6 +125,16 @@ class DictionaryHttpTest {
     }
 
     @Test
+    void dictionaryHistoryValidatesBothPathFieldsOnBothRoutes() throws Exception {
+        for (String base : java.util.List.of("/api/dictionaries", "/api/v1/platform/dictionaries")) {
+            mockMvc.perform(get(base + "/INVALID/versions/0").with(dictionaryWriter()))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.violations[*].field",
+                            org.hamcrest.Matchers.containsInAnyOrder("code", "version")));
+        }
+    }
+
+    @Test
     void invalidDictionaryValueReturnsUnifiedValidationError() throws Exception {
         mockMvc.perform(post("/api/dictionaries")
                         .contentType(MediaType.APPLICATION_JSON)

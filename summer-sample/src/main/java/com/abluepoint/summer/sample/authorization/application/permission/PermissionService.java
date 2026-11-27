@@ -42,6 +42,16 @@ public class PermissionService {
 
     public record Result(Object body, int status, long version) {}
 
+    /** Catalog reads prefer platform definitions; old IDs remain readable only in their own domain. */
+    public Domain readDomain(Domain requester, boolean group, String id) {
+        String table = group ? "summer_permission_group" : "summer_permission";
+        String column = group ? "group_id" : "permission_id";
+        return db.queryForObject("select count(*) from " + table
+                + " where domain_key='PLATFORM:platform' and " + column + "=?", Integer.class, id) == 1
+                ? Domain.platform() : requester;
+    }
+
+
     @Transactional(readOnly = true)
     public Result getDataScope(Domain d, String id) {
         return dataScopeResult(get(d, false, id));
@@ -398,6 +408,10 @@ public class PermissionService {
                         d.key(),
                         id);
             } else {
+                if (db.queryForObject("select count(*) from summer_permission_data_interface where domain_key=? and interface_permission_id=?",
+                        Integer.class, d.key(), id) > 0)
+                    throw fail(409, "Interface permission is referenced by a data permission");
+                db.update("delete from summer_permission_data_interface where domain_key=? and permission_id=?", d.key(), id);
                 db.update(
                         "delete from summer_permission where domain_key=? and permission_id=?",
                         d.key(),
@@ -501,7 +515,7 @@ public class PermissionService {
                             : create ? null : (String) old.get("description");
             Map<String, Object> detail =
                     body.containsKey("dataScope")
-                            ? dataDetails.validate(body.get("dataScope"))
+                            ? dataDetails.validate(d, body.get("dataScope"))
                             : create ? null : type.equals("DATA") ? dataDetails.get(d, id) : null;
             if (!type.equals("DATA") && body.containsKey("dataScope"))
                 throw fail(400, "Only DATA permissions have dataScope");
@@ -566,7 +580,7 @@ public class PermissionService {
                         version,
                         d.key(),
                         id);
-            if (detail != null) dataDetails.replace(d, id, detail);
+            if (body.containsKey("dataScope")) dataDetails.replace(d, id, detail);
             result = view(row(d, false, id), false);
         }
         audit.mutation(

@@ -1,3 +1,4 @@
+import DataInterfacePicker from './components/DataInterfacePicker';
 import { useInterfaceOperations } from '@/auth/useInterfaceOperations';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -11,20 +12,25 @@ import {
   Select,
   Space,
   Table,
-  Tree,
+  TableColumnProps,
+  Tabs,
 } from '@arco-design/web-react';
 import { Prompt } from 'react-router-dom';
+import treeStyles from './components/permission-group-tree.module.less';
+import PermissionGroupTree from './components/PermissionGroupTree';
 import MenuPermissionBindings from './components/MenuPermissionBindings';
-import InterfaceAssociationsEditor from './components/InterfaceAssociationsEditor';
+import InterfaceAssociationsEditor, {
+  InterfaceDraft,
+} from './components/InterfaceAssociationsEditor';
 import { getOrganizationTree, OrganizationUnit } from '../organization/api';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 import {
   call,
   Failure,
   Group,
   Page,
   Permission,
-  DataResource,
+  DataScopeDetail,
   PermissionDomain,
 } from './api';
 
@@ -39,65 +45,94 @@ const enumLabels: Record<string, string> = {
   DISABLED: '停用',
 };
 const filterLabels: Record<string, string> = {
-  type: '权限类型',
   status: '状态',
   accessMode: '访问方式',
 };
 const enumOptions = (values: string[]) =>
   values.map((value) => ({ label: enumLabels[value], value }));
 
-export default function PermissionsPage() {
-  const tenant = useActiveEnterprise();
-  const [platform, setPlatform] = useState(false);
+const permissionTypes = ['INTERFACE', 'MENU', 'DATA'] as const;
+type PermissionType = typeof permissionTypes[number];
+
+function PermissionTable({
+  base,
+  type,
+  query,
+  columns,
+  onAccessError,
+}: {
+  base: string;
+  type: PermissionType;
+  query: string;
+  columns: TableColumnProps<Permission>[];
+  onAccessError: (issue: Failure) => void;
+}) {
+  const [page, setPage] = useState(1);
+  const [result, setResult] = useState<Page<Permission>>();
+  const [issue, setIssue] = useState<Failure>();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let current = true;
+    setLoading(true);
+    setIssue(undefined);
+    const params = new URLSearchParams(query);
+    params.set('type', type);
+    params.set('page', String(page));
+    params.set('size', '20');
+    call<Page<Permission>>(base, `/permissions?${params}`)
+      .then((value) => {
+        if (current) setResult(value);
+      })
+      .catch((error: Failure) => {
+        if (!current) return;
+        setResult(undefined);
+        if ([401, 403].includes(error.status)) onAccessError(error);
+        else setIssue(error);
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [base, type, query, page, onAccessError]);
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
-        <Select
-          aria-label="权限管理域"
-          value={platform ? 'platform' : 'enterprise'}
-          options={[
-            { label: '企业', value: 'enterprise' },
-            { label: '平台', value: 'platform' },
-          ]}
-          onChange={(v) => {
-            if (
-              !tenant.busy &&
-              (!tenant.dirty || window.confirm('放弃未保存修改？'))
-            ) {
-              tenant.setDirty(false);
-              setPlatform(v === 'platform');
-            }
-          }}
-        />
-        {!platform && (
-          <Select
-            aria-label="活动租户"
-            value={tenant.enterpriseId || undefined}
-            options={tenant.options}
-            onChange={tenant.change}
-            disabled={tenant.busy}
-          />
-        )}
-      </Space>
-      {(platform || tenant.enterpriseId) && (
-        <Content
-          key={
-            platform ? 'PLATFORM:platform' : `ENTERPRISE:${tenant.enterpriseId}`
-          }
-          domain={{
-            kind: platform ? 'PLATFORM' : 'ENTERPRISE',
-            id: platform ? 'platform' : tenant.enterpriseId,
-          }}
-          base={
-            platform
-              ? '/api/v1/platform'
-              : `/api/v1/enterprises/${encodeURIComponent(tenant.enterpriseId)}`
-          }
-          dirty={tenant.setDirty}
-          busy={tenant.setBusy}
+      {issue && (
+        <Alert
+          type="error"
+          content={`${issue.status || '网络错误'}：${issue.message} ${
+            issue.requestId || ''
+          }`}
         />
       )}
+      <Table
+        rowKey="permissionId"
+        scroll={{ x: 680 }}
+        loading={loading}
+        columns={columns}
+        data={result?.items || []}
+        pagination={{
+          current: page,
+          pageSize: 20,
+          total: result?.total || 0,
+          hideOnSinglePage: true,
+          onChange: setPage,
+        }}
+      />
     </>
+  );
+}
+
+export default function PermissionsPage() {
+  const { setDirty, setBusy } = useActiveEnterprise();
+  return (
+    <Content
+      domain={{ kind: 'PLATFORM', id: 'platform' }}
+      base="/api/v1/platform"
+      dirty={setDirty}
+      busy={setBusy}
+    />
   );
 }
 function Content({
@@ -141,23 +176,20 @@ function Content({
           : 'permissions.interfaces.write'
       ));
   const [groups, setGroups] = useState<Group[]>([]);
-  const [data, setData] = useState<Page<Permission>>({
-    items: [],
-    total: 0,
-    page: 1,
-    size: 20,
-  });
+  const [revision, setRevision] = useState(0);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [filter, setFilter] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<string>();
   const [error, setError] = useState<Failure>();
-  const [loading, setLoading] = useState(false);
+  const [groupError, setGroupError] = useState<Failure>();
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] =
     useState<{ group: boolean; row?: Group | Permission }>();
   const [changed, setChanged] = useState(false);
   const [bindingDirty, setBindingDirty] = useState(false);
   const [bindingBusy, setBindingBusy] = useState(false);
-  const hasUnsaved = changed || bindingDirty;
+  const [interfaceDraft, setInterfaceDraft] = useState<InterfaceDraft>();
+  const hasUnsaved = changed || bindingDirty || !!interfaceDraft;
   const requestBusy = saving || bindingBusy;
   const associationContext = useRef<string>();
   const bindingKey =
@@ -180,13 +212,13 @@ function Content({
   );
   const clearBinding = () => {
     associationContext.current = undefined;
+    setInterfaceDraft(undefined);
     setBindingDirty(false);
     setBindingBusy(false);
   };
   const [form] = Form.useForm();
+  const [activeType, setActiveType] = useState('INTERFACE');
   const [dataType, setDataType] = useState('INTERFACE');
-  const [resources, setResources] = useState<DataResource[]>([]);
-  const [resourcesError, setResourcesError] = useState('');
   const [departments, setDepartments] = useState<
     { label: string; value: string }[]
   >([]);
@@ -212,36 +244,37 @@ function Content({
         .catch((e) => {
           if (active) setDepartmentsError(e.message || '部门目录读取失败');
         });
+    if (
+      domain.kind === 'PLATFORM' &&
+      editor &&
+      !editor.group &&
+      dataType === 'DATA'
+    )
+      call<{ departments: { id: string; name: string }[] }>(
+        '/api/v1/platform',
+        '/platform-departments'
+      )
+        .then((result) => {
+          if (active)
+            setDepartments(
+              result.departments.map((n) => ({ label: n.name, value: n.id }))
+            );
+        })
+        .catch((e) => {
+          if (active) setDepartmentsError(e.message || '平台部门读取失败');
+        });
     return () => {
       active = false;
     };
-  }, [domain.kind, domain.id, editor]);
-  useEffect(() => {
-    let active = true;
-    call<DataResource[]>(base, '/data-resources')
-      .then((r) => {
-        if (active) {
-          setResources(r);
-          setResourcesError('');
-        }
-      })
-      .catch((e) => {
-        if (active) {
-          setResources([]);
-          setResourcesError(e.message || '业务资源目录读取失败');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [base]);
-  const generation = useRef(0);
+  }, [domain.kind, domain.id, editor, dataType]);
+  const groupGeneration = useRef(0);
+  const [loadingGroups, setLoadingGroups] = useState(true);
   const alive = useRef(true);
   const pending = useRef<{ fingerprint: string; key: string }>();
   useEffect(
     () => () => {
       alive.current = false;
-      generation.current++;
+      groupGeneration.current++;
       dirty(false);
       busy(false);
     },
@@ -265,54 +298,60 @@ function Content({
     if (!alive.current) return;
     setError(e);
     if ([401, 403].includes(e.status)) {
-      generation.current++;
-      setLoading(false);
+      groupGeneration.current++;
+      setLoadingGroups(false);
       setGroups([]);
-      setData({ items: [], total: 0, page: 1, size: 20 });
+      setSelected(undefined);
+      setAccessDenied(true);
       setEditor(undefined);
       clearBinding();
       setChanged(false);
     }
   }, []);
-  const load = useCallback(async () => {
-    const ticket = ++generation.current;
-    setLoading(true);
+  const loadGroups = useCallback(async () => {
+    const ticket = ++groupGeneration.current;
+    setLoadingGroups(true);
+    setGroupError(undefined);
     try {
       const all: Group[] = [];
-      let page = 1;
-      let total = 0;
-      do {
+      for (let page = 1; ; page++) {
         const result = await call<Page<Group>>(
           base,
-          `/permission-groups?page=${page++}&size=200`
+          `/permission-groups?page=${page}&size=200`
         );
+        if (!alive.current || ticket !== groupGeneration.current) return;
         all.push(...result.items);
-        total = result.total;
-      } while (all.length < total);
-      const params = new URLSearchParams({
-        page: '1',
-        size: '20',
-        ...filter,
-        ...(selected ? { groupId: selected, includeDescendants: 'true' } : {}),
-      });
-      const result = await call<Page<Permission>>(
-        base,
-        `/permissions?${params}`
-      );
-      if (alive.current && ticket === generation.current) {
-        setGroups(all);
-        setData(result);
-        setError(undefined);
+        if (all.length >= result.total) break;
+        if (!result.items.length)
+          throw new Error('权限组目录已变化，请刷新重试');
       }
+      setGroups(all);
+      setSelected((current) =>
+        all.some((group) => group.groupId === current) ? current : undefined
+      );
     } catch (e) {
-      if (alive.current && ticket === generation.current) failure(e);
+      if (ticket === groupGeneration.current) {
+        const issue = e as Failure;
+        setGroupError(issue);
+        if ([401, 403].includes(issue.status)) failure(issue);
+      }
     } finally {
-      if (alive.current && ticket === generation.current) setLoading(false);
+      if (alive.current && ticket === groupGeneration.current)
+        setLoadingGroups(false);
     }
-  }, [base, filter, selected, failure]);
+  }, [base, failure]);
   useEffect(() => {
-    load();
-  }, [load]);
+    loadGroups();
+  }, [loadGroups]);
+  const query = new URLSearchParams({
+    ...filter,
+    ...(selected ? { groupId: selected, includeDescendants: 'true' } : {}),
+  }).toString();
+  const load = useCallback(() => {
+    setError(undefined);
+    setAccessDenied(false);
+    setRevision((value) => value + 1);
+  }, []);
   const open = (group: boolean, row?: Group | Permission) => {
     if (
       requestBusy ||
@@ -320,6 +359,7 @@ function Content({
       (editor && hasUnsaved && !window.confirm('放弃未保存修改？'))
     )
       return;
+    setInterfaceDraft(undefined);
     setBindingDirty(false);
     setBindingBusy(false);
     associationContext.current =
@@ -327,14 +367,14 @@ function Content({
     pending.current = undefined;
     setEditor({ group, row });
     form.resetFields();
-    setDataType(row && !group ? (row as Permission).type : 'INTERFACE');
+    setDataType(row && !group ? (row as Permission).type : activeType);
     form.setFieldsValue(
       row ||
         (group
           ? { parentGroupId: selected, sortOrder: 0 }
           : {
               groupId: selected,
-              type: 'INTERFACE',
+              type: activeType,
               accessMode: 'AUTHORIZED',
               status: 'ACTIVE',
             })
@@ -343,15 +383,21 @@ function Content({
     setChanged(false);
   };
   const save = async (remove = false, target = editor) => {
+    if (!target || requestBusy || bindingDirty) return;
+    const editInterface =
+      !remove &&
+      !target.group &&
+      (target.row as Permission)?.type === 'INTERFACE';
+    const draft = editInterface ? interfaceDraft : undefined;
+    const saveMetadata = !editInterface || changed;
     if (
-      !target ||
-      requestBusy ||
-      bindingDirty ||
-      !allowed(metadataAction(target.group, !!target.row, remove))
+      (saveMetadata &&
+        !allowed(metadataAction(target.group, !!target.row, remove))) ||
+      (draft && !allowed('permissions.interfaces.write'))
     )
       return;
     let values: Record<string, unknown> = {};
-    if (!remove) {
+    if (!remove && saveMetadata) {
       try {
         await form.validate();
         values = form.getFieldsValue();
@@ -370,11 +416,12 @@ function Content({
     }
     if (!target.group && dataType !== 'DATA') delete values.dataScope;
     if (dataType === 'DATA' && values.dataScope) {
-      const detail = values.dataScope as {
-        scopePreset: string;
-        departmentIds?: string[];
-      };
-      if (detail.scopePreset !== 'SPECIFIED_DEPARTMENTS')
+      const detail = values.dataScope as DataScopeDetail;
+      if (
+        !['SPECIFIED_DEPARTMENTS', 'PLATFORM_SPECIFIED_SUBTREES'].includes(
+          detail.scopePreset
+        )
+      )
         delete detail.departmentIds;
     }
     if (target.group) values.parentGroupId = values.parentGroupId || null;
@@ -401,24 +448,50 @@ function Content({
           .slice(2)}`,
       };
     setSaving(true);
+    setError(undefined);
+    let metadataSaved = false;
     try {
-      await call(
-        base,
-        path,
-        method,
-        remove ? undefined : values,
-        target.row?.version,
-        pending.current.key
-      );
-      if (!alive.current) return;
+      if (saveMetadata) {
+        const result = await call<Permission>(
+          base,
+          path,
+          method,
+          remove ? undefined : values,
+          target.row?.version,
+          pending.current.key
+        );
+        if (!alive.current) return;
+        if (draft) {
+          metadataSaved = true;
+          setEditor({ group: false, row: result });
+          setChanged(false);
+        }
+      }
+      if (draft) {
+        await call(
+          base,
+          `${path}/interfaces`,
+          'PUT',
+          { resourceIds: draft.resourceIds },
+          draft.version,
+          draft.mutationKey
+        );
+        if (!alive.current) return;
+      }
       setEditor(undefined);
       clearBinding();
       setChanged(false);
       pending.current = undefined;
+      if (target.group) await loadGroups();
       if (remove && target.group && id === selected) setSelected(undefined);
-      else await load();
+      else load();
     } catch (e) {
-      failure(e);
+      if (metadataSaved) load();
+      failure(
+        metadataSaved
+          ? { ...e, message: `权限资料已保存，接口关联保存失败：${e.message}` }
+          : e
+      );
     } finally {
       if (alive.current) {
         setSaving(false);
@@ -426,38 +499,65 @@ function Content({
     }
   };
   const options = groups.map((g) => ({ value: g.groupId, label: g.name }));
-  const tree = (
-    parent: string | null
-  ): Array<{ key: string; title: string; children: unknown[] }> =>
-    groups
-      .filter((g) => g.parentGroupId === parent)
-      .map((g) => ({
-        key: g.groupId,
-        title: g.name,
-        children: tree(g.groupId),
-      }));
+  const listError = error || groupError;
+  const selectedGroup = groups.find((group) => group.groupId === selected);
+  const columns: TableColumnProps<Permission>[] = [
+    { title: '名称', dataIndex: 'name' },
+    { title: '标识', dataIndex: 'code' },
+    {
+      title: '访问方式',
+      dataIndex: 'accessMode',
+      render: (v) => enumLabels[v],
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      render: (v) => enumLabels[v],
+    },
+    { title: '版本', dataIndex: 'version' },
+    {
+      title: '操作',
+      render: (_, row: Permission) => (
+        <Space>
+          <Button
+            disabled={!canOpen(false, row)}
+            onClick={() => open(false, row)}
+          >
+            编辑
+          </Button>
+          <Button
+            disabled={!allowed('permissions.delete')}
+            status="danger"
+            onClick={() =>
+              Modal.confirm({
+                title: '删除权限？',
+                content: '仍被引用的权限不可删除。',
+                onOk: () => save(true, { group: false, row }),
+              })
+            }
+          >
+            删除
+          </Button>
+        </Space>
+      ),
+    },
+  ];
   return (
     <Card title="权限管理">
       <Prompt
         when={hasUnsaved || requestBusy}
         message={() => (requestBusy ? false : '放弃未保存修改？')}
       />
-      {error && (
+      {listError && (
         <Alert
           type="error"
-          content={`${error.status || '网络错误'}：${error.message} ${
-            error.requestId || ''
+          content={`${listError.status || '网络错误'}：${listError.message} ${
+            listError.requestId || ''
           }`}
           style={{ marginBottom: 16 }}
         />
       )}
       <Space wrap>
-        <Button
-          onClick={() => open(true)}
-          disabled={requestBusy || !allowed('groups.create')}
-        >
-          新建权限组
-        </Button>
         <Button
           type="primary"
           onClick={() => open(false)}
@@ -467,7 +567,14 @@ function Content({
         >
           新建权限
         </Button>
-        <Button onClick={load} disabled={requestBusy}>
+        <Button
+          onClick={() => {
+            setError(undefined);
+            loadGroups();
+            load();
+          }}
+          disabled={requestBusy}
+        >
           刷新
         </Button>
         <Input
@@ -475,16 +582,14 @@ function Content({
           placeholder="权限名称"
           onChange={(v) => setFilter((q) => ({ ...q, name: v }))}
         />
-        {['type', 'status', 'accessMode'].map((k) => (
+        {['status', 'accessMode'].map((k) => (
           <Select
             key={k}
             aria-label={filterLabels[k]}
             placeholder={filterLabels[k]}
             allowClear
             style={{ width: 160 }}
-            options={(k === 'type'
-              ? ['INTERFACE', 'MENU', 'DATA']
-              : k === 'status'
+            options={(k === 'status'
               ? ['ACTIVE', 'DISABLED']
               : ['AUTHORIZED', 'PUBLIC', 'AUTHENTICATED']
             ).map((v) => ({ label: enumLabels[v], value: v }))}
@@ -499,132 +604,55 @@ function Content({
           />
         ))}
       </Space>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '260px 1fr',
-          gap: 20,
-          marginTop: 20,
-        }}
-      >
-        <div>
-          <Button onClick={() => setSelected(undefined)}>全部权限</Button>
-          <Tree
-            treeData={tree(null) as never}
-            selectedKeys={selected ? [selected] : []}
-            onSelect={(keys) => setSelected(keys[0] as string)}
-          />
-          {selected && (
-            <Space>
-              <Button
-                disabled={!allowed('groups.update')}
-                onClick={() =>
-                  open(
-                    true,
-                    groups.find((g) => g.groupId === selected)
-                  )
-                }
-              >
-                编辑组
-              </Button>
-              <Button
-                disabled={!allowed('groups.delete')}
-                status="danger"
-                onClick={() =>
-                  Modal.confirm({
-                    title: '删除空权限组？',
-                    onOk: () =>
-                      save(true, {
-                        group: true,
-                        row: groups.find((g) => g.groupId === selected),
-                      }),
-                  })
-                }
-              >
-                删除组
-              </Button>
-            </Space>
+      <div className={treeStyles.workspace}>
+        <PermissionGroupTree
+          groups={groups}
+          selected={selectedGroup}
+          onSelect={setSelected}
+          management={{
+            onCreate: () => open(true),
+            onEdit: (group) => open(true, group),
+            onDelete: (group) =>
+              Modal.confirm({
+                title: '删除空权限组？',
+                content: group.name,
+                onOk: () => save(true, { group: true, row: group }),
+              }),
+            canCreate: !requestBusy && allowed('groups.create'),
+            canEdit: !requestBusy && allowed('groups.update'),
+            canDelete: !requestBusy && allowed('groups.delete'),
+          }}
+          loading={loadingGroups}
+        />
+        <div className={treeStyles.permissionTables}>
+          {!accessDenied && (
+            <Tabs activeTab={activeType} onChange={setActiveType}>
+              {permissionTypes.map((type) => (
+                <Tabs.TabPane key={type} title={enumLabels[type]}>
+                  <PermissionTable
+                    key={JSON.stringify([base, query, revision])}
+                    base={base}
+                    type={type}
+                    query={query}
+                    columns={columns}
+                    onAccessError={failure}
+                  />
+                </Tabs.TabPane>
+              ))}
+            </Tabs>
           )}
         </div>
-        <Table
-          rowKey="permissionId"
-          loading={loading}
-          data={data.items}
-          pagination={{
-            total: data.total,
-            pageSize: data.size,
-            current: data.page,
-            onChange: async (page) => {
-              const ticket = ++generation.current;
-              try {
-                const q = new URLSearchParams({
-                  ...filter,
-                  page: String(page),
-                  size: '20',
-                  ...(selected
-                    ? { groupId: selected, includeDescendants: 'true' }
-                    : {}),
-                });
-                const r = await call<Page<Permission>>(
-                  base,
-                  `/permissions?${q}`
-                );
-                if (alive.current && ticket === generation.current) setData(r);
-              } catch (e) {
-                failure(e);
-              }
-            },
-          }}
-          columns={[
-            { title: '名称', dataIndex: 'name' },
-            { title: '标识', dataIndex: 'code' },
-            {
-              title: '权限类型',
-              dataIndex: 'type',
-              render: (v) => enumLabels[v],
-            },
-            {
-              title: '访问方式',
-              dataIndex: 'accessMode',
-              render: (v) => enumLabels[v],
-            },
-            {
-              title: '状态',
-              dataIndex: 'status',
-              render: (v) => enumLabels[v],
-            },
-            { title: '版本', dataIndex: 'version' },
-            {
-              title: '操作',
-              render: (_, row: Permission) => (
-                <Space>
-                  <Button
-                    disabled={!canOpen(false, row)}
-                    onClick={() => open(false, row)}
-                  >
-                    编辑
-                  </Button>
-                  <Button
-                    disabled={!allowed('permissions.delete')}
-                    status="danger"
-                    onClick={() =>
-                      Modal.confirm({
-                        title: '删除权限？',
-                        content: '仍被引用的权限不可删除。',
-                        onOk: () => save(true, { group: false, row }),
-                      })
-                    }
-                  >
-                    删除
-                  </Button>
-                </Space>
-              ),
-            },
-          ]}
-        />
       </div>
       <Modal
-        style={{ width: 720, maxWidth: 'calc(100vw - 32px)' }}
+        style={{
+          width:
+            dataType === 'DATA' ||
+            (!editor?.group &&
+              (editor?.row as Permission)?.type === 'INTERFACE')
+              ? 1040
+              : 720,
+          maxWidth: 'calc(100vw - 32px)',
+        }}
         title={editor?.group ? '权限组' : '权限'}
         visible={!!editor}
         confirmLoading={saving}
@@ -633,7 +661,8 @@ function Content({
             bindingBusy ||
             bindingDirty ||
             !editor ||
-            !allowed(metadataAction(editor.group, !!editor.row)),
+            (!allowed(metadataAction(editor.group, !!editor.row)) &&
+              !(interfaceDraft && allowed('permissions.interfaces.write'))),
         }}
         cancelButtonProps={{ disabled: requestBusy }}
         maskClosable={!requestBusy}
@@ -731,57 +760,26 @@ function Content({
                 <Alert content="创建权限不会自动授予任何角色。" />
                 {dataType === 'DATA' && (
                   <>
-                    {resourcesError && (
-                      <Alert type="error" content={resourcesError} />
-                    )}
-
                     <Form.Item
-                      label="业务资源"
-                      field="dataScope.dataResourceKey"
-                      rules={[{ required: true }]}
+                      label="关联接口权限"
+                      field="dataScope.interfacePermissionIds"
+                      rules={[
+                        {
+                          required: true,
+                          type: 'array',
+                          minLength: 1,
+                          message: '请选择至少一个接口权限',
+                        },
+                      ]}
                     >
-                      <Select
-                        options={resources.map((r) => ({
-                          label: r.name,
-                          value: r.key,
-                        }))}
-                        onChange={() =>
-                          form.setFieldValue('dataScope.action', undefined)
+                      <DataInterfacePicker
+                        base={base}
+                        groups={groups}
+                        disabled={
+                          requestBusy ||
+                          !allowed(metadataAction(false, !!editor?.row))
                         }
                       />
-                    </Form.Item>
-                    <Form.Item noStyle shouldUpdate>
-                      {() => (
-                        <Form.Item
-                          label="操作"
-                          field="dataScope.action"
-                          rules={[{ required: true }]}
-                        >
-                          <Select
-                            options={(
-                              resources.find(
-                                (r) =>
-                                  r.key ===
-                                  form.getFieldValue(
-                                    'dataScope.dataResourceKey'
-                                  )
-                              )?.actions || []
-                            ).map((action) => ({
-                              label:
-                                (
-                                  {
-                                    read: '查询',
-                                    update: '修改',
-                                    delete: '删除',
-                                    create: '创建',
-                                    export: '导出',
-                                  } as Record<string, string>
-                                )[action] || action,
-                              value: action,
-                            }))}
-                          />
-                        </Form.Item>
-                      )}
                     </Form.Item>
                     <Form.Item
                       label="记录范围"
@@ -792,19 +790,27 @@ function Content({
                         options={[
                           { label: '本人', value: 'SELF' },
                           { label: '当前租户全部', value: 'TENANT_ALL' },
-                          ...(domain.kind === 'ENTERPRISE'
+                          {
+                            label: '本部门（当前租户全部有效任职）',
+                            value: 'DEPARTMENT',
+                          },
+                          {
+                            label: '本部门及下级部门（当前租户）',
+                            value: 'DEPARTMENT_AND_DESCENDANTS',
+                          },
+                          ...(domain.kind === 'PLATFORM'
                             ? [
                                 {
-                                  label: '本部门（全部有效任职）',
-                                  value: 'DEPARTMENT',
+                                  label: '全部平台部门',
+                                  value: 'PLATFORM_ALL_DEPARTMENTS',
                                 },
                                 {
-                                  label: '本部门及下级部门',
-                                  value: 'DEPARTMENT_AND_DESCENDANTS',
+                                  label: '本人平台主部门及下级',
+                                  value: 'PLATFORM_PRIMARY_SUBTREE',
                                 },
                                 {
-                                  label: '指定部门（仅选中节点）',
-                                  value: 'SPECIFIED_DEPARTMENTS',
+                                  label: '指定平台部门及下级',
+                                  value: 'PLATFORM_SPECIFIED_SUBTREES',
                                 },
                               ]
                             : []),
@@ -813,8 +819,12 @@ function Content({
                     </Form.Item>
                     <Form.Item noStyle shouldUpdate>
                       {() =>
-                        form.getFieldValue('dataScope.scopePreset') ===
-                          'SPECIFIED_DEPARTMENTS' && (
+                        [
+                          'SPECIFIED_DEPARTMENTS',
+                          'PLATFORM_SPECIFIED_SUBTREES',
+                        ].includes(
+                          form.getFieldValue('dataScope.scopePreset')
+                        ) && (
                           <>
                             {departmentsError && (
                               <Alert type="error" content={departmentsError} />
@@ -840,9 +850,7 @@ function Content({
                                           )
                                       )
                                     )
-                                      callback(
-                                        '请移除失效或其他租户的部门并重新选择'
-                                      );
+                                      callback('请移除不可用的部门并重新选择');
                                     else callback();
                                   },
                                 },
@@ -859,20 +867,6 @@ function Content({
                           </>
                         )
                       }
-                    </Form.Item>
-                    <Form.Item noStyle shouldUpdate>
-                      {() => (
-                        <Alert
-                          content={
-                            resources.find(
-                              (r) =>
-                                r.key ===
-                                form.getFieldValue('dataScope.dataResourceKey')
-                            )?.selfMeaning ||
-                            '本人归属由业务资源定义，全部范围仍受租户及业务上限约束。'
-                          }
-                        />
-                      )}
                     </Form.Item>
                   </>
                 )}
@@ -931,9 +925,8 @@ function Content({
                 }`}
                 domain={domain}
                 permissionId={(editor.row as Permission).permissionId}
-                version={editor.row.version}
-                onSaved={load}
-                onDirtyChange={onBindingDirty}
+                draft={interfaceDraft}
+                onChange={setInterfaceDraft}
                 onBusyChange={onBindingBusy}
                 disabled={saving || !allowed('permissions.interfaces.write')}
               />

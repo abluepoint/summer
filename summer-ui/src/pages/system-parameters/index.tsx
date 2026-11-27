@@ -4,7 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { isAuthRedirecting } from '@/auth/oidc';
 import useLocale from '@/utils/useLocale';
 import { Parameter, ParameterApiError, ParameterEvent, ParameterListQuery, ParameterPage, ParameterVersion, ParameterVersionPage, parameterApiForEnterprise } from './api';
-import useActiveEnterprise from '../data-scopes/useActiveEnterprise';
+import useActiveEnterprise from '@/hooks/useActiveEnterprise';
 
 const Item = Form.Item;
 const empty = { key: '', type: 'STRING' as Parameter['type'], value: '', required: false, min: undefined as number | undefined, max: undefined as number | undefined, pattern: '', public: false, description: '' };
